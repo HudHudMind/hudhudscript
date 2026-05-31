@@ -1,0 +1,28 @@
+// SOP NPC RPG Sample — Subject-Oriented Programming
+// v0.5.60
+
+role Fighter { can attack, can defend }
+
+subject Knight has Fighter {
+    state health: 100, state power: 30, state stamina: 100
+}
+subject Dragon has Fighter {
+    state health: 200, state power: 40, state stamina: 150
+}
+
+effect on Damage(target, amount) { target.health = target.health - amount }
+effect on Fatigue(target, amount) { target.stamina = target.stamina - amount }
+
+on attack(self, target) {
+    Damage(target, self.power)
+    Fatigue(self, 10)
+}
+
+let hero = spawn Knight
+let boss = spawn Dragon
+
+hero.attack(boss)
+print("Boss HP: ")
+print(boss.health)
+print("Hero SP: ")
+print(hero.stamina)

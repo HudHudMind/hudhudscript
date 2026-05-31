@@ -1,0 +1,26 @@
+// SOP Sample — Subject-Oriented Programming (Harrison & Ossher)
+// v0.5.57
+
+role Fighter { can attack, can defend }
+
+subject Knight has Fighter {
+    state health: 100, state power: 30
+}
+
+subject CombatLog of Knight {
+    state hits: 0
+    on record_hit(self, dmg) { self.hits = self.hits + dmg }
+}
+
+effect on Damage(target, amount) { target.health = target.health - amount }
+
+on attack(self, target) {
+    Damage(target, self.power)
+    self.record_hit(self.power)
+}
+
+let hero = spawn Knight
+let boss = spawn Knight
+hero.attack(boss)
+print("Boss HP: " + boss.health)
+print("Hero hits: " + hero.hits)

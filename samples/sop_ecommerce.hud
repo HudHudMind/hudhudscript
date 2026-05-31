@@ -1,0 +1,25 @@
+// SOP E-Commerce Sample — Subject-Oriented Programming
+// v0.5.60
+
+subject Customer {
+    state balance: 500, state cart_total: 0
+}
+subject Shop {
+    state inventory: 100, state revenue: 0
+}
+
+effect on Charge(target, amount) { target.balance = target.balance - amount }
+effect on Refund(target, amount) { target.balance = target.balance + amount }
+
+on purchase(self, shop) {
+    Charge(self, 89)
+    shop.revenue = shop.revenue + 89
+}
+
+let buyer = spawn Customer
+let store = spawn Shop
+buyer.purchase(store)
+print("Buyer balance: ")
+print(buyer.balance)
+print("Shop revenue: ")
+print(store.revenue)

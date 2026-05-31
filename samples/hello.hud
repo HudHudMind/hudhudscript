@@ -1,0 +1,12 @@
+// HudHudScript — Hello World
+print("Hello, World!");
+
+let name = "HudHud";
+print("Welcome to " + name + "Script!");
+
+let languages = ["English", "Turkish", "Arabic"];
+let i = 0;
+while (i < languages.length) {
+    print("Hello from " + languages[i]);
+    i = i + 1;
+}

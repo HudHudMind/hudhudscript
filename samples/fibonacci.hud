@@ -1,0 +1,21 @@
+// HudHudScript — Fibonacci (rekürsif + iteratif)
+print("=== Rekürsif ===");
+fn fib(n) {
+    if (n <= 1) { return n; }
+    return fib(n - 1) + fib(n - 2);
+}
+print("fib(10) = " + fib(10));
+print("fib(20) = " + fib(20));
+
+print("");
+print("=== İteratif ===");
+let a = 0;
+let b = 1;
+let i = 2;
+while (i <= 20) {
+    let next = a + b;
+    a = b;
+    b = next;
+    i = i + 1;
+}
+print("fib(20) = " + b);

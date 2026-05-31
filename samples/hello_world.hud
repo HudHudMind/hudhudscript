@@ -1,0 +1,43 @@
+// HudHudScript — Hello World in Multiple Languages
+// Issue #36: Comprehensive sample library
+
+// ── English ──────────────────────────────────────────────────
+let greeting_en = "Hello, World!";
+print(greeting_en);
+
+// ── Turkish (Türkçe) ─────────────────────────────────────────
+tanım mesaj_tr = "Merhaba, Dünya!";
+print(mesaj_tr);
+
+// ── Arabic (العربية) ─────────────────────────────────────────
+متغير رسالة = "مرحبا، عالم!";
+اطبع(رسالة)؛
+
+// ── Japanese (日本語) ─────────────────────────────────────────
+// Note: Japanese kanji keywords (定義) are defined in the grammar
+// but not yet wired through the keyword normalizer. Using English
+// keywords with Japanese string values for now.
+let message_ja = "こんにちは、世界！";
+print(message_ja);
+
+// ── Spanish (Español) ────────────────────────────────────────
+let saludo = "¡Hola, Mundo!";
+print(saludo);
+
+// ── Conditional greetings ────────────────────────────────────
+let name = "HudHud";
+
+if (name == "HudHud") {
+    print("Welcome to HudHudScript, " + name + "!");
+} else {
+    print("Hello, " + name + "!");
+}
+
+// ── Loop-based greeting ──────────────────────────────────────
+let languages = ["English", "Turkish", "Arabic", "Japanese", "Spanish"];
+let i = 0;
+
+while (i < 5) {
+    print("Hello from " + languages[i]);
+    i = i + 1;
+}

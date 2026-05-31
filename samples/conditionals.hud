@@ -1,0 +1,17 @@
+// HudHudScript — Koşullar: if/else, &&, ||
+let x = 10;
+let y = 20;
+
+if (x > 5 && y > 15) {
+    print("x > 5 VE y > 15 ✓");
+}
+
+if (x < 5 || y > 15) {
+    print("x < 5 VEYA y > 15 ✓ (|| short-circuit)");
+}
+
+if (x > 5) {
+    print("x büyük");
+} else {
+    print("x küçük");
+}

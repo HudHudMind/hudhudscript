@@ -3,10 +3,10 @@
 > **Multi-lingual, register-based scripting language for AI orchestration, agent systems, and governance modeling.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.5.57-blue.svg)](Cargo.toml)
+[![Version](https://img.shields.io/badge/version-0.6.0-blue.svg)](Cargo.toml)
 [![Rust](https://img.shields.io/badge/built%20with-Rust-orange.svg)](https://www.rust-lang.org/)
 
-HudHudScript is a programming language designed to be written in **your own language** — Turkish, Arabic, Japanese, English, Kurdish, Persian, and 17 more. Every keyword, every built-in function, every error message is localized natively. It runs on a **fully register-based VM** written in Rust, with first-class support for AI providers, agent pipelines, council/governance models, and SOPs (Standard Operating Procedures).
+HudHudScript is a programming language designed to be written in **your own language** — Turkish, Arabic, Japanese, English, Kurdish, Persian, and 18 more. Every keyword, every built-in function, every error message is localized natively. It runs on a **fully register-based VM** written in Rust, with first-class support for AI providers, agent pipelines, council/governance models, and SOPs (Standard Operating Procedures).
 
 ---
 
@@ -29,7 +29,7 @@ HudHudScript is a programming language designed to be written in **your own lang
 
 | | Description |
 |---|---|
-| 🌍 **23 Native Languages** | Write `yazdır("Merhaba")` in Turkish, `اطبع("مرحبا")` in Arabic, `表示("こんにちは")` in Japanese. Keywords and built-ins use the actual word in your language. |
+| 🌍 **24 Native Languages** | Write `yazdır("Merhaba")` in Turkish, `اطبع("مرحبا")` in Arabic, `表示("こんにちは")` in Japanese. Keywords and built-ins use the actual word in your language. |
 | 🚀 **Register-Based VM** | Inspired by Lua 5.4. No stack/register hybrid — every local is a register. Fast, predictable execution. |
 | 🤖 **AI-First Built-ins** | `provider`, `agent` are first-class constructs. Native integration with DeepSeek, OpenAI, Anthropic, Ollama, and local models. |
 | 🏛️ **Governance Primitives** | `role`, `council`, `swarm`, `community`, `constitution`, `law` — model real-world authority systems directly. |
@@ -246,7 +246,7 @@ hudhud --help
 - Async / await (`async fn`, `.then()`, `.await`)
 - Modules (`use`, `import`, `export`)
 
-All keywords have native equivalents in 23 languages — see the Variables & Logic example above.
+All keywords have native equivalents in 24 languages — see the Variables & Logic example above.
 
 ### AI Orchestration Constructs
 

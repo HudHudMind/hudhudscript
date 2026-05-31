@@ -1,0 +1,25 @@
+// Agent Sample — AI Agent with Provider
+// v0.5.60 — requires DEEPSEEK_API_KEY env var
+
+provider DeepSeek {
+    type: "deepseek"
+    model: "deepseek-chat"
+    api_key: env("DEEPSEEK_API_KEY")
+}
+
+agent Translator {
+    role: "translator"
+    intent: "Translate text between languages"
+    provider: DeepSeek
+}
+
+agent Analyst {
+    role: "analyst"
+    intent: "Analyze data and provide insights"
+    provider: DeepSeek
+}
+
+print("Agent Translator role: ")
+print(Translator["role"])
+print("Agent Analyst intent: ")
+print(Analyst["intent"])

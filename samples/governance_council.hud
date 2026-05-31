@@ -1,0 +1,31 @@
+// Governance Sample — Council + Swarm
+// v0.5.57
+
+role Mayor    { can propose, can veto }
+role Treasurer { can budget, can audit }
+
+subject CityMayor has Mayor {
+    state term: 1, state proposals: 0
+}
+subject CityTreasurer has Treasurer {
+    state budget: 1000000, state spent: 0
+}
+
+council CityCouncil {
+    quorum: 2
+    members: ["CityMayor", "CityTreasurer"]
+    rules: ["majority-vote"]
+}
+
+swarm AuditTeam {
+    agents: ["CityMayor", "CityTreasurer"]
+    strategy: "parallel"
+}
+
+spawn CityMayor
+spawn CityTreasurer
+
+print("Council quorum:")
+print(CityCouncil["quorum"])
+print("Swarm strategy:")
+print(AuditTeam["strategy"])

@@ -1,0 +1,22 @@
+// OOP Sample — Classes, Inheritance, Abstract
+// v0.5.57
+
+abstract class Shape {
+    public fn area() { return 0 }
+}
+
+class Circle extends Shape {
+    public fn area() { return 3.14 * self.radius * self.radius }
+}
+
+class Square extends Shape {
+    public fn area() { return self.side * self.side }
+}
+
+let c = new Circle()
+c.radius = 5
+print("Circle area: " + c.area())
+
+let s = new Square()
+s.side = 4
+print("Square area: " + s.area())

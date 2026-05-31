@@ -1,0 +1,77 @@
+// ═══════════════════════════════════════════════════════════
+// SOP Arena Combat — Harrison & Ossher Subject-Oriented Game
+// v0.5.23 — of, despawn, view auto-bind, effects, roles
+// ═══════════════════════════════════════════════════════════
+
+role Fighter  { can attack, can defend }
+role Caster   { can cast, can channel }
+
+subject Knight has Fighter {
+    state health: 120, state power: 25, state name: "Knight"
+}
+subject Mage has Caster {
+    state health: 70, state power: 40, state mana: 100, state name: "Mage"
+}
+
+// View subjects — each must have unique name
+subject KnightLog of Knight {
+    state hits: 0, state damage_dealt: 0
+    on mark_hit(self, dmg) {
+        self.hits = self.hits + 1
+        self.damage_dealt = self.damage_dealt + dmg
+    }
+}
+subject MageLog of Mage {
+    state hits: 0, state damage_dealt: 0
+    on mark_hit(self, dmg) {
+        self.hits = self.hits + 1
+        self.damage_dealt = self.damage_dealt + dmg
+    }
+}
+
+effect on PhysicalDamage(target, raw) { target.health = target.health - raw }
+effect on MagicalDamage(target, raw) { target.health = target.health - raw }
+
+on attack(self, target) {
+    let dmg = self.power
+    PhysicalDamage(target, dmg)
+    self.mark_hit(dmg)
+}
+on magic_bolt(self, target) {
+    let cost = 15
+    self.mana = self.mana - cost
+    let dmg = self.power + 10
+    MagicalDamage(target, dmg)
+    self.mark_hit(dmg)
+}
+
+on rest(self) {
+    self.health = self.health + 6
+}
+
+// ═══════════════ GAME ═══════════════
+let knight = spawn Knight
+let mage   = spawn Mage
+
+print("=== ARENA COMBAT ===")
+
+print("Knight (" + knight.health + " HP) -> Mage (" + mage.health + " HP)")
+knight.attack(mage)
+print("Mage: " + mage.health + " HP | Knight: " + knight.hits + " hits")
+
+print("Mage (" + mage.health + " HP) -> Knight (" + knight.health + " HP)")
+mage.magic_bolt(knight)
+print("Knight: " + knight.health + " HP | Mage: " + mage.hits + " hits")
+
+knight.attack(mage)
+mage.magic_bolt(knight)
+mage.rest()
+knight.attack(mage)
+
+print("")
+print("=== FINAL ===")
+print("Knight: " + knight.health + " HP, " + knight.hits + " hits, " + knight.damage_dealt + " dmg")
+print("Mage:   " + mage.health + " HP, " + mage.hits + " hits, " + mage.damage_dealt + " dmg")
+
+let margin = knight.health - mage.health
+print("Margin: " + margin + " — KNIGHT WINS!")

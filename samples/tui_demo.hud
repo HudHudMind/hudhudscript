@@ -1,0 +1,19 @@
+// TUI Demo — Command Buffer Pattern (TUI.md fix)
+// Widget'lar önce queue'lanır, tui.draw() hepsini tek frame'de çizer.
+
+import tui
+
+tui.init()
+
+// Widget'ları queue'la
+tui.block({ title: "HudHudScript TUI", borders: "all", area: { x: 0, y: 0, width: 40, height: 3 } })
+tui.paragraph({ text: "Counter: 42", style: { fg: "yellow", bold: 1 }, area: { x: 1, y: 1, width: 38, height: 1 } })
+tui.gauge({ value: 75, max: 100, label: "Progress", style: { fg: "green" }, area: { x: 0, y: 4, width: 40, height: 1 } })
+
+// TEK frame'de hepsini çiz
+tui.draw()
+
+// 2 saniye bekle (veya event loop ile q bekle)
+let event = tui.poll_event(2000)
+tui.restore()
+print("TUI demo complete")

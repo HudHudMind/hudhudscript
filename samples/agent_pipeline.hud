@@ -1,0 +1,32 @@
+// Agent Pipeline Sample — Multi-Agent Orchestration
+// v0.5.60
+
+agent Translator {
+    role: "translator"
+    intent: "Translate text between languages"
+}
+
+agent Coder {
+    role: "code_reviewer"
+    intent: "Review and write code"
+}
+
+agent Analyst {
+    role: "analyst"
+    intent: "Analyze data and provide insights"
+}
+
+swarm Team {
+    agents: ["Translator", "Coder", "Analyst"]
+    strategy: "parallel"
+}
+
+council Board {
+    members: ["Translator", "Analyst"]
+    rules: ["majority"]
+}
+
+print("Team agents: ")
+print(Team["agents"])
+print("Board members: ")
+print(Board["members"])

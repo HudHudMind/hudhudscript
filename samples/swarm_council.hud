@@ -1,0 +1,39 @@
+// Swarm + Council + Agent — Governance Demo
+// v0.5.57
+
+agent Researcher {
+    role: "researcher"
+    intent: "Research topics thoroughly"
+}
+
+agent Writer {
+    role: "writer"
+    intent: "Write clear summaries"
+}
+
+agent Reviewer {
+    role: "reviewer"
+    intent: "Review content for accuracy"
+}
+
+swarm ResearchTeam {
+    agents: ["Researcher", "Writer"]
+    strategy: "parallel"
+}
+
+council EditorialBoard {
+    members: ["Researcher", "Reviewer"]
+    rules: ["majority"]
+}
+
+community Organization {
+    councils: ["EditorialBoard"]
+    members: ["Researcher", "Writer", "Reviewer"]
+}
+
+print("Swarm:")
+print(ResearchTeam["agents"])
+print("Council:")
+print(EditorialBoard["members"])
+print("Community:")
+print(Organization["councils"])

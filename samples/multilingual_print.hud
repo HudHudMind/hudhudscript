@@ -1,0 +1,69 @@
+// HudHudScript — print() in every supported language
+// Each language uses its NATIVE print function name (Kural 8 uyumlu)
+
+// English
+print("Hello, World!")
+
+// Turkce
+yazdır("Merhaba, Dunya!")
+yaz("Selam!")
+
+// العربية (Arabic)
+اطبع("مرحبا، عالم!")
+
+// 日本語 (Japanese)
+表示("こんにちは、世界！")
+書く("テスト")
+
+// 한국어 (Korean)
+출력("안녕, 세계!")
+
+// Deutsch (German)
+drucken("Hallo, Welt!")
+
+// Francais (French)
+imprimer("Bonjour, le monde!")
+
+// Espanol (Spanish)
+imprimir("Hola, Mundo!")
+
+// Italiano (Italian)
+stampare("Ciao, mondo!")
+
+// Polski (Polish)
+drukuj("Witaj, swiecie!")
+
+// Bahasa Indonesia
+cetak("Halo, Dunia!")
+
+// Русский (Russian)
+печать("Привет, мир!")
+
+// Ελληνικα (Greek)
+εκτύπωση("Γεια σου, κοσμε!")
+
+// فارسی (Persian)
+چاپ("سلام، دنیا!")
+
+// हिन्दी (Hindi)
+छाप("नमस्ते, दुनिया!")
+प्रिंट("हैलो!")
+
+// বাংলা (Bengali)
+প্রিন্ট("নমস্কার, পৃথিবী!")
+ছাপ("হ্যালো!")
+
+// ไทย (Thai)
+พิมพ์("สวัสดี, โลก!")
+
+// 中文 (Chinese)
+打印("你好，世界！")
+
+// Srpski/Hrvatski/Bosanski
+ispiši("Zdravo, svete!")
+
+// Kurdî (Kurdish)
+çap_bike("Silav, cîhan!")
+
+// Tiếng Việt (Vietnamese)
+in_ra("Xin chao, thế giới!")

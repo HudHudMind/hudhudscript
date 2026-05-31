@@ -1,0 +1,29 @@
+// HudHudScript — Döngüler: for, while, break
+print("=== for loop ===");
+for (let i = 0; i < 5; i = i + 1) {
+    print("  i = " + i);
+}
+
+print("");
+print("=== while loop ===");
+let j = 0;
+while (j < 5) {
+    print("  j = " + j);
+    j = j + 1;
+}
+
+print("");
+print("=== break ===");
+for (let k = 0; k < 10; k = k + 1) {
+    if (k == 3) { break; }
+    print("  k = " + k);
+}
+
+print("");
+print("=== nested loops ===");
+for (let y = 0; y < 3; y = y + 1) {
+    for (let x = 0; x < 3; x = x + 1) {
+        if (x == y) { break; }
+        print("  (" + y + "," + x + ")");
+    }
+}
