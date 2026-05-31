@@ -306,7 +306,6 @@ hudhudscript/
 ├── docs/                   # Language reference, book, paper
 ├── editors/                # VS Code, Vim, Emacs plugins
 ├── installer/              # Platform-specific installers
-├── benches/                # Performance benchmarks
 └── hudhudscript-tests/    # Cross-crate integration tests
 ```
 
@@ -351,27 +350,6 @@ hudhud run examples/01-basics/hello_world.hud
 cd crates/hudhudscript-python
 maturin develop --release
 python3 -c "import hudhudscript; print(hudhudscript.version())"
-```
-
-### Run Tests
-
-```bash
-# All tests
-cargo test --workspace
-
-# VM parity tests
-cargo test --test vm_parity_tests
-
-# Single crate
-cargo test -p hudhudscript-vm
-```
-
-### Run Benchmarks
-
-```bash
-cargo bench
-# Or:
-./bench_release.sh
 ```
 
 ---
