@@ -1,0 +1,13 @@
+[package]
+name = "hudhud-download"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+hudhudscript-bytecode = { path = "../hudhudscript-bytecode" }
+hudhudscript-errors = { path = "../hudhudscript-errors" }
+reqwest = { workspace = true, features = ["blocking"] }
+serde_json = { workspace = true }

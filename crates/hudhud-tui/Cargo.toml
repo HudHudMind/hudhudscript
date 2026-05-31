@@ -1,0 +1,11 @@
+[package]
+name = "hudhud-tui"
+version = "0.1.0"
+edition = "2021"
+description = "HudHudScript terminal UI builtins — crossterm + ratatui wrapper"
+
+[dependencies]
+crossterm = "0.27"
+ratatui = "0.26"
+hudhudscript-bytecode = { path = "../hudhudscript-bytecode" }
+hudhudscript-errors = { path = "../hudhudscript-errors" }

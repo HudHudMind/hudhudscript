@@ -1,0 +1,20 @@
+[package]
+name = "hudhudscript-errors"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Shared error types and diagnostics for HudHudScript"
+
+[dependencies]
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[[bin]]
+name = "extract_errors"
+path = "src/bin/extract_errors.rs"
+
+[dev-dependencies]
+serde_json.workspace = true

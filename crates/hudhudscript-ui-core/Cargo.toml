@@ -1,0 +1,13 @@
+[package]
+name = "hudhudscript-ui-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "HudHudScript UI Core — platform-agnostic widget tree, events, and protocol"
+
+[dependencies]
+hudhudscript-errors = { path = "../hudhudscript-errors" }
+serde = { workspace = true }
+serde_json = { workspace = true }

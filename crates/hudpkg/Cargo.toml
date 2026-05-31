@@ -1,0 +1,14 @@
+[package]
+name = "hudpkg"
+version.workspace = true
+edition.workspace = true
+description = "HudHud package manager"
+
+[[bin]]
+name = "hudpkg"
+path = "src/main.rs"
+
+[dependencies]
+serde = { workspace = true }
+toml = { workspace = true }
+semver = { workspace = true }

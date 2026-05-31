@@ -1,0 +1,25 @@
+[package]
+name = "hudhudscript-cache"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+hudhudscript-errors = { path = "../hudhudscript-errors" }
+hudhudscript-governance = { path = "../hudhudscript-governance" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+chrono.workspace = true
+sha2.workspace = true
+hex.workspace = true
+# hashlink 0.10+: intrusive doubly-linked hash structures (LinkedHashMap /
+# LinkedHashSet) for O(1) LRU touch.  Audit v3 Finding 8.1 replaces the
+# previous VecDeque + iter().position() O(n) pattern with a DLL-backed set.
+hashlink = { version = "0.10", features = ["serde_impl"] }
+
+[dev-dependencies]
+proptest.workspace = true
+chrono.workspace = true

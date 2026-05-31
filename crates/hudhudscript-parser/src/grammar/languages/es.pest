@@ -1,0 +1,154 @@
+// ============================================================================
+// SPANISH KEYWORDS (Español)
+// ============================================================================
+
+// Module system
+use_kw_es = _{ "usar" }
+as_kw_es = _{ "como" }
+import_kw_es = _{ "importar" }
+export_kw_es = _{ "exportar" }
+from_kw_es = _{ "desde" }
+
+// Agent system
+agent_kw_es = _{ "agente" }
+tool_kw_es = _{ "herramienta" }
+resource_kw_es = _{ "recurso" }
+mcp_kw_es = _{ "mcp" }
+server_kw_es = _{ "servidor" }
+config_kw_es = _{ "configuración" }
+provider_kw_es = _{ "proveedor" }
+model_kw_es = _{ "modelo" }
+call_kw_es = _{ "llamar" }
+
+
+// Classes and OOP
+class_kw_es = _{ "clase" | "class" }
+extends_kw_es = _{ "extends" | "<-" }
+new_kw_es = _{ "nuevo" | "new" }
+this_kw_es = _{ "this" }
+super_kw_es = _{ "súper" | "super" }
+self_kw_es = _{ "propio" | "self" }
+public_kw_es = _{ "público" | "public" }
+private_kw_es = _{ "privado" | "private" }
+protected_kw_es = _{ "protected" }
+static_kw_es = _{ "static" }
+constructor_kw_es = _{ "constructor" }
+// Control flow
+if_kw_es = _{ "si" }
+else_if_kw_es = _{ "sino si" }
+else_kw_es = _{ "sino" }
+while_kw_es = _{ "mientras" }
+for_kw_es = _{ "para" }
+return_kw_es = _{ "retornar" }
+break_kw_es = _{ "romper" }
+continue_kw_es = _{ "continuar" }
+switch_kw_es = _{ "cambiar" }
+case_kw_es = _{ "caso" }
+default_kw_es = _{ "predeterminado" }
+
+// Functions
+function_kw_es = _{ "función" | "fn" }
+
+// Async
+async_kw_es = _{ "asíncrono" }
+await_kw_es = _{ "esperar" }
+promise_kw_es = _{ "promesa" }
+future_kw_es = _{ "futuro" }
+
+// Error handling
+try_kw_es = _{ "intentar" }
+catch_kw_es = _{ "capturar" }
+finally_kw_es = _{ "finalmente" }
+throw_kw_es = _{ "lanzar" }
+
+// Variables
+var_kw_es = _{ "variable" }
+let_kw_es = _{ "sea" | "variable" }
+const_kw_es = _{ "constante" }
+set_kw_es = _{ "valor" }
+
+// Data
+data_kw_es = _{ "datos" }
+
+// State
+state_kw_es = _{ "estado" }
+statemachine_kw_es = _{ "máquina_de_estados" }
+
+// Entity
+entity_kw_es = _{ "entidad" }
+agentstate_kw_es = _{ "estado_agente" }
+
+// Intent & Entity
+intent_kw_es = _{ "intención" }
+want_kw_es = _{ "querer" }
+priority_kw_es = _{ "prioridad" }
+action_kw_es = _{ "en" }
+transform_kw_es = _{ "transformar" }
+
+// Events
+event_kw_es = _{ "evento" }
+on_kw_es = _{ "en" }
+trigger_kw_es = _{ "disparar" }
+when_kw_es = _{ "cuando" }
+
+// Permissions
+allow_kw_es = _{ "permitir" }
+deny_kw_es = _{ "denegar" }
+
+// Governance
+constitution_kw_es = _{ "en" }
+law_kw_es = _{ "ley" }
+council_kw_es = _{ "consejo" }
+rule_kw_es = _{ "regla" }
+swarm_kw_es = _{ "enjambre" }
+community_kw_es = _{ "comunidad" }
+enforcement_kw_es = _{ "aplicación" }
+mandatory_kw_es = _{ "obligatorio" }
+advisory_kw_es = _{ "consultivo" }
+optional_kw_es = _{ "opcional" }
+
+// Roles & Strategy
+role_kw_es = _{ "rol" }
+member_kw_es = _{ "miembro" }
+protocol_kw_es = _{ "protocolo" }
+competitive_kw_es = _{ "competitivo" }
+collaborative_kw_es = _{ "colaborativo" }
+prosecutor_kw_es = _{ "fiscal" }
+judge_kw_es = _{ "juez" }
+executor_kw_es = _{ "ejecutor" }
+
+// Culture
+culture_kw_es = _{ "cultura" }
+values_kw_es = _{ "valores" }
+norms_kw_es = _{ "normas" }
+communication_style_kw_es = _{ "estilo_comunicación" }
+formal_kw_es = _{ "formal" }
+informal_kw_es = _{ "informal" }
+technical_kw_es = _{ "técnico" }
+
+// Flow & Orchestration
+flow_kw_es = _{ "flujo" }
+dataflow_kw_es = _{ "flujo_datos" }
+layer_kw_es = _{ "capa" }
+network_kw_es = _{ "red" }
+depends_on_kw_es = _{ "depende_de" }
+broadcast_kw_es = _{ "difundir" }
+merge_kw_es = _{ "fusionar" }
+parallel_kw_es = _{ "paralelo" }
+sequential_kw_es = _{ "secuencial" }
+execute_kw_es = _{ "ejecutar" }
+
+// Music Data Structures
+note_kw_es = _{ "nota" }
+chord_kw_es = _{ "acorde" }
+melody_kw_es = _{ "melodía" }
+harmony_kw_es = _{ "armonía" }
+rhythm_kw_es = _{ "ritmo" }
+tempo_kw_es = _{ "tempo" }
+scale_kw_es = _{ "escala" }
+
+// Booleans
+boolean_es = @{ "verdadero" | "falso" }
+
+// Null
+null_es = @{ "nulo" }

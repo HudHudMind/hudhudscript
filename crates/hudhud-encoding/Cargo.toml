@@ -1,0 +1,13 @@
+[package]
+name = "hudhud-encoding"
+version.workspace = true
+edition.workspace = true
+description = "HudHud encoding primitives (no builtins dependency)"
+
+[dependencies]
+base64 = "0.22"
+hex = "0.4"
+urlencoding = "2"
+uuid = { version = "1", features = ["v4", "v7"] }
+hudhudscript-bytecode = { path = "../hudhudscript-bytecode" }
+hudhudscript-errors = { path = "../hudhudscript-errors" }

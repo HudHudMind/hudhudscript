@@ -1,0 +1,9 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 494c42217b15335280df2f62dec5c2d14e4d33ebe66f64499ab9eedd43089120 # shrinks to law = Law { id: "cons1.law1", constitution_id: "cons.2", name: "aaaa ", description: " AA aAa  a", enforcement_level: Mandatory, conditions: [] }
+cc f34a18a2dbaace4fe82b32c2fc4b5ad8f6b97d0b44b4a6a429b10a655f81fe97 # shrinks to constitution_ids = ["cons.720", "cons.720"]
+cc dd276d34cfd834047f7c331315d321c6d5ac993a279489f8555b5b047be6911e # shrinks to constitution_ids = ["cons.159", "cons.159"]

@@ -1,0 +1,17 @@
+[package]
+name = "hudhudscript-validation"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+hudhudscript-ast = { path = "../hudhudscript-ast" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+regex = "1.10"
+
+[dev-dependencies]
+proptest.workspace = true

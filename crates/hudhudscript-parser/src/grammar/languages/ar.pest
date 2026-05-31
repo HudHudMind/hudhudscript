@@ -1,0 +1,163 @@
+// ============================================================================
+// ARABIC KEYWORDS (RTL)
+// ============================================================================
+
+// Module system
+use_kw_ar = _{ "استخدم" }
+as_kw_ar = _{ "كـ" }
+import_kw_ar = _{ "استورد" }
+export_kw_ar = _{ "صدّر" }
+from_kw_ar = _{ "من" }
+
+// Agent system
+agent_kw_ar = _{ "وكيل" }
+tool_kw_ar = _{ "أداة" }
+resource_kw_ar = _{ "مورد" }
+server_kw_ar = _{ "خادم" }
+config_kw_ar = _{ "إعداد" }
+provider_kw_ar = _{ "مزود" }
+
+
+// Classes and OOP
+class_kw_ar = _{ "صنف" | "class" }
+extends_kw_ar = _{ "extends" | "<-" }
+new_kw_ar = _{ "جديد" | "new" }
+this_kw_ar = _{ "this" }
+super_kw_ar = _{ "فوق" | "super" }
+self_kw_ar = _{ "ذاتي" | "self" }
+public_kw_ar = _{ "عام" | "public" }
+private_kw_ar = _{ "خاص" | "private" }
+protected_kw_ar = _{ "protected" }
+static_kw_ar = _{ "static" }
+constructor_kw_ar = _{ "constructor" }
+// Control flow
+if_kw_ar = _{ "إذا" }
+else_if_kw_ar = _{ "وإلا إذا" }
+else_kw_ar = _{ "وإلا" }
+while_kw_ar = _{ "بينما" }
+for_kw_ar = _{ "لكل" }
+return_kw_ar = _{ "ارجع" }
+break_kw_ar = _{ "اكسر" }
+continue_kw_ar = _{ "استمر" }
+switch_kw_ar = _{ "اختر" | "تبديل" }
+case_kw_ar = _{ "حالة" }
+default_kw_ar = _{ "افتراضي" }
+
+// Functions
+function_kw_ar = _{ "دالة" | "د" }
+
+// Async
+async_kw_ar = _{ "غير_متزامن" }
+await_kw_ar = _{ "انتظر" }
+
+// Error handling
+try_kw_ar = _{ "حاول" }
+catch_kw_ar = _{ "امسك" | "اصطد" }
+finally_kw_ar = _{ "أخيرا" }
+throw_kw_ar = _{ "ارمي" }
+
+// Variables
+var_kw_ar = _{ "متغير" }
+let_kw_ar = _{ "متغير" }
+const_kw_ar = _{ "ثابت" }
+set_kw_ar = _{ "قيمة" }
+
+// Data
+data_kw_ar = _{ "بيانات" }
+
+// State
+state_kw_ar = _{ "حالة" }
+statemachine_kw_ar = _{ "آلة_الحالة" }
+
+// Entity
+entity_kw_ar = _{ "كيان" }
+agentstate_kw_ar = _{ "حالة_وكيل" }
+
+// Events
+event_kw_ar = _{ "حدث" }
+on_kw_ar = _{ "عند" }
+trigger_kw_ar = _{ "أطلق" }
+
+// Governance
+constitution_kw_ar = _{ "دستور" }
+law_kw_ar = _{ "قانون" }
+council_kw_ar = _{ "مجلس" }
+rule_kw_ar = _{ "قاعدة" }
+swarm_kw_ar = _{ "سرب" }
+community_kw_ar = _{ "مجتمع" }
+enforcement_kw_ar = _{ "تنفيذ" }
+mandatory_kw_ar = _{ "إلزامي" }
+advisory_kw_ar = _{ "استشاري" }
+optional_kw_ar = _{ "اختياري" }
+
+// Roles & Strategy
+role_kw_ar = _{ "دور" }
+member_kw_ar = _{ "عضو" }
+protocol_kw_ar = _{ "بروتوكول" }
+competitive_kw_ar = _{ "تنافسي" }
+collaborative_kw_ar = _{ "تعاوني" }
+
+// Orchestration
+parallel_kw_ar = _{ "متوازي" }
+sequential_kw_ar = _{ "تسلسلي" }
+execute_kw_ar = _{ "نفذ" }
+
+// Booleans
+boolean_ar = @{ "صحيح" | "خطأ" }
+
+// Agent System (additional)
+mcp_kw_ar = _{ "mcp" }
+model_kw_ar = _{ "نموذج" }
+call_kw_ar = _{ "استدعاء" }
+
+// Async (additional)
+promise_kw_ar = _{ "وعد" }
+future_kw_ar = _{ "مستقبل" }
+
+// Intent & Entity
+intent_kw_ar = _{ "نية" }
+want_kw_ar = _{ "يريد" }
+priority_kw_ar = _{ "أولوية" }
+action_kw_ar = _{ "إجراء" }
+transform_kw_ar = _{ "تحويل" }
+
+// Events (additional)
+when_kw_ar = _{ "متى" }
+
+// Permissions
+allow_kw_ar = _{ "اسمح" }
+deny_kw_ar = _{ "امنع" }
+
+// Governance (additional)
+
+// Roles (additional)
+prosecutor_kw_ar = _{ "مدعي" }
+judge_kw_ar = _{ "قاضي" }
+executor_kw_ar = _{ "منفذ" }
+
+// Culture
+culture_kw_ar = _{ "ثقافة" }
+values_kw_ar = _{ "قيم" }
+norms_kw_ar = _{ "معايير" }
+communication_style_kw_ar = _{ "أسلوب_التواصل" }
+formal_kw_ar = _{ "رسمي" }
+informal_kw_ar = _{ "غير_رسمي" }
+technical_kw_ar = _{ "تقني" }
+
+// Flow & Orchestration (additional)
+flow_kw_ar = _{ "تدفق" }
+dataflow_kw_ar = _{ "تدفق_البيانات" }
+layer_kw_ar = _{ "طبقة" }
+network_kw_ar = _{ "شبكة" }
+depends_on_kw_ar = _{ "يعتمد_على" }
+broadcast_kw_ar = _{ "بث" }
+merge_kw_ar = _{ "دمج" }
+
+// Music Data Structures
+note_kw_ar = _{ "نوتة" }
+chord_kw_ar = _{ "وتر" }
+melody_kw_ar = _{ "لحن" }
+harmony_kw_ar = _{ "انسجام" }
+rhythm_kw_ar = _{ "إيقاع" }
+tempo_kw_ar = _{ "سرعة" }
+scale_kw_ar = _{ "سلم" }

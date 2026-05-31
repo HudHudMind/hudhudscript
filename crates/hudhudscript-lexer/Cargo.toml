@@ -1,0 +1,17 @@
+[package]
+name = "hudhudscript-lexer"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+thiserror.workspace = true
+rustc-hash = { workspace = true }
+unicode-ident = "1"
+hudhudscript-ast = { path = "../hudhudscript-ast" }
+hudhudscript-errors = { path = "../hudhudscript-errors" }
+
+[dev-dependencies]
+proptest.workspace = true

@@ -1,0 +1,12 @@
+[package]
+name = "hudhud-log"
+version = "0.1.0"
+edition = "2021"
+description = "HudHudScript logging builtins — tracing wrapper"
+
+[dependencies]
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "fmt"] }
+tracing-appender = "0.2"
+hudhudscript-bytecode = { path = "../hudhudscript-bytecode" }
+hudhudscript-errors = { path = "../hudhudscript-errors" }

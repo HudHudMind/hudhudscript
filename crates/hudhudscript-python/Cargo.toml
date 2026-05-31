@@ -1,0 +1,28 @@
+[package]
+name = "hudhudscript-python"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Python bindings for HudHudScript interpreter, compiler, and tools"
+license.workspace = true
+
+[lib]
+name = "hudhudscript"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.24.1", features = ["extension-module", "abi3-py38"] }
+hudhudscript-lexer = { path = "../hudhudscript-lexer" }
+hudhudscript-parser = { path = "../hudhudscript-parser" }
+hudhudscript-compiler = { path = "../hudhudscript-compiler" }
+hudhudscript-vm = { path = "../hudhudscript-vm" }
+hudhud-print = { path = "../hudhud-print" }
+hudhudscript-bytecode = { path = "../hudhudscript-bytecode" }
+
+hudhudscript-ast = { path = "../hudhudscript-ast" }
+hudhudscript-types = { path = "../hudhudscript-types" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[build-dependencies]
+pyo3-build-config = "0.24.1"

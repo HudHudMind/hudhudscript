@@ -1,0 +1,22 @@
+[package]
+name = "hudhudscript-modules"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+hudhudscript-errors = { path = "../hudhudscript-errors" }
+hudhudscript-ast = { path = "../hudhudscript-ast" }
+hudhudscript-parser = { path = "../hudhudscript-parser" }
+tokio = { workspace = true, features = ["full"] }
+thiserror.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+reqwest = { workspace = true, features = ["json"] }
+libc = "0.2"
+
+[dev-dependencies]
+proptest.workspace = true
+tempfile = "3.0"

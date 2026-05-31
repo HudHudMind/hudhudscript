@@ -1,0 +1,55 @@
+[package]
+name = "hudhudscript-shared-builtins"
+version.workspace = true
+edition = "2021"
+
+[dependencies]
+hudhudscript-bytecode = { path = "../hudhudscript-bytecode" }
+hudhudscript-vm = { path = "../hudhudscript-vm" }
+hudhud-crypto = { path = "../hudhud-crypto" }
+hudhud-archive = { path = "../hudhud-archive" }
+hudhud-datetime = { path = "../hudhud-datetime" }
+hudhud-linalg = { path = "../hudhud-linalg" }
+hudhud-stats = { path = "../hudhud-stats" }
+hudhud-eventbus = { path = "../hudhud-eventbus" }
+hudhud-plugin = { path = "../hudhud-plugin" }
+hudhud-pluginconfig = { path = "../hudhud-pluginconfig" }
+hudhud-codesign = { path = "../hudhud-codesign" }
+hudhud-ocr = { path = "../hudhud-ocr" }
+hudhud-workflow = { path = "../hudhud-workflow" }
+hudhud-pdf = { path = "../hudhud-pdf" }
+hudhud-gpu = { path = "../hudhud-gpu" }
+hudhud-translate = { path = "../hudhud-translate" }
+hudhud-media = { path = "../hudhud-media" }
+hudhud-browser = { path = "../hudhud-browser" }
+hudhud-project = { path = "../hudhud-project" }
+hudhud-hardware = { path = "../hudhud-hardware" }
+hudhud-notify = { path = "../hudhud-notify" }
+hudhud-security = { path = "../hudhud-security" }
+hudhud-email = { path = "../hudhud-email" }
+hudhud-download = { path = "../hudhud-download" }
+hudhud-metrics = { path = "../hudhud-metrics" }
+hudhud-docker = { path = "../hudhud-docker" }
+hudhud-firewall = { path = "../hudhud-firewall" }
+hudhud-unix = { path = "../hudhud-unix" }
+hudhud-apt = { path = "../hudhud-apt" }
+hudhud-xdg = { path = "../hudhud-xdg" }
+hudhud-http = { path = "../hudhud-http" }
+hudhud-fs = { path = "../hudhud-fs" }
+hudhud-net = { path = "../hudhud-net" }
+hudhud-url = { path = "../hudhud-url" }
+hudhud-regex = { path = "../hudhud-regex" }
+hudhud-scheduler = { path = "../hudhud-scheduler" }
+hudhud-encoding = { path = "../hudhud-encoding" }
+hudhud-print = { path = "../hudhud-print" }
+hudhud-timer = { path = "../hudhud-timer" }
+hudhud-math = { path = "../hudhud-math" }
+hudhud-os = { path = "../hudhud-os" }
+hudhud-env = { path = "../hudhud-env" }
+hudhud-term = { path = "../hudhud-term" }
+hudhud-serial = { path = "../hudhud-serial" }
+hudhud-exec = { path = "../hudhud-exec" }
+hudhud-sop = { path = "../hudhud-sop" }
+hudhudscript-exception = { path = "../hudhudscript-exception" }
+hudhud-ffi = { path = "../hudhud-ffi" }
+hudhud-typeops = { path = "../hudhud-typeops" }

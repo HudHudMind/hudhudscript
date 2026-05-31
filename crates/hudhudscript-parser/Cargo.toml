@@ -1,0 +1,24 @@
+[package]
+name = "hudhudscript-parser"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+hudhudscript-lexer = { path = "../hudhudscript-lexer" }
+hudhudscript-ast = { path = "../hudhudscript-ast" }
+hudhudscript-errors = { path = "../hudhudscript-errors" }
+hudhudscript-utils = { path = "../hudhudscript-utils" }
+pest.workspace = true
+pest_derive.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+criterion = { workspace = true, features = ["html_reports"] }
+
+[[bench]]
+name = "parser_bench"
+harness = false

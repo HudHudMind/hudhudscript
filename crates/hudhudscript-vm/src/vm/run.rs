@@ -1,0 +1,176 @@
+use crate::vm::machine::CallFrame;
+use crate::vm::prepack::prepack_instructions;
+use crate::vm::ExecutionState;
+use crate::vm::VM;
+
+use hudhudscript_bytecode::error::CompileResult;
+use hudhudscript_bytecode::Bytecode;
+use hudhudscript_bytecode::SymId;
+use hudhudscript_bytecode::Value16;
+impl VM {
+    pub fn execute(&mut self, bytecode: &Bytecode) -> CompileResult<()> {
+        bytecode.validate()?;
+
+        let has_slots = bytecode.main_local_count > 0;
+        if has_slots {
+            let mut built: Vec<(u32, usize, Option<usize>)> =
+                Vec::with_capacity(bytecode.main_local_names.len());
+            for (slot, name) in bytecode.main_local_names.iter().enumerate() {
+                let sym_id = hudhudscript_bytecode::interner::intern(name).0;
+                built.push((sym_id, slot, None));
+            }
+            built.sort_by_key(|(sym_id, _, _)| *sym_id);
+            let built_ptr = Box::into_raw(Box::new(built));
+            self.call_stack_local_syms.push(built_ptr);
+            self.owned_local_sym_refs.push(built_ptr);
+        }
+
+        let packed = {
+            let borrowed = bytecode.packed.borrow();
+            if let Some(ref p) = *borrowed {
+                p.clone()
+            } else {
+                drop(borrowed);
+                let p = prepack_instructions(&bytecode.instructions);
+                *bytecode.packed.borrow_mut() = Some(p.clone());
+                p
+            }
+        };
+
+        self.frame_stack.push(CallFrame {
+            chunk_ptr: std::ptr::null(),
+            packed: &packed as *const Vec<u32>,
+            func_sym: SymId(0),
+            ip: 0,
+            dst: 255,
+            reg_base: 0,
+            reg_size: 0,
+            saved_finally: None,
+            has_captures: false,
+            debugger_pushed: false,
+            call_depth: 0,
+            owned_local_syms: has_slots,
+            class_context: false,
+        });
+
+        let stop_depth = 0;
+        let result = self.run_frame_loop(bytecode, &packed, stop_depth);
+
+        while let Some(frame) = self.frame_stack.pop() {
+            self.teardown_frame(frame);
+        }
+
+        if let Err(e) = result {
+            return Err(e);
+        }
+
+        if has_slots {
+            for (slot, name) in bytecode.main_local_names.iter().enumerate() {
+                let value = self.registers[slot];
+                self.globals.entry(name.clone()).or_insert(value);
+            }
+        }
+
+        if self.iterators.is_empty() {
+            self.iterators.shrink_to_fit();
+        }
+        if self.try_frames.is_empty() {
+            self.try_frames.shrink_to_fit();
+        }
+        Ok(())
+    }
+
+    /// Execute bytecode for at most `max_duration`.
+    pub fn execute_for(
+        &mut self,
+        bytecode: &Bytecode,
+        max_duration: std::time::Duration,
+    ) -> CompileResult<ExecutionState> {
+        bytecode.validate()?;
+        let deadline = std::time::Instant::now() + max_duration;
+        self.execution_deadline = Some(deadline);
+        self.suspended_ip = None;
+
+        let packed = {
+            let borrowed = bytecode.packed.borrow();
+            if let Some(ref p) = *borrowed {
+                p.clone()
+            } else {
+                drop(borrowed);
+                let p = prepack_instructions(&bytecode.instructions);
+                *bytecode.packed.borrow_mut() = Some(p.clone());
+                p
+            }
+        };
+
+        self.frame_stack.push(CallFrame {
+            chunk_ptr: std::ptr::null(),
+            packed: &packed as *const Vec<u32>,
+            func_sym: SymId(0),
+            ip: 0,
+            dst: 255,
+            reg_base: 0,
+            reg_size: 0,
+            saved_finally: None,
+            has_captures: false,
+            debugger_pushed: false,
+            call_depth: 0,
+            owned_local_syms: false,
+            class_context: false,
+        });
+
+        let stop_depth = 0;
+        let result = self.run_frame_loop(bytecode, &packed, stop_depth);
+
+        while let Some(frame) = self.frame_stack.pop() {
+            self.teardown_frame(frame);
+        }
+
+        self.execution_deadline = None;
+
+        match result {
+            Ok(_) => {
+                if self.iterators.is_empty() {
+                    self.iterators.shrink_to_fit();
+                }
+                if self.try_frames.is_empty() {
+                    self.try_frames.shrink_to_fit();
+                }
+                Ok(ExecutionState::Completed)
+            }
+            Err(e)
+                if e.context_get("message")
+                    .is_some_and(|m| m.contains("Execution time limit reached")) =>
+            {
+                Ok(ExecutionState::Suspended {
+                    ip: self.suspended_ip.unwrap_or(0),
+                })
+            }
+            Err(e) => Err(e),
+        }
+    }
+
+    /// Resume execution after a previous `Suspended` result.
+    pub fn execute_resume(
+        &mut self,
+        bytecode: &Bytecode,
+        max_duration: std::time::Duration,
+    ) -> CompileResult<ExecutionState> {
+        self.execute_for(bytecode, max_duration)
+    }
+
+    /// Clean up transient VM state after execution (#532).
+    pub(crate) fn cleanup(&mut self) {
+        // Register-based VM: stack field no longer used for cleanup.
+        self.iterators.clear();
+        self.iterator_generators.clear();
+        self.iterators.shrink_to_fit();
+        self.try_frames.clear();
+        self.try_frames.shrink_to_fit();
+        self.finally_frames.clear();
+        self.finally_frames.shrink_to_fit();
+        self.pending_flow = None;
+        self.class_context_stack.clear();
+        self.class_context_stack.shrink_to_fit();
+    }
+}

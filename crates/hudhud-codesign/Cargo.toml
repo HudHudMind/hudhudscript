@@ -1,0 +1,13 @@
+[package]
+name = "hudhud-codesign"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+hudhudscript-bytecode = { path = "../hudhudscript-bytecode" }
+hudhudscript-errors = { path = "../hudhudscript-errors" }
+sha2 = "0.10"
+hex = "0.4"

@@ -1,0 +1,16 @@
+[package]
+name = "hudhudscript-debug"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+hudhudscript-runtime = { path = "../hudhudscript-runtime" }
+thiserror.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true

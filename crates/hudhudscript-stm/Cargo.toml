@@ -1,0 +1,14 @@
+[package]
+name = "hudhudscript-stm"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+hudhudscript-errors = { path = "../hudhudscript-errors" }
+parking_lot.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]

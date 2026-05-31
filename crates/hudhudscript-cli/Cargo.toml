@@ -1,0 +1,108 @@
+[package]
+name = "hudhudscript-cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "HudHudScript CLI — MCP-based orchestration language with UI, deploy, agent, and governance support"
+
+[[bin]]
+name = "hudhud"
+path = "src/main.rs"
+
+# Note: 'hudhudscript' bin removed in v0.4.47.9 — it pointed to the same
+# main.rs as 'hudhud' which caused build target ambiguity warnings, and the
+# package name 'hudhudscript' conflicted with the Python lib target.
+# Use 'hudhud' as the canonical CLI binary.
+
+[[bin]]
+name = "hudc"
+path = "src/hudc.rs"
+
+[[bin]]
+name = "hudi"
+path = "src/hudi.rs"
+
+[[bin]]
+name = "hudp"
+path = "src/hudp.rs"
+
+[features]
+default = ["governance", "mcp", "rag"]
+governance = ["dep:hudhudscript-governance", "dep:hudhudscript-rules"]
+mcp = ["dep:hudhudscript-mcp"]
+rag = ["dep:hudhudscript-rag"]
+tokenomics = ["dep:hudhudscript-tokenomics"]
+minimal = []
+
+[dependencies]
+hudhudscript-errors = { path = "../hudhudscript-errors" }
+hudhudscript-exception = { path = "../hudhudscript-exception" }
+hudhudscript-parser = { path = "../hudhudscript-parser" }
+hudhudscript-compiler = { path = "../hudhudscript-compiler" }
+hudhudscript-vm = { path = "../hudhudscript-vm" }
+hudhudscript-bytecode = { path = "../hudhudscript-bytecode" }
+hudhudscript-formatter = { path = "../hudhudscript-formatter" }
+hudhudscript-runtime = { path = "../hudhudscript-runtime" }
+hudhudscript-lsp = { path = "../hudhudscript-lsp" }
+hudhudscript-package = { path = "../hudhudscript-package" }
+hudhudscript-linter = { path = "../hudhudscript-linter" }
+hudhudscript-ui-core = { path = "../hudhudscript-ui-core" }
+hudhudscript-ui-bridge = { path = "../hudhudscript-ui-bridge" }
+hudhudscript-deploy-core = { path = "../hudhudscript-deploy-core" }
+hudhudscript-debug = { path = "../hudhudscript-debug" }
+hudhudscript-types = { path = "../hudhudscript-types" }
+
+# Optional domain crates behind feature flags
+hudhudscript-mcp = { path = "../hudhudscript-mcp", optional = true }
+hudhudscript-governance = { path = "../hudhudscript-governance", optional = true }
+hudhudscript-rules = { path = "../hudhudscript-rules", optional = true }
+hudhudscript-rag = { path = "../hudhudscript-rag", optional = true }
+hudhudscript-tokenomics = { path = "../hudhudscript-tokenomics", optional = true }
+
+clap = { version = "4.0", features = ["derive"] }
+rustyline = "13.0"
+dirs = "5.0"
+tokio = { workspace = true, features = ["rt", "rt-multi-thread"] }
+anyhow.workspace = true
+serde = { workspace = true }
+serde_json = { workspace = true }
+colored = "2.0"
+toml = { workspace = true }
+
+# P7.2 — faster allocator for the interpreter/VM hot path.
+# Callgrind profiling of `fib(30)` (task: 2026-04-16) showed ~24% of
+# instruction cycles spent in glibc malloc/free (Arc allocs, ScopeStack
+# HashMap entries, Value::clone). mimalloc drops this to ~11% and reduces
+# wall time ~8.5% on the interpreter and ~15.6% on the VM.  It is a drop-in
+# replacement, thread-safe, and used via `#[global_allocator]` in each
+# binary's main.rs (hudhud, hudi, hudc, hudp).
+mimalloc = { version = "0.1", default-features = false }
+
+[dev-dependencies]
+proptest.workspace = true
+
+# ── cargo-deb metadata (Linux .deb package) ──────────────────────────
+[package.metadata.deb]
+maintainer = "HudHudMind <info@hudhudmind.com>"
+copyright = "2026, HudHudMind"
+license-file = ["../../LICENSE", "0"]
+extended-description = "HudHudScript is an MCP-based orchestration language with built-in UI, deploy, agent, and governance support."
+section = "devel"
+priority = "optional"
+assets = [
+    ["target/release/hudhud", "usr/bin/", "755"],
+    ["target/release/hudc", "usr/bin/", "755"],
+    ["target/release/hudi", "usr/bin/", "755"],
+    ["target/release/hudp", "usr/bin/", "755"],
+]
+
+# ── cargo-generate-rpm metadata (Linux .rpm package) ─────────────────
+[package.metadata.generate-rpm]
+assets = [
+    { source = "target/release/hudhud", dest = "/usr/bin/hudhud", mode = "755" },
+    { source = "target/release/hudc", dest = "/usr/bin/hudc", mode = "755" },
+    { source = "target/release/hudi", dest = "/usr/bin/hudi", mode = "755" },
+    { source = "target/release/hudp", dest = "/usr/bin/hudp", mode = "755" },
+]

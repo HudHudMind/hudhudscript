@@ -1,0 +1,12 @@
+[package]
+name = "hudhud-serial"
+version.workspace = true
+edition.workspace = true
+description = "HudHud serialization primitives (no builtins dependency)"
+
+[dependencies]
+toml = "0.8"
+serde_yaml = "0.9"
+csv = "1"
+hudhudscript-bytecode = { path = "../hudhudscript-bytecode" }
+hudhudscript-errors = { path = "../hudhudscript-errors" }

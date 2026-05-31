@@ -1,0 +1,11 @@
+[package]
+name = "hudhud-os"
+version.workspace = true
+edition.workspace = true
+description = "HudHud OS primitives (no builtins dependency)"
+
+[dependencies]
+libc = "0.2"
+sysinfo = "0.30"
+hudhudscript-bytecode = { path = "../hudhudscript-bytecode" }
+hudhudscript-errors = { path = "../hudhudscript-errors" }

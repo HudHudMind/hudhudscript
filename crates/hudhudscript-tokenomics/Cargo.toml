@@ -1,0 +1,74 @@
+[package]
+name = "hudhudscript-tokenomics"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "ML-powered token budget optimization and predictive analytics for HudHudScript"
+
+[dependencies]
+hudhudscript-errors = { path = "../hudhudscript-errors" }
+# Core dependencies
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+
+# Random number generation (lightweight, always needed for ML stubs)
+rand = "0.8"
+
+# Async utilities
+async-trait = { workspace = true }
+
+# ML/AI dependencies (optional – heavy, only enable when real inference is needed)
+ort = { version = "2.0.0-rc.11", optional = true }   # ONNX Runtime for fast inference
+ndarray = { version = "0.15", optional = true }       # N-dimensional arrays for ML
+linfa = { version = "0.7", optional = true }          # Machine learning framework
+linfa-clustering = { version = "0.7", optional = true } # Clustering algorithms
+linfa-linear = { version = "0.7", optional = true }   # Linear models
+
+# Time series & forecasting (optional)
+prophet = { version = "0.1", optional = true }        # Facebook Prophet
+
+# Database & caching (optional – stubs work without them)
+redis = { version = "0.24", features = ["tokio-comp", "connection-manager"], optional = true }
+sqlx = { version = "0.8.1", features = ["runtime-tokio-native-tls", "postgres", "chrono", "uuid"], optional = true }
+
+# Statistics & math (optional – not yet used by stubs)
+statrs = { version = "0.16", optional = true }
+rand_distr = { version = "0.4", optional = true }
+
+# Async utilities (optional – not yet used by stubs)
+futures = { version = "0.3", optional = true }
+
+# Configuration (optional – not yet used by stubs)
+config = { version = "0.14", optional = true }
+
+[dev-dependencies]
+tokio-test = "0.4"
+proptest = { workspace = true }
+criterion = { workspace = true }
+tracing-subscriber.workspace = true
+toml = { workspace = true }
+
+[features]
+default = []
+
+# Enable Redis-based caching
+redis-cache = ["dep:redis"]
+
+# Enable PostgreSQL/TimescaleDB storage
+postgres-storage = ["dep:sqlx"]
+
+# Enable ML inference via ONNX Runtime and linfa
+ml = ["dep:ort", "dep:ndarray", "dep:linfa", "dep:linfa-clustering", "dep:linfa-linear"]
+
+# Enable Facebook Prophet forecasting
+prophet-forecasting = ["dep:prophet"]
+
+# Enable all optional features
+full = ["redis-cache", "postgres-storage", "ml", "prophet-forecasting"]

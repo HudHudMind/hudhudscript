@@ -1,0 +1,99 @@
+[package]
+name = "hudhudscript-vm"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Virtual machine execution engine for HudHudScript bytecode"
+
+[dependencies]
+hudhudscript-bytecode = { path = "../hudhudscript-bytecode" }
+hudhudscript-ast = { path = "../hudhudscript-ast" }
+hudhudscript-parser = { path = "../hudhudscript-parser" }
+hudhudscript-debug = { path = "../hudhudscript-debug" }
+hudhudscript-sandbox = { path = "../hudhudscript-sandbox" }
+hudhudscript-mcp = { path = "../hudhudscript-mcp" }
+hudhudscript-errors = { path = "../hudhudscript-errors" }
+hudhudscript-localization = { path = "../hudhudscript-localization" }
+hudhudscript-modules = { path = "../hudhudscript-modules" }
+hudhudscript-rag = { path = "../hudhudscript-rag" }
+hex = "0.4"
+sha2 = { workspace = true }
+x25519-dalek = { version = "2.0", features = ["static_secrets"] }
+regex = { version = "1", default-features = false, features = ["std"] }
+reqwest = { workspace = true, features = ["blocking"] }
+hudhud-crypto = { path = "../hudhud-crypto" }
+hudhud-fs = { path = "../hudhud-fs" }
+hudhud-http = { path = "../hudhud-http" }
+hudhud-net = { path = "../hudhud-net" }
+hudhud-exec = { path = "../hudhud-exec" }
+hudhud-serial = { path = "../hudhud-serial" }
+hudhud-env = { path = "../hudhud-env" }
+hudhud-os = { path = "../hudhud-os" }
+hudhud-datetime = { path = "../hudhud-datetime" }
+hudhud-encoding = { path = "../hudhud-encoding" }
+hudhud-linalg = { path = "../hudhud-linalg" }
+hudhud-stats = { path = "../hudhud-stats" }
+hudhud-math = { path = "../hudhud-math" }
+hudhud-url = { path = "../hudhud-url" }
+hudhud-regex = { path = "../hudhud-regex" }
+hudhud-scheduler = { path = "../hudhud-scheduler" }
+hudhud-term = { path = "../hudhud-term" }
+hudhud-download = { path = "../hudhud-download" }
+hudhud-archive = { path = "../hudhud-archive" }
+hudhud-metrics = { path = "../hudhud-metrics" }
+hudhud-log = { path = "../hudhud-log" }
+hudhud-tui = { path = "../hudhud-tui" }
+hudhud-docker = { path = "../hudhud-docker" }
+hudhud-email = { path = "../hudhud-email" }
+hudhud-security = { path = "../hudhud-security" }
+hudhud-notify = { path = "../hudhud-notify" }
+hudhud-firewall = { path = "../hudhud-firewall" }
+hudhud-unix = { path = "../hudhud-unix" }
+hudhud-apt = { path = "../hudhud-apt" }
+hudhud-xdg = { path = "../hudhud-xdg" }
+hudhud-codesign = { path = "../hudhud-codesign" }
+hudhud-timer = { path = "../hudhud-timer" }
+hudhud-project = { path = "../hudhud-project" }
+hudhud-browser = { path = "../hudhud-browser" }
+hudhud-media = { path = "../hudhud-media" }
+hudhud-pdf = { path = "../hudhud-pdf" }
+hudhud-ocr = { path = "../hudhud-ocr" }
+hudhud-translate = { path = "../hudhud-translate" }
+hudhud-gpu = { path = "../hudhud-gpu" }
+hudhud-hardware = { path = "../hudhud-hardware" }
+hudhud-print = { path = "../hudhud-print" }
+hudhud-typeops = { path = "../hudhud-typeops" }
+hudhud-sop = { path = "../hudhud-sop" }
+hudhud-workflow = { path = "../hudhud-workflow" }
+hudhud-pluginconfig = { path = "../hudhud-pluginconfig" }
+hudhud-eventbus = { path = "../hudhud-eventbus" }
+hudhud-plugin = { path = "../hudhud-plugin" }
+hudhudscript-governance = { path = "../hudhudscript-governance" }
+hudhudscript-runtime = { path = "../hudhudscript-runtime" }
+hudhudscript-tools = { path = "../hudhudscript-tools" }
+hudhudscript-async = { path = "../hudhudscript-async" }
+hudhudscript-stm = { path = "../hudhudscript-stm" }
+tokio = { workspace = true }
+futures = "0.3"
+
+serde = { workspace = true, features = ["rc"] }
+serde_json = { workspace = true }
+# Bytecode cache decode goes through `Bytecode::from_bytes` (postcard) —
+# no direct bincode dep needed here (PERF-49).
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+parking_lot = { workspace = true }
+rustc-hash = { workspace = true }
+libc = "0.2"
+
+[dev-dependencies]
+criterion = { workspace = true }
+hudhudscript-compiler = { path = "../hudhudscript-compiler" }
+
+[[bench]]
+name = "value_repr_microbench"
+harness = false
+

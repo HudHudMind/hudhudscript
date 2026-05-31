@@ -1,0 +1,191 @@
+[workspace]
+resolver = "2"
+exclude = ["hudhudide/standalone/src-tauri"]
+members = [
+    "crates/hudhudscript-lexer",
+    "crates/hudhudscript-parser",
+    "crates/hudhudscript-ast",
+    "crates/hudhudscript-types",
+    "crates/hudhudscript-compiler",
+    "crates/hudhudscript-bytecode",
+    "crates/hudhudscript-vm",
+    "crates/hudhudscript-formatter",
+    "crates/hudhudscript-markdown",
+    "crates/hudhudscript-runtime",
+    "crates/hudhudscript-orchestration",
+    "crates/hudhudscript-mcp",
+    "crates/hudhudscript-tools",
+    "crates/hudhudscript-resources",
+    "crates/hudhudscript-cli",
+    "crates/hudhudscript-lsp",
+    "crates/hudhudscript-debug",
+    "crates/hudhudscript-test",
+    "crates/hudhudscript-localization",
+    "crates/hudhudscript-vcs",
+    "crates/hudhudscript-async",
+    "crates/hudhudscript-stm",
+    "crates/hudhudscript-modules",
+    "crates/hudhudscript-sandbox",
+    "crates/hudhudscript-validation",
+    "crates/hudhudscript-ids",
+    "crates/hudhudscript-governance",
+    "crates/hudhudscript-cache",
+    "crates/hudhudscript-rules",
+    "crates/hudhudscript-python",
+    "crates/hudhudscript-tokenomics",
+    "crates/hudhudscript-package",
+    "crates/hudhudscript-rag",
+    "crates/hudhudscript-native",
+    "crates/hudhudscript-linter",
+    "crates/hudhudscript-errors",
+    "crates/hudhudscript-exception",
+    "crates/hudhudscript-ui-core",
+    "crates/hudhudscript-ui-bridge",
+    "crates/hudhudscript-deploy-core",
+    "crates/hudconv",
+    "crates/hudhudscript-utils",
+    "crates/hudhudscript-tools-schema",
+    "crates/hudhudscript-tools-io",
+    "crates/hudhudscript-tools-net",
+    "crates/hudhudscript-tools-vcs",
+    "crates/hudhudscript-tools-ai",
+    "crates/hudhudscript-tools-ops",
+    "crates/hudhudscript-cybernetics",
+    "crates/hudhudscript-text-stream",
+    "crates/hudhudscript-shared-builtins",
+    "crates/hudhud-http",
+    "crates/hudhud-fs",
+    "crates/hudhud-net",
+    "crates/hudhud-crypto",
+    "crates/hudhud-exec",
+    "crates/hudhud-encoding",
+    "crates/hudhud-serial",
+    "crates/hudpkg",
+    "crates/hudhud-ffi",
+    "hudhudscript-tests", "crates/hudhud-env", "crates/hudhud-os", "crates/hudhud-datetime", "crates/hudhud-linalg", "crates/hudhud-stats", "crates/hudhud-math", "crates/hudhud-regex", "crates/hudhud-scheduler", "crates/hudhud-url",
+    "crates/hudhud-term",
+    "crates/hudhud-download",
+    "crates/hudhud-archive",
+    "crates/hudhud-metrics",
+    "crates/hudhud-docker",
+    "crates/hudhud-email",
+    "crates/hudhud-security",
+    "crates/hudhud-notify",
+    "crates/hudhud-firewall",
+    "crates/hudhud-unix",
+    "crates/hudhud-apt",
+    "crates/hudhud-xdg",
+    "crates/hudhud-codesign",
+    "crates/hudhud-timer",
+    "crates/hudhud-project",
+    "crates/hudhud-browser",
+    "crates/hudhud-media",
+    "crates/hudhud-pdf",
+    "crates/hudhud-ocr",
+    "crates/hudhud-translate",
+    "crates/hudhud-gpu",
+    "crates/hudhud-hardware",
+    "crates/hudhud-print",
+    "crates/hudhud-typeops",
+    "crates/hudhud-sop",
+    "crates/hudhud-workflow",
+    "crates/hudhud-pluginconfig",
+    "crates/hudhud-eventbus",
+    "crates/hudhud-plugin",
+    "crates/hudhud-log",
+    "crates/hudhud-tui",
+]
+
+[workspace.package]
+version = "0.6.0"
+edition = "2021"
+authors = ["Onur GÜZEL"]
+license = "MIT"
+repository = "https://github.com/HudHudMind/hudhudscript"
+
+[workspace.dependencies]
+# Common dependencies
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+anyhow = "1.0"
+thiserror = "1.0"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+uuid = { version = "1.0", features = ["v4", "serde"] }
+regex = "1.10"
+chrono = { version = "0.4", features = ["serde"] }
+toml = "0.8"
+
+# HTTP client — single version for all crates (issue #158).
+# Individual crates may add extra features (e.g. "blocking", "stream") via
+# `reqwest = { workspace = true, features = ["blocking"] }`.
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "blocking"] }
+
+# Parser
+pest = "2.7"
+pest_derive = "2.7"
+
+# Native FFI
+libloading = "0.8"
+
+# Testing
+proptest = "1.0"
+async-trait = "0.1"
+
+# Benchmarking
+criterion = "0.5"
+
+# Faster synchronization primitives
+parking_lot = "0.12"
+
+# Faster hashing (interpreter hot paths)
+rustc-hash = "2.1"
+
+# Serialization formats (v0.4.38 — Batch 1)
+serde_yaml = "0.9"
+csv = "1.3"
+base64 = "0.22"
+urlencoding = "2.1"
+
+# Stdlib basics (v0.4.38 — Batch 2)
+url = "2.5"
+glob = "0.3"
+tempfile = "3.8"
+
+# Network (v0.4.38 — Batch 6)
+tungstenite = { version = "0.24", features = ["rustls-tls-native-roots"] }
+tokio-tungstenite = { version = "0.24", features = ["rustls-tls-native-roots"] }
+
+# Semantic versioning
+semver = "1.0"
+
+# Cryptographic hashing (used for cache checksums)
+sha2 = "0.10"
+hex = "0.4"
+
+# The shared `hudhudscript-errors` crate (issue #158 / #321) provides common
+# error types (SourcePosition, Diagnostic, Severity, HudHudError) so that
+# individual crates do not have to define error infrastructure from scratch.
+# Migration is incremental — crates adopt it by adding From conversions.
+
+# TODO(#158): Implement an AST visitor trait in `hudhudscript-ast` so that
+# passes (formatter, type-checker, linter, …) can walk the tree without
+# duplicating manual recursion in each crate.
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = false
+panic = "abort"
+
+[profile.release-prof]
+inherits = "release"
+strip = false
+debug = true
+lto = false
+
+[profile.dev]
+opt-level = 0
+debug = true

@@ -1,0 +1,23 @@
+[package]
+name = "hudhudscript-tools-net"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Network tools for HudHudScript — HTTP, MCP bridge, OpenAPI discovery"
+
+[dependencies]
+hudhudscript-errors = { path = "../hudhudscript-errors" }
+hudhudscript-tools-schema = { path = "../hudhudscript-tools-schema" }
+hudhudscript-mcp = { path = "../hudhudscript-mcp" }
+hudhudscript-utils = { path = "../hudhudscript-utils" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+reqwest = { workspace = true, features = ["blocking", "json"] }
+
+[dev-dependencies]
+proptest.workspace = true

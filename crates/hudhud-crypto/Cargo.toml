@@ -1,0 +1,15 @@
+[package]
+name = "hudhud-crypto"
+version.workspace = true
+edition.workspace = true
+description = "HudHud crypto primitives (no VM dependency)"
+
+[dependencies]
+sha2 = { workspace = true }
+blake3 = "1.5"
+aes-gcm = "0.10"
+argon2 = "0.5"
+base64 = "0.22"
+hex = "0.4"
+hudhudscript-bytecode = { path = "../hudhudscript-bytecode" }
+hudhudscript-errors = { path = "../hudhudscript-errors" }

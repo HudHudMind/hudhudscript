@@ -1,0 +1,13 @@
+[package]
+name = "hudhudscript-deploy-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "HudHudScript Deploy Core — deployment IR, pipeline definitions, and adapter trait"
+
+[dependencies]
+hudhudscript-errors = { path = "../hudhudscript-errors" }
+serde = { workspace = true }
+serde_json = { workspace = true }

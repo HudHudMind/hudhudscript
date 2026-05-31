@@ -1,0 +1,42 @@
+[package]
+name = "hudhudscript-tools"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "HudHudScript Tool Registry — re-exports from sub-crates for backward compatibility"
+
+[features]
+default = []
+# Enable full sqlx-backed DatabaseTool (Issue #21).
+db = ["dep:sqlx", "hudhudscript-tools-io/db"]
+
+[dependencies]
+hudhudscript-errors = { path = "../hudhudscript-errors" }
+# Sub-crate re-exports (Issue #677)
+hudhudscript-tools-schema = { path = "../hudhudscript-tools-schema" }
+hudhudscript-tools-io = { path = "../hudhudscript-tools-io" }
+hudhudscript-tools-net = { path = "../hudhudscript-tools-net" }
+hudhudscript-tools-vcs = { path = "../hudhudscript-tools-vcs" }
+hudhudscript-tools-ai = { path = "../hudhudscript-tools-ai" }
+hudhudscript-tools-ops = { path = "../hudhudscript-tools-ops" }
+
+# Original deps (still needed for local modules)
+hudhudscript-mcp = { path = "../hudhudscript-mcp" }
+hudhudscript-sandbox = { path = "../hudhudscript-sandbox" }
+hudhudscript-utils = { path = "../hudhudscript-utils" }
+url.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+reqwest = { workspace = true, features = ["blocking", "json"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
+
+# Optional: full database support behind the `db` feature (Issue #21)
+sqlx = { version = "0.8", features = ["runtime-tokio-native-tls", "postgres", "sqlite", "macros"], optional = true }
+
+[dev-dependencies]
+proptest.workspace = true

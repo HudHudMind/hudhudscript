@@ -1,0 +1,13 @@
+[package]
+name = "hudhud-email"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+hudhudscript-bytecode = { path = "../hudhudscript-bytecode" }
+hudhudscript-errors = { path = "../hudhudscript-errors" }
+serde_json = { workspace = true }
+reqwest = { workspace = true, features = ["blocking"] }

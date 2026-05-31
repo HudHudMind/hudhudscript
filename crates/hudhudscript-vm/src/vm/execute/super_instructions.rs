@@ -1,0 +1,159 @@
+#![allow(unused_imports)]
+
+use super::*;
+
+impl VM {
+    #[inline(always)]
+    pub(crate) fn step_super_instructions(
+        &mut self,
+        instr: &Instruction,
+        ctx: &mut StepContext<'_>,
+    ) -> CompileResult<StepAction> {
+        let instructions = ctx.instructions;
+        let bytecode = ctx.bytecode;
+        let ip = ctx.ip;
+        let ip_ref = &mut *ctx.ip_ref;
+
+        match instr {
+            Instruction::IntLeJumpIfFalse(super_idx) => {
+                let sp = bytecode.get_super_instr_payload(*super_idx);
+                let slot_idx = sp.slot as usize;
+                let le = match numeric_slot(Some(&self.registers[slot_idx])) {
+                    Some(NumericSlot::Int(a)) => a <= sp.imm as i64,
+                    Some(NumericSlot::Num(a)) => num_le(a, sp.imm as f64),
+                    None => return Err(Self::runtime_error_with_pos(
+                        "IntLeRRJumpIfFalse: expected Int or Number local", bytecode, ip)),
+                };
+                if !le {
+                    let new_ip = (ip as i64).wrapping_add(sp.offset as i64);
+                    if new_ip < 0 || new_ip > instructions.len() as i64 {
+                        return Err(compile_codes::runtime_error(format!(
+                            "IntLeRRJumpIfFalse out of bounds: ip={} offset={}", ip, sp.offset)));
+                    }
+                    *ip_ref = new_ip as usize;
+                    return Ok(StepAction::Jumped);
+                }
+            }
+            Instruction::IntLtJumpIfFalse(super_idx) => {
+                let sp = bytecode.get_super_instr_payload(*super_idx);
+                let slot_idx = sp.slot as usize;
+                let lt = match numeric_slot(Some(&self.registers[slot_idx])) {
+                    Some(NumericSlot::Int(a)) => a < sp.imm as i64,
+                    Some(NumericSlot::Num(a)) => num_lt(a, sp.imm as f64),
+                    None => return Err(Self::runtime_error_with_pos(
+                        "IntLtRRJumpIfFalse: expected Int or Number local", bytecode, ip)),
+                };
+                if !lt {
+                    let new_ip = (ip as i64).wrapping_add(sp.offset as i64);
+                    *ip_ref = new_ip as usize;
+                    return Ok(StepAction::Jumped);
+                }
+            }
+            Instruction::IntSubCall1(super_idx) => {
+                let sp = bytecode.get_super_instr_payload(*super_idx);
+                let slot_idx = sp.slot as usize;
+                match numeric_slot(Some(&self.registers[slot_idx])) {
+                    Some(NumericSlot::Int(a)) => {
+                        self.registers[1] = Value16::int(a.wrapping_sub(sp.imm as i64));
+                    }
+                    Some(NumericSlot::Num(a)) => {
+                        self.registers[1] = Value16::number(a - sp.imm as f64);
+                    }
+                    None => return Err(Self::runtime_error_with_pos(
+                        "IntSubCall1: expected Int or Number local", bytecode, ip)),
+                }
+                let payload = bytecode.get_call_payload(sp.call_idx);
+                return Ok(StepAction::Call {
+                    func_sym: payload.sym,
+                    arg_count: payload.arg_count,
+                    first_arg: 1,
+                    dst: 255,
+                });
+            }
+            Instruction::IntAddCall1(super_idx) => {
+                let sp = bytecode.get_super_instr_payload(*super_idx);
+                let slot_idx = sp.slot as usize;
+                match numeric_slot(Some(&self.registers[slot_idx])) {
+                    Some(NumericSlot::Int(a)) => {
+                        self.registers[1] = Value16::int(a.wrapping_add(sp.imm as i64));
+                    }
+                    Some(NumericSlot::Num(a)) => {
+                        self.registers[1] = Value16::number(a + sp.imm as f64);
+                    }
+                    None => return Err(Self::runtime_error_with_pos(
+                        "IntAddCall1: expected Int or Number local", bytecode, ip)),
+                }
+                let payload = bytecode.get_call_payload(sp.call_idx);
+                return Ok(StepAction::Call {
+                    func_sym: payload.sym,
+                    arg_count: payload.arg_count,
+                    first_arg: 1,
+                    dst: 255,
+                });
+            }
+            Instruction::IntIncrSlot { slot } => {
+                let idx = *slot as usize;
+                match numeric_slot(Some(&self.registers[idx])) {
+                    Some(NumericSlot::Int(a)) => {
+                        self.registers[idx] = Value16::int(a.wrapping_add(1));
+                    }
+                    Some(NumericSlot::Num(a)) => {
+                        self.registers[idx] = Value16::number(a + 1.0);
+                    }
+                    None => return Err(Self::runtime_error_with_pos(
+                        "IntIncrSlot: expected Int or Number local", bytecode, ip)),
+                }
+            }
+            Instruction::IntSubLocalI { dst, payload_idx } => {
+                let sp = bytecode.get_super_instr_payload(*payload_idx as u32);
+                let slot_idx = sp.slot as usize;
+                match numeric_slot(Some(&self.registers[slot_idx])) {
+                    Some(NumericSlot::Int(a)) => {
+                        self.registers[*dst as usize] = Value16::int(a.wrapping_sub(sp.imm as i64));
+                    }
+                    Some(NumericSlot::Num(a)) => {
+                        self.registers[*dst as usize] = Value16::number(a - sp.imm as f64);
+                    }
+                    None => return Err(Self::runtime_error_with_pos(
+                        "IntSubLocalI: expected Int or Number local", bytecode, ip)),
+                }
+            }
+            Instruction::IntAddLocalI { dst, payload_idx } => {
+                let sp = bytecode.get_super_instr_payload(*payload_idx as u32);
+                let slot_idx = sp.slot as usize;
+                match numeric_slot(Some(&self.registers[slot_idx])) {
+                    Some(NumericSlot::Int(a)) => {
+                        self.registers[*dst as usize] = Value16::int(a.wrapping_add(sp.imm as i64));
+                    }
+                    Some(NumericSlot::Num(a)) => {
+                        self.registers[*dst as usize] = Value16::number(a + sp.imm as f64);
+                    }
+                    None => return Err(Self::runtime_error_with_pos(
+                        "IntAddLocalI: expected Int or Number local", bytecode, ip)),
+                }
+            }
+            Instruction::SpreadIntoArray { dst, src } => {
+                let acc = self.registers[*dst as usize];
+                let spread = self.registers[*src as usize];
+                let mut arr = acc.as_array().cloned().unwrap_or_default();
+                if let Some(items) = spread.as_array() {
+                    arr.extend(items.iter().cloned());
+                }
+                self.registers[*dst as usize] = Value16::array(arr);
+            }
+            Instruction::SpreadIntoObject { dst, src } => {
+                let acc = self.registers[*dst as usize];
+                let spread = self.registers[*src as usize];
+                let mut map = acc.as_object().cloned().unwrap_or_default();
+                if let Some(src_map) = spread.as_object() {
+                    for (k, v) in src_map {
+                        map.insert(k.clone(), v.clone());
+                    }
+                }
+                self.registers[*dst as usize] = Value16::object(map);
+            }
+            _ => unreachable!("instruction routed to wrong execute helper"),
+        }
+        Ok(StepAction::Advance)
+    }
+}

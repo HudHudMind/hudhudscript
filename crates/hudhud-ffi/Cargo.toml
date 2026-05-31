@@ -1,0 +1,15 @@
+[package]
+name = "hudhud-ffi"
+version.workspace = true
+edition.workspace = true
+description = "C FFI bindings for HudHudScript VM"
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+hudhudscript-vm = { path = "../hudhudscript-vm" }
+hudhudscript-bytecode = { path = "../hudhudscript-bytecode" }
+hudhudscript-compiler = { path = "../hudhudscript-compiler" }
+hudhudscript-parser = { path = "../hudhudscript-parser" }
+hudhudscript-errors = { path = "../hudhudscript-errors" }

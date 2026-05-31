@@ -1,0 +1,10 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 4e276831bd0586d35086e224790815c73b6e4b36859d2bd2729218017e6da1d1 # shrinks to field = "a", a = 0.0, b = -2.381846146929786e66
+cc 069ed1aa586e5f3df4750a7297cf2fa7c228bc5f078e959ee2ae5f9532b951e9 # shrinks to field = "a", threshold = -5.532561219983595e65
+cc c2ada4198351ee0950da967e5c28916164c33f076b7e7bfd37f50e3a3b9bab0c # shrinks to field = "a", threshold = -9.348589785134844e277
+cc f76b1012dfe2062ec427209ce98bb4bae55e8a6eaa3ca46e1ea217c1de6e666d # shrinks to field1 = "e", field2 = "e", value1 = String(""), value2 = String("")

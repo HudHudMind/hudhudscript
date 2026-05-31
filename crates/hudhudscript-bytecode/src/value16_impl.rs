@@ -1,0 +1,348 @@
+use crate::{
+    ClassData, DataData, DynamicData, DynamicKind, DynamicObject, FunctionData, GeneratorState16,
+    InstanceData, PromiseState16, ReprTag, ResourceRef, ToolRef, Value16,
+};
+use parking_lot::Mutex;
+use std::sync::Arc;
+
+impl PartialEq for Value16 {
+    fn eq(&self, other: &Self) -> bool {
+        self.values_equal(other)
+    }
+}
+
+impl Eq for Value16 {}
+
+impl Default for Value16 {
+    fn default() -> Self {
+        Value16::null()
+    }
+}
+
+impl Value16 {
+    #[inline(always)]
+    pub fn as_str(&self) -> Option<&str> {
+        if let Some(s) = self.0.as_inline_string() {
+            return Some(s);
+        }
+        if self.0.tag() == ReprTag::Dynamic {
+            let ptr = self.0.as_ptr()?;
+            let obj = unsafe { &*(ptr as *const DynamicObject) };
+            if matches!(obj.kind, DynamicKind::String) {
+                if let DynamicData::String(s) = &obj.data {
+                    return Some(s.as_str());
+                }
+            }
+        }
+        None
+    }
+
+    /// Unchecked string access — caller guarantees String type.
+    /// For hot string benchmarks (palindrome, strcat, strrev).
+    #[inline(always)]
+    pub fn as_str_unchecked(&self) -> &str {
+        if let Some(s) = self.0.as_inline_string() {
+            return s;
+        }
+        debug_assert!(self.0.tag() == ReprTag::Dynamic);
+        let ptr = self.0.as_ptr().unwrap();
+        let obj = unsafe { &*(ptr as *const DynamicObject) };
+        debug_assert!(matches!(obj.kind, DynamicKind::String));
+        if let DynamicData::String(ref s) = obj.data { s.as_str() }
+        else { unsafe { std::hint::unreachable_unchecked() } }
+    }
+
+    #[inline(always)]
+    pub fn as_string_mut(&mut self) -> Option<&mut String> {
+        if self.0.tag() == ReprTag::InlineString {
+            return None; // inline strings are immutable
+        }
+        if self.0.tag() == ReprTag::Dynamic {
+            let ptr = self.0.as_ptr()? as *mut DynamicObject;
+            let obj = unsafe { &mut *ptr };
+            if matches!(obj.kind, DynamicKind::String) {
+                if let DynamicData::String(ref mut s) = obj.data {
+                    return Some(s);
+                }
+            }
+        }
+        None
+    }
+
+    #[inline(always)]
+    pub fn as_array(&self) -> Option<&Vec<Value16>> {
+        if self.0.tag() == ReprTag::Dynamic {
+            let ptr = self.0.as_ptr()?;
+            let obj = unsafe { &*(ptr as *const DynamicObject) };
+            if matches!(obj.kind, DynamicKind::Array) {
+                if let DynamicData::Array(a) = &obj.data {
+                    return Some(a);
+                }
+            }
+        }
+        None
+    }
+    
+    #[inline]
+    pub fn as_array_mut(&mut self) -> Option<&mut Vec<Value16>> {
+        if self.0.tag() == ReprTag::Dynamic {
+            let ptr = self.0.as_ptr()? as *mut DynamicObject;
+            let obj = unsafe { &mut *ptr };
+            if matches!(obj.kind, DynamicKind::Array) {
+                if let DynamicData::Array(ref mut a) = obj.data {
+                    return Some(a);
+                }
+            }
+        }
+        None
+    }
+
+    /// Unchecked array access — caller must guarantee is_dynamic+Array.
+    /// For hot matrix/vector benchmarks where type is known from context.
+    #[inline(always)]
+    pub fn as_array_unchecked(&self) -> &Vec<Value16> {
+        debug_assert!(self.0.tag() == ReprTag::Dynamic);
+        let obj = unsafe { &*(self.0.as_ptr().unwrap() as *const DynamicObject) };
+        debug_assert!(matches!(obj.kind, DynamicKind::Array));
+        if let DynamicData::Array(ref a) = obj.data { a }
+        else { unsafe { std::hint::unreachable_unchecked() } }
+    }
+
+    /// Unchecked mutable array access.
+    #[inline(always)]
+    pub fn as_array_mut_unchecked(&mut self) -> &mut Vec<Value16> {
+        debug_assert!(self.0.tag() == ReprTag::Dynamic);
+        let obj = unsafe { &mut *(self.0.as_ptr().unwrap() as *mut DynamicObject) };
+        debug_assert!(matches!(obj.kind, DynamicKind::Array));
+        if let DynamicData::Array(ref mut a) = obj.data { a }
+        else { unsafe { std::hint::unreachable_unchecked() } }
+    }
+
+    /// Fast combined array element access: type check + bounds check + clone.
+    /// Returns None if not an array or out of bounds.
+    #[inline(always)]
+    pub fn array_get(&self, idx: usize) -> Option<&Value16> {
+        if self.0.tag() == ReprTag::Dynamic {
+            let obj = unsafe { &*(self.0.as_ptr()? as *const DynamicObject) };
+            if matches!(obj.kind, DynamicKind::Array) {
+                if let DynamicData::Array(ref a) = obj.data {
+                    return a.get(idx);
+                }
+            }
+        }
+        None
+    }
+
+    /// Fast combined array mutation: type check + auto-extend + write.
+    #[inline]
+    pub fn array_set(&mut self, idx: usize, val: Value16) -> bool {
+        if self.0.tag() == ReprTag::Dynamic {
+            let ptr = match self.0.as_ptr() { Some(p) => p, None => return false };
+            let obj = unsafe { &mut *(ptr as *mut DynamicObject) };
+            if matches!(obj.kind, DynamicKind::Array) {
+                if let DynamicData::Array(ref mut a) = obj.data {
+                    if idx >= a.len() { a.resize(idx + 1, Value16::null()); }
+                    a[idx] = val;
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    #[inline(always)]
+    pub fn as_object(&self) -> Option<&std::collections::HashMap<String, Value16>> {
+        if self.0.tag() == ReprTag::Dynamic {
+            let ptr = self.0.as_ptr()?;
+            let obj = unsafe { &*(ptr as *const DynamicObject) };
+            if matches!(obj.kind, DynamicKind::Object) {
+                if let DynamicData::Object(o) = &obj.data {
+                    return Some(o);
+                }
+            }
+        }
+        None
+    }
+
+    pub fn as_object_mut(&mut self) -> Option<&mut std::collections::HashMap<String, Value16>> {
+        if self.0.tag() == ReprTag::Dynamic {
+            let ptr = self.0.as_ptr()? as *mut DynamicObject;
+            let obj = unsafe { &mut *ptr };
+            if matches!(obj.kind, DynamicKind::Object) {
+                if let DynamicData::Object(ref mut o) = obj.data {
+                    return Some(o);
+                }
+            }
+        }
+        None
+    }
+
+    #[inline(always)]
+    pub fn as_function_data(&self) -> Option<&FunctionData> {
+        if self.0.tag() == ReprTag::Dynamic {
+            let ptr = self.0.as_ptr()?;
+            let obj = unsafe { &*(ptr as *const DynamicObject) };
+            if matches!(obj.kind, DynamicKind::Function) {
+                if let DynamicData::Function(f) = &obj.data {
+                    return Some(f);
+                }
+            }
+        }
+        None
+    }
+
+    #[inline]
+    pub fn as_instance_data(&self) -> Option<&InstanceData> {
+        if self.0.tag() == ReprTag::Dynamic {
+            let ptr = self.0.as_ptr()?;
+            let obj = unsafe { &*(ptr as *const DynamicObject) };
+            if matches!(obj.kind, DynamicKind::Instance) {
+                if let DynamicData::Instance(i) = &obj.data {
+                    return Some(i);
+                }
+            }
+        }
+        None
+    }
+
+    #[inline]
+    pub fn as_promise_state(&self) -> Option<&PromiseState16> {
+        if self.0.tag() == ReprTag::Dynamic {
+            let ptr = self.0.as_ptr()?;
+            let obj = unsafe { &*(ptr as *const DynamicObject) };
+            if matches!(obj.kind, DynamicKind::Promise) {
+                if let DynamicData::Promise(p) = &obj.data {
+                    return Some(p);
+                }
+            }
+        }
+        None
+    }
+
+    #[inline]
+    pub fn as_class_data(&self) -> Option<&ClassData> {
+        if self.0.tag() == ReprTag::Dynamic {
+            let ptr = self.0.as_ptr()?;
+            let obj = unsafe { &*(ptr as *const DynamicObject) };
+            if matches!(obj.kind, DynamicKind::Class) {
+                if let DynamicData::Class(c) = &obj.data {
+                    return Some(c);
+                }
+            }
+        }
+        None
+    }
+
+    #[inline]
+    pub fn as_data_data(&self) -> Option<&DataData> {
+        if self.0.tag() == ReprTag::Dynamic {
+            let ptr = self.0.as_ptr()?;
+            let obj = unsafe { &*(ptr as *const DynamicObject) };
+            if matches!(obj.kind, DynamicKind::Data) {
+                if let DynamicData::Data(d) = &obj.data {
+                    return Some(d);
+                }
+            }
+        }
+        None
+    }
+
+    #[inline]
+    pub fn as_set(&self) -> Option<&Vec<Value16>> {
+        if self.0.tag() == ReprTag::Dynamic {
+            let ptr = self.0.as_ptr()?;
+            let obj = unsafe { &*(ptr as *const DynamicObject) };
+            if matches!(obj.kind, DynamicKind::Set) {
+                if let DynamicData::Set(s) = &obj.data {
+                    return Some(s);
+                }
+            }
+        }
+        None
+    }
+
+    #[inline]
+    pub fn as_map_pairs(&self) -> Option<&Vec<(Value16, Value16)>> {
+        if self.0.tag() == ReprTag::Dynamic {
+            let ptr = self.0.as_ptr()?;
+            let obj = unsafe { &*(ptr as *const DynamicObject) };
+            if matches!(obj.kind, DynamicKind::Map) {
+                if let DynamicData::Map(m) = &obj.data {
+                    return Some(m);
+                }
+            }
+        }
+        None
+    }
+
+    #[inline]
+    pub fn as_generator_state(&self) -> Option<&Arc<Mutex<GeneratorState16>>> {
+        if self.0.tag() == ReprTag::Dynamic {
+            let ptr = self.0.as_ptr()?;
+            let obj = unsafe { &*(ptr as *const DynamicObject) };
+            if matches!(obj.kind, DynamicKind::Generator) {
+                if let DynamicData::Generator(g) = &obj.data {
+                    return Some(g);
+                }
+            }
+        }
+        None
+    }
+
+    #[inline]
+    pub fn as_tool_ref(&self) -> Option<&ToolRef> {
+        if self.0.tag() == ReprTag::Dynamic {
+            let ptr = self.0.as_ptr()?;
+            let obj = unsafe { &*(ptr as *const DynamicObject) };
+            if matches!(obj.kind, DynamicKind::Tool) {
+                if let DynamicData::Tool(t) = &obj.data {
+                    return Some(t);
+                }
+            }
+        }
+        None
+    }
+
+    #[inline]
+    pub fn as_resource_ref(&self) -> Option<&ResourceRef> {
+        if self.0.tag() == ReprTag::Dynamic {
+            let ptr = self.0.as_ptr()?;
+            let obj = unsafe { &*(ptr as *const DynamicObject) };
+            if matches!(obj.kind, DynamicKind::Resource) {
+                if let DynamicData::Resource(r) = &obj.data {
+                    return Some(r);
+                }
+            }
+        }
+        None
+    }
+
+    #[inline]
+    pub fn as_option(&self) -> Option<Option<&Value16>> {
+        if self.0.tag() == ReprTag::Dynamic {
+            let ptr = self.0.as_ptr()?;
+            let obj = unsafe { &*(ptr as *const DynamicObject) };
+            if matches!(obj.kind, DynamicKind::Option) {
+                if let DynamicData::Option(o) = &obj.data {
+                    return Some(o.as_ref().map(|b| b.as_ref()));
+                }
+            }
+        }
+        None
+    }
+
+    #[inline]
+    pub fn as_result(&self) -> Option<Result<&Value16, &String>> {
+        if self.0.tag() == ReprTag::Dynamic {
+            let ptr = self.0.as_ptr()?;
+            let obj = unsafe { &*(ptr as *const DynamicObject) };
+            if matches!(obj.kind, DynamicKind::Result) {
+                if let DynamicData::Result(r) = &obj.data {
+                    return Some(r.as_ref().map(|b| b.as_ref()));
+                }
+            }
+        }
+        None
+    }
+
+}

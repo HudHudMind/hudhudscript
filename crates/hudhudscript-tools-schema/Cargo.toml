@@ -1,0 +1,19 @@
+[package]
+name = "hudhudscript-tools-schema"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Schema validation and tool registry for HudHudScript tools"
+
+[dependencies]
+hudhudscript-errors = { path = "../hudhudscript-errors" }
+hudhudscript-mcp = { path = "../hudhudscript-mcp" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true

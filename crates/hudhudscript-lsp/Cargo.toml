@@ -1,0 +1,27 @@
+[package]
+name = "hudhudscript-lsp"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+hudhudscript-bytecode = { path = "../hudhudscript-bytecode" }
+hudhudscript-errors = { path = "../hudhudscript-errors" }
+hudhudscript-ast = { path = "../hudhudscript-ast" }
+hudhudscript-parser = { path = "../hudhudscript-parser" }
+hudhudscript-types = { path = "../hudhudscript-types" }
+hudhudscript-formatter = { path = "../hudhudscript-formatter" }
+tower-lsp = "0.20"
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[[bin]]
+name = "hudhudscript-lsp"
+path = "src/main.rs"
+
+[dev-dependencies]
+proptest.workspace = true

@@ -1,0 +1,154 @@
+// ============================================================================
+// RUSSIAN KEYWORDS (Русский)
+// ============================================================================
+
+// Module system
+use_kw_ru = _{ "использовать" }
+as_kw_ru = _{ "как" }
+import_kw_ru = _{ "импорт" }
+export_kw_ru = _{ "экспорт" }
+from_kw_ru = _{ "из" }
+
+// Agent system
+agent_kw_ru = _{ "агент" }
+tool_kw_ru = _{ "инструмент" }
+resource_kw_ru = _{ "ресурс" }
+mcp_kw_ru = _{ "mcp" }
+server_kw_ru = _{ "сервер" }
+config_kw_ru = _{ "конфиг" }
+provider_kw_ru = _{ "провайдер" }
+model_kw_ru = _{ "модель" }
+call_kw_ru = _{ "вызвать" }
+
+
+// Classes and OOP
+class_kw_ru = _{ "класс" | "class" }
+extends_kw_ru = _{ "extends" | "<-" }
+new_kw_ru = _{ "новый" | "new" }
+this_kw_ru = _{ "this" }
+super_kw_ru = _{ "супер" | "super" }
+self_kw_ru = _{ "сам" | "self" }
+public_kw_ru = _{ "публичный" | "public" }
+private_kw_ru = _{ "приватный" | "private" }
+protected_kw_ru = _{ "protected" }
+static_kw_ru = _{ "static" }
+constructor_kw_ru = _{ "constructor" }
+// Control flow
+if_kw_ru = _{ "если" }
+else_if_kw_ru = _{ "иначе если" }
+else_kw_ru = _{ "иначе" }
+while_kw_ru = _{ "пока" }
+for_kw_ru = _{ "для" }
+return_kw_ru = _{ "вернуть" }
+break_kw_ru = _{ "прервать" }
+continue_kw_ru = _{ "продолжить" }
+switch_kw_ru = _{ "выбрать" }
+case_kw_ru = _{ "случай" }
+default_kw_ru = _{ "по_умолчанию" }
+
+// Functions
+function_kw_ru = _{ "функция" | "фн" }
+
+// Async
+async_kw_ru = _{ "асинхронный" }
+await_kw_ru = _{ "ждать" }
+promise_kw_ru = _{ "обещание" }
+future_kw_ru = _{ "будущее" }
+
+// Error handling
+try_kw_ru = _{ "попробовать" }
+catch_kw_ru = _{ "поймать" }
+finally_kw_ru = _{ "наконец" }
+throw_kw_ru = _{ "бросить" }
+
+// Variables
+var_kw_ru = _{ "переменная" }
+let_kw_ru = _{ "пусть" | "переменная" }
+const_kw_ru = _{ "константа" }
+set_kw_ru = _{ "значение" }
+
+// Data
+data_kw_ru = _{ "данные" }
+
+// State
+state_kw_ru = _{ "состояние" }
+statemachine_kw_ru = _{ "машина_состояний" }
+
+// Entity
+entity_kw_ru = _{ "сущность" }
+agentstate_kw_ru = _{ "состояние_агента" }
+
+// Intent & Entity
+intent_kw_ru = _{ "намерение" }
+want_kw_ru = _{ "хотеть" }
+priority_kw_ru = _{ "приоритет" }
+action_kw_ru = _{ "действие" }
+transform_kw_ru = _{ "преобразовать" }
+
+// Events
+event_kw_ru = _{ "событие" }
+on_kw_ru = _{ "на" }
+trigger_kw_ru = _{ "триггер" }
+when_kw_ru = _{ "когда" }
+
+// Permissions
+allow_kw_ru = _{ "разрешить" }
+deny_kw_ru = _{ "запретить" }
+
+// Governance
+constitution_kw_ru = _{ "конституция" }
+law_kw_ru = _{ "закон" }
+council_kw_ru = _{ "совет" }
+rule_kw_ru = _{ "правило" }
+swarm_kw_ru = _{ "рой" }
+community_kw_ru = _{ "сообщество" }
+enforcement_kw_ru = _{ "исполнение" }
+mandatory_kw_ru = _{ "обязательный" }
+advisory_kw_ru = _{ "рекомендательный" }
+optional_kw_ru = _{ "необязательный" }
+
+// Roles & Strategy
+role_kw_ru = _{ "роль" }
+member_kw_ru = _{ "член" }
+protocol_kw_ru = _{ "протокол" }
+competitive_kw_ru = _{ "конкурентный" }
+collaborative_kw_ru = _{ "совместный" }
+prosecutor_kw_ru = _{ "прокурор" }
+judge_kw_ru = _{ "судья" }
+executor_kw_ru = _{ "исполнитель" }
+
+// Culture
+culture_kw_ru = _{ "культура" }
+values_kw_ru = _{ "ценности" }
+norms_kw_ru = _{ "нормы" }
+communication_style_kw_ru = _{ "стиль_общения" }
+formal_kw_ru = _{ "формальный" }
+informal_kw_ru = _{ "неформальный" }
+technical_kw_ru = _{ "технический" }
+
+// Flow & Orchestration
+flow_kw_ru = _{ "поток" }
+dataflow_kw_ru = _{ "поток_данных" }
+layer_kw_ru = _{ "слой" }
+network_kw_ru = _{ "сеть" }
+depends_on_kw_ru = _{ "зависит_от" }
+broadcast_kw_ru = _{ "транслировать" }
+merge_kw_ru = _{ "объединить" }
+parallel_kw_ru = _{ "параллельный" }
+sequential_kw_ru = _{ "последовательный" }
+execute_kw_ru = _{ "выполнить" }
+
+// Music Data Structures
+note_kw_ru = _{ "нота" }
+chord_kw_ru = _{ "аккорд" }
+melody_kw_ru = _{ "мелодия" }
+harmony_kw_ru = _{ "гармония" }
+rhythm_kw_ru = _{ "ритм" }
+tempo_kw_ru = _{ "темп" }
+scale_kw_ru = _{ "гамма" }
+
+// Booleans
+boolean_ru = @{ "истина" | "ложь" }
+
+// Null
+null_ru = @{ "нуль" }

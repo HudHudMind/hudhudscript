@@ -1,0 +1,28 @@
+[package]
+name = "hudhudscript-bytecode"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Bytecode format, instruction set, and value types for HudHudScript"
+
+[dependencies]
+hudhudscript-errors = { path = "../hudhudscript-errors" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+# postcard 1.x: varint-encoded binary format.  SOLE production wire encoding
+# for `.hudb` / `.hudc` caches as of BYTECODE_VERSION v8 (PERF-49, Audit v3
+# Finding 15.1) — typically 40-60% smaller than bincode's fixed-width layout.
+postcard = { version = "1.0", features = ["use-std"] }
+thiserror = { workspace = true }
+parking_lot = { version = "0.12", features = ["serde"] }
+rustc-hash = { workspace = true }
+
+[dev-dependencies]
+criterion = { workspace = true }
+
+
+[[bench]]
+name = "instruction_bench"
+harness = false

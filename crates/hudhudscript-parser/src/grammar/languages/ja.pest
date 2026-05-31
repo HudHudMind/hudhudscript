@@ -1,0 +1,150 @@
+// ============================================================================
+// JAPANESE KEYWORDS (Native Japanese Characters)
+// ============================================================================
+
+// Module system
+use_kw_ja = _{ "使う" }
+as_kw_ja = _{ "として" }
+import_kw_ja = _{ "輸入" }
+export_kw_ja = _{ "輸出" }
+from_kw_ja = _{ "から" }
+
+// Agent system
+agent_kw_ja = _{ "エージェント" }
+tool_kw_ja = _{ "ツール" }
+resource_kw_ja = _{ "資源" }
+server_kw_ja = _{ "サーバー" }
+config_kw_ja = _{ "設定" }
+
+
+// Classes and OOP
+class_kw_ja = _{ "クラス" | "class" }
+extends_kw_ja = _{ "extends" | "<-" }
+new_kw_ja = _{ "新規" | "new" }
+this_kw_ja = _{ "this" }
+super_kw_ja = _{ "親" | "super" }
+self_kw_ja = _{ "自己" | "self" }
+public_kw_ja = _{ "公開" | "public" }
+private_kw_ja = _{ "非公開" | "private" }
+protected_kw_ja = _{ "protected" }
+static_kw_ja = _{ "static" }
+constructor_kw_ja = _{ "constructor" }
+// Control flow
+if_kw_ja = _{ "もし" }
+else_if_kw_ja = _{ "それなら" }
+else_kw_ja = _{ "それでも" }
+while_kw_ja = _{ "間" }
+for_kw_ja = _{ "ため" }
+return_kw_ja = _{ "戻る" }
+break_kw_ja = _{ "破る" }
+continue_kw_ja = _{ "続ける" }
+switch_kw_ja = _{ "切り替える" }
+case_kw_ja = _{ "場合" }
+default_kw_ja = _{ "基本" }
+
+// Functions
+function_kw_ja = _{ "関数" }
+
+// Async
+async_kw_ja = _{ "非同期" }
+await_kw_ja = _{ "待つ" }
+
+// Error handling
+try_kw_ja = _{ "試みる" }
+catch_kw_ja = _{ "捕まえる" }
+finally_kw_ja = _{ "最後" }
+throw_kw_ja = _{ "投げる" }
+
+// Variables
+var_kw_ja = _{ "変数" }
+let_kw_ja = _{ "定義" }
+const_kw_ja = _{ "定数" }
+
+// Data
+data_kw_ja = _{ "データ" }
+
+// State
+state_kw_ja = _{ "状態" }
+statemachine_kw_ja = _{ "ステートマシン" }
+
+// Entity
+entity_kw_ja = _{ "実体" }
+agentstate_kw_ja = _{ "エージェント状態" }
+
+// Events
+event_kw_ja = _{ "イベント" }
+on_kw_ja = _{ "上" }
+trigger_kw_ja = _{ "トリガー" }
+
+// Permissions
+allow_kw_ja = _{ "許可" }
+deny_kw_ja = _{ "禁止" }
+
+// Governance
+constitution_kw_ja = _{ "憲法" }
+law_kw_ja = _{ "法律" }
+council_kw_ja = _{ "会議" }
+rule_kw_ja = _{ "ルール" }
+swarm_kw_ja = _{ "群れ" }
+community_kw_ja = _{ "コミュニティ" }
+provider_kw_ja = _{ "プロバイダー" }
+enforcement_kw_ja = _{ "執行" }
+mandatory_kw_ja = _{ "必須" }
+advisory_kw_ja = _{ "勧告" }
+optional_kw_ja = _{ "任意" }
+
+// Booleans
+boolean_ja = @{ "真" | "偽" }
+
+// Null
+null_ja = @{ "ヌル" }
+
+// Grammatical particles
+topic_marker = _{ "は" }
+subj_marker = _{ "が" }
+obj_marker_ja = _{ "を" }
+
+mcp_kw_ja = _{ "MCP" }
+model_kw_ja = _{ "モデル" }
+call_kw_ja = _{ "呼ぶ" }
+promise_kw_ja = _{ "約束" }
+future_kw_ja = _{ "未来" }
+set_kw_ja = _{ "値" }
+intent_kw_ja = _{ "意図" }
+want_kw_ja = _{ "欲しい" }
+priority_kw_ja = _{ "優先度" }
+action_kw_ja = _{ "アクション" }
+transform_kw_ja = _{ "変換" }
+when_kw_ja = _{ "時" }
+role_kw_ja = _{ "役割" }
+member_kw_ja = _{ "メンバー" }
+protocol_kw_ja = _{ "プロトコル" }
+competitive_kw_ja = _{ "競争" }
+collaborative_kw_ja = _{ "協同" }
+prosecutor_kw_ja = _{ "検察官" }
+judge_kw_ja = _{ "裁判官" }
+executor_kw_ja = _{ "実行者" }
+culture_kw_ja = _{ "文化" }
+values_kw_ja = _{ "価値" }
+norms_kw_ja = _{ "規範" }
+communication_style_kw_ja = _{ "コミュニケーションスタイル" }
+formal_kw_ja = _{ "公式" }
+informal_kw_ja = _{ "非公式" }
+technical_kw_ja = _{ "技術" }
+flow_kw_ja = _{ "フロー" }
+dataflow_kw_ja = _{ "データフロー" }
+layer_kw_ja = _{ "層" }
+network_kw_ja = _{ "ネットワーク" }
+depends_on_kw_ja = _{ "依存" }
+broadcast_kw_ja = _{ "放送" }
+merge_kw_ja = _{ "合併" }
+parallel_kw_ja = _{ "並行" }
+sequential_kw_ja = _{ "順序" }
+execute_kw_ja = _{ "実行" }
+note_kw_ja = _{ "音符" }
+chord_kw_ja = _{ "コード" }
+melody_kw_ja = _{ "メロディ" }
+harmony_kw_ja = _{ "ハーモニー" }
+rhythm_kw_ja = _{ "リズム" }
+tempo_kw_ja = _{ "テンポ" }
+scale_kw_ja = _{ "スケール" }

@@ -1,0 +1,19 @@
+[package]
+name = "hudhudscript-test"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+thiserror.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+hudhudscript-parser = { path = "../hudhudscript-parser" }
+hudhudscript-ast = { path = "../hudhudscript-ast" }
+hudhudscript-compiler = { path = "../hudhudscript-compiler" }
+hudhudscript-vm = { path = "../hudhudscript-vm" }
+hudhudscript-runtime = { path = "../hudhudscript-runtime" }
+tokio = { workspace = true }

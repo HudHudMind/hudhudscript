@@ -1,0 +1,15 @@
+[package]
+name = "hudhudscript-types"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+hudhudscript-errors = { path = "../hudhudscript-errors" }
+hudhudscript-ast = { path = "../hudhudscript-ast" }
+thiserror.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true

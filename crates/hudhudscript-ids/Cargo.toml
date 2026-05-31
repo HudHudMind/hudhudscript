@@ -1,0 +1,13 @@
+[package]
+name = "hudhudscript-ids"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+regex = "1.10"
+
+[dev-dependencies]
+proptest.workspace = true

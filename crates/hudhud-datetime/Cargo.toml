@@ -1,0 +1,10 @@
+[package]
+name = "hudhud-datetime"
+version.workspace = true
+edition.workspace = true
+description = "HudHud datetime primitives (no builtins dependency)"
+
+[dependencies]
+chrono = "0.4"
+hudhudscript-bytecode = { path = "../hudhudscript-bytecode" }
+hudhudscript-errors = { path = "../hudhudscript-errors" }

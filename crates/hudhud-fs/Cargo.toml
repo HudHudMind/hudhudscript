@@ -1,0 +1,12 @@
+[package]
+name = "hudhud-fs"
+version.workspace = true
+edition.workspace = true
+description = "HudHud file system primitives (no builtins dependency)"
+
+[dependencies]
+tempfile = "3"
+glob = "0.3"
+libc = "0.2"
+hudhudscript-bytecode = { path = "../hudhudscript-bytecode" }
+hudhudscript-errors = { path = "../hudhudscript-errors" }

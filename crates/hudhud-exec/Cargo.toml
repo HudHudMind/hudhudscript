@@ -1,0 +1,10 @@
+[package]
+name = "hudhud-exec"
+version.workspace = true
+edition.workspace = true
+description = "HudHud exec primitives (no builtins dependency)"
+
+[dependencies]
+hudhudscript-bytecode = { path = "../hudhudscript-bytecode" }
+hudhudscript-errors = { path = "../hudhudscript-errors" }
+libc = "0.2"

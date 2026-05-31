@@ -1,0 +1,132 @@
+// ============================================================================
+// BENGALI KEYWORDS (বাংলা)
+// ============================================================================
+
+// Module system
+use_kw_bn = _{ "ব্যবহার_করো" }
+as_kw_bn = _{ "হিসেবে" }
+import_kw_bn = _{ "আমদানি_করো" }
+export_kw_bn = _{ "রপ্তানি_করো" }
+from_kw_bn = _{ "থেকে" }
+
+// Agent system
+agent_kw_bn = _{ "এজেন্ট" }
+tool_kw_bn = _{ "টুল" }
+resource_kw_bn = _{ "সম্পদ" }
+mcp_kw_bn = _{ "এমসিপি" }
+server_kw_bn = _{ "সার্ভার" }
+config_kw_bn = _{ "কনফিগ" }
+
+
+// Classes and OOP
+class_kw_bn = _{ "শ্রেণী" | "class" }
+extends_kw_bn = _{ "extends" | "<-" }
+new_kw_bn = _{ "নতুন" | "new" }
+this_kw_bn = _{ "this" }
+super_kw_bn = _{ "উপরে" | "super" }
+self_kw_bn = _{ "নিজে" | "self" }
+public_kw_bn = _{ "সর্বজনীন" | "public" }
+private_kw_bn = _{ "ব্যক্তিগত" | "private" }
+protected_kw_bn = _{ "protected" }
+static_kw_bn = _{ "static" }
+constructor_kw_bn = _{ "constructor" }
+// Control flow
+if_kw_bn = _{ "যদি" }
+else_kw_bn = _{ "নাহলে" }
+while_kw_bn = _{ "যতক্ষণ" }
+for_kw_bn = _{ "জন্য" }
+return_kw_bn = _{ "ফেরত_দাও" }
+break_kw_bn = _{ "ভাঙো" }
+continue_kw_bn = _{ "চালিয়ে_যাও" }
+switch_kw_bn = _{ "সুইচ" }
+case_kw_bn = _{ "কেস" }
+default_kw_bn = _{ "ডিফল্ট" }
+
+// Async
+async_kw_bn = _{ "অ্যাসিঙ্ক" }
+await_kw_bn = _{ "অপেক্ষা_করো" }
+
+// Error handling
+try_kw_bn = _{ "চেষ্টা_করো" }
+catch_kw_bn = _{ "ধরে_ফেলো" }
+finally_kw_bn = _{ "শেষে" }
+throw_kw_bn = _{ "ছুঁড়ে_দাও" }
+
+// Variables
+let_kw_bn = _{ "ধরো" | "চলক" }
+
+// Data
+data_kw_bn = _{ "ডেটা" }
+
+// Governance
+constitution_kw_bn = _{ "উপর" }
+law_kw_bn = _{ "আইন" }
+council_kw_bn = _{ "পরিষদ" }
+rule_kw_bn = _{ "নিয়ম" }
+swarm_kw_bn = _{ "ঝাঁক" }
+community_kw_bn = _{ "সম্প্রদায়" }
+provider_kw_bn = _{ "প্রদানকারী" }
+enforcement_kw_bn = _{ "প্রয়োগ" }
+mandatory_kw_bn = _{ "বাধ্যতামূলক" }
+advisory_kw_bn = _{ "পরামর্শমূলক" }
+optional_kw_bn = _{ "ঐচ্ছিক" }
+
+// Booleans
+boolean_bn = @{ "সত্য" | "মিথ্যা" }
+
+model_kw_bn = _{ "মডেল" }
+call_kw_bn = _{ "কল_করো" }
+else_if_kw_bn = _{ "যদি" }
+function_kw_bn = _{ "ফাংশন" | "fn" }
+promise_kw_bn = _{ "প্রতিশ্রুতি" }
+future_kw_bn = _{ "ভবিষ্যৎ" }
+var_kw_bn = _{ "ভেরিয়েবল" }
+const_kw_bn = _{ "কনস্ট্যান্ট" }
+set_kw_bn = _{ "সেট_করো" }
+state_kw_bn = _{ "অবস্থা" }
+statemachine_kw_bn = _{ "স্টেটমেশিন" }
+entity_kw_bn = _{ "সত্তা" }
+agentstate_kw_bn = _{ "এজেন্টস্টেট" }
+intent_kw_bn = _{ "উদ্দেশ্য" }
+want_kw_bn = _{ "চাই" }
+priority_kw_bn = _{ "অগ্রাধিকার" }
+action_kw_bn = _{ "উপর" }
+transform_kw_bn = _{ "রূপান্তর" }
+event_kw_bn = _{ "ঘটনা" }
+on_kw_bn = _{ "উপর" }
+trigger_kw_bn = _{ "ট্রিগার" }
+when_kw_bn = _{ "যখন" }
+allow_kw_bn = _{ "অনুমতি" }
+deny_kw_bn = _{ "অস্বীকার" }
+role_kw_bn = _{ "ভূমিকা" }
+member_kw_bn = _{ "সদস্য" }
+protocol_kw_bn = _{ "প্রোটোকল" }
+competitive_kw_bn = _{ "প্রতিযোগিতামূলক" }
+collaborative_kw_bn = _{ "সহযোগিতামূলক" }
+prosecutor_kw_bn = _{ "প্রসিকিউটর" }
+judge_kw_bn = _{ "বিচারক" }
+executor_kw_bn = _{ "নির্বাহক" }
+culture_kw_bn = _{ "সংস্কৃতি" }
+values_kw_bn = _{ "মূল্যবোধ" }
+norms_kw_bn = _{ "নিয়মকানুন" }
+communication_style_kw_bn = _{ "যোগাযোগশৈলী" }
+formal_kw_bn = _{ "আনুষ্ঠানিক" }
+informal_kw_bn = _{ "অনানুষ্ঠানিক" }
+technical_kw_bn = _{ "প্রযুক্তিগত" }
+flow_kw_bn = _{ "প্রবাহ" }
+dataflow_kw_bn = _{ "ডেটাপ্রবাহ" }
+layer_kw_bn = _{ "স্তর" }
+network_kw_bn = _{ "নেটওয়ার্ক" }
+depends_on_kw_bn = _{ "নির্ভর_করে" }
+broadcast_kw_bn = _{ "সম্প্রচার" }
+merge_kw_bn = _{ "মার্জ_করো" }
+parallel_kw_bn = _{ "সমান্তরাল" }
+sequential_kw_bn = _{ "ক্রমিক" }
+execute_kw_bn = _{ "চালাও" }
+note_kw_bn = _{ "নোট" }
+chord_kw_bn = _{ "কর্ড" }
+melody_kw_bn = _{ "সুর" }
+harmony_kw_bn = _{ "সামঞ্জস্য" }
+rhythm_kw_bn = _{ "ছন্দ" }
+tempo_kw_bn = _{ "গতি" }
+scale_kw_bn = _{ "স্কেল" }

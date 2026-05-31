@@ -1,0 +1,17 @@
+[package]
+name = "hudhudscript-cybernetics"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+hudhudscript-errors = { path = "../hudhudscript-errors" }
+tokio = { workspace = true, features = ["sync"] }
+thiserror.workspace = true
+serde.workspace = true
+async-trait.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["full"] }

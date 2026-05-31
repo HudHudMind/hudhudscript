@@ -1,0 +1,192 @@
+// ============================================================================
+// TURKISH KEYWORDS (Türkçe - SOV word order)
+// ============================================================================
+
+// Module system
+use_kw_tr = _{ "kullan" }
+as_kw_tr = _{ "olarak" }
+import_kw_tr = _{ "içe_aktar" }
+export_kw_tr = _{ "dışa_aktar" }
+from_kw_tr = _{ "den" }
+
+// Agent system
+agent_kw_tr = _{ "ajan" | "ajani" | "temsilci" | "etmen" }
+tool_kw_tr = _{ "araç" }
+resource_kw_tr = _{ "kaynak" }
+mcp_kw_tr = _{ "mcp" }
+server_kw_tr = _{ "sunucu" }
+config_kw_tr = _{ "yapılandırma" }
+provider_kw_tr = _{ "sağlayıcı" }
+model_kw_tr = _{ "model" }
+call_kw_tr = _{ "çağır" }
+
+// Control flow
+if_kw_tr = _{ "eğer" }
+ise_kw = _{ "ise" ~ !(LETTER | NUMBER | "_") }  // Fix #409/#411: boundary-aware postfix conditional
+else_if_kw_tr = _{ "değilse ama" }
+else_kw_tr = _{ "değilse" | "hiç biri değilse" | "hiçbiri değilse" }
+while_kw_tr = _{ "iken" | "döngü" }
+for_kw_tr = _{ "döngü" }
+herbir_kw_tr = _{ "herbir" }
+in_kw_tr = _{ "içindeki" | "içinde" }  // for...in loop — içindeki alias
+return_kw_tr = _{ "dön" }
+break_kw_tr = _{ "kır" | "çık" | "dur" }
+continue_kw_tr = _{ "devam" }
+switch_kw_tr = _{ "seç" }
+case_kw_tr = _{ "durum" }
+default_kw_tr = _{ "varsayılan" }
+
+// Functions
+function_kw_tr = _{ "işlev" | "iş" }
+
+// Async
+async_kw_tr = _{ "eşzamansız" }
+await_kw_tr = _{ "bekle" }
+promise_kw_tr = _{ "söz" }
+future_kw_tr = _{ "gelecek" }
+
+// Error handling
+try_kw_tr = _{ "dene" }
+catch_kw_tr = _{ "yakala" }
+finally_kw_tr = _{ "sonunda" }
+throw_kw_tr = _{ "fırlat" }
+
+// Variables
+var_kw_tr = _{ "değişken" }
+let_kw_tr = _{ "tanım" | "değişken" }
+const_kw_tr = _{ "sabit" }
+set_kw_tr = _{ "değer" }
+
+// Enum
+enum_kw_tr = _{ "numaralandır" | "num" }
+
+// Classes and OOP
+class_kw_tr = _{ "sınıf" }
+extends_kw_tr = _{ "<-" }  // Araba <- Araç (inheritance arrow)
+new_kw_tr = _{ "yeni" }
+this_kw_tr = _{ "bu" ~ !(ASCII_ALPHANUMERIC | "_" | '\u{0080}'..'\u{FFFF}') }
+super_kw_tr = _{ "üst" }
+self_kw_tr = _{ "kendi" ~ !(ASCII_ALPHANUMERIC | "_" | '\u{0080}'..'\u{FFFF}') }
+public_kw_tr = _{ "açık" }
+private_kw_tr = _{ "gizli" }
+protected_kw_tr = _{ "saklı" }
+static_kw_tr = _{ "statik" }
+constructor_kw_tr = _{ "kurucu" }
+
+// Data
+data_kw_tr = _{ "veri" }
+
+// State
+state_kw_tr = _{ "durum" }
+statemachine_kw_tr = _{ "durummakinesi" }
+
+// Entity & Intent
+entity_kw_tr = _{ "varlık" }
+agentstate_kw_tr = _{ "ajan_durumu" | "ajandurum" }
+intent_kw_tr = _{ "niyet" }
+want_kw_tr = _{ "iste" }
+priority_kw_tr = _{ "öncelik" }
+action_kw_tr = _{ "üzerinde" }
+transform_kw_tr = _{ "dönüşüm" }
+
+// Events
+event_kw_tr = _{ "olay" }
+on_kw_tr = _{ "üzerinde" }
+trigger_kw_tr = _{ "tetikle" }
+when_kw_tr = _{ "ne_zaman" }
+
+// Permissions
+allow_kw_tr = _{ "izin_ver" | "izinler" }
+deny_kw_tr = _{ "yasakla" }
+
+// Governance
+constitution_kw_tr = _{ "anayasa" }
+law_kw_tr = _{ "yasa" }
+rule_kw_tr = _{ "kural" }
+council_kw_tr = _{ "konsey" }
+swarm_kw_tr = _{ "sürü" }
+community_kw_tr = _{ "topluluk" }
+contract_kw_tr = _{ "sözleşme" }
+treaty_kw_tr = _{ "antlaşma" }
+enforcement_kw_tr = _{ "uygulama" }
+mandatory_kw_tr = _{ "zorunlu" }
+advisory_kw_tr = _{ "tavsiye" }
+optional_kw_tr = _{ "isteğe_bağlı" }
+
+// Roles & Strategy
+role_kw_tr = _{ "rol" }
+member_kw_tr = _{ "üye" }
+protocol_kw_tr = _{ "protokol" }
+competitive_kw_tr = _{ "rekabetçi" }
+collaborative_kw_tr = _{ "işbirlikçi" }
+prosecutor_kw_tr = _{ "savcı" }
+judge_kw_tr = _{ "hakim" }
+executor_kw_tr = _{ "yürütücü" }
+
+// Governance models (Türkçe)
+democracy_kw_tr = _{ "demokrasi" }
+monarchy_kw_tr = _{ "monarşi" }
+technocracy_kw_tr = _{ "teknokrasi" }
+theocracy_kw_tr = _{ "teokrasi" }
+parliamentary_kw_tr = _{ "parlamenter" }
+meritocracy_kw_tr = _{ "liyakat" }
+anarchy_kw_tr = _{ "anarşi" }
+oligarchy_kw_tr = _{ "oligarşi" }
+consensus_kw_tr = _{ "uzlaşı" }
+autocracy_kw_tr = _{ "otokrasi" }
+
+// Execution types (Türkçe)
+roundRobin_kw_tr = _{ "sırayla" }
+
+// Voting types (Türkçe)
+majority_kw_tr = _{ "çoğunluk" }
+unanimous_kw_tr = _{ "oybirliği" }
+weighted_kw_tr = _{ "ağırlıklı" }
+firstWins_kw_tr = _{ "ilkKazanan" }
+
+// Strategy session hooks (Türkçe)
+onStart_kw_tr = _{ "başlangıçta" }
+onMemberStart_kw_tr = _{ "üyeKonuşmadan" }
+onMemberComplete_kw_tr = _{ "üyeTamamladığında" }
+onVote_kw_tr = _{ "oylamada" }
+onComplete_kw_tr = _{ "tamamlandığında" }
+onError_kw_tr = _{ "hatada" }
+
+// Culture
+culture_kw_tr = _{ "kültür" }
+values_kw_tr = _{ "değerler" }
+norms_kw_tr = _{ "normlar" }
+communication_style_kw_tr = _{ "iletişim_tarzı" }
+formal_kw_tr = _{ "resmi" }
+informal_kw_tr = _{ "gayri_resmi" }
+technical_kw_tr = _{ "teknik" }
+
+// Flow & Orchestration
+flow_kw_tr = _{ "akış" }
+dataflow_kw_tr = _{ "veri_akışı" }
+layer_kw_tr = _{ "katman" }
+network_kw_tr = _{ "ağ" }
+depends_on_kw_tr = _{ "bağlı" }
+broadcast_kw_tr = _{ "yayınla" }
+merge_kw_tr = _{ "birleştir" }
+parallel_kw_tr = _{ "paralel" }
+sequential_kw_tr = _{ "sıralı" }
+execute_kw_tr = _{ "çalıştır" }
+
+// Music Data Structures
+note_kw_tr = _{ "nota" }
+chord_kw_tr = _{ "akor" }
+melody_kw_tr = _{ "melodi" }
+harmony_kw_tr = _{ "armoni" }
+rhythm_kw_tr = _{ "ritim" }
+tempo_kw_tr = _{ "tempo" }
+scale_kw_tr = _{ "skala" }
+
+// Booleans
+boolean_tr = @{ "doğru" | "yanlış" }
+
+// Null
+null_tr = @{ "boş" }
+
+// Grammatical particles
+obj_marker_tr = _{ "sunucusunu" }

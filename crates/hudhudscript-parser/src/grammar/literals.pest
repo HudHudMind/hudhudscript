@@ -1,0 +1,78 @@
+// ============================================================================
+// LITERALS AND IDENTIFIERS
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// IDENTIFIERS
+// ----------------------------------------------------------------------------
+
+// Identifier: Supports Unicode for all languages
+// Excludes pure Kanji number sequences
+// Fix v0.4.469: Keyword reservation — keywords cannot be used as identifiers.
+// and_kw and or_kw excluded because their single-letter forms (y, e, i, o) would
+// break valid variable names like year, each, index, obj.
+identifier = @{ 
+    !("零" | "〇" | "一" | "二" | "三" | "四" | "五" | "六" | "七" | "八" | "九" | "十" | "百" | "千" | "万" | "億") ~
+    (ASCII_ALPHA | "_" | '\u{0080}'..'\u{FFFF}') ~ 
+    (ASCII_ALPHANUMERIC | "_" | '\u{0080}'..'\u{FFFF}')* 
+}
+
+// ----------------------------------------------------------------------------
+// NUMERIC LITERALS (Multi-Script Support)
+// ----------------------------------------------------------------------------
+
+// Arabic-Indic digits: ٠-٩ (U+0660 to U+0669)
+arabic_digit = _{ '\u{0660}'..'\u{0669}' }
+
+// Bengali-Indic digits: ০-৯ (U+09E6 to U+09EF)
+bengali_digit = _{ '\u{09E6}'..'\u{09EF}' }
+
+// Japanese/Chinese full-width digits: ０-９ (U+FF10 to U+FF19)
+fullwidth_digit = _{ '\u{FF10}'..'\u{FF19}' }
+
+// Japanese Kanji numerals (for traditional writing)
+// Supports compositional numbers like 百五十三 (153), 三千二百四十五 (3245)
+// Greedy matching - consumes all consecutive Kanji number characters
+japanese_numeral = @{
+    (
+        ("零" | "〇" | "一" | "二" | "三" | "四" | "五" | "六" | "七" | "八" | "九" | "十" | "百" | "千" | "万" | "億")+
+    )
+}
+
+// Combined digit rule supporting Western, Arabic-Indic, Bengali-Indic, and Full-width
+digit = _{ ASCII_DIGIT | arabic_digit | bengali_digit | fullwidth_digit }
+
+// Number literal: Supports integers and decimals (no negative sign - use unary operator)
+// Japanese Kanji numerals must be tried FIRST before digit-by-digit parsing
+number = @{ japanese_numeral | (digit+ ~ ("." ~ digit+)?) }
+
+// ----------------------------------------------------------------------------
+// STRING LITERALS
+// ----------------------------------------------------------------------------
+
+string = @{ "\"" ~ (("\\" ~ ANY) | (!"\\" ~ !"\"" ~ ANY))* ~ "\"" }
+
+// ----------------------------------------------------------------------------
+// BOOLEAN LITERALS (Multi-Language Support)
+// ----------------------------------------------------------------------------
+
+boolean = @{
+    // English
+    "true" | "false"
+    // Turkish
+    | "doğru" | "yanlış"
+    // Japanese (romaji)
+    | "shin" | "gi"
+    // Japanese (kanji)
+    | "真" | "偽"
+    // Arabic
+    | "صحيح" | "خطأ"
+    // Bengali
+    | "সত্য" | "মিথ্যা"
+}
+
+// ----------------------------------------------------------------------------
+// NULL LITERAL (Fix #420: uses language-specific keyword pattern from base.pest)
+// ----------------------------------------------------------------------------
+
+null = @{ null_kw }

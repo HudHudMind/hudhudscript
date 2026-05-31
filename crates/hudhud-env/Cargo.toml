@@ -1,0 +1,9 @@
+[package]
+name = "hudhud-env"
+version.workspace = true
+edition.workspace = true
+description = "HudHud env primitives (no builtins dependency)"
+
+[dependencies]
+hudhudscript-bytecode = { path = "../hudhudscript-bytecode" }
+hudhudscript-errors = { path = "../hudhudscript-errors" }

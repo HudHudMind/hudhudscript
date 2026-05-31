@@ -1,0 +1,219 @@
+//! `impl CompileTarget for Compiler` split across sub-files.
+
+use super::*;
+
+mod class_impl;
+mod emit_impl;
+mod func_impl;
+mod mcp_impl;
+
+impl CompileTarget for Compiler {
+    fn ct_compile_decl(&mut self, decl: &Decl) -> CompileResult<()> {
+        self.compile_decl(decl)
+    }
+    fn ct_compile_match_pattern(
+        &mut self,
+        pattern: &hudhudscript_ast::MatchPattern,
+    ) -> CompileResult<Vec<usize>> {
+        let r = crate::compiler::regalloc::temp_reg();
+        self.last_match_reg = r;
+        self.bytecode.push_instr(Instruction::Move { dst: r, src: 255 });
+        self.compile_match_pattern_bytecode(pattern, r)
+    }
+    fn ct_compile_destructure_pattern(
+        &mut self,
+        pattern: &hudhudscript_ast::Pattern,
+        is_const: bool,
+    ) -> CompileResult<()> {
+        self.compile_destructure_pattern(pattern, is_const)
+    }
+    fn ct_register_trait(&mut self, name: &str, methods: &[hudhudscript_ast::TraitMethodSig]) {
+        let method_names: Vec<String> = methods.iter().map(|m| m.name.clone()).collect();
+        self.known_traits.insert(name.to_string(), method_names);
+    }
+
+    fn ct_compile_class(&mut self, class_decl: &hudhudscript_ast::ClassDecl) -> CompileResult<()> {
+        self.compile_class_impl(class_decl)
+    }
+    fn ct_emit(&mut self, instr: Instruction) {
+        self.emit(instr)
+    }
+    fn ct_emit_const(&mut self, val: Value16) -> u32 {
+        self.emit_const(val)
+    }
+    fn ct_compile_arrow(
+        &mut self,
+        params: &[String],
+        arrow_body: &hudhudscript_ast::ArrowFunctionBody,
+        is_async: bool,
+    ) -> CompileResult<()> {
+        self.compile_arrow(params, arrow_body, is_async)
+    }
+    fn ct_compile_mcp_server(
+        &mut self,
+        mcp_decl: &hudhudscript_ast::McpServerDecl,
+    ) -> CompileResult<()> {
+        self.compile_mcp_server(mcp_decl)
+    }
+    fn ct_emit_num_const(&mut self, val: f64) -> u32 {
+        self.emit_num_const(val)
+    }
+    fn ct_emit_int_const(&mut self, val: i64) -> u32 {
+        self.emit_int_const(val)
+    }
+    fn ct_intern(&mut self, name: &str) -> u32 {
+        self.intern(name)
+    }
+    fn ct_mark_stmt_pos(&mut self, span: &Span) {
+        self.mark_stmt_pos(span)
+    }
+    fn ct_current_ip(&self) -> usize {
+        self.current_ip()
+    }
+    fn ct_patch(&mut self, ip: usize, instr: Instruction) {
+        self.patch(ip, instr)
+    }
+    fn ct_add_loop_payload(&mut self, start: u32, end: u32) -> u32 {
+        self.add_loop_payload(start, end)
+    }
+    fn ct_patch_loop_payload_end(&mut self, idx: u32, end: u32) {
+        self.patch_loop_payload_end(idx, end)
+    }
+    fn ct_add_enum_decl_payload(&mut self, payload: hudhudscript_bytecode::EnumDeclPayload) -> u32 {
+        self.add_enum_decl_payload(payload)
+    }
+    fn ct_add_class_decl_payload(&mut self, payload: hudhudscript_bytecode::ClassDeclPayload) -> u32 {
+        self.add_class_decl_payload(payload)
+    }
+    fn ct_add_trait_check_payload(&mut self, payload: hudhudscript_bytecode::TraitCheckPayload) -> u32 {
+        self.add_trait_check_payload(payload)
+    }
+    fn ct_add_load_module_payload(&mut self, payload: hudhudscript_bytecode::LoadModulePayload) -> u32 {
+        self.add_load_module_payload(payload)
+    }
+    fn ct_add_define_function_payload(&mut self, payload: hudhudscript_bytecode::DefineFunctionPayload) -> u32 {
+        self.add_define_function_payload(payload)
+    }
+    fn ct_add_class_static_decl_payload(&mut self, payload: hudhudscript_bytecode::ClassStaticDeclPayload) -> u32 {
+        self.add_class_static_decl_payload(payload)
+    }
+    fn ct_add_destruct_object_payload(&mut self, payload: hudhudscript_bytecode::DestructObjectPayload) -> u32 {
+        self.add_destruct_object_payload(payload)
+    }
+    fn ct_add_call_payload(&mut self, sym: SymId, arg_count: u8) -> u32 {
+        self.add_call_payload(sym, arg_count)
+    }
+    fn ct_add_two_sym_payload(&mut self, first: u32, second: u32) -> u32 {
+        self.add_two_sym_payload(first, second)
+    }
+    fn ct_add_opt_sym_payload(&mut self, sym: Option<SymId>) -> u32 {
+        self.add_opt_sym_payload(sym)
+    }
+    fn ct_add_super_instr_payload(&mut self, call_idx: u32, slot: u32, imm: i16, offset: i32) -> u32 {
+        self.bytecode.add_super_instr_payload(call_idx, slot, imm, offset)
+    }
+    fn ct_declare_local(&mut self, name: &str, is_const: bool) -> CompileResult<()> {
+        if self.in_top_level {
+            self.top_level_names.insert(name.to_string());
+        }
+        self.declare_local(name, is_const)
+    }
+    fn ct_is_top_level(&self) -> bool {
+        self.in_top_level
+    }
+    fn ct_begin_scope(&mut self) {
+        self.begin_scope()
+    }
+    fn ct_end_scope(&mut self) {
+        self.end_scope()
+    }
+    fn ct_compile_function_decl(
+        &mut self,
+        name: &str,
+        params: &[String],
+        body: &[Stmt],
+        is_async: bool,
+        is_generator: bool,
+        span: Span,
+    ) -> CompileResult<()> {
+        self.compile_function_decl(name, params, body, is_async, is_generator, span)
+    }
+
+    fn ct_local_type(&self, name: &str) -> crate::compiler::expr::ExprType {
+        self.locals
+            .iter()
+            .rev()
+            .find(|l| l.name == name)
+            .map(|l| l.known_type)
+            .unwrap_or(crate::compiler::expr::ExprType::Unknown)
+    }
+
+    fn ct_set_local_type(&mut self, name: &str, ty: crate::compiler::expr::ExprType) {
+        if let Some(local) = self.locals.iter_mut().rev().find(|l| l.name == name) {
+            local.known_type = ty;
+        }
+    }
+
+    fn ct_local_reg(&self, name: &str) -> Option<u8> {
+        self.locals
+            .iter()
+            .rev()
+            .find(|l| l.name == name)
+            .and_then(|l| l.reg)
+    }
+    fn ct_is_const_local(&self, name: &str) -> bool {
+        self.locals
+            .iter()
+            .rev()
+            .find(|l| l.name == name)
+            .map(|l| l.is_const)
+            .unwrap_or(false)
+    }
+
+    fn ct_next_local_reg(&self) -> u8 {
+        self.next_local_reg
+    }
+
+    fn ct_current_fn_name(&self) -> Option<&str> {
+        self.fn_ctx.as_ref().and_then(|c| c.fn_name.as_deref())
+    }
+
+    fn ct_current_has_rest(&self) -> bool {
+        self.fn_ctx.as_ref().map_or(false, |c| c.has_rest)
+    }
+
+    fn ct_check_await(&self, span: &Span) -> CompileResult<()> {
+        if let Some(ctx) = &self.fn_ctx {
+            if !ctx.is_async {
+                let pos = SourcePosition { line: span.start.line, column: span.start.column };
+                return Err(compile_codes::generic_at(
+                    "await can only be used inside async functions".to_string(), pos));
+            }
+        }
+        Ok(())
+    }
+
+    fn ct_track_reference(&mut self, name: &str) {
+        if let Some(ctx) = &mut self.fn_ctx {
+            ctx.referenced.push(name.to_string());
+        }
+    }
+
+    fn ct_match_reg(&self) -> u8 {
+        self.last_match_reg
+    }
+    fn ct_set_match_reg(&mut self, reg: u8) {
+        self.last_match_reg = reg;
+    }
+    fn ct_patch_jump_offset(&mut self, ip: usize, offset: i16) {
+        match &mut self.bytecode.instructions[ip] {
+            Instruction::JumpIfFalse { offset: ref mut off, .. } => *off = offset,
+            Instruction::JumpIfTrue { offset: ref mut off, .. } => *off = offset,
+            Instruction::Jump(ref mut off) => *off = offset as i32,
+            _ => {}
+        }
+    }
+    fn ct_is_known_generator(&self, name: &str) -> bool {
+        self.known_generators.contains(name)
+    }
+}

@@ -1,0 +1,32 @@
+[package]
+name = "hudhudscript-runtime"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+hudhudscript-errors = { path = "../hudhudscript-errors" }
+hudhudscript-orchestration = { path = "../hudhudscript-orchestration" }
+hudhudscript-mcp = { path = "../hudhudscript-mcp" }
+hudhudscript-tools = { path = "../hudhudscript-tools" }
+hudhudscript-resources = { path = "../hudhudscript-resources" }
+hudhudscript-ast = { path = "../hudhudscript-ast" }
+hudhudscript-utils = { path = "../hudhudscript-utils" }
+tokio.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+uuid = { version = "1.0", features = ["v4", "serde"] }
+async-trait = "0.1"
+reqwest = { workspace = true, features = ["stream"] }
+tokio-util = { version = "0.7", features = ["io"] }
+futures-util = "0.3"
+
+[dev-dependencies]
+proptest.workspace = true
+async-trait.workspace = true
+hudhudscript-parser = { path = "../hudhudscript-parser" }
+tempfile = "3.8"

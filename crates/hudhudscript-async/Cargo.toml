@@ -1,0 +1,20 @@
+[package]
+name = "hudhudscript-async"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+hudhudscript-errors = { path = "../hudhudscript-errors" }
+hudhudscript-ast = { path = "../hudhudscript-ast" }
+tokio = { workspace = true, features = ["full"] }
+thiserror.workspace = true
+uuid.workspace = true
+serde = { workspace = true, features = ["derive"] }
+futures = "0.3"
+parking_lot = { workspace = true }
+
+[dev-dependencies]
+proptest.workspace = true

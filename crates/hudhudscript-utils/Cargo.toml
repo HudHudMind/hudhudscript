@@ -1,0 +1,16 @@
+[package]
+name = "hudhudscript-utils"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Utility library for HudHudScript — retry, rate limiting, debounce, throttle"
+
+[dependencies]
+tokio = { workspace = true, features = ["time", "sync"] }
+thiserror.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["full", "test-util"] }
+proptest.workspace = true

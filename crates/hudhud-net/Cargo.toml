@@ -1,0 +1,12 @@
+[package]
+name = "hudhud-net"
+version.workspace = true
+edition.workspace = true
+description = "HudHud network primitives (no builtins dependency)"
+
+[dependencies]
+tungstenite = { workspace = true }
+serde_json = { workspace = true }
+libc = "0.2"
+hudhudscript-bytecode = { path = "../hudhudscript-bytecode" }
+hudhudscript-errors = { path = "../hudhudscript-errors" }

@@ -1,0 +1,11 @@
+[package]
+name = "hudhudscript-formatter"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+hudhudscript-ast = { path = "../hudhudscript-ast" }
+hudhudscript-markdown = { path = "../hudhudscript-markdown" }
+
+[dev-dependencies]
+hudhudscript-parser = { path = "../hudhudscript-parser" }

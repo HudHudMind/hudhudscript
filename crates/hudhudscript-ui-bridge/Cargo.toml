@@ -1,0 +1,13 @@
+[package]
+name = "hudhudscript-ui-bridge"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "HudHudScript UI Bridge — GUI framework adapters (GTK, Qt, Tauri, Iced, Web)"
+
+[dependencies]
+hudhudscript-ui-core = { path = "../hudhudscript-ui-core" }
+serde = { workspace = true }
+serde_json = { workspace = true }

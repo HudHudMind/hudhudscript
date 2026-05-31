@@ -1,0 +1,219 @@
+// ============================================================================
+// ENGLISH KEYWORDS
+// ============================================================================
+
+// Module system
+use_kw_en = _{ "use" }
+as_kw_en = _{ "as" }
+import_kw_en = _{ "import" }
+export_kw_en = _{ "export" }
+from_kw_en = _{ "from" }
+
+// Agent system
+agent_kw_en = _{ "agent" }
+tool_kw_en = _{ "tool" }
+resource_kw_en = _{ "resource" }
+mcp_kw_en = _{ "mcp" }
+server_kw_en = _{ "server" }
+config_kw_en = _{ "config" }
+provider_kw_en = _{ "provider" }
+model_kw_en = _{ "model" }
+call_kw_en = _{ "call" }
+
+// Control flow
+if_kw_en = _{ "if" }
+else_if_kw_en = _{ "else if" }
+else_kw_en = _{ "else" }
+while_kw_en = _{ "while" }
+for_kw_en = _{ "for" }
+return_kw_en = _{ "return" }
+break_kw_en = _{ "break" }
+continue_kw_en = _{ "continue" }
+switch_kw_en = _{ "switch" }
+case_kw_en = _{ "case" }
+default_kw_en = _{ "default" }
+match_kw_en = _{ "match" }
+enum_kw_en = _{ "enum" }
+
+// Functions
+function_kw_en = _{ "function" | "fn" }
+
+// Async
+async_kw_en = _{ "async" }
+await_kw_en = _{ "await" }
+promise_kw_en = _{ "promise" }
+future_kw_en = _{ "future" }
+
+// Error handling
+try_kw_en = _{ "try" }
+catch_kw_en = _{ "catch" }
+finally_kw_en = _{ "finally" }
+throw_kw_en = _{ "throw" }
+
+// Variables
+var_kw_en = _{ "var" }
+let_kw_en = _{ "let" }
+const_kw_en = _{ "const" }
+set_kw_en = _{ "set" }
+
+// Classes and OOP
+class_kw_en = _{ "class" }
+extends_kw_en = _{ "extends" | "<-" }
+new_kw_en = _{ "new" }
+this_kw_en = { "this" }
+super_kw_en = _{ "super" }
+self_kw_en = { "self" }  // self keyword for accessing class itself
+public_kw_en = _{ "public" }
+private_kw_en = _{ "private" }
+protected_kw_en = _{ "protected" }
+static_kw_en = _{ "static" }
+constructor_kw_en = _{ "constructor" }
+
+// Traits/Interfaces — Issue #659
+trait_kw_en = _{ "trait" | "interface" }
+implements_kw_en = _{ "implements" }
+instanceof_kw_en = _{ "instanceof" }
+
+// Data
+data_kw_en = _{ "data" }
+
+// State
+state_kw_en = _{ "state" }
+statemachine_kw_en = _{ "statemachine" }
+
+// Entity & Intent
+entity_kw_en = _{ "entity" }
+agentstate_kw_en = _{ "agentstate" }
+intent_kw_en = _{ "intent" }
+want_kw_en = _{ "want" }
+priority_kw_en = _{ "priority" }
+action_kw_en = _{ "action" }
+transform_kw_en = _{ "transform" }
+
+// Events
+event_kw_en = _{ "event" }
+on_kw_en = _{ "on" }
+trigger_kw_en = _{ "trigger" }
+when_kw_en = _{ "when" }
+
+// Permissions
+permission_kw_en = _{ "permission" }
+allow_kw_en = _{ "allow" }
+deny_kw_en = _{ "deny" }
+
+// Governance
+constitution_kw_en = _{ "constitution" }
+law_kw_en = _{ "law" }
+rule_kw_en = _{ "rule" }
+council_kw_en = _{ "council" }
+swarm_kw_en = _{ "swarm" }
+community_kw_en = _{ "community" }
+contract_kw_en = _{ "contract" }
+treaty_kw_en = _{ "treaty" }
+enforcement_kw_en = _{ "enforcement" }
+mandatory_kw_en = _{ "mandatory" }
+advisory_kw_en = _{ "advisory" }
+optional_kw_en = _{ "optional" }
+
+// Roles & Strategy
+role_kw_en = _{ "role" }
+member_kw_en = _{ "member" }
+protocol_kw_en = _{ "protocol" }
+competitive_kw_en = _{ "competitive" }
+collaborative_kw_en = _{ "collaborative" }
+prosecutor_kw_en = _{ "prosecutor" }
+judge_kw_en = _{ "judge" }
+executor_kw_en = _{ "executor" }
+
+// Governance models
+democracy_kw_en = _{ "democracy" }
+monarchy_kw_en = _{ "monarchy" }
+technocracy_kw_en = _{ "technocracy" }
+theocracy_kw_en = _{ "theocracy" }
+parliamentary_kw_en = _{ "parliamentary" }
+meritocracy_kw_en = _{ "meritocracy" }
+anarchy_kw_en = _{ "anarchy" }
+oligarchy_kw_en = _{ "oligarchy" }
+consensus_kw_en = _{ "consensus" }
+autocracy_kw_en = _{ "autocracy" }
+
+// Execution types
+roundRobin_kw_en = _{ "roundRobin" }
+
+// Voting types
+majority_kw_en = _{ "majority" }
+unanimous_kw_en = _{ "unanimous" }
+weighted_kw_en = _{ "weighted" }
+firstWins_kw_en = _{ "firstWins" }
+
+// Strategy session hooks
+onStart_kw_en = _{ "onStart" }
+onMemberStart_kw_en = _{ "onMemberStart" }
+onMemberComplete_kw_en = _{ "onMemberComplete" }
+onVote_kw_en = _{ "onVote" }
+onComplete_kw_en = _{ "onComplete" }
+onError_kw_en = _{ "onError" }
+
+// Culture
+culture_kw_en = _{ "culture" }
+values_kw_en = _{ "values" }
+norms_kw_en = _{ "norms" }
+communication_style_kw_en = _{ "communication_style" }
+formal_kw_en = _{ "formal" }
+informal_kw_en = _{ "informal" }
+technical_kw_en = _{ "technical" }
+
+// Flow & Orchestration
+flow_kw_en = _{ "flow" }
+dataflow_kw_en = _{ "dataflow" }
+layer_kw_en = _{ "layer" }
+network_kw_en = _{ "network" }
+depends_on_kw_en = _{ "depends_on" }
+broadcast_kw_en = _{ "broadcast" }
+merge_kw_en = _{ "merge" }
+parallel_kw_en = _{ "parallel" }
+sequential_kw_en = _{ "sequential" }
+execute_kw_en = _{ "execute" }
+
+// Music Data Structures
+note_kw_en = _{ "note" }
+chord_kw_en = _{ "chord" }
+melody_kw_en = _{ "melody" }
+harmony_kw_en = _{ "harmony" }
+rhythm_kw_en = _{ "rhythm" }
+tempo_kw_en = _{ "tempo" }
+scale_kw_en = _{ "scale" }
+
+// Subject-Oriented Programming (SOP)
+subject_kw_en = _{ "subject" }
+uses_kw_en = _{ "uses" }
+via_kw_en = _{ "via" }
+relation_kw_en = _{ "relation" }
+effect_kw_en = _{ "effect" }
+memory_kw_en = _{ "memory" }
+perception_kw_en = _{ "perception" }
+context_kw_en = _{ "context" }
+spawn_kw_en = _{ "spawn" }
+despawn_kw_en = _{ "despawn" }
+compose_kw_en = _{ "compose" }
+of_kw_en = _{ "of" }
+can_kw_en = _{ "can" }
+has_kw_en = _{ "has" }
+intends_kw_en = _{ "intends" }
+send_kw_en = _{ "send" }
+receive_kw_en = _{ "receive" }
+require_kw_en = _{ "require" }
+perform_kw_en = _{ "perform" }
+
+// RAG (Retrieval-Augmented Generation)
+store_kw_en = _{ "store" }
+remember_kw_en = _{ "remember" }
+recall_kw_en = _{ "recall" }
+forget_kw_en = _{ "forget" }
+embed_kw_en = _{ "embed" }
+
+// Booleans
+boolean_en = @{ "true" | "false" }
+
+// Null
+null_en = @{ "null" }

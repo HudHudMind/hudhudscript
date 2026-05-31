@@ -1,0 +1,64 @@
+// Bengali (বাংলা) Keywords
+// SOV word order, Bengali script
+
+// Module system
+use_kw_bn = _{ "ব্যবহার_করো" }
+as_kw_bn = _{ "হিসেবে" }
+import_kw_bn = _{ "আমদানি_করো" }
+export_kw_bn = _{ "রপ্তানি_করো" }
+from_kw_bn = _{ "থেকে" }
+
+// Agent system
+agent_kw_bn = _{ "এজেন্ট" }
+tool_kw_bn = _{ "টুল" }
+resource_kw_bn = _{ "সম্পদ" }
+server_kw_bn = _{ "সার্ভার" }
+config_kw_bn = _{ "কনফিগ" }
+
+// Control flow
+if_kw_bn = _{ "যদি" }
+else_kw_bn = _{ "নাহলে" }
+while_kw_bn = _{ "যতক্ষণ" }
+for_kw_bn = _{ "জন্য" }
+return_kw_bn = _{ "ফেরত_দাও" }
+break_kw_bn = _{ "ভাঙো" }
+continue_kw_bn = _{ "চালিয়ে_যাও" }
+switch_kw_bn = _{ "সুইচ" }
+case_kw_bn = _{ "কেস" }
+default_kw_bn = _{ "ডিফল্ট" }
+
+// Error handling
+try_kw_bn = _{ "চেষ্টা_করো" }
+catch_kw_bn = _{ "ধরে_ফেলো" }
+finally_kw_bn = _{ "শেষে" }
+throw_kw_bn = _{ "ছুঁড়ে_দাও" }
+
+// Async
+async_kw_bn = _{ "অ্যাসিঙ্ক" }
+await_kw_bn = _{ "অপেক্ষা_করো" }
+
+// Variables
+let_kw_bn = _{ "ধরো" | "চলক" }
+data_kw_bn = _{ "ডেটা" }
+const_kw_bn = _{ "ধ্রুবক" }
+
+// Governance
+constitution_kw_bn = _{ "সংবিধান" }
+law_kw_bn = _{ "আইন" }
+rule_kw_bn = _{ "নিয়ম" }
+council_kw_bn = _{ "পরিষদ" }
+swarm_kw_bn = _{ "ঝাঁক" }
+community_kw_bn = _{ "সম্প্রদায়" }
+mandatory_kw_bn = _{ "বাধ্যতামূলক" }
+advisory_kw_bn = _{ "পরামর্শমূলক" }
+optional_kw_bn = _{ "ঐচ্ছিক" }
+role_kw_bn = _{ "ভূমিকা" }
+member_kw_bn = _{ "সদস্য" }
+strategy_kw_bn = _{ "কৌশল" }
+competitive_kw_bn = _{ "প্রতিযোগিতামূলক" }
+collaborative_kw_bn = _{ "সহযোগিতামূলক" }
+
+// Orchestration
+parallel_kw_bn = _{ "সমান্তরাল" }
+sequential_kw_bn = _{ "ক্রমিক" }
+execute_kw_bn = _{ "চালাও" }

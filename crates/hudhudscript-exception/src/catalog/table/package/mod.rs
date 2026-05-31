@@ -1,0 +1,59 @@
+use crate::catalog::category::ExceptionCategory;
+use crate::catalog::codes::ExceptionCode;
+use crate::catalog::entry::ExceptionEntry;
+
+mod gguf;
+pub use gguf::*;
+mod graph;
+pub use graph::*;
+mod hf;
+pub use hf::*;
+mod model;
+pub use model::*;
+mod module;
+pub use module::*;
+mod ollama;
+pub use ollama::*;
+mod package;
+pub use package::*;
+mod resolver;
+pub use resolver::*;
+
+pub static TABLE: &[ExceptionEntry] = &[
+    GGUF_INVALID_MAGIC,
+    GGUF_INVALID_UTF8,
+    GGUF_TOO_SHORT,
+    GGUF_UNEXPECTED_EOF,
+    GGUF_UNSUPPORTED_VERSION,
+    GRAPH_CIRCULAR_DEPENDENCY,
+    GRAPH_MODULE_NOT_FOUND,
+    HF_DESERIALIZE,
+    HF_HTTP,
+    MODEL_MANAGER_ALREADY_EXISTS,
+    MODEL_MANAGER_INSUFFICIENT_DISK_SPACE,
+    MODEL_MANAGER_IO,
+    MODEL_MANAGER_NOT_FOUND,
+    MODULE_LOADER_ALREADY_LOADED,
+    MODULE_LOADER_MODULE_NOT_FOUND,
+    MODULE_LOADER_PARSE_ERROR,
+    MODULE_LOADER_READ_ERROR,
+    OLLAMA_DESERIALIZE,
+    OLLAMA_HTTP,
+    PACKAGE_BUILD_FAILED,
+    PACKAGE_CHECKSUM_MISMATCH,
+    PACKAGE_DEPENDENCY_RESOLUTION,
+    PACKAGE_ENTRY_POINT_NOT_FOUND,
+    PACKAGE_INVALID_PACKAGE_NAME,
+    PACKAGE_INVALID_VERSION,
+    PACKAGE_IO,
+    PACKAGE_NETWORK,
+    PACKAGE_OTHER,
+    PACKAGE_PACKAGE_NOT_FOUND,
+    PACKAGE_SECURITY_VULNERABILITY,
+    PACKAGE_SERIALIZATION,
+    PACKAGE_TOML,
+    PACKAGE_TOML_SERIALIZE,
+    PACKAGE_VERSION_NOT_FOUND,
+    RESOLVER_INVALID_PATH,
+    RESOLVER_NOT_FOUND,
+];

@@ -1,0 +1,16 @@
+[package]
+name = "hudhudscript-linter"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+hudhudscript-ast = { path = "../hudhudscript-ast" }
+hudhudscript-errors = { path = "../hudhudscript-errors" }
+serde.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+hudhudscript-parser = { path = "../hudhudscript-parser" }
