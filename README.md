@@ -6,7 +6,7 @@
 [![Version](https://img.shields.io/badge/version-0.6.0-blue.svg)](Cargo.toml)
 [![Rust](https://img.shields.io/badge/built%20with-Rust-orange.svg)](https://www.rust-lang.org/)
 
-HudHudScript is a programming language designed to be written in **your own language** — Turkish, Arabic, Japanese, English, Kurdish, Persian, and 18 more. Every keyword, every built-in function, every error message is localized natively. It runs on a **fully register-based VM** written in Rust, with first-class support for AI providers, agent pipelines, council/governance models, and SOPs (Standard Operating Procedures).
+HudHudScript is a programming language designed to be written in **your own language** — Turkish, Arabic, Japanese, English, Kurdish, Persian, and 18 more. Every keyword, every built-in function, every error message is localized natively. It runs on a **fully register-based VM** written in Rust, with first-class support for AI providers, agent pipelines, council/governance models, and SOP (Subject-Oriented Programming).
 
 ---
 
@@ -33,7 +33,7 @@ HudHudScript is a programming language designed to be written in **your own lang
 | 🚀 **Register-Based VM** | Inspired by Lua 5.4. No stack/register hybrid — every local is a register. Fast, predictable execution. |
 | 🤖 **AI-First Built-ins** | `provider`, `agent` are first-class constructs. Native integration with DeepSeek, OpenAI, Anthropic, Ollama, and local models. |
 | 🏛️ **Governance Primitives** | `role`, `council`, `swarm`, `community`, `constitution`, `law` — model real-world authority systems directly. |
-| 📜 **SOP Workflows** | Standard Operating Procedures as code — sequential, parallel, conditional flows with audit trails. |
+| 📜 **SOP — Subject-Oriented Programming** | `role`, `subject`, `effect`, `view` — model behavior by subject (Harrison & Ossher), with sequential/parallel/conditional flows. |
 | 🔐 **Sandbox & Validation** | Built-in capability-based sandbox, schema validation, MCP protocol bridge. |
 | ⚡ **Multi-Frontend** | CLI (`hudhud`), Python module (`hudhudscript`), LSP server, REPL, web playground. |
 

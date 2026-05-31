@@ -1,0 +1,359 @@
+{
+  "_note": "Sample translations for E0001-E0005. Full translation requires automated processing of all 323 error entries.",
+  "locales": {
+    "tr": {
+      "locale": "tr",
+      "language": "Türkçe",
+      "errors": {
+        "E0001": {
+          "title": "Onay durumu geçişi geçersiz",
+          "short_description": "Bir onay isteği, onay iş akışı kuralları altında mevcut durumdan istenen duruma geçirilemez.",
+          "long_description": "Onay istekleri sonlu bir durum makinesi izler: tipik olarak Bekliyor -> Onaylandı veya Bekliyor -> Reddedildi. Terminal durumlar yeniden girilmez. Bu hata, çağrıyanın yasa bir geçiş denemesi anlamına gelir; örneğin zaten reddedilmiş bir istemi onaylamak veya önceden çözümlenmiş birini yeniden açmak gibi. Sorunu, isteğin mevcut durumunu kontrol ederek ve iki çağrıyanın aynı isteği çözümlemek için yarışmadığından emin olarak düzeltin. Akış durumu makinesinde kararı gözden geçirmek gerekiyorsa, eski olanı değiştirirken yeni bir onay isteği oluşturun. Bu genellikle operatörün iki kez düğmeye tıkladığı veya yeniden deneme mantığının geçici bir ağ arızasından sonra bir kararı yeniden verdiği insan-in-the-loop betiklerinde görülür.",
+          "hints": [
+            "Onay/durumu çağmadan önce mevcut onay durumunu alın",
+            "Onaylandı ve Reddedildi'yi terminal olarak kabul edin - asla dışarı geçmeyin",
+            "Karar uç noktalarını idempotent yapın böylece yeniden denemeler güvenlidir",
+            "Yeni bir karar gerekiyorsa yeni bir onay isteği verin"
+          ]
+        },
+        "E0002": {
+          "title": "Onay isteği kimliği mevcut değil",
+          "short_description": "Onay deposu, sağlanan istek kimliğiyle eşleşen bir giriş içermiyor.",
+          "long_description": "Onay alt sistemi istekleri opak bir kimlikle anahtarlar. Bu hata, o kimliğin bilinmediği anlamına gelir - hiç oluşturulmadı, süresi dolup çöp toplandı veya sorgulanan depodan farklı bir onay deposuna ait. Kimliğin orijinal approval::request(...) çağrısından yakalandığından ve değiştirilmeden geçildiğinden emin olun. Dizgi dönüşümüne, JSON round-trip'lerinin hassasiyeti kaybetmesine veya depoların süreç başına kapsamlı ve tüketiciyle paylaşılmayanlarına karşı dikkatli olun."
+        },
+        "E0003": {
+          "title": "CLI Argümanında Geçersiz Değer",
+          "short_description": "Bir komut satırı argümanı, ilan edilen türünü veya kabul edilen kümesini karşılamayan bir değerle sağlandı.",
+          "long_description": "CLI ayrıştırıcısı, sağladığınız bayrağı veya konumsalı başarıyla eşleştirdi, ancak eklenen değer dönüştürme veya doğrulama işlemini başarısız kıldı. Bu genellikle sayısal bir bayrağa sayısal olmayan bir token verildiğinde, bir enum tarzı bayrağa izin verilen listedeki bir adın dışında bir değer verildiğinde veya bir yol bayrağına işletim sisteminin reddettiği bir dizgi verildiğinde olur."
+        },
+        "E0004": {
+          "title": "Gerekli CLI Argümanı Sağlanmadı",
+          "short_description": "Aktif alt komut tarafından gerekli olarak işaretlenen bir komut satırı argümanı çağrıdan çıkarıldı.",
+          "long_description": "Her HudHudScript alt komutu, hangi bayrakların ve konumsalların zorunlu olduğunu ilan eder. Bu gerekli girişlerden biri olmadan bir alt komutu çağırdığınızda, ayrıştırıcı göndermeden önce durur ve eksik adı bildirir."
+        },
+        "E0005": {
+          "title": "Alt Komut Belirtilmedi",
+          "short_description": "CLI, alt komut seçmeden çağrıldı ve çıplak ikili için varsayılan bir eylem yapılandırılmadı.",
+          "long_description": "hhs, çoklu bir araçtır: çoğu kullanışlı iş çalıştır, derle, dağıt, lsp veya repl gibi alt komutlar aracılığıyla gerçekleşir. Alt komut olmadan (ve --version gibi genel bir bayrak olmadan) ikiliyi çağırmak, ayrıştırıcıyı gönderecek bir eylem bırakmadan bırakır."
+        }
+      }
+    },
+    "ja": {
+      "locale": "ja",
+      "language": "日本語",
+      "errors": {
+        "E0001": {
+          "title": "承認状態の遷移が無効",
+          "short_description": "承認リクエストは、承認ワークフロールールに従って現在の状態から要求された状態に移動できません。",
+          "long_description": "承認リクエストは有限状態マシンに従います。通常は保留中→承認または保留中→拒否で、終端状態に再入することはできません。このエラーは、呼び出し元が既に拒否されたリクエストを承認しようとしたり、以前解決されたものを再開しようとしたりするなど、違法な遷移を試行したことを意味します。リクエストの現在の状態を確認し、2つの呼び出し元が同じリクエストを競合して解決していないことを確認することで修正します。",
+          "hints": [
+            "承認/拒否を呼び出す前に現在の承認状態を取得してください",
+            "承認済みと拒否を終端状態として扱います - 決して移動しないでください",
+            "再試行が安全になるように決定エンドポイントをべき等にします",
+            "新しい決定が必要な場合は、新しい承認リクエストを発行します"
+          ]
+        },
+        "E0002": {
+          "title": "承認リクエストIDが存在しません",
+          "short_description": "承認ストアに、提供されたリクエストIDと一致するエントリがありません。",
+          "long_description": "承認サブシステムは、リクエストを不透明なIDでキーにします。このエラーは、そのIDが不明であることを意味します - 作成されたことがない、期限切れでガベージコレクトされた、またはクエリされているストアとは異なる承認ストアに属しています。"
+        },
+        "E0003": {
+          "title": "CLI引数の値が無効",
+          "short_description": "コマンドライン引数が、宣言された型または受け入れ可能なセットを満たさない値で提供されました。",
+          "long_description": "CLIパーサーは、指定したフラグまたは位置引数を正常に一致させましたが、添付された値が変換または検証に失敗しました。これは通常、数値フラグに非数値トークンが提供された場合、enumスタイルのフラグに許可リスト外の名前が提供された場合、またはパスフラグにOSが拒否する文字列が提供された場合に発生します。"
+        },
+        "E0004": {
+          "title": "必須のCLI引数が提供されていません",
+          "short_description": "アクティブなサブコマンドによって必須とマークされたコマンドライン引数が、呼び出しから省略されました。",
+          "long_description": "各HudHudScriptサブコマンドは、どのフラグと位置引数が必須かを宣言します。この必須入力のいずれかなしでサブコマンドを呼び出すと、パーサーはディスパッチの前に停止し、欠落している名前を報告します。"
+        },
+        "E0005": {
+          "title": "サブコマンドが指定されていません",
+          "short_description": "CLIはサブコマンドを選択せずに呼び出され、裸のバイナリ用のデフォルトアクションが設定されていません。",
+          "long_description": "hhsはマルチツールです：ほとんどの有用な作業は、run、build、deploy、lsp、replなどのサブコマンドを通じて行われます。サブコマントなし（--versionなどのグローバルフラグもなし）でバイナリを呼び出すと、パーサーはトップレベルを超えることができません。"
+        }
+      }
+    },
+    "ar": {
+      "locale": "ar",
+      "language": "العربية",
+      "direction": "rtl",
+      "errors": {
+        "E0001": {
+          "title": "انتقال حالة الموافقة غير صالح",
+          "short_description": "لا يمكن لطلب الموافقة الانتقال من حالته الحالية إلى الحالة المطلوبة بموجب قواعد سير عمل الموافقة.",
+          "long_description": "تتبع طلبات الموافقة آلة حالة منتهية: عادةً معلق -> معتمد أو معلق -> مرفوض، مع حالات طرفية لا يمكن إعادة دخولها. يعني هذا الخطأ أن المتصل حاول انتقالاً غير قانوني، على سبيل المثال الموافقة على طلب مرفوض بالفعل أو إعادة فتح طلب تم حله سابقاً."
+        },
+        "E0002": {
+          "title": "معرف طلب الموافقة غير موجود",
+          "short_description": "لا يحتوي مخزن الموافقة على إدخال يطابق معرف الطلب المقدم.",
+          "long_description": "يقوم نظام الموافقة الفرعي بتخزين الطلبات بواسطة معرف غير شفاف. يعني هذا الخطأ أن المعرف غير معروف - لم يتم إنشاؤه أبداً، أو انتهت صلاحيته وتمت إزالته، أو أنه ينتمي إلى مخزن موافقة مختلف من الذي يتم الاستعلام عنه."
+        },
+        "E0003": {
+          "title": "قيمة وسيطة CLI غير صالحة",
+          "short_description": "تم توفير وسيطة سطر الأوامر بقيمة لا تفي بنوعها المعلن أو مجموعتها المقبولة.",
+          "long_description": "قام محلل CLI بمطابقة العلم أو الموضعي الذي قدمته بنجاح، لكن القيمة المرفقة فشلت في التحويل أو التحقق. يحدث هذا عادةً عندما يتلقى علم رقمي رمزًا غير رقمي، أو يتلقى علم نمط enum اسمًا خارج القائمة المسموحة، أو يتلقى علم مسار سلسلة يرفضها نظام التشغيل."
+        },
+        "E0004": {
+          "title": "لم يتم توفير وسيطة CLI المطلوبة",
+          "short_description": "تم حذف وسيطة سطر الأوامر التي تم وضع علامة عليها كمطلوبة من قبل الأمر الفرعي النشط من الاستدعاء.",
+          "long_description": "يعلن كل أمر فرعي في HudHudScript عن مجموعة ثابتة من العلامات والمواقع المقبولة. عند استدعاء أمر فرعي بدون أحد هذه المدخلات المطلوبة، يتوقف المحلل قبل الإرسال ويبلغ عن الاسم المفقود."
+        },
+        "E0005": {
+          "title": "لم يتم تحديد أمر فرعي",
+          "short_description": "تم استدعاء CLI دون تحديد أمر فرعي وليس هناك إجراء افتراضي تم تكوينه للملف الثنائي العاري.",
+          "long_description": "hhs هي أداة متعددة: معظم العمل المفيد يتم عبر أوامر فرعية مثل run و build و deploy و lsp أو repl. استدعاء الملف الثنائي بدون أمر فرعي (وبدون علم عالمي مثل --version) يترك المحلل بدون إجراء لإرساله."
+        }
+      }
+    },
+    "es": {
+      "locale": "es",
+      "language": "Español",
+      "errors": {
+        "E0001": {
+          "title": "Transición de estado de aprobación inválida",
+          "short_description": "Una solicitud de aprobación no puede moverse desde su estado actual al estado solicitado bajo las reglas del flujo de trabajo de aprobación.",
+          "long_description": "Las solicitudes de aprobación siguen una máquina de estados finitos: típicamente Pendiente -> Aprobada o Pendiente -> Denegada, con estados terminales que no se pueden reingresar. Este error significa que el llamador intentó una transición ilegal, por ejemplo aprobar una solicitud ya denegada o reabrir una que fue resuelta previamente."
+        },
+        "E0002": {
+          "title": "ID de solicitud de aprobación no existe",
+          "short_description": "El almacén de aprobaciones no tiene una entrada que coincida con el ID de solicitud proporcionado.",
+          "long_description": "El subsistema de aprobación almacena las solicitudes mediante un ID opaco. Este error significa que ese ID es desconocido: nunca fue creado, ha expirado y sido recolectado como basura, o pertenece a un almacén de aprobaciones diferente al que se está consultando."
+        },
+        "E0003": {
+          "title": "Valor de argumento CLI inválido",
+          "short_description": "Se proporcionó un argumento de línea de comandos con un valor que no satisface su tipo declarado o conjunto aceptado.",
+          "long_description": "El analizador CLI coincidió exitosamente con la bandera o posicional que proporcionaste, pero el valor adjunto falló en la conversión o validación. Esto ocurre comúnmente cuando una bandera numérica recibe un token no numérico, una bandera de estilo enum recibe un nombre fuera de la lista permitida, o una bandera de ruta recibe una cadena que el OS rechaza."
+        },
+        "E0004": {
+          "title": "Argumento CLI requerido no proporcionado",
+          "short_description": "Se omitió un argumento de línea de comandos marcado como requerido por el subcomando activo de la invocación.",
+          "long_description": "Cada subcomando de HudHudScript declara qué banderas y posicionales son obligatorios. Cuando invocas un subcomando sin una de estas entradas requeridas, el analizador se detiene antes de enviar y reporta el nombre faltante."
+        },
+        "E0005": {
+          "title": "Subcomando no especificado",
+          "short_description": "El CLI fue invocado sin seleccionar un subcomando y no hay acción predeterminada configurada para el binario desnudo.",
+          "long_description": "hhs es una multi-herramienta: la mayoría del trabajo útil ocurre a través de subcomandos como ejecutar, construir, desplegar, lsp o repl. Llamar al binario sin subcomando (y sin bandera global como --version) deja al analizador sin una acción a la cual enviar."
+        }
+      }
+    },
+    "de": {
+      "locale": "de",
+      "language": "Deutsch",
+      "errors": {
+        "E0001": {
+          "title": "Ungültiger Genehmigungsstatus-Übergang",
+          "short_description": "Eine Genehmigungsanforderung kann unter den Genehmigungs-Workflow-Regeln nicht von ihrem aktuellen Zustand in den angeforderten Zustand übergehen.",
+          "long_description": "Genehmigungsanforderungen folgen einem endlichen Zustandsautomaten: typischerweise Ausstehend -> Genehmigt oder Ausstehend -> Abgelehnt, mit Endzuständen, die nicht erneut betreten werden können. Dieser Fehler bedeutet, dass ein Aufrufer einen unzulässigen Übergang versucht hat, zum Beispiel die Genehmigung einer bereits abgelehnten Anforderung oder die Wiedereröffnung einer zuvor gelösten Anforderung."
+        },
+        "E0002": {
+          "title": "Genehmigungsanforderungs-ID existiert nicht",
+          "short_description": "Der Genehmigungsspeicher hat keinen Eintrag, der mit der angegebenen Anforderungs-ID übereinstimmt.",
+          "long_description": "Das Genehmigungs-Subsystem speichert Anforderungen anhand einer opaken ID. Dieser Fehler bedeutet, dass diese ID unbekannt ist - sie wurde nie erstellt, ist abgelaufen und wurde bereinigt oder gehört zu einem anderen Genehmigungsspeicher als dem, der abgefragt wird."
+        },
+        "E0003": {
+          "title": "CLI-Argument hat ungültigen Wert",
+          "short_description": "Ein Befehlszeilenargument wurde mit einem Wert angegeben, der seinen deklarierten Typ oder die akzeptierte Menge nicht erfüllt.",
+          "long_description": "Der CLI-Parser hat das von Ihnen angegebene Flag oder Positional erfolgreich zugeordnet, aber der angehängte Wert ist bei der Konvertierung oder Validierung fehlgeschlagen. Dies geschieht häufig, wenn ein numerisches Flag ein nicht-numerisches Token erhält, ein Enum-Style-Flag einen Namen außerhalb der erlaubten Liste erhält oder ein Pfad-Flag eine Zeichenkette erhält, die das Betriebssystem ablehnt."
+        },
+        "E0004": {
+          "title": "Erforderliches CLI-Argument nicht angegeben",
+          "short_description": "Ein Befehlszeilenargument, das vom aktiven Unterbefehl als erforderlich markiert ist, wurde in dem Aufruf weggelassen.",
+          "long_description": "Jeder HudHudScript-Unterbefehl deklariert, welche Flags und Positionals obligatorisch sind. Wenn Sie einen Unterbefehl ohne eine dieser erforderlichen Eingaben aufrufen, hält der Parser vor dem Dispatch an und meldet den fehlenden Namen."
+        },
+        "E0005": {
+          "title": "Kein Unterbefehl angegeben",
+          "short_description": "Das CLI wurde ohne Auswahl eines Unterbefehls aufgerufen und es ist keine Standardaktion für die bloße Binärdatei konfiguriert.",
+          "long_description": "hhs ist ein Multitool: die meiste nützliche Arbeit geschieht über Unterbefehle wie ausführen, bauen, bereitstellen, lsp oder repl. Der Aufruf des Binaries ohne Unterbefehl (und ohne globales Flag wie --version) lässt den Parser ohne eine Aktion zum Versenden."
+        }
+      }
+    },
+    "fr": {
+      "locale": "fr",
+      "language": "Français",
+      "errors": {
+        "E0001": {
+          "title": "Transition d'état d'approbation invalide",
+          "short_description": "Une demande d'approbation ne peut pas passer de son état actuel à l'état demandé selon les règles du flux de travail d'approbation.",
+          "long_description": "Les demandes d'approbation suivent une machine à états finis: généralement En attente -> Approuvé ou En attente -> Refusé, avec des états terminaux qui ne peuvent pas être rouverts. Cette erreur signifie qu'un appelant a tenté une transition illégale, par exemple approuver une demande déjà refusée ou rouvrir une qui a été précédemment résolue."
+        },
+        "E0002": {
+          "title": "L'ID de demande d'approbation n'existe pas",
+          "short_description": "Le magasin d'approbation n'a pas d'entrée correspondant à l'ID de demande fourni.",
+          "long_description": "Le sous-système d'approbation stocke les demandes par un ID opaque. Cette erreur signifie que cet ID est inconnu - il n'a jamais été créé, a expiré et a été collecté comme déchets, ou appartient à un magasin d'approbation différent de celui qui est interrogé."
+        },
+        "E0003": {
+          "title": "Valeur d'argument CLI invalide",
+          "short_description": "Un argument de ligne de commande a été fourni avec une valeur qui ne satisfait pas son type déclaré ou son ensemble accepté.",
+          "long_description": "L'analyseur CLI a correctement mis en correspondance l'indicateur ou le positionnel que vous avez fourni, mais la valeur jointe a échoué à la conversion ou à la validation. Cela se produit couramment lorsqu'un indicateur numérique reçoit un jeton non numérique, un indicateur de style enum reçoit un nom en dehors de la liste autorisée, ou un indicateur de chemin reçoit une chaîne que l'OS rejette."
+        },
+        "E0004": {
+          "title": "Argument CLI requis non fourni",
+          "short_description": "Un argument de ligne de commande marqué comme requis par le sous-commande actif a été omis de l'invocation.",
+          "long_description": "Chaque sous-commande HudHudScript déclare quels indicateurs et positionnels sont obligatoires. Lorsque vous invoquez une sous-commande sans l'une de ces entrées requises, l'analyseur s'arrête avant l'expédition et signale le nom manquant."
+        },
+        "E0005": {
+          "title": "Aucun sous-commande spécifié",
+          "short_description": "Le CLI a été invoqué sans sélectionner de sous-commande et aucune action par défaut n'est configurée pour le binaire nu.",
+          "long_description": "hhs est un multi-outil: la plupart des travaux utiles se font via des sous-commandes comme exécuter, construire, déployer, lsp ou repl. Appeler le binaire sans sous-commande (et sans indicateur global comme --version) laisse l'analyseur sans action à expédier."
+        }
+      }
+    },
+    "it": {
+      "locale": "it",
+      "language": "Italiano",
+      "errors": {
+        "E0001": {
+          "title": "Transizione stato approvazione non valida",
+          "short_description": "Una richiesta di approvazione non può passare dal suo stato attuale allo stato richiesto in base alle regole del flusso di lavoro di approvazione.",
+          "long_description": "Le richieste di approvazione seguono una macchina a stati finiti: tipicamente In attesa -> Approvata o In attesa -> Rifiutata, con stati terminali che non possono essere re-immessi. Questo errore significa che il chiamante ha tentato una transizione illegale, ad esempio approvare una richiesta già rifiutata o riaprire una che era stata precedentemente risolta."
+        },
+        "E0002": {
+          "title": "L'ID richiesta approvazione non esiste",
+          "short_description": "L'archivio approvazioni non ha una voce corrispondente all'ID richiesta fornito.",
+          "long_description": "Il sottosistema di approvazione memorizza le richieste tramite un ID opaco. Questo errore significa che quell'ID è sconosciuto - non è mai stato creato, è scaduto ed è stato raccolto come immondizia, o appartiene a un archivio approvazioni diverso da quello che viene interrogato."
+        },
+        "E0003": {
+          "title": "Valore argomento CLI non valido",
+          "short_description": "Un argomento della riga di comando è stato fornito con un valore che non soddisfa il suo tipo dichiarato o l'insieme accettato.",
+          "long_description": "L'analizzatore CLI ha trovato con successo corrispondenza con il flag o il posizionale fornito, ma il valore allegato non è riuscito nella conversione o nella convalida. Questo accade comunemente quando un flag numerico riceve un token non numerico, un flag di stile enum riceve un nome al di fuori dell'elenco consentito, o un flag percorso riceve una stringa che l'OS rifiuta."
+        },
+        "E0004": {
+          "title": "Argomento CLI richiesto non fornito",
+          "short_description": "Un argomento della riga di comando contrassegnato come richiesto dal sottocomando attivo è stato omesso dalla chiamata.",
+          "long_description": "Ogni sottocomando HudHudScript dichiara quali flag e posizionali sono obbligatori. Quando si invoca un sottocomando senza uno di questi input richiesti, l'analizzatore si ferma prima del dispatch e segnala il nome mancante."
+        },
+        "E0005": {
+          "title": "Nessun sottocomando specificato",
+          "short_description": "Il CLI è stato invocato senza selezionare un sottocomando e non è configurata alcuna azione predefinita per il binario nudo.",
+          "long_description": "hhs è un multi-strumento: la maggior parte del lavoro utile avviene attraverso sottocomandi come eseguire, compilare, distribuire, lsp o repl. Chiamare il binario senza sottocomando (e senza flag globale come --version) lascia l'analizzatore senza un'azione a cui spedire."
+        }
+      }
+    },
+    "el": {
+      "locale": "el",
+      "language": "Ελληνικά",
+      "errors": {
+        "E0001": {
+          "title": "Μη έγκυρη μετάβαση κατάστασης έγκρισης",
+          "short_description": "Ένα αίτημα έγκρισης δεν μπορεί να μετακινηθεί από την τρέχουσα κατάστασή του στην αιτούμενη κατάσταση σύμφωνα με τους κανόνες ροής εργασίας έγκρισης.",
+          "long_description": "Τα αιτήματα έγκρισης ακολουθούν ένα πεπερασμένο αυτόματο κατάστασης: συνήθως Εκκρεμεί -> Εγκεκριμένο ή Εκκρεμεί -> Απορριμμένο, με τερματικές καταστάσεις που δεν μπορούν να επανεισέλθουν. Αυτό το σφάλμα σημαίνει ότι ο καλών προσπάθησε μια παράνομη μετάβαση, για παράδειγμα έγκριση ενός ήδη απορριμμένου αιτήματος ή επανάνοιγμα ενός που είχε προηγουμένως επιλυθεί."
+        },
+        "E0002": {
+          "title": "Το ID αιτήματος έγκρισης δεν υπάρχει",
+          "short_description": "Η αποθήκη έγκρισης δεν έχει καταχώρηση που να ταιριάζει με το παρεχόμενο ID αιτήματος.",
+          "long_description": "Το υποσύστημα έγκρισης αποθηκεύει αιτήματα με ένα αδιαφανές ID. Αυτό το σφάλμα σημαίνει ότι αυτό το ID είναι άγνωστο - δεν δημιουργήθηκε ποτέ, έληξε και συλλέχθηκε ως σκουπίδια, ή ανήκει σε διαφορετική αποθήκη έγκρισης από αυτήν που ερωτάται."
+        },
+        "E0003": {
+          "title": "Μη έγκυρη τιμή ορίσματος CLI",
+          "short_description": "Ένα όρισμα γραμμής εντολών παρέχθηκε με μια τιμή που δεν ικανοποιεί τον δηλωμένο τύπο του ή το αποδεκτό σύνολο.",
+          "long_description": "Το πρόγραμμα ανάλυσης CLI αντιστοιχίστηκε επιτυχώς με τη σημαία ή το θέση που παρείχατε, αλλά η επισυναπτόμενη τιμή απέτυχε στη μετατροπή ή την επικύρωση. Αυτό συμβαίνει συνήθως όταν μια αριθμητική σημαία λαμβάνει ένα μη αριθμητικό διακριτικό, μια σημαία στυλ enum λαμβάνει ένα όνομα εκτός της επιτρεπόμενης λίστας, ή μια σημαία διαδρομής λαμβάνει μια συμβολοσειρά που το λειτουργικό απορρίπτει."
+        },
+        "E0004": {
+          "title": "Απαιτούμενο όρισμα CLI δεν παρέχθηκε",
+          "short_description": "Ένα όρισμα γραμμής εντολών που σημειώθηκε ως απαιτούμενο από την ενεργή υποεντολή παραλείφθηκε από την κλήση.",
+          "long_description": "Κάθε υποεντολή HudHudScript δηλώνει ποιες σημαίες και θέσεις είναι υποχρεωτικές. Όταν καλείτε μια υποεντολή χωρίς μία από αυτές τις απαιτούμενες εισόδους, το πρόγραμμα ανάλυσης σταματά πριν την αποστολή και αναφέρει το όνομα που λείπει."
+        },
+        "E0005": {
+          "title": "Δεν καθορίστηκε υποεντολή",
+          "short_description": "Το CLI κλήθηκε χωρίς την επιλογή υποεντολής και δεν έχει διαμορφωθεί προεπιλεγμένη ενέργεια για το γυμνό δυαδικό.",
+          "long_description": "Το hhs είναι ένα πολυ-εργαλείο: η περισσότερη χρήσιμη εργασία γίνεται μέσω υποεντολών όπως εκτέλεση, κατασκευή, ανάπτυξη, lsp ή repl. Η κλήση του δυαδικού χωρίς υποεντολή (και χωρίς καθολική σημαία όπως --version) αφήνει το πρόγραμμα ανάλυσης χωρίς ενέργεια για αποστολή."
+        }
+      }
+    },
+    "bs": {
+      "locale": "bs",
+      "language": "Bosanski",
+      "errors": {
+        "E0001": {
+          "title": "Nevažeći prijelaz stanja odobrenja",
+          "short_description": "Zahtjev za odobrenje ne može prijeći iz trenutnog stanja u traženo stanje prema pravilima toka rada odobrenja.",
+          "long_description": "Zahtjevi za odobrenjem prate konačni automat stanja: tipično Na čekanju -> Odobreno ili Na čekanju -> Odbijeno, sa terminalnim stanjima koja se ne mogu ponovo ući. Ova greška znači da je pozivatelj pokušao nelegalni prijelaz, na primjer odobriti već odbijeni zahtjev ili ponovo otvoriti onaj koji je prethodno riješen."
+        },
+        "E0002": {
+          "title": "ID zahtjeva za odobrenje ne postoji",
+          "short_description": "Skladište odobrenja nema unos koji odgovara dostavljenom ID-u zahtjeva.",
+          "long_description": "Podsistem odobrenja čuva zahtjeve po neprozirnom ID-u. Ova greška znači da je taj ID nepoznat - nikada nije stvoren, istekao je i skupljen kao smeće, ili pripada drugom skladištu odobrenja nego onom koji se upituje."
+        },
+        "E0003": {
+          "title": "Nevažeća vrijednost CLI argumenta",
+          "short_description": "Argument komandne linije je dostavljen sa vrijednošću koja ne zadovoljava njegov deklarisani tip ili prihvaćeni skup.",
+          "long_description": "CLI parser je uspješno spario zastavicu ili pozicijski argument koji ste dostavili, ali priložena vrijednost nije uspjela u konverziji ili validaciji. To se obično dogodi kada numerička zastavica primi nenumerički token, zastavica enum stila primi ime izvan dozvoljene liste, ili zastavica putanje primi niz koji OS odbija."
+        },
+        "E0004": {
+          "title": "Obavezan CLI argument nije dostavljen",
+          "short_description": "Argument komandne linije označen kao obavezan od aktivnog podkomande je izostavljen iz poziva.",
+          "long_description": "Svaka HudHudScript podkomanda deklariše koje zastavice i pozicijski argumenti su obavezni. Kada pozovete podkomandu bez jednog od ovih obaveznih ulaza, parser se zaustavlja prije slanja i prijavljuje nedostajuće ime."
+        },
+        "E0005": {
+          "title": "Nije navedena podkomanda",
+          "short_description": "CLI je pozvan bez odabira podkomande i nijedna zadana akcija nije konfigurisana za goli binarni program.",
+          "long_description": "hhs je multi-alat: većina korisnog rada odvija se kroz podkomande poput run, build, deploy, lsp ili repl. Pozivanje binarnog programa bez podkomande (i bez globalne zastavice poput --version) ostavlja parser bez akcije za slanje."
+        }
+      }
+    },
+    "hr": {
+      "locale": "hr",
+      "language": "Hrvatski",
+      "errors": {
+        "E0001": {
+          "title": "Nevažeći prijelaz stanja odobrenja",
+          "short_description": "Zahtjev za odobrenjem ne može prijeći iz trenutnog stanja u traženo stanje prema pravilima tijeka rada odobrenja.",
+          "long_description": "Zahtjevi za odobrenjem prate konačni automat stanja: tipično Na čekanju -> Odobreno ili Na čekanju -> Odbijeno, s terminalnim stanjima koja se ne mogu ponovno ući. Ova greška znači da je pozivatelj pokušao nezakoniti prijelaz, na primjer odobriti već odbijeni zahtjev ili ponovno otvoriti onaj koji je prethodno riješen."
+        },
+        "E0002": {
+          "title": "ID zahtjeva za odobrenje ne postoji",
+          "short_description": "Spremište odobrenja nema unos koji odgovara isporučenom ID-u zahtjeva.",
+          "long_description": "Podsustav odobrenja pohranjuje zahtjeve po neprozirnom ID-u. Ova greška znači da je taj ID nepoznat - nikada nije stvoren, istekao je i prikupljen kao smeće, ili pripada drugom spremištu odobrenja nego onom koji se upituje."
+        },
+        "E0003": {
+          "title": "Nevažeća vrijednost CLI argumenta",
+          "short_description": "Argument naredbenog retka dostavljen je s vrijednošću koja ne zadovoljava njegov deklarirani tip ili prihvaćeni skup.",
+          "long_description": "CLI parser uspješno je spario zastavicu ili pozicijski argument koji ste dostavili, ali priložena vrijednost nije uspjela u pretvorbi ili validaciji. To se obično dogodi kada numerička zastavica primi nenumerički token, zastavica enum stila primi ime izvan dopuštene liste, ili zastavica putanje primi niz koji OS odbija."
+        },
+        "E0004": {
+          "title": "Obavezan CLI argument nije dostavljen",
+          "short_description": "Argument naredbenog retka označen kao obavezan od aktivne podnaredbe izostavljen je iz poziva.",
+          "long_description": "Svaka HudHudScript podnaredba deklarira koje su zastavice i pozicijski argumenti obavezni. Kada pozovete podnaredbu bez jednog od ovih obaveznih ulaza, parser se zaustavlja prije slanja i prijavljuje nedostajuće ime."
+        },
+        "E0005": {
+          "title": "Podnaredba nije navedena",
+          "short_description": "CLI je pozvan bez odabira podnaredbe i nijedna zadana akcija nije konfigurirana za goli binarni program.",
+          "long_description": "hhs je multi-alat: većina korisnog rada odvija se kroz podnaredbe poput run, build, deploy, lsp ili repl. Pozivanje binarnog programa bez podnaredbe (i bez globalne zastavice poput --version) ostavlja parser bez akcije za slanje."
+        }
+      }
+    },
+    "ko": {
+      "locale": "ko",
+      "language": "한국어",
+      "errors": {
+        "E0001": {
+          "title": "승인 상태 전환이 유효하지 않음",
+          "short_description": "승인 요청은 승인 워크플로 규칙에 따라 현재 상태에서 요청된 상태로 이동할 수 없습니다.",
+          "long_description": "승인 요청은 유한 상태 머신을 따릅니다. 일반적으로 대기 중 -> 승인됨 또는 대기 중 -> 거부됨이며, 다시 입력할 수 없는 종결 상태가 있습니다. 이 오류는 호출자가 이미 거부된 요청을 승인하거나 이전에 해결된 요청을 다시 여는 등 불법적인 전환을 시도했음을 의미합니다."
+        },
+        "E0002": {
+          "title": "승인 요청 ID가 존재하지 않음",
+          "short_description": "승인 저장소에 제공된 요청 ID와 일치하는 항목이 없습니다.",
+          "long_description": "승인 하위 시스템은 불투명한 ID로 요청을 저장합니다. 이 오류는 해당 ID를 알 수 없음을 의미합니다. 생성된 적이 없거나 만료되어 수집되었거나 쿼리 중인 저장소와 다른 승인 저장소에 속해 있습니다."
+        },
+        "E0003": {
+          "title": "CLI 인수 값이 유효하지 않음",
+          "short_description": "선언된 유형이나 허용된 집합을 만족하지 않는 값으로 명령줄 인수가 제공되었습니다.",
+          "long_description": "CLI 파서는 제공한 플래그 또는 위치 인수와 성공적으로 일치했지만, 첨부된 값이 변환 또는 유효성 검사에 실패했습니다. 숫자 플래그가 숫자가 아닌 토큰을 수신하거나, enum 스타일 플래그가 허용 목록 외부의 이름을 수신하거나, 경로 플래그가 OS가 거부하는 문자열을 수신할 때 일반적으로 발생합니다."
+        },
+        "E0004": {
+          "title": "필수 CLI 인수가 제공되지 않음",
+          "short_description": "활성 하위 명령에서 필수로 표시된 명령줄 인수가 호출에서 생략되었습니다.",
+          "long_description": "각 HudHudScript 하위 명령은 어떤 플래그와 위치 인수가 필수인지 선언합니다. 이 필수 입력 중 하나 없이 하위 명령을 호출하면 파서는 디스패치하기 전에 중지하고 누락된 이름을 보고합니다."
+        },
+        "E0005": {
+          "title": "하위 명령이 지정되지 않음",
+          "short_description": "하위 명령을 선택하지 않고 CLI가 호출되었으며, 베어 바이너리에 대한 기본 작업이 구성되지 않았습니다.",
+          "long_description": "hhs는 다중 도구입니다. 대부분의 유용한 작업은 실행, 빌드, 배포, lsp 또는 repl과 같은 하위 명령을 통해 수행됩니다. 하위 명령 없이(--version과 같은 전역 플래그 없이) 바이너리를 호출하면 파서에 전송할 작업이 없습니다."
+        }
+      }
+    }
+  }
+}

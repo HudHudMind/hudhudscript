@@ -1,0 +1,61 @@
+{
+  "locale": "pl",
+  "language": "Polish (Polski)",
+  "errors": {
+    "E0001": {
+      "hints": [
+        "Fetch the current approval state before calling approve/deny",
+        "Treat Approved and Denied as terminal — never transition out",
+        "Make decision endpoints idempotent so retries are safe",
+        "Issue a new approval request if a fresh decision is needed"
+      ],
+      "long_description": "Approval requests follow a finite state machine: typically Pending -> Approved or Pending -> Denied, with terminal states that cannot be re-entered. This error means a caller tried an illegal transition, for example approving an already-denied request or re-opening one that was previously resolved.\n\nFix it by inspecting the current state of the request before issuing the transition, and by ensuring no two callers race to resolve the same request. If the workflow legitimately needs to revisit a decision, create a new approval request rather than mutating the old one.\n\nThis commonly appears in human-in-the-loop scripts where the operator clicks a button twice, or where retry logic re-issues a decision after a transient network failure.",
+      "short_description": "An approval request cannot move from its current state to the requested state under the approval workflow rules.",
+      "title": "Approval state transition is invalid"
+    },
+    "E0002": {
+      "hints": [
+        "Verify the id came from a successful approval::request() call",
+        "Check that requester and approver share the same backend store",
+        "Watch for id truncation across JSON / database / URL boundaries",
+        "Confirm the request has not exceeded its TTL and been purged"
+      ],
+      "long_description": "The approval subsystem keys requests by an opaque id. This error means that id is unknown — it was never created, has expired and been garbage collected, or belongs to a different approval store than the one being queried.\n\nFix it by ensuring the id is captured from the original `approval::request(...)` call and passed unchanged. Beware of stringification, JSON round-trips that lose precision, or stores that are scoped per-process and not shared with the consumer.\n\nA common cause is calling the approver from a fresh script run without persisting the request id from the previous run, or pointing the approver and the requester at different backends.",
+      "short_description": "The approval store has no entry matching the supplied request id, so the operation cannot be applied.",
+      "title": "Approval request id does not exist"
+    },
+    "E0003": {
+      "hints": [
+        "Check the expected type with `hhs <command> --help`",
+        "Quote values containing spaces or shell metacharacters",
+        "For enum flags, copy the exact spelling from --help output",
+        "Verify numeric ranges — some flags accept only positive integers"
+      ],
+      "long_description": "The CLI parser successfully matched the flag or positional you provided, but the value attached to it failed conversion or validation. This commonly happens when a numeric flag receives a non-numeric token, an enum-style flag receives a name outside the allowed list, or a path flag receives a string the OS rejects.\n\nValue parsing in `hudhudscript-cli` runs after argument matching, so the diagnostic includes both the flag name and the offending token. The command does not execute when this error fires; the process exits before any subcommand handler runs.\n\nFix the value to match the type expected by the flag. If you intended a different flag, double-check spelling — an unknown flag would surface a different diagnostic instead.",
+      "short_description": "A command-line argument was supplied with a value that does not satisfy its declared type or accepted set.",
+      "title": "CLI Argument Has Invalid Value"
+    },
+    "E0004": {
+      "hints": [
+        "Run `hhs <subcommand> --help` to see all required arguments",
+        "Check whether the value can be supplied via env var instead",
+        "Verify you are invoking the intended subcommand",
+        "Use shell history expansion only after confirming the previous call was correct"
+      ],
+      "long_description": "Each HudHudScript subcommand declares which flags and positionals are mandatory. When you invoke a subcommand without one of these required inputs, the parser stops before dispatching and reports the missing name.\n\nThis check runs after subcommand selection, so the diagnostic is scoped to the specific subcommand you typed. Different subcommands have different required sets — `hhs deploy` requires a project directory while `hhs run` does not.\n\nProvide the missing argument on the command line or, where supported, set it via the corresponding environment variable or config file. The `--help` output for the subcommand lists every required input near the top.",
+      "short_description": "A command-line argument marked as required by the active subcommand was omitted from the invocation.",
+      "title": "Required CLI Argument Not Provided"
+    },
+    "E0005": {
+      "hints": [
+        "Run `hhs --help` to list all available subcommands",
+        "Common subcommands: run, build, deploy, lsp, repl, fmt",
+        "Use `hhs --version` if you only wanted the version string",
+        "Shell aliases that strip arguments are a common cause"
+      ],
+      "long_description": "`hhs` is a multi-tool: most useful work happens through subcommands such as `run`, `build`, `deploy`, `lsp`, or `repl`. Calling the binary with no subcommand (and no global flag like `--version`) leaves the parser without an action to dispatch.\n\nThis is distinct from a missing argument inside a subcommand — here the parser never gets past the top level. The error message lists the available subcommands so you can pick one without consulting the manual.\n\nProvide a subcommand or one of the recognized top-level flags. If you wanted a help summary, use `--help`.",
+      "short_description": "The CLI was invoked without selecting a subcommand and no default action is configured for the bare binary.",
+      "title": "No Subcommand Specified"
+    }
+  }
+}

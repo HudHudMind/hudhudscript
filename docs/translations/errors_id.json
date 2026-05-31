@@ -1,0 +1,545 @@
+{
+  "locale": "id",
+  "errors": {
+    "E0001": {
+      "title": "Transisi status tidak valid",
+      "short_description": "Permintaan tidak dapat berpindah status。",
+      "long_description": "Long description for E0001",
+      "hints": [
+        "Check documentation",
+        "Verify settings"
+      ]
+    },
+    "E0002": {
+      "title": "Error E0002",
+      "short_description": "Short desc for E0002",
+      "long_description": "Long description for E0002",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0003": {
+      "title": "Error E0003",
+      "short_description": "Short desc for E0003",
+      "long_description": "Long description for E0003",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0004": {
+      "title": "Error E0004",
+      "short_description": "Short desc for E0004",
+      "long_description": "Long description for E0004",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0005": {
+      "title": "Error E0005",
+      "short_description": "Short desc for E0005",
+      "long_description": "Long description for E0005",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0006": {
+      "title": "Error E0006",
+      "short_description": "Short desc for E0006",
+      "long_description": "Long description for E0006",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0007": {
+      "title": "Error E0007",
+      "short_description": "Short desc for E0007",
+      "long_description": "Long description for E0007",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0008": {
+      "title": "Error E0008",
+      "short_description": "Short desc for E0008",
+      "long_description": "Long description for E0008",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0009": {
+      "title": "Error E0009",
+      "short_description": "Short desc for E0009",
+      "long_description": "Long description for E0009",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0010": {
+      "title": "Error E0010",
+      "short_description": "Short desc for E0010",
+      "long_description": "Long description for E0010",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0011": {
+      "title": "Error E0011",
+      "short_description": "Short desc for E0011",
+      "long_description": "Long description for E0011",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0012": {
+      "title": "Error E0012",
+      "short_description": "Short desc for E0012",
+      "long_description": "Long description for E0012",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0013": {
+      "title": "Error E0013",
+      "short_description": "Short desc for E0013",
+      "long_description": "Long description for E0013",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0014": {
+      "title": "Error E0014",
+      "short_description": "Short desc for E0014",
+      "long_description": "Long description for E0014",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0015": {
+      "title": "Error E0015",
+      "short_description": "Short desc for E0015",
+      "long_description": "Long description for E0015",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0016": {
+      "title": "Error E0016",
+      "short_description": "Short desc for E0016",
+      "long_description": "Long description for E0016",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0017": {
+      "title": "Error E0017",
+      "short_description": "Short desc for E0017",
+      "long_description": "Long description for E0017",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0018": {
+      "title": "Error E0018",
+      "short_description": "Short desc for E0018",
+      "long_description": "Long description for E0018",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0019": {
+      "title": "Error E0019",
+      "short_description": "Short desc for E0019",
+      "long_description": "Long description for E0019",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0020": {
+      "title": "Error E0020",
+      "short_description": "Short desc for E0020",
+      "long_description": "Long description for E0020",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0021": {
+      "title": "Error E0021",
+      "short_description": "Short desc for E0021",
+      "long_description": "Long description for E0021",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0022": {
+      "title": "Error E0022",
+      "short_description": "Short desc for E0022",
+      "long_description": "Long description for E0022",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0023": {
+      "title": "Error E0023",
+      "short_description": "Short desc for E0023",
+      "long_description": "Long description for E0023",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0024": {
+      "title": "Error E0024",
+      "short_description": "Short desc for E0024",
+      "long_description": "Long description for E0024",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0025": {
+      "title": "Error E0025",
+      "short_description": "Short desc for E0025",
+      "long_description": "Long description for E0025",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0026": {
+      "title": "Error E0026",
+      "short_description": "Short desc for E0026",
+      "long_description": "Long description for E0026",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0027": {
+      "title": "Error E0027",
+      "short_description": "Short desc for E0027",
+      "long_description": "Long description for E0027",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0028": {
+      "title": "Error E0028",
+      "short_description": "Short desc for E0028",
+      "long_description": "Long description for E0028",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0029": {
+      "title": "Error E0029",
+      "short_description": "Short desc for E0029",
+      "long_description": "Long description for E0029",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0030": {
+      "title": "Error E0030",
+      "short_description": "Short desc for E0030",
+      "long_description": "Long description for E0030",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0031": {
+      "title": "Error E0031",
+      "short_description": "Short desc for E0031",
+      "long_description": "Long description for E0031",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0032": {
+      "title": "Error E0032",
+      "short_description": "Short desc for E0032",
+      "long_description": "Long description for E0032",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0033": {
+      "title": "Error E0033",
+      "short_description": "Short desc for E0033",
+      "long_description": "Long description for E0033",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0034": {
+      "title": "Error E0034",
+      "short_description": "Short desc for E0034",
+      "long_description": "Long description for E0034",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0035": {
+      "title": "Error E0035",
+      "short_description": "Short desc for E0035",
+      "long_description": "Long description for E0035",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0036": {
+      "title": "Error E0036",
+      "short_description": "Short desc for E0036",
+      "long_description": "Long description for E0036",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0037": {
+      "title": "Error E0037",
+      "short_description": "Short desc for E0037",
+      "long_description": "Long description for E0037",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0038": {
+      "title": "Error E0038",
+      "short_description": "Short desc for E0038",
+      "long_description": "Long description for E0038",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0039": {
+      "title": "Error E0039",
+      "short_description": "Short desc for E0039",
+      "long_description": "Long description for E0039",
+      "hints": [
+        "Hint 1",
+        "Hint 2"
+      ]
+    },
+    "E0040": {
+      "title": "Fitur bahasa tidak didukung",
+      "short_description": "Kompiler belum tahu cara menurunkan ke bytecode。",
+      "long_description": "Long description for E0040",
+      "hints": [
+        "Check documentation",
+        "Verify settings"
+      ]
+    },
+    "E0041": {
+      "title": "Fitur tidak didukung di lokasi sumber",
+      "short_description": "Kompiler menemukan konstruksi yang tidak didukung dan melaporkan lokasi sumbernya.",
+      "long_description": "Long description for E0041",
+      "hints": [
+        "Check documentation",
+        "Verify settings"
+      ]
+    },
+    "E0042": {
+      "title": "String versi konstitusi tidak valid",
+      "short_description": "Versi konstitusi tidak dapat diparsing sebagai versi semantik yang valid.",
+      "long_description": "Long description for E0042",
+      "hints": [
+        "Check documentation",
+        "Verify settings"
+      ]
+    },
+    "E0043": {
+      "title": "Hukum tidak ada dalam konstitusi",
+      "short_description": "Mencoba membaca, mengubah, atau mencabut hukum dalam konstitusi yang tidak mengandungnya.",
+      "long_description": "Long description for E0043",
+      "hints": [
+        "Check documentation",
+        "Verify settings"
+      ]
+    },
+    "E0044": {
+      "title": "Konstitusi tidak memiliki versi sebelumnya",
+      "short_description": "Meminta versi sebelumnya dari konstitusi yang berada di versi awalnya.",
+      "long_description": "Long description for E0044",
+      "hints": [
+        "Check documentation",
+        "Verify settings"
+      ]
+    },
+    "E0050": {
+      "title": "Panggilan LLM gagal, percobaan habis",
+      "short_description": "Setelah percobaan yang dikonfigurasi, panggilan penyedia LLM tidak pernah berhasil.",
+      "long_description": "Long description for E0050",
+      "hints": [
+        "Check documentation",
+        "Verify settings"
+      ]
+    },
+    "E0060": {
+      "title": "Penyedia LLM tidak tersedia",
+      "short_description": "Penyedia LLM tidak dapat diakses karena penutupan sisi server.",
+      "long_description": "Long description for E0060",
+      "hints": [
+        "Check documentation",
+        "Verify settings"
+      ]
+    },
+    "E0045": {
+      "title": "Error E0045",
+      "short_description": "Short description for E0045",
+      "long_description": "Long description for E0045.",
+      "hints": [
+        "Check documentation",
+        "Verify configuration"
+      ]
+    },
+    "E0046": {
+      "title": "Error E0046",
+      "short_description": "Short description for E0046",
+      "long_description": "Long description for E0046.",
+      "hints": [
+        "Check documentation",
+        "Verify configuration"
+      ]
+    },
+    "E0047": {
+      "title": "Error E0047",
+      "short_description": "Short description for E0047",
+      "long_description": "Long description for E0047.",
+      "hints": [
+        "Check documentation",
+        "Verify configuration"
+      ]
+    },
+    "E0048": {
+      "title": "Error E0048",
+      "short_description": "Short description for E0048",
+      "long_description": "Long description for E0048.",
+      "hints": [
+        "Check documentation",
+        "Verify configuration"
+      ]
+    },
+    "E0049": {
+      "title": "Error E0049",
+      "short_description": "Short description for E0049",
+      "long_description": "Long description for E0049.",
+      "hints": [
+        "Check documentation",
+        "Verify configuration"
+      ]
+    },
+    "E0051": {
+      "title": "Error E0051",
+      "short_description": "Short description for E0051",
+      "long_description": "Long description for E0051.",
+      "hints": [
+        "Check documentation",
+        "Verify configuration"
+      ]
+    },
+    "E0052": {
+      "title": "Error E0052",
+      "short_description": "Short description for E0052",
+      "long_description": "Long description for E0052.",
+      "hints": [
+        "Check documentation",
+        "Verify configuration"
+      ]
+    },
+    "E0053": {
+      "title": "Error E0053",
+      "short_description": "Short description for E0053",
+      "long_description": "Long description for E0053.",
+      "hints": [
+        "Check documentation",
+        "Verify configuration"
+      ]
+    },
+    "E0054": {
+      "title": "Error E0054",
+      "short_description": "Short description for E0054",
+      "long_description": "Long description for E0054.",
+      "hints": [
+        "Check documentation",
+        "Verify configuration"
+      ]
+    },
+    "E0055": {
+      "title": "Error E0055",
+      "short_description": "Short description for E0055",
+      "long_description": "Long description for E0055.",
+      "hints": [
+        "Check documentation",
+        "Verify configuration"
+      ]
+    },
+    "E0056": {
+      "title": "Error E0056",
+      "short_description": "Short description for E0056",
+      "long_description": "Long description for E0056.",
+      "hints": [
+        "Check documentation",
+        "Verify configuration"
+      ]
+    },
+    "E0057": {
+      "title": "Error E0057",
+      "short_description": "Short description for E0057",
+      "long_description": "Long description for E0057.",
+      "hints": [
+        "Check documentation",
+        "Verify configuration"
+      ]
+    },
+    "E0058": {
+      "title": "Error E0058",
+      "short_description": "Short description for E0058",
+      "long_description": "Long description for E0058.",
+      "hints": [
+        "Check documentation",
+        "Verify configuration"
+      ]
+    },
+    "E0059": {
+      "title": "Error E0059",
+      "short_description": "Short description for E0059",
+      "long_description": "Long description for E0059.",
+      "hints": [
+        "Check documentation",
+        "Verify configuration"
+      ]
+    }
+  }
+}

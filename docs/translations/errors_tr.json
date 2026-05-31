@@ -1,0 +1,3001 @@
+{
+  "locale": "tr",
+  "language": "Türkçe",
+  "errors": {
+    "E0001": {
+      "title": "Onay durumu geçişi geçersiz",
+      "short_description": "Bir onay isteği, onay iş akışı kuralları altında mevcut durumundan istenen duruma geçirilemez.",
+      "long_description": "Onay istekleri sonlu bir durum makinesi izler: tipik olarak Bekliyor -> Onaylandı veya Bekliyor -> Reddedildi, son durumlar geri dönülemez. Bu hata, çağrı yapanın bir geçersiz durum değişikliği denediğini gösterir; örneğin zaten reddedilmiş bir isteği onaylamak veya önceden çözümlenmiş olanı yeniden açmak. Sorunu çözmek için isteğin mevcut durumunu kontrol edin ve iki çağrı yapanın aynı isteği aynı anda çözmeye çalışmadığından emin olun.",
+      "hints": [
+        "approve/deny çağmadan önce mevcut onay durumunu alın",
+        "Onaylandı ve Reddedildi son durumlardır - bunlardan çıkış yapılmaz",
+        "Karar uç noktalarını idempotent yapın böylece yeniden denemeler güvenlidir",
+        "Yeni bir karar gerekiyorsa yeni bir onay isteği oluşturun"
+      ]
+    },
+    "E0002": {
+      "title": "Onay isteği kimliği bulunamadı",
+      "short_description": "Onay deposu, sağlanan istek kimliğiyle eşleşen bir kayıt içermiyor.",
+      "long_description": "Onay alt sistemi, istekleri opak bir kimlikle kaydeder. Bu hata, o kimliğin bilinmediği anlamına gelir - hiç oluşturulmamış, süresi dolup çöp toplanmış veya sorgulanan depodan farklı bir onay deposuna ait.",
+      "hints": [
+        "Kimliğin approval::request() çağrısından geldiğini doğrulayın",
+        "İstek atanın ve onaylayan aynı arka uç depoyu paylaştığını kontrol edin",
+        "JSON/veritabanı sınırlarında kimlik kesilmesine karşı dikkatli olun",
+        "İsteğin TTL'sini aşmadan ve temizlenmediğinden emin olun"
+      ]
+    },
+    "E0003": {
+      "title": "CLI argüman değeri geçersiz",
+      "short_description": "Bir komut satırı argümanı, bildirilen türünü veya kabul edilen kümesini karşılamayan bir değerle sağlandı.",
+      "long_description": "CLI ayrıştırıcısı sağladığınız bayrağı veya konumsalı başarıyla eşleştirdi, ancak eklenen değer dönüştürme veya doğrulamada başarısız oldu. Bu genellikle sayısal bir bayrağın sayısal olmayan bir token aldığında, enum tarzı bir bayrağın izin verilen liste dışında bir ad aldığında veya bir yol bayrağının işletim sistemi tarafından reddedilen bir dize aldığında meydana gelir.",
+      "hints": [
+        "Beklenen türü `hhs <komut> --help` ile kontrol edin",
+        "Boşluk veya kabuk meta karakterleri içeren değerleri tırnak içine alın",
+        "Enum bayrakları için --help çıktısından tam yazımı kopyalayın",
+        "Sayısal aralıkları doğrulayın - bazı bayraklar yalnızca pozitif tam sayıları kabul eder"
+      ]
+    },
+    "E0004": {
+      "title": "Gerekli CLI argümanı sağlanmadı",
+      "short_description": "Aktif alt komut tarafından gerekli olarak işaretlenen bir komut satırı argümanı, çağrıdan çıkarıldı.",
+      "long_description": "Her HudHudScript alt komutu, hangi bayrakların ve konumsalların zorunlu olduğunu bildirir. Bu gerekli girdilerden biri olmadan bir alt komutu çağırdığınızda, ayrıştırıcı göndermeden önce durur ve eksik adı bildirir.",
+      "hints": [
+        "Tüm gerekli argümanları görmek için `hhs <altkomut> --help` çalıştırın",
+        "Değerin ortam değişkeniyle sağlanıp sağlanamayacağını kontrol edin",
+        "Yöneldiğiniz alt komutu çağırdığınızı doğrulayın",
+        "Önceki çağrının doğru olduğunu onaylayana kadar kabuk geçmişi genişlemesini kullanmayın"
+      ]
+    },
+    "E0005": {
+      "title": "Alt komut belirtilmedi",
+      "short_description": "CLI bir alt komut seçmeden çağrıldı ve çıplak ikili için varsayılan bir eylem yapılandırılmadı.",
+      "long_description": "`hhs` bir çoklu araçtır: çoğu faydalı iş `run`, `build`, `deploy`, `lsp` veya `repl` gibi alt komutlar aracılığıyla gerçekleşir. İkiliyi alt komut olmadan (ve `--version` gibi genel bir bayrak olmadan) çağırmak, ayrıştırıcıyı gönderecek bir eylem bırakmadan bırakır.",
+      "hints": [
+        "Tüm kullanılabilir alt komutları listelemek için `hhs --help` çalıştırın",
+        "Yaygın alt komutlar: run, build, deploy, lsp, repl",
+        "Yalnızca bir yardım özeti istiyorsanız, `--help` kullanın",
+        "Argümanları kaldıran kabuk takma adları yaygın bir nedendir"
+      ]
+    },
+    "E0006": {
+      "title": "Genel CLI ayrıştırma hatası",
+      "short_description": "Bağımsız değişken ayrıştırıcı, bilinen CLI hata kategorilerinin dışında kalan bir nedenle başarısız oldu.",
+      "long_description": "Bu, `hudhudscript-cli` bilinen bilinmeyen argüman, eksik gerekli, eksik alt komut veya geçersiz değer kategorilerinin dışında bir ayrıştırma sorunusu ile karşılaştığında yayınlanan bir yakalama tümü varyantıdır. Örnekler arasında çakışan bayrak kombinasyonları, bozuk UTF-8 veya dahili `clap` hataları yer alır.",
+      "hints": [
+        "Sarılmış mesajı okuyun - gerçek nedeni taşır",
+        "Çakışan bayrak çiftleri için arayın",
+        "ASCII olmayan karakterler söz konusuysa LANG/LC_ALL'i kontrol edin",
+        "Bir seferde bir şüpheli bayrağı kaldırarak `--help` ile yeniden oluşturun"
+      ]
+    },
+    "E0007": {
+      "title": "Tanımlanamayan CLI argümanı",
+      "short_description": "CLI ayrıştırıcısı, aktif alt komutun bildirmediği bir bayrak veya konumsal ile karşılaştı.",
+      "long_description": "Her alt komutun kabul edilen bayrak ve konumsallarının sabit bir kümesi vardır. Bu kümenin dışında bir şey geçtiğinizde - yazım hatası, güncel olmayan bir öğretici veya farklı bir alt komuta ait bir bayrak aracılığıyla - ayrıştırıcı tahmin etmemeyi reddeder ve sorunlu tokeni bildirir.",
+      "hints": [
+        "Desteklenen bayrakları görmek için `hhs <altkomut> --help` çalıştırın",
+        "Yazım hatalarını kontrol edin",
+        "Bayrağın yazdığınız alt komuta ait olduğundan emin olun",
+        "Uzun bayraklar `--ad`, kısa bayraklar `-n` kullanır"
+      ]
+    },
+    "E0008": {
+      "title": "Promise tutamacı çalışma zamanında bulunamadı",
+      "short_description": "Async çalışma zamanı, tutamacıyla başvurulan bir promise'i bulamadı; genellikle zaten tüketildiği veya hiç kaydedilmediği için.",
+      "long_description": "Async çalışma zamanı, dahili tutacaça göre anahtarlanan canlı promise'lerin bir kaydını tutar. Yorumlayıcı bir promise'i çözmeye, reddetmeye veya beklemeye çalıştığında, çalışma zamanı verilen tutacak için kayıt bulamadı. Bu genellikle promise'in zaten uzlaşılmış ve çöp toplanmış olduğu, farklı bir çalışma zamanı örneğinde oluşturulduğu veya tutacağın uydurulmuş veya bozulduğu anlamına gelir.",
+      "hints": [
+        "Aynı promise'i iki kez beklemeyin",
+        "Promise'i uzlaştırmadan önce async çalışma zamanının yıkılmadığından emin olun",
+        "Farklı çalışma zamanı örneklerinden promise'leri karıştırmadığınızı kontrol edin",
+        "Canlılığı garanti edemiyorsanız askıya alma noktaları arasında ham tutacakları saklamayın"
+      ]
+    },
+    "E0009": {
+      "title": "Async çalışma zamanı dahili hatası",
+      "short_description": "Async yürütücü, bir görevi zamanlamada, anketlemede veya tamamlanana kadar sürdürmede dahili bir hatayla karşılaştı.",
+      "long_description": "Bu, async çalışma zamanının kendisi - kullanıcı kodu değil - bir başarısızlıkla karşılaştığında yüzeye çıkan bir yakalama tümü hatasıdır. Nedenler arasında bırakılmış bir uyandırıcı, panikleyen bir gelecek, reaktör G/Ç hataları veya yürütücü içindeki bir değişmez ihlali yer alır.",
+      "hints": [
+        "Sarılmış mesajı okuyun - alt hatayı kesin olarak tanımlar",
+        "Görevler hala devam ederken async çalışma zamanını kapatmaktan kaçının",
+        "Düz HudHudScript koduyla tetiklenirse hudhudscript-async'a karşı bir hata bildirin",
+        "FFI aracılığıyla kaydedilen yerli görevlerden gelen panikler için ana bilgisayar günlüklerini kontrol edin"
+      ]
+    },
+    "E0010": {
+      "title": "Async görev oluşturulamadı",
+      "short_description": "Çalışma zamanı yeni bir async görev oluşturmayı reddetti; genellikle kapanıyor olduğu veya çalışan kapasitesini tükettiği için.",
+      "long_description": "`async fn` çağrıları veya `spawn(...)` çağrıları yeni bir görev oluşturduğunda, yürütücü bunu çalışan iş parçacıklarından birine kabul etmelidir. Bu hata, yürütücü gönderimi reddettiğinde döndürülür - en yaygın olarak kapatma başlatıldığında, sınırlı bir görev kuyruğu dolu olduğunda veya ana bilgisayar gömülü bir oluşturma kotası koyduğunda.",
+      "hints": [
+        "`runtime.stop()` sonrası veya kapanma kancalarından `spawn` çağırmayın",
+        "Sınırlı görev kuyralarının taşmasını önlemek için üreticileri kısıtlayın",
+        "eşzamanlı görev sayısını sınırlayan kum havuzu/gömücü politikalarını kontrol edin",
+        "Sınırsız fan-out yerine mevcut görevlere katılmayı tercih edin"
+      ]
+    },
+    "E0011": {
+      "title": "UI köprüsü bağlantısını kaybetti",
+      "short_description": "Başarılı ilk el sıkışmadan sonra HudHudScript ile ana bilgisayar UI çerçevesi arasındaki aktarım kesildi.",
+      "long_description": "`hudhudscript-ui-core` içindeki UI köprüsü, gömülü çerçeveye uzun ömürlü bir kanal tutar. Başlatıldıktan sonra, her iki taraf bu kanal üzerinden render komutları ve olay geri çağrıları değiştirir. Kanal beklenmedik şekilde kapandığında köprü bu hatayı yükseltir.",
+      "hints": [
+        "Ana bilgisayar penceresinin veya web görünümünün kullanıcı tarafından kapatıldığını kontrol edin",
+        "Kesinti zamanı civarında ana bilgisayar süreç günlüklerini inceleyin",
+        "Uzun ömürlü UI oturumlarını köprüyü yeniden oluşturan bir denetleyici ile sarın",
+        "Bu hata ateşlendiğinde askıya alınan UI bekleme işlemlerini iptal edin"
+      ]
+    },
+    "E0012": {
+      "title": "Temel UI çerçevesi hatası bildirdi",
+      "short_description": "Ana bilgisayar çerçevesi, HudHudScript'ten iletilen bir köprü isteğini işlerken bir hatayı döndürdü.",
+      "long_description": "Köprüsü çağrıyı Tauri, Dioxus, web görünümü veya desteklenen başka bir arka uca ilettiğinde, o arka uç kendi nedenlerinden dolayı çağrıyı reddedebilir. Köprü temel mesajı açıkça sarar.",
+      "hints": [
+        "Sarılmış mesajı okuyun - doğrudan ana bilgisayar çerçevesinden gelir",
+        "Hata metni için ana bilgisayar çerçevesinin belgelerinde çapraz referans yapın",
+        "Widget ağacının çerçevenin beklediğiyle eşleştiğini doğrulayın",
+        "Sorunlu çağrıyı izole etmek için minimal bir sahneye karşı yeniden oluşturun"
+      ]
+    },
+    "E0013": {
+      "title": "UI köprüsü başlatma başarısız",
+      "short_description": "Köprüsü seçilen UI çerçevesiyle başlangıçta el sıkışmayı tamamlayamadı.",
+      "long_description": "Başlatma, çerçeveyi yüklemeyi, ana bilgisayar penceresini veya web görünümünü ayırmayı ve ilk yetenek tanımlayıcılarını değiştirmeyi kapsar. Bu dizideki herhangi bir başarısızlık `InitFailed` olarak görünür.",
+      "hints": [
+        "Seçilen arka uç için yerel bağımlılıkların yüklendiğini doğrulayın",
+        "İkili çerçeve özelliğiyle derlendiğinden emin olun",
+        "Sarılmış mesajda OS düzeyinde izin sorunlarını inceleyin",
+        "Platform ve yapılandırmayı ayırmak için farklı bir arka uç deneyin"
+      ]
+    },
+    "E0014": {
+      "title": "UI köprüsü render adımı başarısız",
+      "short_description": "Ana bilgisayar çerçevesi, başarılı köprü başlatmasından sonra HudHudScript tarafından verilen bir render komutunu reddetti.",
+      "long_description": "Render başarısızlıkları gerçek çizim veya düzen aşamasında meydana gelir. Köprü, çerçeveye özgü başarısızlığı tek bir varyanta dönüştürürken orijinal mesajı korur.",
+      "hints": [
+        "İmkansız düzen kısıtlamalarını veya sıfır boyutlu düğümleri arayın",
+        "Gölgelendiriciler veya büyük doku dosyaları söz konusuysa GPU belleğini kontrol edin",
+        "Tetikleyiciyi izole etmek için minimal bir widget ağacına karşı yeniden oluşturun",
+        "İsteğe bağlı çizim özelliklerini çağırmadan önce yetenek kontrolleri ekleyin"
+      ]
+    },
+    "E0015": {
+      "title": "İstenen UI çerçevesi yerleşik değil",
+      "short_description": "Betik, bu HudHudScript ikilisinin derlenmediği bir UI çerçevesi istedi.",
+      "long_description": "HudHudScript, Cargo özellik bayraklarının arkasında birkaç UI arka ucunu destekler. Verilen bir ikili, yalnızca derleme zamanında etkinleştirilen arka uçları içerir.",
+      "hints": [
+        "Uygun `--features ui-tauri` (veya benzeri) ile yeniden derleyin",
+        "Hangilerinin derlendiğini görmek için `hhs --version` çalıştırın",
+        "Betikleri zaten desteklenen bir arka uca geçirin",
+        "İsteğe bağlı bir arka uç istemeden önce özellik algılama yardımcı programını kullanın"
+      ]
+    },
+    "E0016": {
+      "title": "Anayasa önbellekte eksik",
+      "short_description": "Önbellek, istenen tanımlayıcıya sahip bir anayasa belgesi bulamadı.",
+      "long_description": "Anayasalar, HudHudScript önbellek hiyerarşisinde üst düzey yönetişim belgeleridir. Bu hata, hiç eklenmemiş, süresi dolmuş veya başka bir yazar tarafından silinmiş bir kimlik araması yapıldığında ortaya çıkar.",
+      "hints": [
+        "Başlangıçta anayasaları önceden yüklemek için `cache.warm()` çağrısı yapın",
+        "Tutmayı önlemek için `get` öncesinde `cache.contains(id)` kullanın",
+        "Kimliğin içerik karması olduğunu doğrulayın",
+        "Nadiren erişilen kökleri düşürmeyen süre sonu politikasını kontrol edin"
+      ]
+    },
+    "E0017": {
+      "title": "Önbellek kaydı seri kaldırılamadı",
+      "short_description": "Önbelleklenmiş bir blob, beklenen yazılmış değerine kodu çözülemedi.",
+      "long_description": "Önbellek, değerleri bayt dizileri olarak saklar ve okumada bunları kodu çözer. Bu hata, baytlar başarıyla alındı ancak kod çözücü reddetti anlamına gelir.",
+      "hints": [
+        "Değer türleri değiştiğinde önbellek ad alanını artırın",
+        "Yazılmış değerleri `{ version, payload }` zarfıyla sarın",
+        "Yükseltmelerden sonra `cache.invalidate_stale()` çalıştırın"
+      ]
+    },
+    "E0018": {
+      "title": "Aynı içerik zaten başka bir anahtar altında saklı",
+      "short_description": "Bir ekleme reddedildi çünkü aynı içerik zaten önbellekte farklı bir kimlik altında mevcut.",
+      "long_description": "Önbellek, içerik adresli tekilleştirmeyi uygular. Aynı içeriği eklemeye çalıştığınızda, önbellek yazmayı reddeder ve hem istenen hem de mevcut kimliği bildirir.",
+      "hints": [
+        "`put(id, content)` yerine `cache.put_or_get(content)` çağrısı yapın",
+        "Hata mesajında bildirilen mevcut kimliği kullanın",
+        "Meta verileri içerik karmasıyla anahtarlanan bir yan dizinde saklayın"
+      ]
+    },
+    "E0019": {
+      "title": "Farklı içerikler arasında önbellek kimliği çakışması",
+      "short_description": "İki farklı yük aynı önbellek kimliğine hash'lendi; hash çakışması veya manuel kimlik yeniden kullanımı gösteriyor.",
+      "long_description": "Her önbellek kaydı bir içerik karmasıyla anahtarlanır. Bir çakışma, aynı kimliğin farklı bayt dizilerine eşlendiği anlamına gelir; bu, kriptografik karma ile varsayılan olarak olmamalıdır.",
+      "hints": [
+        "Manuel kimlikler geçmeyin - önbelleğin içeriği hash etmesine izin verin",
+        "Test yapılandırmasında hash işlevinin düşürülmediğini doğrulayın",
+        "Son iyi anlık görüntüden geri yükleyin"
+      ]
+    },
+    "E0020": {
+      "title": "Yasa önbellekte eksik",
+      "short_description": "Bir anayasa altında başvurulan belirli bir yasa belgesi önbellekte bulunamadı.",
+      "long_description": "Yasalar, önbellek hiyerarşisinde anayasaların bir seviye altında yaşar. Ebeveyn anayasa var olabilir, ancak istenen yasa kimliği yok.",
+      "hints": [
+        "Kimliği doğrulamak için anayasa yasalarını listeleyin",
+        "Yakın zamanda yazıldıysa çoğaltmayı bekleyin",
+        "Yasanın içerik kimliği olduğundan emin olun"
+      ]
+    },
+    "E0021": {
+      "title": "Önbellek kotası aşıldı",
+      "short_description": "Bir ekleme, yapılandırılmış kapasite kotası nedeniyle reddedildi.",
+      "long_description": "Önbellek, belleği sınırlı tutmak için sabit bir kota uygular. Tamamlandığında, yazma işlemleri reddedilir. Kota sınırını artırın veya LRU politikasına geçin.",
+      "hints": [
+        "cache.max_bytes değerini artırın",
+        "LRU politikasına geçin",
+        "cache.evict_oldest(n) çağrısı yapın"
+      ]
+    },
+    "E0022": {
+      "title": "Kural önbellekte eksik",
+      "short_description": "Bir yasa altında başvurulan kural belgesi önbellekte bulunamadı.",
+      "long_description": "Kurallar, önbellek hiyerarşisinde yasaların bir seviye altında yaşar. Ebeveyn yasa var olabilir, ancak istenen kural kimliği yoktur.",
+      "hints": [
+        "law.rules() ile kuralları listeleyin",
+        "Kritik kuralları sabitleyin",
+        "Kural katmanı için çıkarmayı azaltın"
+      ]
+    },
+    "E0023": {
+      "title": "Önbellek serileştirme hatası",
+      "short_description": "Bir değer, önbellekte depolanmak üzere kodlanamadı.",
+      "long_description": "Yazmadan önce önbellek değerleri baytlara kodlar. Kodlayıcı, serileştirilemeyen alanlar veya döngüsel yapılar nedeniyle reddetti.",
+      "hints": [
+        "#[serde(skip)] ekleyin",
+        "Kapatmaları adlandırılmış işlevlerle değiştirin",
+        "Döngüleri kırın"
+      ]
+    },
+    "E0024": {
+      "title": "Katalog G/Ç hatası",
+      "short_description": "Yerelleştirme alt sistemi katalog dosyasını okuyamadı.",
+      "long_description": "Kataloglar JSON veya YAML'den yüklenir. Eksik yol, izin reddi veya kırık sembolik bağlantı gibi dosya sistemi hataları.",
+      "hints": [
+        "Katalog yolunun var olduğunu doğrulayın",
+        "İzinleri kontrol edin",
+        "Disk alanını kontrol edin"
+      ]
+    },
+    "E0025": {
+      "title": "Katalog JSON ayrıştırma hatası",
+      "short_description": "JSON kataloğu ayrıştırılamadı.",
+      "long_description": "JSON dosyası sözdizimsel olarak geçersiz. Sondaki virgüller, dengesiz ayraçlar veya akıllı tırnaklar olabilir.",
+      "hints": [
+        "jq . catalog.json ile doğrulayın",
+        "Katı JSON kurallarını takip edin",
+        "BOM baytlarına dikkat edin"
+      ]
+    },
+    "E0026": {
+      "title": "Katalog YAML ayrıştırma hatası",
+      "short_description": "YAML kataloğu ayrıştırılamadı.",
+      "long_description": "YAML boşluk duyarlıdır. Sekmeler, tutarsız girinti veya karışık akış/blok stilleri yaygın nedenlerdir.",
+      "hints": [
+        "Sekmeleri boşluklarla değiştirin",
+        "Özel karakterleri tırnaklayın",
+        "YAML formatlayıcı kullanın"
+      ]
+    },
+    "E0027": {
+      "title": "Konsey toplulukta bulunmuyor",
+      "short_description": "Bir topluluk içinde olmayan bir konsey arandı.",
+      "long_description": "Topluluk, bağlı konseylerin bir dizinini tutar. Konsey adı bu dizinde yok.",
+      "hints": [
+        "community.attach_council() ile eklenmiş mi kontrol edin",
+        "Büyük/küçük harf duyarlılığını kontrol edin",
+        "community.councils() ile listeleyin"
+      ]
+    },
+    "E0028": {
+      "title": "Konsey zaten toplulukta ekli",
+      "short_description": "Zaten ekli olan bir konsey eklemeye çalışıldı.",
+      "long_description": "Topluluk içinde konsey adları benzersiz olmalıdır. Mevcut olanı değiştirmek için önce ayırın.",
+      "hints": [
+        "Benzersiz ad kullanın",
+        "Önce detach sonra attach yapın",
+        "community.has_council() ile kontrol edin"
+      ]
+    },
+    "E0029": {
+      "title": "Ajan zaten topluluğun üyesi",
+      "short_description": "Zaten üye olan bir ajana topluluğa eklemeye çalışıldı.",
+      "long_description": "Topluluk üyeliği bir kümedir - her ajan kimliği en fazla bir kez görünür.",
+      "hints": [
+        "add_member çağrmadan önce is_member kontrol edin",
+        "Tohum listelerinde tekrarları kaldırın",
+        "Set kullanın"
+      ]
+    },
+    "E0030": {
+      "title": "Kaynak zaten topluluğa kayıtlı",
+      "short_description": "Anahtarı zaten alınmış bir kaynak kaydetmeye çalışıldı.",
+      "long_description": "Topluluklarda kaynak anahtarları benzersizdir. Mevcut olanı değiştirmek için önce kaldırın.",
+      "hints": [
+        "Daha spesifik anahtar seçin",
+        "Önce has_resource kontrol edin",
+        "Değiştirmek için önce kaldırın"
+      ]
+    },
+    "E0031": {
+      "title": "Geçersiz topluluk yapılandırması",
+      "short_description": "Topluluğa sağlanan yapılandırma doğrulamada başarısız oldu.",
+      "long_description": "Topluluk yapılandırması kültürel profil, üyelik politikası yeter sayısı gibi alanları içerir. Bu alanlardan herhangi biri eksik veya tutarsız olduğunda topluluk reddedilir.",
+      "hints": [
+        "Mesajı okuyun",
+        "Yeter sayısını doğrulayın",
+        "Varsayılan anayasayı kontrol edin"
+      ]
+    },
+    "E0032": {
+      "title": "Ajan bu topluluğun üyesi değil",
+      "short_description": "İşlem üye listesinde olmayan bir ajan kimliğine başvurdu.",
+      "long_description": "Üye hedefli işlemler ajanın mevcut bir üye olmasını gerektirir. Bu hata sağlanan kimlik üyelik kümesinde olmadığında ortaya çıkar.",
+      "hints": [
+        "community.is_member(id) kullanın",
+        "Eşzamanlı kaldırma durumlarını denetleyin"
+      ]
+    },
+    "E0033": {
+      "title": "Kaynak anahtarı toplulukta kayıtlı değil",
+      "short_description": "Bir anahtarla toplulukta kaynak arandı ancak giriş yok.",
+      "long_description": "Her topluluk anahtarlanmış paylaşılan kaynaklara sahiptir. Bu anahtar mevcut değilse bu hata ortaya çıkar.",
+      "hints": [
+        "Bu topluluğa eklendiğini onaylayın",
+        "Erişmeden önce has_resource kontrol edin",
+        "Bootstrap sırasını denetleyin"
+      ]
+    },
+    "E0034": {
+      "title": "Derleyici genel hata",
+      "short_description": "Bayt kodu derleyicisi daha spesifik bir kategoriye uymayan genel hata bildirdi.",
+      "long_description": "Yarı uygulanmış dil özellikleri veya bozuk AST nedeniyle ortaya çıkar.",
+      "hints": [
+        "Bildirilen konumu inceleyin",
+        "Minimum yeniden üretme yapın"
+      ]
+    },
+    "E0035": {
+      "title": "Kaynak konumunda derleme hatası",
+      "short_description": "Derleyici kaynak konumuna bağlı genel hata bildirdi.",
+      "long_description": "Konumsuz genel derleme hatası ancak ekli kaynak aralığı ile.",
+      "hints": [
+        "Vurgulanan konumu açın",
+        "Yeniden yazmayı deneyin"
+      ]
+    },
+    "E0036": {
+      "title": "Derleyici geçersiz bayt kodu üretti",
+      "short_description": "Bayt kodu yayıcı doğrulamadan başarısız olan talimat dizisi oluşturdu.",
+      "long_description": "Bayt kodu yayıldıktan sonra derleyici doğrulayıcı çalıştırır. Değişmez ihlal edildiğinde reddeder.",
+      "hints": [
+        "Derleyici hatası bildirin",
+        "Yığın etkilerini denetleyin",
+        "HHS_LOG=debug çalıştırın"
+      ]
+    },
+    "E0037": {
+      "title": "Belirli konumda geçersiz bayt kodu",
+      "short_description": "Bayt kodu doğrulaması kaynak aralığına bağlı talimatta başarısız oldu.",
+      "long_description": "Doğrulayıcı talimat reddetti ve düşüren düşük seviyeli kurala geri eşledi.",
+      "hints": [
+        "Derleyici hatası olarak ele alın",
+        "Alt ifadeleri çıkarın"
+      ]
+    },
+    "E0038": {
+      "title": "Derleme sırasında çalışma zamanı hatası",
+      "short_description": "Derleyiciden tetiklenen çalışma zamanı değerlendirmesi başarısız oldu.",
+      "long_description": "Derleme zamanı işi kod çalıştırmayı gerektirir - sabat başlatıcıyı değerlendirmek gibi.",
+      "hints": [
+        "Sarılmış çalışma zamanı mesajını okuyun",
+        "Sabat başlatıcıları derleme zamanında çalışır"
+      ]
+    },
+    "E0039": {
+      "title": "Derleme sırasında kaynak konumunda çalışma zamanı hatası",
+      "short_description": "Derleme zamanı değerlendirme başarısız ve başarısız ifade konumu var.",
+      "long_description": "Çalışma zamanı hatası-derleme sırasında varyantı ancak kesin kaynak aralığı ile.",
+      "hints": [
+        "Vurgulanan satırı açın",
+        "Sabat init'te paniklerden kaçının"
+      ]
+    },
+    "E0040": {
+      "title": "Dil özelliği henüz desteklenmiyor",
+      "short_description": "Derleyici henüz bayt koduna düşürmeyi bilmediği yapı tanıdı.",
+      "long_description": "Ayrıştırıcı ve tip denetleyicisi kabul etti ancak bayt kodu yayıcı düşürme kuralını uygulamadı.",
+      "hints": [
+        "VM'nin hangi özellikleri desteklediğini kontrol edin",
+        "Yorumlayıcıyı geçici çözüm olarak deneyin"
+      ]
+    },
+    "E0041": {
+      "title": "Kaynak konumunda desteklenmeyen özellik",
+      "short_description": "Derleyici desteklenmeyen yapıya çarptı ve kesin konumu bildiriyor.",
+      "long_description": "Desteklenmeyen-özellik hatası ancak tam yapıya/yapıya işaret eden ekli aralık ile.",
+      "hints": [
+        "Bildirilen satırı inceleyin",
+        "Daha basit forma yeniden yazın"
+      ]
+    },
+    "E0042": {
+      "title": "Geçersiz anayasa sürümü",
+      "short_description": "Anayasa sürümü geçerli anlamsal sürüm olarak ayrıştırılmadı.",
+      "long_description": "Anayasalar anlamsal sürüm benzeri şema ile sürümlendirilir. Sürüm dizisi ayrıştırılamadığında bu hata ortaya çıkar.",
+      "hints": [
+        "MAJOR.MINOR.PATCH formatını kullanın",
+        "Öndeki v öneklerinden kaçının"
+      ]
+    },
+    "E0043": {
+      "title": "Anayasada yasa mevcut değil",
+      "short_description": "Anayasada bulunmayan bir yasayı okumaya/değiştirmeye çalışıldı.",
+      "long_description": "Bir anayasa yasaların sıralı koleksiyonudur. İşlemler yasanın var olmasını gerektirir.",
+      "hints": [
+        "constitution.laws() ile doğrulayın",
+        "Doğru sürümü inceleyin"
+      ]
+    },
+    "E0044": {
+      "title": "Anayasada önceki sürüm yok",
+      "short_description": "Başlangıç sürümündeki anayasanın öncülü istendi.",
+      "long_description": "Anayasalar tarihsel sürümler zinciri tutar. İlk yayınlanan sürümde öncül yoktur.",
+      "hints": [
+        "rollback() öncesinde has_previous_version() kullanın",
+        "Zincir yürüyüşünde sonlandırma olarak ele alın"
+      ]
+    },
+    "E0045": {
+      "title": "Anayasa kayıtlı değil",
+      "short_description": "Kayıtta bu giriş olmayan isimle anayasa arandı.",
+      "long_description": "Anayasalar adlandırılmış kayıtta yaşar. İsim çözümleyen işlemler isim bilinmediğinde bu hatayı yükseltir.",
+      "hints": [
+        "Başvurmadan önce register ile kaydedin",
+        "Yazım ve büyük/küçük harfi kontrol edin"
+      ]
+    },
+    "E0046": {
+      "title": "Konuşmanın mesajı yok",
+      "short_description": "Sıfır mesaj içeren konuşmada işlem denendi.",
+      "long_description": "Birçok AI aracı konuşmada en az bir mesaj gerektirir.",
+      "hints": [
+        "conversation.send() öncesinde mesaj ekleyin",
+        "İlk dönüş olarak sistem istemi kullanın"
+      ]
+    },
+    "E0047": {
+      "title": "Konuşma G/Ç hatası",
+      "short_description": "Disk üzerindeki konuşma deposunu okuma/yazma başarısız oldu.",
+      "long_description": "Konuşmalar diske kaydedilebilir. Bu hata temeldeki işletim sistemi hatasını sarar.",
+      "hints": [
+        "Dizinin var olduğunu doğrulayın",
+        "Disk alanını kontrol edin",
+        "Kilitsiz aynı dosyada çoklu örnek yarışmayın"
+      ]
+    },
+    "E0048": {
+      "title": "Konuşma serileştirme başarısız",
+      "short_description": "Konuşma kaydedilemedi veya yüklendikten sonra kodu çözülemedi.",
+      "long_description": "Konuşmalar JSON olarak saklanır. Bu hata kodlayıcının/kod çözücünün reddettiği anlamına gelir.",
+      "hints": [
+        "Yükseltmelerden sonra migrate() çalıştırın",
+        "Mesaj meta verilerine keyfi nesneler koymayın"
+      ]
+    },
+    "E0049": {
+      "title": "LLM bütçesi aşıldı",
+      "short_description": "LLM çağrısı harcamayı yapılandırılan bütçenin ötesine iteceği için engellendi.",
+      "long_description": "HudHudScript LLM harcamasını izler ve bütçeyi aşacak isteği reddeder.",
+      "hints": [
+        "cost_limit değerini artırın",
+        "Daha ucuz modele geçin",
+        "Bağlam uzunluğunu kısaltın"
+      ]
+    },
+    "E0050": {
+      "title": "Model için fiyatlandırma yok",
+      "short_description": "Maliyet motoru çağrılan model için fiyatlandırma verisine sahip değil.",
+      "long_description": "Harcamayı hesaplamak için modelin belirteç başına fiyatına bakılır. Model adı eksikse bu hata ortaya çıkar.",
+      "hints": [
+        "Modeli pricing.toml dosyasına ekleyin",
+        "Yazımı iki kez kontrol edin"
+      ]
+    },
+    "E0051": {
+      "title": "Sağlayıcı için fiyatlandırma yok",
+      "short_description": "Maliyet motoru sağlayıcı için fiyat tablosu yok.",
+      "long_description": "Fiyatlandırma tabloları sağlayıcıya göre düzenlenir.",
+      "hints": [
+        "Sağlayıcıyı pricing.toml'da kaydedin",
+        "Sıfır oranlarla yerel modeller için kaydedin"
+      ]
+    },
+    "E0052": {
+      "title": "Konseyde ajan bulunamadı",
+      "short_description": "Konsey işlemi üye olmayan ajanı referans aldı.",
+      "long_description": "Konseyin sabit kadrosu vardır. Her işlem ajanın mevcut üye olmasını gerektirir.",
+      "hints": [
+        "is_member ile doğrulayın",
+        "Üyeleri listeleyin"
+      ]
+    },
+    "E0053": {
+      "title": "Konseyin bağlı anayasası eksik",
+      "short_description": "Bağlı anayasa arama zamanında çözülemedi.",
+      "long_description": "Konsey yönetmelik içeren anayasaya bağlanabilir.",
+      "hints": [
+        "Anayasanın kayıtlı olduğunu doğrulayın",
+        "Yeniden bağlayın"
+      ]
+    },
+    "E0054": {
+      "title": "Konseyde ajan zaten var",
+      "short_description": "Zaten içeren konseye ajan eklemeye çalışıldı.",
+      "long_description": "Konsey üyeliği kümedir - her ajan kimliği en fazla bir kez.",
+      "hints": [
+        "assign_role kullanın",
+        "Önce is_member kontrol edin"
+      ]
+    },
+    "E0055": {
+      "title": "Konsey kararı yürütme başarısız",
+      "short_description": "Oylamayla seçilen eylem yürütme sırasında hata verdi.",
+      "long_description": "Konsey karara vardıktan sonra kazanan eylemi çalıştırır.",
+      "hints": [
+        "Nedeni inceleyin",
+        "Yeniden oylama uygun mudur"
+      ]
+    },
+    "E0056": {
+      "title": "Konsey işlemi için geçersiz rol",
+      "short_description": "Konseyin tanımadığı veya izin vermediği rolle işlem denendi.",
+      "long_description": "Konseyler sabit rol seti kabul eder.",
+      "hints": [
+        "Geçerli rolleri listeleyin",
+        "Bir başka üyeyi terfi ettirmeden başkanı indirmeyin"
+      ]
+    },
+    "E0057": {
+      "title": "Konseyin üyesi yok",
+      "short_description": "En az bir üye gerektiren işlem boş konseyde yapıldı.",
+      "long_description": "Sıfır üyeli konsey oy veremez veya kesinleşemez.",
+      "hints": [
+        "Yapılandırmada en az bir üye ile tohumlayın",
+        "run öncesinde üye sayısını kontrol edin"
+      ]
+    },
+    "E0058": {
+      "title": "Konsey kayıtta bulunamadı",
+      "short_description": "Kayıtta böyle giriş olmayan isimle konsey arandı.",
+      "long_description": "Orkestrasyon çalışma zamanı bildirilen konseylerin kaydını tutar.",
+      "hints": [
+        "Aramadan önce konseyi kaydedin",
+        "Küresel veya topluluk kapsamını ayırt edin"
+      ]
+    },
+    "E0059": {
+      "title": "Konsey kararı zaman aşımına uğradı",
+      "short_description": "Konsey yapılandırılan zaman bütçesi içinde karara varamadı.",
+      "long_description": "Her konsey çalıştırmasının zaman bütçesi vardır.",
+      "hints": [
+        "Yavaş üyeler için zaman aşımını artırın",
+        "Adımıza göre bekleme sürelerini günlüğe kaydedin"
+      ]
+    },
+    "E0060": {
+      "title": "Darbe hedef ajan bulunamadı",
+      "short_description": "Darbe işlemi yönetim sisteminde olmayan ajan kimliğine başvurdu.",
+      "long_description": "Darbe, normal yönetimi askıya alan acil durum geçersiz kılma mekanizmasıdır.",
+      "hints": [
+        "Ajanın var olduğunu doğrulayın",
+        "Yeni çalışma zamanına karşı eski darbe günlüklerini yeniden oynamaktan kaçının"
+      ]
+    },
+    "E0061": {
+      "title": "Darbe bağlı anayasası bulunamadı",
+      "short_description": "Darbe yönetim sisteminde kayıtlı olmayan anayasaya başvurdu.",
+      "long_description": "Darbe, geçersiz kılma süresince öncelik alan acil durum anayasası ilan edebilir.",
+      "hints": [
+        "Darbe başlatmadan önce acil durum anayasasını kaydedin",
+        "Varsayılan acil kurallara geri dönün"
+      ]
+    },
+    "E0062": {
+      "title": "Sibernetik döngü aktüatör yazma başarısız",
+      "short_description": "Kontrol döngüsünün aktüatörü komut edilen değeri uygulayamadı.",
+      "long_description": "Sibernetik döngü gözlemciden, ilke karar vericiden ve aktüatörden oluşur.",
+      "hints": [
+        "Neden için sarılmış nedeni kontrol edin",
+        "Geri beslemeli döngüde otomatik devam etmeyin"
+      ]
+    },
+    "E0063": {
+      "title": "Sibernetik döngü gözlemci okuma başarısız",
+      "short_description": "Kontrol döngüsünün gözlemcisi izlediği sistem durumunu okuyamadı.",
+      "long_description": "Gözlemciler geri besleme döngüsünün sensör tarafıdır.",
+      "hints": [
+        "Neden için sarılmış nedeni inceleyin",
+        "Donmuş örnekleri beslemeyin"
+      ]
+    },
+    "E0064": {
+      "title": "Sibernetik döngü ilke kararı başarısız",
+      "short_description": "İlke işlevi gözlemlenen durumdan düzeltme hesaplarken hata verdi.",
+      "long_description": "İlke geri besleme döngüsünün beynidir.",
+      "hints": [
+        "Sarılmış nedeni inceleyin",
+        "Girdi şeklinin değişmediğini kontrol edin"
+      ]
+    },
+    "E0065": {
+      "title": "Veritabanı bağlantısı kurulamadı",
+      "short_description": "Sürücü yapılandırılan sunucuya bağlantı açamadı.",
+      "long_description": "Ulaşılamaz ana bilgisayar, yanlış bağlantı noktası, TLS el sıkışma başarısızlığı, süresi dolmuş kimlik bilgileri sık nedenlerdir.",
+      "hints": [
+        "DSN'yi yerel istemciyle doğrulayın",
+        "Başlangıç yarışı için geri deneme ekleyin"
+      ]
+    },
+    "E0066": {
+      "title": "Veritabanı özelliği devre dışı",
+      "short_description": "Çalışma zamanı db özelliği olmadan derlendi.",
+      "long_description": "HudHudScript veritabanı sürücüleri olmadan inşa edilebilir.",
+      "hints": [
+        "cargo build --features db ile yeniden derleyin",
+        "Tam görüntü kullanın"
+      ]
+    },
+    "E0067": {
+      "title": "Veritabanı çağrısı geçersiz argümanlar aldı",
+      "short_description": "Veritabanı fonksiyonuna iletilen argümanlar sorgu öncesinde doğrulamadan başarısız oldu.",
+      "long_description": "Sorgu sürücüye ulaşmadan önce bu hata ortaya çıkar.",
+      "hints": [
+        "Yer tutucu sayısını bağla listesi uzunluğuyla eşleştirin",
+        "DSN şeması için doğru sözdizimini kullanın"
+      ]
+    },
+    "E0068": {
+      "title": "SQL sorgusu yürütme başarısız",
+      "short_description": "Veritabanı sunucusu sorguyu reddetti - sözdizimi hatası, eksik tablolar veya kısıtlama ihlalleri.",
+      "long_description": "Sürücü sorguyu gönderdi ancak sunucu hata döndürdü.",
+      "hints": [
+        "Sarılmış arka uç mesajını okuyun",
+        "Ölümcül hatalarda tüm işlemi yeniden deneyin"
+      ]
+    },
+    "E0069": {
+      "title": "Veritabanı arka ucu desteklenmiyor",
+      "short_description": "DSN şeması bu çalışma zamanı derlemesinin sürdüremeyeceği arka uca atıfta bulunuyor.",
+      "long_description": "HudHudScript bilinen arka uçlar için sürücülerle birlikte gönderilir.",
+      "hints": [
+        "Desteklenen şema kullanın: postgres, mysql, sqlite",
+        "Desteklenen kablo protokollerinden birini sunan Proxy ile ön uç yapın"
+      ]
+    },
+    "E0070": {
+      "title": "Dağıtım bağdaştırıcısı hatası bildirdi",
+      "short_description": "Hedefe özgü dağıtım bağdaştırıcısı dağıtım ardışık düzeninde hata döndürdü.",
+      "long_description": "hudhudscript-deploy-core yapı tamamlandıktan sonra takılabilir bağdaştırıcıya gönderim yapar.",
+      "hints": [
+        "Sarılmış mesajı okuyun",
+        "Gerekli kimlik bilgilerinin mevcut olduğunu doğrulayın"
+      ]
+    },
+    "E0071": {
+      "title": "Dağıtım yapı adımı başarısız",
+      "short_description": "Gerçek dağıtımdan önceki yapı adımı dağıtılabilir yapıt oluşturamadı.",
+      "long_description": "Herhangi bir bağdaştırıcı çağrılmadan önce deploy-core projeyi hedefin beklediği biçime yapar.",
+      "hints": [
+        "Deploy'ı yeniden çalıştırmadan önce yapıyı bağımsız olarak çoğaltın",
+        "Sarılmış mesajı inceleyin"
+      ]
+    },
+    "E0072": {
+      "title": "Dağıtım yapılandırması geçersiz veya eksik",
+      "short_description": "Dağıtım komutu yapılandırmasını yükleyemedi veya doğrulayamadı.",
+      "long_description": "Deploy-core proje dizini, yapı hedefi ve bağdaştırıcıya özel ayarları içeren yapılandırma gerektirir.",
+      "hints": [
+        "--project-dir'nin var olduğunu ve geçerli proje içerdiğini doğrulayın",
+        "Yapı hedefi adını doğru yazın"
+      ]
+    },
+    "E0073": {
+      "title": "Başarılı yapıdan sonra dağıtım adımı başarısız",
+      "short_description": "Yapıt başarıyla yapıldı ancak gerçek dağıtım adımı tamamlanamadı.",
+      "long_description": "Bu varyant son aşamayı kapsar.",
+      "hints": [
+        "Bağlantıyı ve kimlik bilgilerini doğrulayın",
+        "Kota sınırına bakın"
+      ]
+    },
+    "E0074": {
+      "title": "Dağıtım geri alma tamamlanamadı",
+      "short_description": "Başarısız dağıtımdan sonra otomatik geri alma başarısız oldu ve heket bozulmuş olabilir.",
+      "long_description": "Dağıtım başarısız olduğunda deploy-core önceki iyi sürümü geri yüklemeye çalışır.",
+      "hints": [
+        "Acil olarak ele alın",
+        "Yeniden denemeden önce el ile önceki sürümü geri yükleyin"
+      ]
+    },
+    "E0075": {
+      "title": "Gömme giriş metni boş",
+      "short_description": "Boş dize için gömme istendi - çoğu sağlayıcı reddeder.",
+      "long_description": "Gömme modelleri en az bir belirteç gerektirir.",
+      "hints": [
+        "Boş dizeleri embed() çağrısından önce atlayın",
+        "Bağla kırpın ve upstream'de boş mu diye kontrol edin"
+      ]
+    },
+    "E0076": {
+      "title": "Gömme vektörü yanlış boyuta sahip",
+      "short_description": "Gömme vektörü dizin veya arka uç modelinin beklediği boyuta sahip değil.",
+      "long_description": "Vektör dizinleri belirli boyut sayısı için oluşturulur.",
+      "hints": [
+        "Dizin başına bir gömme modeli kullanın",
+        "Model değiştirirken dizini yeniden oluşturun"
+      ]
+    },
+    "E0077": {
+      "title": "Gömme sağlayıcısı hata döndürdü",
+      "short_description": "Yukarı akış gömme sağlayıcısı isteği başarısız kıldı.",
+      "long_description": "Gömme üretimi sağlayıcıya devredilir.",
+      "hints": [
+        "Sarılmış mesajı inceleyin",
+        "Geçici hatalar için geri deneme ekleyin",
+        "Yerel modelleri başlangıçta önceden yükleyin"
+      ]
+    },
+    "E0078": {
+      "title": "Olay veri yolu kanalı kapalı",
+      "short_description": "Zaten kapanmış olay veri yolu kanalında yayınla veya abone olma denendi.",
+      "long_description": "Olay veri yolu kanalları açıkça veya sahip ağ yıkıldığında kapatılabilir.",
+      "hints": [
+        "Yayınlamadan önce bus.is_closed() kontrolü yapın",
+        "Kanalı tüm üreticilerinden ve tüketicilerinden sonra kapatın"
+      ]
+    },
+    "E0079": {
+      "title": "Olay veri yolu konusuna abone yok",
+      "short_description": "Yayın işlemi hedef konuda etkin abone bulamadı.",
+      "long_description": "Varsayılan olarak olay veri yolları fire-and-forget'tir.",
+      "hints": [
+        "İlk yayınlamadan önce abonelerin bağlanması için başlangıç bariyeri kullanın",
+        "Boş teslimat kabul edilebilirse best-effort'e geçin"
+      ]
+    },
+    "E0080": {
+      "title": "Yedek zincirdeki tüm sağlayıcılar tükendi",
+      "short_description": "Yedek zincirindeki tüm sağlayıcılar denendi ve hepsi başarısız oldu.",
+      "long_description": "Yedek zinciri öncelik sırasına göre sağlayıcıları dener.",
+      "hints": [
+        "fallback.log_attempts = true etkinleştirin",
+        "Son çare olarak yerel Ollama sağlayıcısı ekleyin"
+      ]
+    },
+    "E0081": {
+      "title": "Yedek zincirinde yapılandırılmış sağlayıcı yok",
+      "short_description": "Geri dönüş dağıtıcısı zincirinde sıfır sağlayıcıyla çağrıldı.",
+      "long_description": "Yedek zinciri en az bir sağlayıcı içermelidir.",
+      "hints": [
+        "fallback.providers'a en az bir sağlayıcı ekleyin",
+        "Başlangıçta boş olmayan zinciri doğrulayın"
+      ]
+    },
+    "E0082": {
+      "title": "GGUF dosyası geçersiz sihirli baytlara sahip",
+      "short_description": "Dosyanın ilk dört baytı GGUF sihirli başlığı değil.",
+      "long_description": "Her GGUF dosyası 'GGUF' ASCII baytlarıyla başlar.",
+      "hints": [
+        "Dosyayı yeniden indirin",
+        "Yayıncının SHA-256'sına karşı doğrulayın"
+      ]
+    },
+    "E0083": {
+      "title": "GGUF meta verileri geçersiz UTF-8 içeriyor",
+      "short_description": "Meta veri anahtarı veya dize değeri geçerli UTF-8 değil.",
+      "long_description": "GGUF meta veri dizeleri uzunluk önekli UTF-8 bayt dizileridir.",
+      "hints": [
+        "Dosyayı bozuk olarak değerlendirin ve yeniden indirin"
+      ]
+    },
+    "E0084": {
+      "title": "GGUF dosyası başlık boyutundan kısa",
+      "short_description": "Dosya minimum GGUF başlığından (sihirli + sürüm + sayı) daha kısa.",
+      "long_description": "Geçerli GGUF dosyası en azından sabit başlık kadar olmalıdır.",
+      "hints": [
+        "Kısmi dosyayı silip baştan indirin",
+        "Tamamlanana kadar devam indirmeyi temizleyin"
+      ]
+    },
+    "E0085": {
+      "title": "GGUF ayrıştırıcı beklenmedik dosya sonuna rastladı",
+      "short_description": "Başlık dosyanın gerçekte içerdiğinden daha fazla veri (tensörler, meta veriler) bildirdi.",
+      "long_description": "Başlık kaç tensör ve meta veri anahtar-değer çiftinin izlediğini listeler.",
+      "hints": [
+        "Dosyayı yeniden indirin - kısadır",
+        "Content-Length'i kaynakla karşılaştırın"
+      ]
+    },
+    "E0086": {
+      "title": "GGUF dosyası desteklenmeyen sürüm kullanıyor",
+      "short_description": "Dosyanın GGUF sürüm alanı daha yeni veya daha eski.",
+      "long_description": "HudHudScript sabit bir aralığı destekler ve reddeder.",
+      "hints": [
+        "HudHudScript'i güncelleyin",
+        "Eşleşen sürüm hedefleyen dönüştürücü ile yeniden nicemleyin"
+      ]
+    },
+    "E0087": {
+      "title": "Git alt süreç sıfır dışı çıktı",
+      "short_description": "Git CLI çalıştı ancak sıfır dışı durumla çıktı.",
+      "long_description": "HudHudScript sistem git ikilisine VCS işlemleri için kabuk çıkar.",
+      "hints": [
+        "Sarılmış git stderr'yi okuyun",
+        "Aynı komutu aynı çalışma dizininde tekrarlayın"
+      ]
+    },
+    "E0088": {
+      "title": "Git ikilisi PATH üzerinde değil",
+      "short_description": "HudHudScript PATH üzerinde git yürütülebilir dosyasını bulamadı.",
+      "long_description": "Git araç alt sistemi çalışma zamanında git ikilisini gerektirir.",
+      "hints": [
+        "Çalışma zamanı ortamında git'i kurun",
+        "Aynı kullanıcı olarak which git ile doğrulayın"
+      ]
+    },
+    "E0089": {
+      "title": "Git aracı geçersiz argümanlar aldı",
+      "short_description": "Git yardımcıya iletilen argümanlar alt süreç başlatılmadan önce doğrulamadan başarısız oldu.",
+      "long_description": "Git aracı sarmalayıcısı argümanları yerel olarak doğrular.",
+      "hints": [
+        "Gerekli ve isteğe bağlı alanlar için imzayı eşleştirin",
+        "Önde gelen tire olmayan dal adlarını sanitize edin"
+      ]
+    },
+    "E0090": {
+      "title": "Git çıktısı ayrıştırma başarısız",
+      "short_description": "Git aracı makine tarafından okunabilir çıktıyı ayrıştıramadı.",
+      "long_description": "Birkaç git yardımcısı makine tarafından okunabilir çıktıyı ayrıştırır.",
+      "hints": [
+        "Git çağrısından önce LC_ALL=C ayarlayın",
+        "Stdout'a yazdıran kancaları devre dışı bırakın"
+      ]
+    },
+    "E0091": {
+      "title": "Verilen yolda Git deposu yok",
+      "short_description": "Sağlanan yol .git dizisi içermiyor ve herhangi bir git çalışma ağacı içinde değil.",
+      "long_description": "Git araç yardımcıları verilen yoldan yukarı yürüyerek .git arar.",
+      "hints": [
+        "Yolun git init veya git clone ile başlatıldığını doğrulayın",
+        "Yetişkin işaretçi dosyalarını temizleyin"
+      ]
+    },
+    "E0092": {
+      "title": "Git alt süreç oluşturma başarısız",
+      "short_description": "İşletim sistemi git işlemini başlatmayı reddetti.",
+      "long_description": "GitGitNotFound ve GitCommandFailed'tan farklı olarak bu genel durum reddidir.",
+      "hints": [
+        "ulimit -u öğren ve süreç sayısı sınırlarını kontrol et",
+        "SELinux/AppArmor denetim günlüklerini gözden geçir"
+      ]
+    },
+    "E0093": {
+      "title": "Yönetişimde ajan kayıtlı değil",
+      "short_description": "Yönetişim API çağrısı yönetişim sisteminin bilmediği ajan kimliğine başvurdu.",
+      "long_description": "Yönetişim cephesi konseylerdeki, sürülerdeki vb. her ajanda kaydını tutar.",
+      "hints": [
+        "Başvurmadan önce governance.register_agent(agent) ile kaydedin",
+        "Kimlikte yazım hatası olup olmadığını kontrol edin"
+      ]
+    },
+    "E0094": {
+      "title": "Yönetişim önbellek kimliği çarpışması",
+      "short_description": "Yönetişim grafiğinde kimlik çakışması.",
+      "long_description": "Farklı içerikler aynı kimliğe hash'lendi.",
+      "hints": [
+        "İçerik karmasını kullanın",
+        "Manuel kimlikleri önleyin"
+      ]
+    },
+    "E0095": {
+      "title": "Yönetişim grafiğinde döngüsel bağımlılık",
+      "short_description": "Yönetişim grafiğinde döngüsel bağımlılık tespit edildi.",
+      "long_description": "Ajanlar arası bağımlılıklar döngü içeremez.",
+      "hints": [
+        "Bağımlılık grafiğini denetleyin",
+        "Döngüyü kırın"
+      ]
+    },
+    "E0096": {
+      "title": "Yönetişim kaydında anayasa bulunamadı",
+      "short_description": "Yönetişim kaydında anayasa yok.",
+      "long_description": "Anayasa ismiyle arama başarısız oldu.",
+      "hints": [
+        "Anayasayı kaydedin",
+        "Yazımı kontrol edin"
+      ]
+    },
+    "E0097": {
+      "title": "Yönetişim biçimi doğrulama başarısız",
+      "short_description": "Yönetişim yapılandırması geçersiz.",
+      "long_description": "Biçim doğrulama kurallarına uymuyor.",
+      "hints": [
+        "Şemayı kontrol edin",
+        "Doğrulama günlüğünü inceleyin"
+      ]
+    },
+    "E0098": {
+      "title": "Geçersiz yönetişim yapılandırması",
+      "short_description": "Yönetişim yapılandırması geçersiz.",
+      "long_description": "Yapılandırma değerleri kabul edilemez.",
+      "hints": [
+        "Yapılandırma dosyasını denetleyin",
+        "Varsayılanları kullanın"
+      ]
+    },
+    "E0099": {
+      "title": "Yönetişim katmanında geçersiz rol",
+      "short_description": "Yönetişim katmanında geçersiz rol.",
+      "long_description": "Rol tanımı geçersiz.",
+      "hints": [
+        [
+          "Geçerli rolleri listeleyin"
+        ],
+        [
+          "Rol tanımını düzeltin"
+        ]
+      ]
+    },
+    "E0100": {
+      "title": "Yönetişim kaynağı bulunamadı",
+      "short_description": "Yönetişim kaynağı mevcut değil.",
+      "long_description": "Kaynak yönetişim kapsamında tanımlı değil.",
+      "hints": [
+        "Kaynak tanımını ekleyin",
+        "Kapsamı kontrol edin"
+      ]
+    },
+    "E0101": {
+      "title": "Yönetişim serileştirme başarısız",
+      "short_description": "Yönetişim grafiği serileştirilemedi veya seri kaldırılamadı.",
+      "long_description": "Yönetişim yapılandırması kalıcı depolama için kodlanırken veya geri yüklenirken hata oluştu.",
+      "hints": [
+        "Şema sürümünü kontrol edin",
+        "Bozuk durumu temizleyin"
+      ]
+    },
+    "E0102": {
+      "title": "Modül grafiğinde döngüsel bağımlılık",
+      "short_description": "Modül içe aktarma grafiğinde döngü tespit edildi.",
+      "long_description": "Modüller doğrudan veya dolaylı olarak kendilerini içe aktaramaz. Döngüsel bağımlılıklar yasaktır.",
+      "hints": [
+        "Refaktör ederek döngüyü kırın",
+        "Ortak kodu ayrı modüle çıkarın"
+      ]
+    },
+    "E0103": {
+      "title": "Modül bağımlılık grafiğinde eksik",
+      "short_description": "Bağımlılık grafiğinde başvurulan modül bulunamadı.",
+      "long_description": "Bir modül içe aktarma, dosya sisteminde bulunamayan bir modülü listeliyor.",
+      "hints": [
+        "Dosya yolunu kontrol edin",
+        "Yazım hatası olup olmadığını denetleyin"
+      ]
+    },
+    "E0104": {
+      "title": "HuggingFace yanıtı seri kaldırma başarısız",
+      "short_description": "HuggingFace API yanıtı JSON'a dönüştürülemedi.",
+      "long_description": "Model meta verileri veya karşılama listesi ayrıştırılamadı.",
+      "hints": [
+        "HuggingFace durum sayfasını kontrol edin",
+        "Yanıtı manuel olarak doğrulayın"
+      ]
+    },
+    "E0105": {
+      "title": "HuggingFace HTTP isteği başarısız",
+      "short_description": "HuggingFace'e HTTP isteği gönderilemedi.",
+      "long_description": "Ağ sorunları, DNS başarısızlığı veya SSL hatası olabilir.",
+      "hints": [
+        "İnternet bağlantısını kontrol edin",
+        "Proxy ayarlarını doğrulayın"
+      ]
+    },
+    "E0106": {
+      "title": "HTTP aracı URL'si geçersiz",
+      "short_description": "HTTP isteği URL'si ayrıştırılamadı.",
+      "long_description": "URL biçimi geçersiz veya eksik bileşenler içeriyor.",
+      "hints": [
+        "URL şemasını kontrol edin",
+        "URL'yi kodlayın"
+      ]
+    },
+    "E0107": {
+      "title": "HTTP yanıt gövdesi ayrıştırma başarısız",
+      "short_description": "HTTP yanıt gövdesi beklenen biçime ayrıştırılamadı.",
+      "long_description": "JSON, XML veya diğer biçimde ayrıştırma hatası.",
+      "hints": [
+        "İçerik tipi başlığını kontrol edin",
+        "Ham yanıtı inceleyin"
+      ]
+    },
+    "E0108": {
+      "title": "HTTP isteği aktarımı başarısız",
+      "short_description": "HTTP isteği ağ düzeyinde başarısız oldu.",
+      "long_description": "Bağlantı sıfırlandı, zaman aşımı veya başka bir ağ hatası.",
+      "hints": [
+        "Ağ bağlantısını kontrol edin",
+        "Yeniden deneme ekleyin"
+      ]
+    },
+    "E0109": {
+      "title": "HTTP isteği zaman aşımına uğradı",
+      "short_description": "HTTP isteği yapılandırılan zaman sınırı içinde tamamlanamadı.",
+      "long_description": "Sunucu yanıt vermiyor veya ağ çok yavaş.",
+      "hints": [
+        "Zaman aşımı sınırını artırın",
+        "Bağlantıyı kontrol edin"
+      ]
+    },
+    "E0110": {
+      "title": "Dizinde kimlik zaten var",
+      "short_description": "İndekse eklenecek belge kimliği zaten mevcut.",
+      "long_description": "RAG dizininde yinelenen kimlikler yasaktır.",
+      "hints": [
+        "Kimliği değiştirin",
+        "Önce mevcut olanı kaldırın"
+      ]
+    },
+    "E0111": {
+      "title": "Dizinleme sırasında gömme başarısız",
+      "short_description": "Belge metni gömme vektörüne dönüştürülemedi.",
+      "long_description": "Gömme sağlayıcısı boş veya çok uzun metni reddetti.",
+      "hints": [
+        "Metni kırparak deneyin",
+        "Gömme modeli sınırlarını kontrol edin"
+      ]
+    },
+    "E0112": {
+      "title": "Dizinde belge bulunamadı",
+      "short_description": "Dizinde aranan belge kimliği mevcut değil.",
+      "long_description": "RAG dizininde böyle bir kimlik yok.",
+      "hints": [
+        "Kimliği doğrulayın",
+        "Dizini yeniden oluşturun"
+      ]
+    },
+    "E0113": {
+      "title": "Katman bilinmeyen bağımlılığa başvuruyor",
+      "short_description": "Katman, var olmayan bir katmana bağımlılık bildiriyor.",
+      "long_description": "Katman yapılandırmasındaki bağımlılık adı tanımlanmamış.",
+      "hints": [
+        "Bağımlılık adını kontrol edin",
+        "Bağımlılığı tanımlayın"
+      ]
+    },
+    "E0114": {
+      "title": "Katman yürütme hatası döndürdü",
+      "short_description": "Katman yürütme işlevi başarısız oldu.",
+      "long_description": "Özel katman mantığında çalışma zamanı hatası.",
+      "hints": [
+        "Katman günlüklerini inceleyin",
+        "Girdileri doğrulayın"
+      ]
+    },
+    "E0115": {
+      "title": "Katman adı zaten kayıtlı",
+      "short_description": "Bu ada sahip katman zaten kayıtlı.",
+      "long_description": "Katman adları benzersiz olmalıdır.",
+      "hints": [
+        "Benzersiz ad kullanın",
+        "Mevcut olanı yeniden adlandırın"
+      ]
+    },
+    "E0116": {
+      "title": "Başvurulan katman bulunamadı",
+      "short_description": "İşlem, var olmayan bir katmana başvurdu.",
+      "long_description": "Katman adı kayıtlı değil.",
+      "hints": [
+        "Yazımı kontrol edin",
+        "Kayıt sırasını kontrol edin"
+      ]
+    },
+    "E0117": {
+      "title": "Katman yürütme zaman aşımına uğradı",
+      "short_description": "Katman yapılandırılan zaman sınırı içinde tamamlanamadı.",
+      "long_description": "Katman hesaplaması çok uzun sürdü.",
+      "hints": [
+        "Zaman aşımı sınırını artırın",
+        "Optimizasyon yapın"
+      ]
+    },
+    "E0118": {
+      "title": "Dize sabitinde geçersiz kaçış dizisi",
+      "short_description": "Lexer tanınmayan kaçış dizisiyle karşılaştı.",
+      "long_description": "\\x, \\u veya diğer kaçış kodlarında hata.",
+      "hints": [
+        "Geçerli kaçış kodlarını kullanın",
+        "Ters eğik çizgileri kaçışlayın"
+      ]
+    },
+    "E0119": {
+      "title": "Bozuk sayısal sabit",
+      "short_description": "Sayısal sabit ayrıştırılamadı.",
+      "long_description": "Geçersiz ondalık, onaltılık veya ikili gösterim.",
+      "hints": [
+        "Sayı biçimini kontrol edin",
+        "Nokta veya üs kullanımını denetleyin"
+      ]
+    },
+    "E0120": {
+      "title": "Kaynakta beklenmeyen karakter",
+      "short_description": "Lexer beklenmeyen bir karakterle karşılaştı.",
+      "long_description": "Kaynak dosyada tanınmayan sembol.",
+      "hints": [
+        "Karakter kodlamasını kontrol edin",
+        "Gizli karakterleri arayın"
+      ]
+    },
+    "E0121": {
+      "title": "Sonlandırılmamış dize sabiti",
+      "short_description": "Dize tırnağı kapatılmadan dosya sonuna ulaşıldı.",
+      "long_description": "Açma tırnağına karşılık kapatma tırnağı yok.",
+      "hints": [
+        "Eksik tırnağı ekleyin",
+        "Çok satırlı dizelerde tırnak kullanın"
+      ]
+    },
+    "E0122": {
+      "title": "LSP Tokio çalışma zamanı başlatma başarısız",
+      "short_description": "LSP sunucusu Tokio çalışma zamanını başlatamadı.",
+      "long_description": "Async çalışma zamanı oluşturma başarısız oldu.",
+      "hints": [
+        "Sistem kaynaklarını kontrol edin",
+        "Yeniden başlatmayı deneyin"
+      ]
+    },
+    "E0123": {
+      "title": "Genel LSP sunucusu hatası",
+      "short_description": "LSP sunucusu genel bir hata bildirdi.",
+      "long_description": "Dil sunucusu protokol dışı bir hata döndürdü.",
+      "hints": [
+        "Sunucu günlüklerini inceleyin",
+        "İstemci bağlantısını kontrol edin"
+      ]
+    },
+    "E0124": {
+      "title": "Uzun süreli bellek arka ucu başarısız",
+      "short_description": "Uzun süreli bellek depolama arka ucu hata verdi.",
+      "long_description": "Redis, veritabanı veya dosya sistemi hatası.",
+      "hints": [
+        "Bağlantıyı kontrol edin",
+        "Yeterli alan olduğunu doğrulayın"
+      ]
+    },
+    "E0125": {
+      "title": "Bellek anahtarıyla kayıt bulunamadı",
+      "short_description": "Anahtarla aranan bellek kaydı mevcut değil.",
+      "long_description": "Uzun süreli bellekte bu anahtar yok.",
+      "hints": [
+        "Anahtarı doğrulayın",
+        "Süre sonunu kontrol edin"
+      ]
+    },
+    "E0126": {
+      "title": "Bellek kaydı serileştirme başarısız",
+      "short_description": "Bellek kaydı depolanamadı veya geri yüklenemedi.",
+      "long_description": "Serileştirilebilir olmayan veri veya şema uyuşmazlığı.",
+      "hints": [
+        "Veri türlerini kontrol edin",
+        "Göç mantığını uygulayın"
+      ]
+    },
+    "E0127": {
+      "title": "Model kataloğunda zaten var",
+      "short_description": "Eklenmeye çalışılan model kimliği zaten mevcut.",
+      "long_description": "Model adları katalogda benzersiz olmalıdır.",
+      "hints": [
+        "Farklı ad kullanın",
+        "Mevcut olanu kaldırın"
+      ]
+    },
+    "E0128": {
+      "title": "Model yöneticisi disk alanı yetersiz",
+      "short_description": "Model indirmek için yeterli disk alanı yok.",
+      "long_description": "Model dosyaları için yeterli boş alan yok.",
+      "hints": [
+        "Alan temizleyin",
+        "Daha küçük model seçin",
+        "Başka konuma yükleyin"
+      ]
+    },
+    "E0129": {
+      "title": "Model yöneticisi G/Ç hatası",
+      "short_description": "Model yöneticisi dosya sistemi hatasıyla karşılaştı.",
+      "long_description": "Okuma, yazma veya dizin oluşturma başarısız oldu.",
+      "hints": [
+        "İzinleri kontrol edin",
+        "Disk alanını doğrulayın"
+      ]
+    },
+    "E0130": {
+      "title": "Model katalogda bulunamadı",
+      "short_description": "Aranan model kimliği katalogda mevcut değil.",
+      "long_description": "Bu model kimliği kayıtlı değil.",
+      "hints": [
+        "Kimliği doğrulayın",
+        "Önce modeli kaydedin"
+      ]
+    },
+    "E0131": {
+      "title": "Modül zaten yüklendi",
+      "short_description": "İçe aktarılmaya çalışılan modül zaten yüklü.",
+      "long_description": "Aynı modül dosyası ikinci kez yüklenemez.",
+      "hints": [
+        "Tekrar yüklemeden önce kaldırın",
+        "Önbelleklenmiş mi kontrol edin"
+      ]
+    },
+    "E0132": {
+      "title": "Modül dosyası yükleyici tarafından bulunamadı",
+      "short_description": "Modül çözümleyici dosyayı bulamadı.",
+      "long_description": "Dosya yolu mevcut değil veya erişilemez.",
+      "hints": [
+        "Yolu kontrol edin",
+        "Uzantıyı ekleyin"
+      ]
+    },
+    "E0133": {
+      "title": "Modül kaynağı ayrıştırma hatası",
+      "short_description": "Modül dosyası sözdizimi hatası içeriyor.",
+      "long_description": "Lexer veya parser modül kodunu reddetti.",
+      "hints": [
+        "Sözdizimini düzeltin",
+        "Bağımlılıkları kontrol edin"
+      ]
+    },
+    "E0134": {
+      "title": "Modül dosyası okuma hatası",
+      "short_description": "Modül dosyası diskten okunamadı.",
+      "long_description": "İzin reddi veya disk hatası.",
+      "hints": [
+        "İzinleri kontrol edin",
+        "Dosyanın var olduğunu doğrulayın"
+      ]
+    },
+    "E0135": {
+      "title": "Yerel işleve yanlış argüman sayısı",
+      "short_description": "Yerel işleve çok az veya çok fazla argüman geçirildi.",
+      "long_description": "Yerel fonksiyon imzası argüman sayısıyla eşleşmiyor.",
+      "hints": [
+        "İmzayı kontrol edin",
+        "Argümanları sayın"
+      ]
+    },
+    "E0136": {
+      "title": "Yerel bağlama derleme hatası",
+      "short_description": "FFI yerel bağlama kodu derlenemedi.",
+      "long_description": "C/Rust kod derleme hatası verdi.",
+      "hints": [
+        "Derleyici çıktısını inceleyin",
+        "Bağımlılıkları kontrol edin"
+      ]
+    },
+    "E0137": {
+      "title": "Yerel işlev kayıtlı değil",
+      "short_description": "Çağrılan yerel işlev kayıt defterinde yok.",
+      "long_description": "Yerel fonksiyon adı kaydedilmemiş.",
+      "hints": [
+        "İsmi doğrulayın",
+        "Önce kaydedin"
+      ]
+    },
+    "E0138": {
+      "title": "Dize iç NUL baytları içeriyor",
+      "short_description": "Yerel FFI'e geçirilen dize iç NUL karakteri içeriyor.",
+      "long_description": "C dizeleri NUL ile sonlandırılır, iç NUL geçersizdir.",
+      "hints": [
+        "NUL karakterlerini kaldırın",
+        "Tampon formatını kullanın"
+      ]
+    },
+    "E0139": {
+      "title": "Yerel kitaplık yüklenemedi",
+      "short_description": "Yerel kütüphane dosyası yüklenemedi.",
+      "long_description": "Paylaşımlı kütüphane dosyası bulunamadı veya bozuk.",
+      "hints": [
+        "Yolunu kontrol edin",
+        "LD_LIBRARY_PATH'i kontrol edin"
+      ]
+    },
+    "E0140": {
+      "title": "Yerel kitaplık dosyası bulunamadı",
+      "short_description": "Yerel kütüphane dosya sistemin'de mevcut değil.",
+      "long_description": "Belirtilen yolda .so/.dll/.dylib dosyası yok.",
+      "hints": [
+        "Yolu doğrulayın",
+        "Kütüphaneyi kurun"
+      ]
+    },
+    "E0141": {
+      "title": "Yerel kitaplık tutamacı yüklenmedi",
+      "short_description": "Kütüphane henüz yüklenmeden yerel tutamaç kullanıldı.",
+      "long_description": "Önce kütüphaneyi açmalısınız.",
+      "hints": [
+        "load_library() çağrın",
+        "Sırayı kontrol edin"
+      ]
+    },
+    "E0142": {
+      "title": "Kitaplıkta simge bulunamadı",
+      "short_description": "İstenen fonksiyon adı kütüphane içinde yok.",
+      "long_description": "Yerel kütüphane bu simgeyi dışa aktarmıyor.",
+      "hints": [
+        "İsmi doğrulayın",
+        "nm/ldd ile kontrol edin"
+      ]
+    },
+    "E0143": {
+      "title": "Yerel işleve çok fazla argüman",
+      "short_description": "Yerel işlev çağrısı desteklenen limiti aşıyor.",
+      "long_description": "Yerel fonksiyon argüman sayısı sınırı aşıldı.",
+      "hints": [
+        "Argümanları yapıda paketleyin",
+        "Sınırı kontrol edin"
+      ]
+    },
+    "E0144": {
+      "title": "Desteklenmeyen FFI türü",
+      "short_description": "Yerel arayüz için kullanılan veri türü desteklenmiyor.",
+      "long_description": "FFI sınırında bu tür için destek yok.",
+      "hints": [
+        "Temel tür kullanın",
+        "Tampon olarak geçin"
+      ]
+    },
+    "E0145": {
+      "title": "Gezinti koruması tarafından engellendi",
+      "short_description": "Gezinti işlemi güvenlik kısıtlaması tarafından reddedildi.",
+      "long_description": "UI yönlendirme politikası bu gezintiyi yasaklıyor.",
+      "hints": [
+        "Politikayı kontrol edin",
+        "Derin bağlantıyı doğrulayın"
+      ]
+    },
+    "E0146": {
+      "title": "Açılacak gezinti geçmişi yok",
+      "short_description": "Geri gezinti istendi ancak geçmiş yığında giriş yok.",
+      "long_description": "Zaten en üstte, geri gidilecek yer yok.",
+      "hints": [
+        "Geri tuşunu devre dışı bırakın",
+        "Yığında olduğunu doğrulayın"
+      ]
+    },
+    "E0147": {
+      "title": "Gezinti hedef ekran bilinmiyor",
+      "short_description": "Adlandırılmış gezinti hedefi kayıtlı değil.",
+      "long_description": "Bu rota adı yönlendiricide tanımlı değil.",
+      "hints": [
+        "Rota adını kontrol edin",
+        "Önce kaydedin"
+      ]
+    },
+    "E0151": {
+      "title": "Ağ bağımlılık grafiğinde döngü",
+      "short_description": "Katman bağımlılıkları döngüsel referans içeriyor.",
+      "long_description": "Katmanlar birbirlerine doğrudan veya dolaylı olarak bağımlı olamaz. Döngüsel bağımlılıklar yasaktır.",
+      "hints": [
+        "Bağımlılık yapısını düzeltin",
+        "Ortak arayüzü ayırın"
+      ]
+    },
+    "E0152": {
+      "title": "Ağ adı zaten kayıtlı",
+      "short_description": "Bu ada sahip ağ zaten kayıtlı.",
+      "long_description": "Ağ adları benzersiz olmalıdır. Yinelenen adlar yasaktır.",
+      "hints": [
+        "Benzersiz ad kullanın",
+        "Var olanı kaldırın veya yeniden adlandırın"
+      ]
+    },
+    "E0153": {
+      "title": "Başvurulan ağ bulunamadı",
+      "short_description": "İşlem var olmayan bir ağa başvurdu.",
+      "long_description": "Ağ adı kayıtlı veya kapsam dışında.",
+      "hints": [
+        "Yazımı kontrol edin",
+        "Ağın oluşturulduğunu doğrulayın"
+      ]
+    },
+    "E0154": {
+      "title": "Ağ yürütme zaman aşımına uğradı",
+      "short_description": "Ağ yapılandırılan zaman sınırı içinde tamamlanamadı.",
+      "long_description": "Ağ katmanları ve bağımlılıkları çok uzun sürdü.",
+      "hints": [
+        "Zaman aşımı sınırını artırın",
+        "Kritik yolu optimize edin"
+      ]
+    },
+    "E0155": {
+      "title": "Ollama yanıtı seri kaldırma başarısız",
+      "short_description": "Ollama API yanıtı JSON'a dönüştürülemedi.",
+      "long_description": "Yerel model yanıtı bozuk veya beklenmeyen biçimde.",
+      "hints": [
+        "Ollama sürümünü kontrol edin",
+        "Günlükleri inceleyin"
+      ]
+    },
+    "E0156": {
+      "title": "Ollama HTTP isteği başarısız",
+      "short_description": "Ollama yerel sunucusuna bağlantı kurulamadı.",
+      "long_description": "Ollama sunucusu çalışmıyor veya yanıt vermiyor.",
+      "hints": [
+        "Ollama sunucusunun çalıştığını doğrulayın",
+        "Bağlantı noktasını kontrol edin"
+      ]
+    },
+    "E0157": {
+      "title": "OpenAPI belgesi ayrıştırma başarısız",
+      "short_description": "OpenAPI/Swagger JSON/YAML ayrıştırılamadı.",
+      "long_description": "OpenAPI belgesi geçersiz veya eksik alanlar içeriyor.",
+      "hints": [
+        "Şemayı doğrulayın",
+        "Sürümü kontrol edin"
+      ]
+    },
+    "E0158": {
+      "title": "OpenAPI araç kaydı başarısız",
+      "short_description": "OpenAPI tanımı araç olarak kaydedilemedi.",
+      "long_description": "Araç şeması geçersiz veya ad çakışması.",
+      "hints": [
+        "Araç adını kontrol edin",
+        "Parametre şemasını doğrulayın"
+      ]
+    },
+    "E0159": {
+      "title": "Orkestrasyon akış tanımı geçersiz",
+      "short_description": "İş akışı tanımı doğrulama kurallarını ihlal ediyor.",
+      "long_description": "Akış yapılandırması şemaya uymuyor.",
+      "hints": [
+        "Şemayı kontrol edin",
+        "Adımları doğrulayın"
+      ]
+    },
+    "E0160": {
+      "title": "Orkestrasyon katman hatasıyla karşılaştı",
+      "short_description": "Orkestrasyon bir katmanın başarısız olduğunu bildirdi.",
+      "long_description": "Bir katman yürütme sırasında hata verdi.",
+      "hints": [
+        "Katman günlüklerini inceleyin",
+        "Girdiyi doğrulayın"
+      ]
+    },
+    "E0161": {
+      "title": "Orkestrasyon ağ hatasıyla karşılaştı",
+      "short_description": "Orkestrasyon bir ağın başarısız olduğunu bildirdi.",
+      "long_description": "Bir ağ yürütme sırasında hata verdi.",
+      "hints": [
+        "Ağ günlüklerini inceleyin",
+        "Bağımlılıkları kontrol edin"
+      ]
+    },
+    "E0162": {
+      "title": "Orkestrasyon sırasında ağ yürütme başarısız",
+      "short_description": "Ağ orkestrasyon sırasında yürütülemedi.",
+      "long_description": "Ağ katmanları başarısız oldu.",
+      "hints": [
+        "Hata ayrıntılarını inceleyin",
+        "Ağı yeniden deneyin"
+      ]
+    },
+    "E0163": {
+      "title": "Orkestrasyon bilinmeyen ağa başvurdu",
+      "short_description": "İş akışı tanımlanmamış bir ağa başvurdu.",
+      "long_description": "Akış adımı var olmayan ağı çağırıyor.",
+      "hints": [
+        "Ağ adını düzeltin",
+        "Ağı tanımlayın"
+      ]
+    },
+    "E0164": {
+      "title": "İş akışı adı zaten kayıtlı",
+      "short_description": "Bu ada sahip iş akışı zaten kayıtlı.",
+      "long_description": "İş akışı adları benzersiz olmalıdır.",
+      "hints": [
+        "Benzersiz ad kullanın",
+        "Var olanı kaldırın"
+      ]
+    },
+    "E0165": {
+      "title": "Kayıtlı iş akışı bulunamadı",
+      "short_description": "İş akışı kayıt defterinde mevcut değil.",
+      "long_description": "Bu iş akışı adı tanımlanmamış.",
+      "hints": [
+        "Yazımı kontrol edin",
+        "Önce tanımlayın"
+      ]
+    },
+    "E0166": {
+      "title": "İş akışı yürütme zaman aşımına uğradı",
+      "short_description": "İş akışı genel zaman sınırı içinde tamamlanamadı.",
+      "long_description": "Tüm adımlar çok uzun sürdü.",
+      "hints": [
+        "Zaman aşımı sınırını artırın",
+        "Uzun adımları optimize edin"
+      ]
+    },
+    "E0167": {
+      "title": "Paket derleme adımı başarısız",
+      "short_description": "Paket derleme aşaması hata verdi.",
+      "long_description": "Kod derleme veya paketleme başarısız oldu.",
+      "hints": [
+        "Derleyici çıktısını inceleyin",
+        "Bağımlılıkları kontrol edin"
+      ]
+    },
+    "E0168": {
+      "title": "Paket sağlama toplamı uyuşmazlığı",
+      "short_description": "İndirilen paket beklenen sağlama toplamıyla eşleşmiyor.",
+      "long_description": "Dosya bozulmuş veya yanlış indirilmiş.",
+      "hints": [
+        "Yeniden indirin",
+        "Kaynağı doğrulayın"
+      ]
+    },
+    "E0169": {
+      "title": "Paket bağımlılık çözümleyicisi kısıtlamaları karşılayamadı",
+      "short_description": "Bağımlılık çözümleyici uyumlu sürüm bulamadı.",
+      "long_description": "Çakışan bağımlılık gereksinimleri.",
+      "hints": [
+        "Kısıtlamaları gevşetin",
+        "Manüel olarak çözümleyin"
+      ]
+    },
+    "E0170": {
+      "title": "Paket giriş noktası dosyası eksik",
+      "short_description": "Paket giriş noktası belirtilen yolda yok.",
+      "long_description": "main.js veya benzeri giriş dosyası bulunamadı.",
+      "hints": [
+        "Yolu kontrol edin",
+        "Dosyanın var olduğunu doğrulayın"
+      ]
+    },
+    "E0171": {
+      "title": "Geçersiz paket adı",
+      "short_description": "Paket adı adlandırma kurallarını ihlal ediyor.",
+      "long_description": "Paket adları yalnızca küçük harf, sayı ve tire içerebilir.",
+      "hints": [
+        "Adı düzeltin",
+        "npm kurallarını izleyin"
+      ]
+    },
+    "E0172": {
+      "title": "SemVer sürüm dizgisi geçersiz",
+      "short_description": "Paket sürümü semantik sürüm olarak ayrıştırılamadı.",
+      "long_description": "X.Y.Z biçimi bekleniyor.",
+      "hints": [
+        "SemVer biçimini kullanın",
+        "Önek eklemeyin"
+      ]
+    },
+    "E0173": {
+      "title": "Paket işlemi G/Ç hatası",
+      "short_description": "Paket işlemi dosya sistemi hatasıyla karşılaştı.",
+      "long_description": "Okuma, yazma veya dizin işlemi başarısız oldu.",
+      "hints": [
+        "İzinleri kontrol edin",
+        "Disk alanını doğrulayın"
+      ]
+    },
+    "E0174": {
+      "title": "Paket yöneticisi ağ hatası",
+      "short_description": "Paket kayıt defterine bağlantı kurulamadı.",
+      "long_description": "npm, crates.io veya özel kayıt defteri ulaşılamaz.",
+      "hints": [
+        "İnternet bağlantısını kontrol edin",
+        "Proxy ayarlarını doğrulayın"
+      ]
+    },
+    "E0175": {
+      "title": "Belirtilmemiş paket yöneticisi hatası",
+      "short_description": "Paket yöneticisi spesifik olmayan bir hata bildirdi.",
+      "long_description": "Genel bir paket işlemi başarısız oldu.",
+      "hints": [
+        "Günlükleri inceleyin",
+        "Komutu yeniden çalıştırın"
+      ]
+    },
+    "E0176": {
+      "title": "Paket kayıt defterinde bulunamadı",
+      "short_description": "Aranan paket kayıt defterinde mevcut değil.",
+      "long_description": "Paket adı bilinmiyor veya yazım hatası.",
+      "hints": [
+        "Yazımı kontrol edin",
+        "Ad alanını doğrulayın"
+      ]
+    },
+    "E0177": {
+      "title": "Paketin bilinen güvenlik açığı var",
+      "short_description": "Paket bilinen bir CVE içeriyor.",
+      "long_description": "Güvenlik taraması yüksek önemli açık tespit etti.",
+      "hints": [
+        "Sürümü yükseltin",
+        "Başka paket kullanın",
+        "Riski değerlendirin"
+      ]
+    },
+    "E0178": {
+      "title": "Paket verisi serileştirme hatası",
+      "short_description": "Paket meta verileri kodlanamadı.",
+      "long_description": "TOML/JSON yazma başarısız oldu.",
+      "hints": [
+        "Veri türlerini kontrol edin",
+        "Şemayı doğrulayın"
+      ]
+    },
+    "E0179": {
+      "title": "TOML ayrıştırma başarısız",
+      "short_description": "TOML dosyası ayrıştırılamadı.",
+      "long_description": "Cargo.toml veya hudhud.toml geçersiz.",
+      "hints": [
+        "Sözdizimini kontrol edin",
+        "Doğrulayıcı çalıştırın"
+      ]
+    },
+    "E0180": {
+      "title": "TOML serileştirme yazma başarısız",
+      "short_description": "Yapılandırma TOML'e yazılamadı.",
+      "long_description": "TOML çıktı oluşturma başarısız oldu.",
+      "hints": [
+        "Değerleri kontrol edin",
+        "Şemayı doğrulayın"
+      ]
+    },
+    "E0181": {
+      "title": "Kayıtta eşleşen sürüm yok",
+      "short_description": "Paketin istenen sürüm kısıtlamalarını karşılayan sürümü yok.",
+      "long_description": "Tüm sürümler kısıtlamalar dışında.",
+      "hints": [
+        "Kısıtlamaları gevşetin",
+        "Alternatif sürüm arayın"
+      ]
+    },
+    "E0182": {
+      "title": "Geçersiz sözdizimi",
+      "short_description": "Kaynak kod sözdizimi hatası içeriyor.",
+      "long_description": "Ayrıştırıcı kodu reddetti.",
+      "hints": [
+        "Sözdizimini düzeltin",
+        "Belgelere bakın"
+      ]
+    },
+    "E0183": {
+      "title": "Ayrıştırma sırasında lexer hatası",
+      "short_description": "Lexer ayrıştırma sırasında hata verdi.",
+      "long_description": "Tokenizasyon başarısız oldu.",
+      "hints": [
+        "Karakter kodlamasını kontrol edin",
+        "Geçersiz karakterleri arayın"
+      ]
+    },
+    "E0184": {
+      "title": "Ayrıştırma sırasında beklenmedik dosya sonu",
+      "short_description": "Ayrıştırıcı dosya ortasında kaynak bitişiyle karşılaştı.",
+      "long_description": "Kod eksik veya kapatılmamış yapı var.",
+      "hints": [
+        "Kapatma parantezlerini kontrol edin",
+        "Dosyanın tam olduğunu doğrulayın"
+      ]
+    },
+    "E0185": {
+      "title": "Girdide beklenmedek belirteç",
+      "short_description": "Ayrıştırıcı beklenmeyen belirteçle karşılaştı.",
+      "long_description": "Bu bağlamda bu belirteç beklenmiyordu.",
+      "hints": [
+        "Önceki sözdizimini kontrol edin",
+        "Eksik noktalama işaretlerini arayın"
+      ]
+    },
+    "E0186": {
+      "title": "Ajan izin sisteminde kayıtlı değil",
+      "short_description": "İzin kontrolü kayıtlı olmayan ajana başvurdu.",
+      "long_description": "Ajan izin kayıt defterinde yok.",
+      "hints": [
+        "Ajan kaydını kontrol edin",
+        "Önce kaydedin"
+      ]
+    },
+    "E0187": {
+      "title": "Ajana eylem izni verilmedi",
+      "short_description": "Ajanın bu eylemi gerçekleştirme izni yok.",
+      "long_description": "Yetkilendirme politikası reddetti.",
+      "hints": [
+        "Rolü kontrol edin",
+        "Politikayı gözden geçirin"
+      ]
+    },
+    "E0188": {
+      "title": "Anlık görüntü/geri yükleme G/Ç hatası",
+      "short_description": "Kalıcı depolama anlık görüntüsü başarısız oldu.",
+      "long_description": "Durumu diske kaydetme veya yüklem başarısız oldu.",
+      "hints": [
+        [
+          "Yeterli alan olduğunu doğrulayın"
+        ],
+        [
+          "İzinleri kontrol edin"
+        ]
+      ]
+    },
+    "E0189": {
+      "title": "Ajan için anlık görüntü bulunamadı",
+      "short_description": "İstenen ajan kimliği için anlık görüntü yok.",
+      "long_description": "Anlık görüntü mevcut değil veya takma ad hatalı.",
+      "hints": [
+        "Takma adı doğrulayın",
+        "Önce anlık görüntü alın"
+      ]
+    },
+    "E0190": {
+      "title": "Anlık görüntü serileştirme veya ayrıştırma başarısız",
+      "short_description": "Anlık görüntü verisi kodlanamadı veya kodu çözülemedi.",
+      "long_description": "Durum serileştirme sırasında hata oluştu.",
+      "hints": [
+        "Veri boyutunu kontrol edin",
+        "Şema sürümünü doğrulayın"
+      ]
+    },
+    "E0191": {
+      "title": "Bakış açısı alanı gizli",
+      "short_description": "Mevcut bakış açısı alanını gizliyor.",
+      "long_description": "Alan erişim kuralı tarafından gizlendi.",
+      "hints": [
+        "Bakış açısını değiştirin",
+        "Erişim kurallarını gözden geçirin"
+      ]
+    },
+    "E0192": {
+      "title": "Bakış açısı yazma erişimi reddedildi",
+      "short_description": "Bakış açısı yazma erişimini reddetti.",
+      "long_description": "Salt okunur alan değiştirilemez.",
+      "hints": [
+        "Yazılabilirlik bayrağını kontrol edin",
+        "Bakış açısını güncelleyin"
+      ]
+    },
+    "E0193": {
+      "title": "Promise zaten reddedildi",
+      "short_description": "Promise zaten reddedilmiş durumda.",
+      "long_description": "İkinci kez reddedilemez.",
+      "hints": [
+        "Yeni promise oluşturun",
+        "Durumu kontrol edin"
+      ]
+    },
+    "E0194": {
+      "title": "Promise zaten çözüldü",
+      "short_description": "Promise zaten çözülmüş durumda.",
+      "long_description": "Promise yalnızca bir kez çözülür.",
+      "hints": [
+        "Tek çözümleme kuralına uygun",
+        "Yeni promise kullanın"
+      ]
+    },
+    "E0195": {
+      "title": "Promise alıcısı uzlaşmadan önce bırakıldı",
+      "short_description": "Promise sonuçlanmadan receiver droplandı.",
+      "long_description": "Async görev sonucu gelmeden iptal edildi.",
+      "hints": [
+        "Görev ömrünü yönetin",
+        "CancelationToken kullanın"
+      ]
+    },
+    "E0196": {
+      "title": "Beklenen promise reddedildi",
+      "short_description": "await edilen promise reddedildi.",
+      "long_description": "Async işlem başarısız oldu.",
+      "hints": [
+        "try-catch kullanın",
+        "Hata nedeni inceleyin"
+      ]
+    },
+    "E0197": {
+      "title": "LLM sağlayıcısı API hatası döndürdü",
+      "short_description": "LLM API HTTP hatası döndürdü.",
+      "long_description": "OpenAI, Anthropic veya diğer API hata verdi.",
+      "hints": [
+        "API anahtarını kontrol edin",
+        "Kota sınırlarını kontrol edin"
+      ]
+    },
+    "E0198": {
+      "title": "İstek başına belirteç bütçesi aşıldı",
+      "short_description": "Tek istek belirteç limitini aştı.",
+      "long_description": "max_tokens sınırı aşıldı.",
+      "hints": [
+        "Girdiyi kısaltın",
+        "max_tokens artırın"
+      ]
+    },
+    "E0199": {
+      "title": "Günlük/aylık belirteç bütçesi aşıldı",
+      "short_description": "API kullanıcı düzeyi sınırına ulaşıldı.",
+      "long_description": "Gün/ay içinde maksimum harcama.",
+      "hints": [
+        "Bütçe sınırını artırın",
+        "Daha ucuz model kullanın"
+      ]
+    },
+    "E0200": {
+      "title": "Sağlayıcı yapılandırması geçersiz",
+      "short_description": "Sağlayıcı config dosyası doğrulamadan başarısız.",
+      "long_description": "API URL, anahtar veya model yok.",
+      "hints": [
+        "Config dosyasını kontrol edin",
+        "Ortam değişkenlerini doğrulayın"
+      ]
+    },
+    "E0201": {
+      "title": "Aylık belirteç/harcama bütçesi aşıldı",
+      "short_description": "Aylik bütçe sınırına ulaşıldı.",
+      "long_description": "Organizasyon düzeyi aylık limit.",
+      "hints": [
+        "Yöneticiyle iletişime geçin",
+        "Bütçeyi artırın"
+      ]
+    },
+    "E0202": {
+      "title": "Sağlayıcıya ağ iletişimi hatası",
+      "short_description": "Sağlayıcı API bağlantı kuramadı.",
+      "long_description": "TLS, DNS veya zaman aşımı sorunu.",
+      "hints": [
+        "Ağ bağlantısını kontrol edin",
+        "Güvenlik duvarını kontrol edin"
+      ]
+    },
+    "E0203": {
+      "title": "Sağlayıcı yapılandırılmamış",
+      "short_description": "Sağlayıcı config dosyasında tanımlı değil.",
+      "long_description": "Kullanılan ancak tanımlanmamış sağlayıcı.",
+      "hints": [
+        "providers bölümünü kontrol edin",
+        "Yapılandırmayı güncelleyin"
+      ]
+    },
+    "E0204": {
+      "title": "Sağlayıcı araması boş döndü",
+      "short_description": "Model sağlayıcı bulunamadı.",
+      "long_description": "Sağlayıcı adı kayıtlı değil.",
+      "hints": [
+        "Yazımı kontrol edin",
+        "Önce kaydedin"
+      ]
+    },
+    "E0205": {
+      "title": "Belirteç optimizasyon geçişi başarısız",
+      "short_description": "Optimizasyon adımı hata verdi.",
+      "long_description": "Prompt optimizasyon başarısız oldu.",
+      "hints": [
+        "Optimizasyon ayarlarını kontrol edin",
+        "Devre dışı bırakın"
+      ]
+    },
+    "E0206": {
+      "title": "Sağlayıcı istek/yanıt serileştirme başarısız",
+      "short_description": "İstek/yanıt JSON'a dönüştürülemedi.",
+      "long_description": "Geçersiz karakter veya kodlama sorunu.",
+      "hints": [
+        "Unicode'u kontrol edin",
+        "Karakter setini belirtin"
+      ]
+    },
+    "E0207": {
+      "title": "Dakika başına istek sınırı aşıldı",
+      "short_description": "RPM (requests per minute) limiti ulaşıldı.",
+      "long_description": "API dakikalık hız sınırı.",
+      "hints": [
+        "Hızı yavaşlatın",
+        "İstekleri kuyruğa alın"
+      ]
+    },
+    "E0208": {
+      "title": "Dakika başına belirteç sınırı aşıldı",
+      "short_description": "TPM (tokens per minute) limiti ulaşıldı.",
+      "long_description": "Belirteç dakikalık işleme sınırı.",
+      "hints": [
+        "Girdi boyutunu azaltın",
+        "Bekleyin"
+      ]
+    },
+    "E0209": {
+      "title": "Araç kayıt defteri çağrısı başarısız",
+      "short_description": "Araç kayıt defteri iletişim hatası.",
+      "long_description": "MCP/araç sunucusuna bağlanılamadı.",
+      "hints": [
+        "Sunucunun çalıştığını doğrulayın",
+        "Bağlantı URL'sini kontrol edin"
+      ]
+    },
+    "E0210": {
+      "title": "Araç keşfi başarısız",
+      "short_description": "Araç sunucusundan araç listesi alınamadı.",
+      "long_description": "Araç metadatası alınamadı.",
+      "hints": [
+        "Sunucu yanıtını kontrol edin",
+        "Şemayı doğrulayın"
+      ]
+    },
+    "E0211": {
+      "title": "Yinelenen araç kaydı",
+      "short_description": "Araç adı zaten kayıtlı.",
+      "long_description": "Araç adları benzersiz olmalıdır.",
+      "hints": [
+        "Farklı ad kullanın",
+        "Var olanı kaldırın"
+      ]
+    },
+    "E0212": {
+      "title": "Araç kayıtta sunucu bulunamadı",
+      "short_description": "Başvurulan araç sunucusu yok.",
+      "long_description": "Sunucu tanımlanmamış.",
+      "hints": [
+        "Sunucu adını kontrol edin",
+        "Önce tanımlayın"
+      ]
+    },
+    "E0213": {
+      "title": "Araç kayıtta bulunamadı",
+      "short_description": "Aranan araç mevcut değil.",
+      "long_description": "Araç adı kayıtlı değil.",
+      "hints": [
+        "Yazımı kontrol edin",
+        "Sunucuyu doğrulayın"
+      ]
+    },
+    "E0214": {
+      "title": "Araç şema doğrulama başarısız",
+      "short_description": "Araç girişleri şemaya uymuyor.",
+      "long_description": "Gerekli parametreler eksik veya tür yanlış.",
+      "hints": [
+        "Şemayı kontrol edin",
+        "Girdileri doğrulayın"
+      ]
+    },
+    "E0215": {
+      "title": "Modül çözümleyici yolu geçersiz",
+      "short_description": "Modül yolu ayrıştırılamadı.",
+      "long_description": "Geçersiz URL veya dosya yolu.",
+      "hints": [
+        "Yol formatını kontrol edin",
+        "URL şemasını doğrulayın"
+      ]
+    },
+    "E0216": {
+      "title": "Çözümleyici modül bulunamadı",
+      "short_description": "Modül çözümleyici konumlandıramadı.",
+      "long_description": "Dosya sisteminde modül yok.",
+      "hints": [
+        "Yolu düzeltin",
+        "Modülü kurun"
+      ]
+    },
+    "E0217": {
+      "title": "Kaynak keşfi başarısız",
+      "short_description": "MCP kaynak listesi alınamadı.",
+      "long_description": "Sunucu kaynak meta verisini döndüremedi.",
+      "hints": [
+        "Sunucu kapasitesini kontrol edin",
+        "İzinleri doğrulayın"
+      ]
+    },
+    "E0218": {
+      "title": "Geçersiz kaynak URI",
+      "short_description": "Kaynak URI biçimi geçersiz.",
+      "long_description": "URI şeması desteklenmiyor veya bozuk.",
+      "hints": [
+        "URI biçimini kontrol edin",
+        "Şemayı doğrulayın"
+      ]
+    },
+    "E0219": {
+      "title": "Kaynak bulunamadı",
+      "short_description": "URI ile kaynak mevcut değil.",
+      "long_description": "Sunucu bu kaynağı bilmiyor.",
+      "hints": [
+        "URI'yı düzeltin",
+        "Kaynak listesini kontrol edin"
+      ]
+    },
+    "E0220": {
+      "title": "Kaynak okuma başarısız",
+      "short_description": "Kaynak içeriği okunamadı.",
+      "long_description": "Erişim reddedildi veya kaynak yok.",
+      "hints": [
+        "İzinleri kontrol edin",
+        "Kaynağın var olduğunu doğrulayın"
+      ]
+    },
+    "E0221": {
+      "title": "Geçersiz rol tanımı",
+      "short_description": "Rol tanımı doğrulama kurallarını ihlal ediyor.",
+      "long_description": "Rol adı veya izinleri geçersiz.",
+      "hints": [
+        "Adlandırma kurallarını kontrol edin",
+        "İzin şemasını doğrulayın"
+      ]
+    },
+    "E0222": {
+      "title": "Rolde izin bulunamadı",
+      "short_description": "Rolde istenen izin yok.",
+      "long_description": "Rol bu izni içermiyor.",
+      "hints": [
+        "Rol izinlerini listeleyin",
+        "Rolü güncelleyin"
+      ]
+    },
+    "E0223": {
+      "title": "Rol kayıtta bulunamadı",
+      "short_description": "Aranan rol tanımlı değil.",
+      "long_description": "Rol adı kayıtlı değil.",
+      "hints": [
+        "Yazımı kontrol edin",
+        "Önce tanımlayın"
+      ]
+    },
+    "E0224": {
+      "title": "Çalışma zamanında ajan zaten var",
+      "short_description": "Aynı ada sahip ajan zaten kayıtlı.",
+      "long_description": "Ajan kimlikleri benzersiz olmalıdır.",
+      "hints": [
+        "Farklı ad kullanın",
+        "Var olanı kaldırın"
+      ]
+    },
+    "E0225": {
+      "title": "Başvurulan ajan yok",
+      "short_description": "İşlem var olmayan ajana başvurdu.",
+      "long_description": "Ajan mevcut değil veya kaldırıldı.",
+      "hints": [
+        "Adı doğrulayın",
+        "Ajanın var olduğunu kontrol edin"
+      ]
+    },
+    "E0226": {
+      "title": "break döngü dışında kullanıldı",
+      "short_description": "break ifadesi döngü içinde değil.",
+      "long_description": "break yalnızca for/while içinde geçerli.",
+      "hints": [
+        "Döngü içinde kullanın",
+        "Döngüyü kontrol edin"
+      ]
+    },
+    "E0227": {
+      "title": "Çağrılabilir değer çağrılırken hata",
+      "short_description": "Fonksiyon çağrısı başarısız oldu.",
+      "long_description": "Çağrılan değer çağrılabilir değil.",
+      "hints": [
+        "Türü kontrol edin",
+        "Fonksiyon olduğunu doğrulayın"
+      ]
+    },
+    "E0228": {
+      "title": "continue döngü dışında kullanıldı",
+      "short_description": "continue ifadesi döngü içinde değil.",
+      "long_description": "continue yalnızca döngü içinde geçerli.",
+      "hints": [
+        "Döngü içinde kullanın",
+        "Yapıyı kontrol edin"
+      ]
+    },
+    "E0229": {
+      "title": "Özel çalışma zamanı hatası",
+      "short_description": "Kullanıcı kodu throw ile hata fırlattı.",
+      "long_description": "Açıkça fırlatılan özel hata.",
+      "hints": [
+        "Yakalama bloğunu kontrol edin",
+        "Hata mesajını inceleyin"
+      ]
+    },
+    "E0230": {
+      "title": "Sıfıra bölme",
+      "short_description": "Sayı sıfıra bölündü.",
+      "long_description": "Matematiksel olarak tanımsız işlem.",
+      "hints": [
+        "Böleni kontrol edin",
+        "Sıfır kontrolü ekleyin"
+      ]
+    },
+    "E0231": {
+      "title": "Çalışma zamanı yürütme başarısız",
+      "short_description": "Genel yürütme başarısızlığı.",
+      "long_description": "Belirtilmemiş çalışma zamanı hatası.",
+      "hints": [
+        "Günlükleri inceleyin",
+        "Bağlamı kontrol edin"
+      ]
+    },
+    "E0232": {
+      "title": "Yürütme aktif anayasayı ihlal ediyor",
+      "short_description": "Eylem etkin yönetişim kurallarını çiğniyor.",
+      "long_description": "Anayasa kısıtlaması reddetti.",
+      "hints": [
+        "Anayasayı gözden geçirin",
+        "Yönetişim durumunu kontrol edin"
+      ]
+    },
+    "E0233": {
+      "title": "Değişmez değişkene atama",
+      "short_description": "const değişkenine yeniden atama yapıldı.",
+      "long_description": "Sabitler değiştirilemez.",
+      "hints": [
+        "let kullanın",
+        "Yeniden atamayı kaldırın"
+      ]
+    },
+    "E0234": {
+      "title": "Dizin sınırları dışında",
+      "short_description": "Dizi erişimi geçerli aralık dışında.",
+      "long_description": "Negatif veya aşan indeks.",
+      "hints": [
+        "Indeks aralığını kontrol edin",
+        "length ile karşılaştırın"
+      ]
+    },
+    "E0235": {
+      "title": "İşlenen türleri için işlem geçersiz",
+      "short_description": "Türler için işlem tanımlanmamış.",
+      "long_description": "Bu tür kombinasyonu desteklenmiyor.",
+      "hints": [
+        "Türleri kontrol edin",
+        "Dönüşüm yapın"
+      ]
+    },
+    "E0236": {
+      "title": "Modül düzeyinde hata",
+      "short_description": "Modül yükleme/çalıştırma hatası.",
+      "long_description": "Modül başlatma başarısız oldu.",
+      "hints": [
+        "Bağımlılıkları kontrol edin",
+        "Kodu doğrulayın"
+      ]
+    },
+    "E0237": {
+      "title": "Yürütme gaz limiti aşıldı",
+      "short_description": "Gaz bütçesi tükendi.",
+      "long_description": "Sözleşme yürütme limitine ulaştı.",
+      "hints": [
+        "Optimizasyon yapın",
+        "Limiti artırın"
+      ]
+    },
+    "E0238": {
+      "title": "Promise reddedildi - yorumlayıcıda",
+      "short_description": "await edilen promise reddedildi.",
+      "long_description": "Async işlem başarısız oldu.",
+      "hints": [
+        "Hata işleyin",
+        "Nedeni araştırın"
+      ]
+    },
+    "E0239": {
+      "title": "Değerde özellik bulunamadı",
+      "short_description": "Mevcut olmayan özelliğe erişildi.",
+      "short_descriptionTR": "Nesne üzerinde olmayan alana erişim.",
+      "long_description": "undefined veya null özellik erişimi.",
+      "hints": [
+        "Undefined kontrolü yapın",
+        "?. kullanın"
+      ]
+    },
+    "E0240": {
+      "title": "Kaynak erişimi başarısız",
+      "short_description": "Kaynak okunamadı/yazılamadı.",
+      "long_description": "I/O kaynak işlemi başarısız oldu.",
+      "hints": [
+        "Yolu kontrol edin",
+        "İzinleri doğrulayın"
+      ]
+    },
+    "E0241": {
+      "title": "return fonksiyon dışında",
+      "short_description": "return ifadesi fonksiyon içinde değil.",
+      "long_description": "return yalnızca fonksiyon içinde geçerli.",
+      "hints": [
+        "Fonksiyon içinde kullanın",
+        "Yapıyı kontrol edin"
+      ]
+    },
+    "E0242": {
+      "title": "Güvenlik koruması ihlali",
+      "short_description": "Kum havuzu politikası ihlali.",
+      "long_description": "Kısıtlanmış işlem engellendi.",
+      "hints": [
+        "Politikayı gözden geçirin",
+        "İzin isteyin"
+      ]
+    },
+    "E0243": {
+      "title": "Çağrı yığını taşması",
+      "short_description": "Rekürsif çağrı çok derin.",
+      "long_description": "Maksimum yığın derinliği aşıldı.",
+      "hints": [
+        "Rekürsyon sınırı ekleyin",
+        "Terative yapın"
+      ]
+    },
+    "E0244": {
+      "title": "Geçersiz çalışma zamanı durumu",
+      "short_description": "VM tutarsız durumda.",
+      "long_description": "Dahili çalışma zamanı tutarsızlığı.",
+      "hints": [
+        "Yeniden başlatın",
+        "Hata bildirin"
+      ]
+    },
+    "E0245": {
+      "title": "STM işlem yeniden deneme limiti aşıldı",
+      "short_description": "STM çok fazla yeniden denedi.",
+      "long_description": "Çakışma çözümü başarısız oldu.",
+      "hints": [
+        "İşlem süresini azaltın",
+        "Çakışmayı azaltın"
+      ]
+    },
+    "E0246": {
+      "title": "STM işlem zaman aşımına uğradı",
+      "short_description": "STM işlem tamamlanamadı.",
+      "long_description": "Zaman sınırı içinde commit yapılamadı.",
+      "hints": [
+        "Zaman aşımı artırın",
+        "İşlemi küçültün"
+      ]
+    },
+    "E0247": {
+      "title": "Görev tutamacı mevcut değil",
+      "short_description": "Async görev kimliği bulunamadı.",
+      "long_description": "Görev tamamlandı veya iptal edildi.",
+      "hints": [
+        "Görev ömrünü yönetin",
+        "Kimliği kontrol edin"
+      ]
+    },
+    "E0248": {
+      "title": "Yakalanmamış kullanıcı istisnası",
+      "short_description": "try-catch ile yakalanmayan throw.",
+      "long_description": "Program tarafından işlenmeyen hata.",
+      "hints": [
+        "try-catch ekleyin",
+        "Global işleyici tanımlayın"
+      ]
+    },
+    "E0249": {
+      "title": "Araç çağrısı başarısız",
+      "short_description": "MCP araç yürütme hatası.",
+      "long_description": "Araç sunucusu çağrıyı yerine getiremedi.",
+      "hints": [
+        "Sunucu günlüklerini kontrol edin",
+        "Parametreleri doğrulayın"
+      ]
+    },
+    "E0250": {
+      "title": "Çalışma zamanı tür uyuşmazlığı",
+      "short_description": "Değer beklenen türle eşleşmiyor.",
+      "long_description": "Dinamik tür kontrolü başarısız oldu.",
+      "hints": [
+        "typeof kontrolü yapın",
+        "Dönüştürün"
+      ]
+    },
+    "E0251": {
+      "title": "Tanımsız değişken başvurusu",
+      "short_description": "Bildirilmemiş değişkene erişildi.",
+      "long_description": "Değişkan mevcut kapsamda tanımlı değil.",
+      "hints": [
+        "Bildirimi kontrol edin",
+        "Yazımı doğrulayın"
+      ]
+    },
+    "E0252": {
+      "title": "Başlatmadan önce erişim (TDZ)",
+      "short_description": "let/const değişkenine başatmadan önce erişildi.",
+      "long_description": "Geçici ölü bölge ihlali.",
+      "hints": [
+        "Bildirim sırasını değiştirin",
+        "Başatmadan sonra kullanın"
+      ]
+    },
+    "E0253": {
+      "title": "Değişken zaten kapsamda tanımlı",
+      "short_description": "Aynı ada sahip değişken zaten var.",
+      "long_description": "Yinelenen bildirim.",
+      "hints": [
+        "Farklı ad kullanın",
+        "Var olanı kaldırın"
+      ]
+    },
+    "E0254": {
+      "title": "yield jeneratör dışında",
+      "short_description": "yield ifadesi jeneratör fonksiyonu içinde değil.",
+      "long_description": "yield yalnızca jeneratörde geçerli.",
+      "hints": [
+        "function* kullanın",
+        "İçeride olduğunu doğrulayın"
+      ]
+    },
+    "E0255": {
+      "title": "Kum havuzu dosya erişimi reddetti",
+      "short_description": "Dosya sistemi kum havuzu politikası tarafından engellendi.",
+      "long_description": "Yol izin verilenler listesinde değil.",
+      "hints": [
+        "Yolu onaylayın",
+        "Politikayı güncelleyin"
+      ]
+    },
+    "E0256": {
+      "title": "Geçersiz kum havuzu yapılandırması",
+      "short_description": "Kum havuzu config geçersiz.",
+      "long_description": "Yapılandırma ayrıştırılamadı.",
+      "hints": [
+        "JSON şemasını kontrol edin",
+        "Doğrulayın"
+      ]
+    },
+    "E0257": {
+      "title": "Kum havuzu ağ erişimi reddetti",
+      "short_description": "Ağ kum havuzu politikası tarafından engellendi.",
+      "long_description": "Ana bilgisayar izin verilenler listesinde değil.",
+      "hints": [
+        "URL'yi kontrol edin",
+        "Politikayı güncelleyin"
+      ]
+    },
+    "E0258": {
+      "title": "Kum havuzu işlem yürütmesi reddetti",
+      "short_description": "İşlem yürütme kum havuzu tarafından engellendi.",
+      "long_description": "exec/spawn yasaklandı.",
+      "hints": [
+        "Politikayı gözden geçirin",
+        "Alternatif arayın"
+      ]
+    },
+    "E0259": {
+      "title": "Kum havuzu kaynak limiti aşıldı",
+      "short_description": "Kaynak kota aşıldı.",
+      "long_description": "Bellek/CPU sınırına ulaşıldı.",
+      "hints": [
+        "Limiti artırın",
+        "Optimizasyon yapın"
+      ]
+    },
+    "E0260": {
+      "title": "Kum havuzu sistem çağrısı başarısız",
+      "short_description": "Sistem çağrısı kum havuzu tarafından engellendi.",
+      "long_description": "Güvenli olmayan syscall.",
+      "hints": [
+        "Politikayı gözden geçirin",
+        "seccomp yapılandırması"
+      ]
+    },
+    "E0261": {
+      "title": "Beceri tanımı doğrulama başarısız",
+      "short_description": "YAML beceri tanımı geçersiz.",
+      "long_description": "Şema doğrulama başarısız oldu.",
+      "hints": [
+        "Şemayı kontrol edin",
+        "YAML sözdizimini doğrulayın"
+      ]
+    },
+    "E0262": {
+      "title": "Beceri tanımı YAML hatası",
+      "short_description": "Beceri YAML'i ayrıştırılamadı.",
+      "long_description": "YAML sözdizimi hatası.",
+      "hints": [
+        "Biçimi düzeltin",
+        "Doğrulayıcı çalıştırın"
+      ]
+    },
+    "E0263": {
+      "title": "Vektör deposu boyut uyuşmazlığı",
+      "short_description": "Vektör boyutu dizin boyutuyla eşleşmiyor.",
+      "long_description": "Farklı modelden veya yanlış yapılandırma.",
+      "hints": [
+        "Boyutları eşleştirin",
+        "Dizini yeniden oluşturun"
+      ]
+    },
+    "E0264": {
+      "title": "Vektör deposu yapılandırması geçersiz",
+      "short_description": "Vektör deposu config geçersiz.",
+      "long_description": "Mesafe metriği veya boyut eksik.",
+      "hints": [
+        "Config doğrulayın",
+        "Boyutları belirtin"
+      ]
+    },
+    "E0265": {
+      "title": "Depo anahtarıyla kayıt bulunamadı",
+      "short_description": "Vektör deposunda anahtar yok.",
+      "long_description": "ID vektör deposunda mevcut değil.",
+      "hints": [
+        "Anahtarı kontrol edin",
+        "Depoyu kontrol edin"
+      ]
+    },
+    "E0266": {
+      "title": "Vektör deposu kalıcılık hatası",
+      "short_description": "Vektör deposu diske yazılamadı.",
+      "long_description": "I/O hatası veya yer sorunu.",
+      "hints": [
+        "Yer olduğunu doğrulayın",
+        "İzinleri kontrol edin"
+      ]
+    },
+    "E0267": {
+      "title": "Metin akışı kanalı beklenmedik şekilde kapandı",
+      "short_description": "Akış kanalı kapatıldı.",
+      "long_description": "Üretici veya tüketici sonlandı.",
+      "hints": [
+        [
+          "Ömrü yönetin"
+        ],
+        [
+          "Hata işleyin"
+        ]
+      ]
+    },
+    "E0268": {
+      "title": "Metin akışı kod çözme hatası",
+      "short_description": "Akış baytları metne dönüştürülemedi.",
+      "long_description": "Geçersiz UTF-8 veya kodlama.",
+      "hints": [
+        "Kodlamayı belirtin",
+        "Baytları doğrulayın"
+      ]
+    },
+    "E0269": {
+      "title": "Metin akışı kodlama hatası",
+      "short_description": "Metin akış baytlarına kodlanamadı.",
+      "long_description": "Çıkış kodlama hatası.",
+      "hints": [
+        "Kodlamayı kontrol edin",
+        "Hedefi doğrulayın"
+      ]
+    },
+    "E0270": {
+      "title": "Sürü ajan yürütme başarısız",
+      "short_description": "Bir ajan görevi başarısız oldu.",
+      "long_description": "Sürüdeki bir ajan hata verdi.",
+      "hints": [
+        "Ajan günlüklerini kontrol edin",
+        "Yeniden deneyin"
+      ]
+    },
+    "E0271": {
+      "title": "Ajan sürüde değil",
+      "short_description": "İşlem sürüde olmayan bir ajana başvurdu.",
+      "long_description": "Ajan mevcut sürü üyesi değil.",
+      "hints": [
+        "Sürü üyeliğini kontrol edin",
+        "Önce eklemyin"
+      ]
+    },
+    "E0272": {
+      "title": "Ajan zaten sürüde",
+      "short_description": "Zaten sürüde olan ajan eklenmeye çalışıldı.",
+      "long_description": "Yinelenen sürü üyeliği.",
+      "hints": [
+        "Önce üyeliği kontrol edin",
+        "Tek eklemyin"
+      ]
+    },
+    "E0273": {
+      "title": "Sürü yeterli başarı koşuluna ulaşamadı",
+      "short_description": "Sürü başarı çoğunluğu sağlayamadı.",
+      "long_description": "Yeterli ajan başarısız oldu.",
+      "hints": [
+        "Başarı eşiğini düşürün",
+        "Daha fazla ajan ekleyin"
+      ]
+    },
+    "E0274": {
+      "title": "Sürüde ajan yok",
+      "short_description": "Boş sürüde işlem denendi.",
+      "long_description": "Sürü hiç üye içermiyor.",
+      "hints": [
+        "Önce üye ekleyin",
+        "Boş kontrol yapın"
+      ]
+    },
+    "E0275": {
+      "title": "Sürü durum anahtarı bulunamadı",
+      "short_description": "Sürü paylaşılan durum anahtarı yok.",
+      "long_description": "Anahtar sürü durumunda mevcut değil.",
+      "hints": [
+        "Anahtarı kontrol edin",
+        "Önce ayarlayın"
+      ]
+    },
+    "E0276": {
+      "title": "Sürü yürütme zaman aşımına uğradı",
+      "short_description": "Sürü zaman sınırı içinde tamamlanamadı.",
+      "long_description": "Sürü görevleri çok uzun sürdü.",
+      "hints": [
+        "Zaman aşımı artırın",
+        "Paralelleştirin"
+      ]
+    },
+    "E0277": {
+      "title": "Adlandırılmış bütçe mevcut değil",
+      "short_description": "Başvurulan bütçe tanımlı değil.",
+      "long_description": "Bütçe adı kayıtlı değil.",
+      "hints": [
+        "Adı kontrol edin",
+        "Önce tanımlayın"
+      ]
+    },
+    "E0278": {
+      "title": "Tokenomik önbellek katmanı hatası",
+      "short_description": "Tokenomik önbellek işlemi başarısız.",
+      "long_description": "Maliyet önbelleği hata verdi.",
+      "hints": [
+        "Önbelleği temizleyin",
+        "Bağlantıyı kontrol edin"
+      ]
+    },
+    "E0279": {
+      "title": "ML maliyet tahmin edicisinde eğitim verisi yok",
+      "short_description": "Tahminici eğitilmemiş.",
+      "long_description": "Yeterli geçmiş verisi yok.",
+      "hints": [
+        "Daha fazla veri toplayın",
+        "Varsayılan kullanın"
+      ]
+    },
+    "E0280": {
+      "title": "Tokenomik yapılandırması geçersiz",
+      "short_description": "Tokenomik config doğrulamadan başarısız.",
+      "long_description": "Fiyatlandırma veya bütçe config geçersiz.",
+      "hints": [
+        "Config dosyasını kontrol edin",
+        "Şemayı doğrulayın"
+      ]
+    },
+    "E0281": {
+      "title": "Tokenomik veritabanı arka ucu başarısız",
+      "short_description": "Tokenomik veritabanı bağlantısı hatası.",
+      "long_description": "Fiyatlandırma DB'sine erişilemiyor.",
+      "hints": [
+        "Bağlantıyı kontrol edin",
+        "Yapılandırmayı doğrulayın"
+      ]
+    },
+    "E0282": {
+      "title": "Federated Learning senkronizasyon başarısız",
+      "short_description": "Federated eğitim senkronizasyonu başarısız.",
+      "long_description": "Dağıtık model senkronizasyon hatası.",
+      "hints": [
+        "Ağı kontrol edin",
+        "Yeniden deneyin"
+      ]
+    },
+    "E0283": {
+      "title": "İşlem için yeterli bütçe kalmadı",
+      "short_description": "Mevcut bütçe işlem için yetersiz.",
+      "long_description": "Kalan bütçe işlem maliyetinden düşük.",
+      "hints": [
+        "Bütçeyi artırın",
+        "Daha ucuz işlem seçin"
+      ]
+    },
+    "E0284": {
+      "title": "Bütçe tutarı geçersiz",
+      "short_description": "Bütçe değeri doğrulanamadı.",
+      "long_description": "Negatif veya geçersiz bütçe.",
+      "hints": [
+        "Pozitif değer girin",
+        "Formatı kontrol edin"
+      ]
+    },
+    "E0285": {
+      "title": "Tokenomik dosya G/Ç hatası",
+      "short_description": "Tokenomik dosya işlemi başarısız.",
+      "long_description": "Konfig dosyası okuma/yazma hatası.",
+      "hints": [
+        "Yolu kontrol edin",
+        "İzinleri doğrulayın"
+      ]
+    },
+    "E0286": {
+      "title": "Maliyet modeli doğruluk eşiğinin altına düştü",
+      "short_description": "Tahmin doğruluğu kabul edilemez.",
+      "long_description": "ML model düşük performans.",
+      "hints": [
+        "Modeli yeniden eğitin",
+        "Eşiği ayarlayın"
+      ]
+    },
+    "E0287": {
+      "title": "ML maliyet modeli iç hatası",
+      "short_description": "Model tahmin hatası.",
+      "long_description": "ML çalışma zamanı hatası.",
+      "hints": [
+        [
+          "Günlükleri kontrol edin"
+        ],
+        [
+          "Yeniden başlatın"
+        ]
+      ]
+    },
+    "E0288": {
+      "title": "Maliyet modeli aşırı uyuyor",
+      "short_description": "Model eğitim verisine aşırı uydu.",
+      "long_description": "Genelleme yeteneği düşük.",
+      "hints": [
+        "Düzenlileştirin",
+        "Daha fazla veri ekleyin"
+      ]
+    },
+    "E0289": {
+      "title": "Maliyet tahmini hesaplanamadı",
+      "short_description": "Tahmin oluşturulamadı.",
+      "long_description": "Girdi eksik veya model hatası.",
+      "hints": [
+        "Girdileri kontrol edin",
+        "Model durumunu doğrulayın"
+      ]
+    },
+    "E0290": {
+      "title": "Tokenomik Redis arka ucu başarısız",
+      "short_summary": "Redis bağlantı hatası.",
+      "long_description": "Tokenomik önbellek Redis'e erişilemiyor.",
+      "hints": [
+        "Redis durumunu kontrol edin",
+        "Bağlantıyı doğrulayın"
+      ]
+    },
+    "E0291": {
+      "title": "Pekiştirmeli öğrenme adımı başarısız",
+      "short_description": "RL optimizasyon başarısız.",
+      "long_description": "RL güncelleme hatası.",
+      "hints": [
+        "Ödünlendirme işlevini kontrol edin",
+        "Yeniden deneyin"
+      ]
+    },
+    "E0292": {
+      "title": "Tokenomik değer serileştirme başarısız",
+      "short_description": "Değer serileştirilemedi.",
+      "long_description": "Tokenomik durum yazma hatası.",
+      "hints": [
+        "Veri türlerini kontrol edin",
+        "Şemayı doğrulayın"
+      ]
+    },
+    "E0293": {
+      "title": "Tokenomik depolama arka ucu başarısız",
+      "short_description": "Depolama işlemi hatası.",
+      "long_description": "Kalıcı depolama erişilemiyor.",
+      "hints": [
+        "Bağlantıyı kontrol edin",
+        "Yapılandırmayı doğrulayın"
+      ]
+    },
+    "E0294": {
+      "title": "Sınıflandırılmamış tokenomik hatası",
+      "short_description": "Bilinmeyen tokenomik hatası.",
+      "long_description": "Belirtilmemiş tokenomik sorunu.",
+      "hints": [
+        "Günlükleri inceleyin",
+        "Destek alın"
+      ]
+    },
+    "E0295": {
+      "title": "Araç dağıtımı çalıştı ancak başarısız oldu",
+      "short_description": "Araç yürütüldü ancak başarısız döndü.",
+      "long_description": "Araç işlemi tamamlandı ancak hata verdi.",
+      "hints": [
+        "Araç çıktısını kontrol edin",
+        "Parametreleri doğrulayın"
+      ]
+    },
+    "E0296": {
+      "title": "Araç geçersiz argümanlar aldı",
+      "short_description": "Araç girdileri şemaya uymuyor.",
+      "long_description": "Tip veya zorunlu alan hatası.",
+      "hints": [
+        "Şemayı kontrol edin",
+        "Girdileri doğrulayın"
+      ]
+    },
+    "E0297": {
+      "title": "Araç çağrısı güvenlik politikası tarafından engellendi",
+      "short_description": "Araç güvenlik kısıtlamasına takıldı.",
+      "long_description": "Riskli araç beyaz listede değil.",
+      "hints": [
+        "Politikayı gözden geçirin",
+        "İzin isteyin"
+      ]
+    },
+    "E0298": {
+      "title": "Araç girdisi anlamsal doğrulamadan başarısız",
+      "short_description": "Girdi mantıksal olarak geçersiz.",
+      "long_description": "Şema geçerli ancak mantık hatası.",
+      "hints": [
+        "Değer aralıklarını kontrol edin",
+        "Mantığı doğrulayın"
+      ]
+    },
+    "E0299": {
+      "title": "atomically bloğunda await yasak",
+      "short_description": "STM işlem bloğunda async operasyon.",
+      "long_description": "STM içinde await kullanılamaz.",
+      "hints": [
+        "await dışarı taşıyın",
+        "Async'i ayırın"
+      ]
+    },
+    "E0300": {
+      "title": "Yinelenen değişken bildirimi",
+      "short_description": "Aynı ada sahip değişken bildirildi.",
+      "long_description": "Aynı kapsamda yinelenen bildirim.",
+      "hints": [
+        "Farklı ad kullanın",
+        "Var olanı kaldırın"
+      ]
+    },
+    "E0301": {
+      "title": "Promise olmayan değerde await",
+      "short_description": "await edilen değer Promise değil.",
+      "long_description": "await yalnızca Promise/Thenable ile çalışır.",
+      "hints": [
+        "Promise yapın",
+        "async fonksiyon kullanın"
+      ]
+    },
+    "E0302": {
+      "title": "Dizinlenebilir olmayan türde dizinleme",
+      "short_description": "Dizi/nesne olmayan değere indeks erişimi.",
+      "long_description": "Sayı veya string dışında indeks.",
+      "hints": [
+        "Türü kontrol edin",
+        "Dizinlenebilir yapın"
+      ]
+    },
+    "E0303": {
+      "title": "Olmayan alana üye erişimi",
+      "short_description": "Tanımsız özelliğe erişildi.",
+      "long_description": "Nesne bu özelliği içermiyor.",
+      "hints": [
+        "?. kullanın",
+        "Önce kontrol edin"
+      ]
+    },
+    "E0304": {
+      "title": "İşlenen türleri için işleç tanımsız",
+      "short_description": "Bu türler için operatör aşırı yüklemesi yok.",
+      "long_description": "Tür kombinasyonu desteklenmiyor.",
+      "hints": [
+        [
+          "Türleri dönüştürün"
+        ],
+        [
+          "Farklı operatör kullanın"
+        ]
+      ]
+    },
+    "E0305": {
+      "title": "Beklenen ve gerçek arasında tip uyuşmazlığı",
+      "short_description": "Tip denetleyici beklenmeyen tür buldu.",
+      "long_description": "Statik tip analizi başarısız.",
+      "hints": [
+        [
+          "Türü düzeltin"
+        ],
+        [
+          "Dönüştürün"
+        ]
+      ]
+    },
+    "E0306": {
+      "title": "Bildirimde tip uyuşmazlığı",
+      "short_description": "Bildirilen tip başlatıcıyla uyuşmuyor.",
+      "long_description": "Açık tip bildirimi çatışması.",
+      "hints": [
+        "Tipi değiştirin",
+        "Başlatıcıyı düzeltin"
+      ]
+    },
+    "E0307": {
+      "title": "Tanımsız fonksiyon çağrısı",
+      "short_description": "Bildirilmemiş fonksiyona çağrı.",
+      "long_description": "Fonksiyon mevcut kapsamda yok.",
+      "hints": [
+        "Adı kontrol edin",
+        "İçe aktarın"
+      ]
+    },
+    "E0308": {
+      "title": "Tanımsız değişken referansı",
+      "short_description": "Bildirilmemiş değişkene erişim.",
+      "long_description": "Değişken mevcut değil.",
+      "hints": [
+        "Bildirimi kontrol edin",
+        "Yazımı doğrulayın"
+      ]
+    },
+    "E0309": {
+      "title": "Fonksiyon çağrısında yanlış argüman sayısı",
+      "short_description": "Argüman sayısı imza ile eşleşmiyor.",
+      "long_description": "Çok az veya çok fazla argüman.",
+      "hints": [
+        "Sayıyı kontrol edin",
+        "İmzayı doğrulayın"
+      ]
+    },
+    "E0310": {
+      "title": "Özel doğrulama kuralı başarısız",
+      "short_description": "Kullanıcı tanımlı doğrulama başarısız.",
+      "long_description": "Schema constraint ihlali.",
+      "hints": [
+        [
+          "Kuralı kontrol edin"
+        ],
+        [
+          "Girdiyi düzeltin"
+        ]
+      ]
+    },
+    "E0311": {
+      "title": "Değer geçersiz biçimde",
+      "short_description": "Biçim deseniyle eşleşmiyor.",
+      "long_description": "Regex veya format hatası.",
+      "hints": [
+        "Deseni kontrol edin",
+        "Biçimi düzeltin"
+      ]
+    },
+    "E0312": {
+      "title": "Değer geçersiz uzunlukta",
+      "short_description": "Uzunluk kısıtlamasını ihlal ediyor.",
+      "long_description": "Çok kısa veya çok uzun.",
+      "hints": [
+        "Uzunluğu kontrol edin",
+        "Kısaltınveya uzatın"
+      ]
+    },
+    "E0313": {
+      "title": "Gerekli şema alanı eksik",
+      "short_description": "Zorunlu alan sağlanmadı.",
+      "long_description": "null/undefined zorunlu alan.",
+      "hints": [
+        "Alan ekleyin",
+        "Zorunluluğu kaldırın"
+      ]
+    },
+    "E0314": {
+      "title": "Sayısal değer aralık dışında",
+      "short_description": "Min/max sınırları ihlal edildi.",
+      "long_description": "Sayı aralık dışında.",
+      "hints": [
+        "Sınırları kontrol edin",
+        "Değeri ayarlayın"
+      ]
+    },
+    "E0315": {
+      "title": "Değer desenle eşleşmiyor",
+      "short_description": "Regex deseniyle tutmuyor.",
+      "long_description": "String formatı uyuşmuyor.",
+      "hints": [
+        "Deseni kontrol edin",
+        "Dizeniyi düzeltin"
+      ]
+    },
+    "E0316": {
+      "title": "Girdi gerekli alan eksik",
+      "short_description": "Zorunlu alan boş bırakıldı.",
+      "long_description": "null/undefined veya boş değer.",
+      "hints": [
+        "Değer sağlayın",
+        "Zorunluluğu kaldırın"
+      ]
+    },
+    "E0317": {
+      "title": "Şema tip uyuşmazlığı",
+      "short_description": "Girdi tipi şemayla uyuşmuyor.",
+      "long_description": "Beklenen tip gerçekle çatışıyor.",
+      "hints": [
+        "Tipi dönüştürün",
+        "Şemayı güncelleyin"
+      ]
+    },
+    "E0318": {
+      "title": "Bilinmeyen şema tipi",
+      "short_description": "Şema tanımlanmamış tip referansı.",
+      "long_description": "Tip adı şemada yok.",
+      "hints": [
+        "Tipi tanımlayın",
+        "Adı düzeltin"
+      ]
+    },
+    "E0319": {
+      "title": "Dallanma adı zaten kullanımda",
+      "short_description": "Dal adı deposunda mevcut.",
+      "long_description": "Yinelenen dal adı.",
+      "hints": [
+        "Farklı ad seçin",
+        "Var olanı silin"
+      ]
+    },
+    "E0320": {
+      "title": "Dal depoda bulunamadı",
+      "short_description": "Başvurulan dal mevcut değil.",
+      "long_description": "Dal silinmiş veya hiç var olmamış.",
+      "hints": [
+        "Adı kontrol edin",
+        "Listeyi görüntüleyin"
+      ]
+    },
+    "E0321": {
+      "title": "VCS işlemi mevcut durumda izin verilmiyor",
+      "short_description": "Mevcut repo durumunda yasak işlem.",
+      "long_description": "Git durum makinesi ihlali - işlem mevcut durum için tanımlı değil.",
+      "hints": [
+        "Durumu kontrol edin",
+        "Git status çalıştırın",
+        "Uygulanabilir komutları listeleyin"
+      ]
+    },
+    "E0322": {
+      "title": "Birleştirme çakışması üretti",
+      "short_description": "Merge manuel çözüm gerektiriyor.",
+      "long_description": "Dosya çakışması tespit edildi - otomatik çözülemedi.",
+      "hints": [
+        "Çakışmaları çözün",
+        "Conflict marker'ları temizleyin",
+        "Yeniden deneyin"
+      ]
+    },
+    "E0323": {
+      "title": "VCS çıktısı ayrıştırma başarısız",
+      "short_description": "Git komut çıktısı ayrıştırılamadı.",
+      "long_description": "Git komutunun beklenmeyen format veya bozuk çıktısı.",
+      "hints": [
+        "Git sürümünü kontrol edin",
+        "Komutu manuel çalıştırın",
+        "Çıktıyı inceleyin"
+      ]
+    },
+    "E0148": {
+      "title": "Getter bulunamadı",
+      "short_description": "Özellik getter'ı tanımlanmamış.",
+      "long_description": "Nesne üzerinde okuma yapılan özelliğin getter metodu yok.",
+      "hints": [
+        "Get özelliğini kontrol edin",
+        "Getter tanımlayın",
+        "Varsayılan değer sağlayın"
+      ]
+    },
+    "E0149": {
+      "title": "Setter bulunamadı",
+      "short_description": "Özellik setter'ı tanımlanmamış.",
+      "long_description": "Nesne üzerinde atama yapılan özelliğin setter metodu yok.",
+      "hints": [
+        "Set özelliğini kontrol edin",
+        "Setter tanımlayın",
+        "Doğrudan atama yapın"
+      ]
+    },
+    "E0150": {
+      "title": "Constructor bulunamadı",
+      "short_description": "Sınıf constructor'ı yok veya erişilemez.",
+      "long_description": "new ile çağrılan sınıfın constructor metodu tanımlı değil.",
+      "hints": [
+        "Sınıf tanımını kontrol edin",
+        "Constructor ekleyin",
+        "Factory metodu kullanın"
+      ]
+    }
+  }
+}

@@ -1,0 +1,2611 @@
+{
+  "locale": "bs",
+  "language": "Bosanski",
+  "errors": {
+    "E0001": {
+      "title": "Nevažeći prijelaz stanja odobrenja",
+      "short_description": "Zahtjev za odobrenje ne može prijeći iz trenutnog stanja u traženo stanje prema pravilima tijeka rada odobrenja.",
+      "long_description": "Zahtjevi za odobrenjem prate konačni automat stanja: tipično Na čekanju → Odobreno ili Na čekanju → Odbijeno, sa terminalnim stanjima koja se ne mogu ponovo ući. Ova greška znači da je pozivatelj pokušao nezakoniti prijelaz, na primjer odobriti već odbijeni zahtjev ili ponovo otvoriti onaj koji je prethodno riješen."
+    },
+    "E0002": {
+      "title": "ID zahtjeva za odobrenje ne postoji",
+      "short_description": "Skladište odobrenja nema unos koji odgovara dostavljenom ID-u zahtjeva.",
+      "long_description": "Podstav odobrenja pohranjuje zahtjeve po neprozirnom ID-u. Ova greška znači da je taj ID nepoznat - nikada nije stvoren, istekao je i prikupljen kao smeće, ili pripada drugom skladištu odobrenja nego onom koji se upituje."
+    },
+    "E0003": {
+      "title": "Nevažeća vrijednost CLI argumenta",
+      "short_description": "Argument naredbenog reda dostavljen je s vrijednošću koja ne zadovoljava njegov deklarirani tip ili prihvaćeni skup.",
+      "long_description": "CLI parser uspješno je spario zastavicu ili pozicijski argument koji ste dostavili, ali priložena vrijednost nije uspjela u pretvorbi ili validaciji. To se obično dogodi kada numerička zastavica primi nenumerički token, zastavica enum stila primi ime izvan dopuštene liste, ili zastavica putanje primi niz koji OS odbija."
+    },
+    "E0004": {
+      "title": "Obavezan CLI argument nije dostavljen",
+      "short_description": "Argument naredbenog reda označen kao obavezan od aktivne podnaredbe izostavljen je iz poziva.",
+      "long_description": "Svaka HudHudScript podnaredba deklarira koje su zastavice i pozicijski argumenti obavezni. Kada pozovete podnaredbu bez jednog od ovih obaveznih ulaza, parser se zaustavlja prije slanja i prijavljuje nedostajuće ime."
+    },
+    "E0005": {
+      "title": "Podnaredba nije navedena",
+      "short_description": "CLI je pozvan bez odabira podnaredbe i nijedna zadana akcija nije konfigurirana za goli binarni program.",
+      "long_description": "hhs je multi-alat: većina korisnog rada odvija se kroz podnaredbe poput run, build, deploy, lsp ili repl. Pozivanje binarnog programa bez podnaredbe (i bez globalne zastavice poput --version) ostavlja parser bez akcije za slanje."
+    },
+    "E0006": {
+      "title": "Generička greška parsiranja CLI",
+      "short_description": "Parser argumenata nije uspio iz razloga koji ne odgovara specifičnijim kategorijama grešaka CLI.",
+      "long_description": "Ovo je sveobuhvatna varijanta koja se izdaje kada `hudhudscript-cli` naiđe na problem parsiranja izvan poznatih kategorija nepoznatog argumenta, nedostajućeg obaveznog, nedostajuće podnaredbe ili nevažeće vrijednosti. Primjeri uključuju sukobljene kombinacije zastavica, neispravan UTF-8 u argv, ili interne greške `clap` koje omotač nije klasificirao."
+    },
+    "E0007": {
+      "title": "Nepoznati CLI argument",
+      "short_description": "CLI parser naišao je na zastavicu ili pozicijski argument koju aktivna podnaredba ne deklarira.",
+      "long_description": "Svaka podnaredba ima fiksni skup prihvaćenih zastavica i pozicijskih argumenata. Kada proslijedite nešto izvan tog skupa - bilo kroz pogrešku tipkanja, zastarjeli vodič, ili zastavicu koja pripada drugoj podnaredbi - parser odbija pogoditi i prijavljuje problematični token."
+    },
+    "E0008": {
+      "title": "Rukovatelj Promisea nije pronađen u runtime-u",
+      "short_description": "Async runtime nije uspio locirati obećanje referencirano svojim rukovateljem, obično zato što je već potrošeno ili nikada nije registrirano.",
+      "long_description": "Async runtime održava registar živih obećanja ključanih internim rukovateljem. Kada je interpreter pokušao riješiti, odbiti ili pričekati obećanje, runtime nije pronašao unos za dani rukovatelj. To obično znači da je obećanje već riješeno i prikupljeno kao smeće, stvoreno u drugoj instanci runtime-a, ili rukovatelj falsificiran ili oštećen."
+    },
+    "E0009": {
+      "title": "Interna greška async runtime-a",
+      "short_description": "Async izvršitelj prijavio je internu grešku prilikom zakazivanja, anketiranja ili vođenja zadatka do dovršetka.",
+      "long_description": "Ovo je općenita greška koja izlazi na površinu kada sam async runtime - a ne korisnički kôd - naiđe na neuspjeh. Uzroci uključuju odbačeni budilnik, budućnost u panici, greške reaktorskog I/O, ili kršenje nepromjenjivog unutar izvršitelja."
+    },
+    "E0010": {
+      "title": "Neuspjelo stvaranje async zadatka",
+      "short_description": "Runtime odbio stvoriti novi asinhroni zadatak, tipično zato što se gasi ili je iscrpio kapacitet radnika.",
+      "long_description": "Kada `async fn` pozivi ili `spawn(...)` pozivi stvaraju novi zadatak, izvršitelj mora prihvatiti taj zadatak na jednoj od svojih radničkih niti. Ova greška vraća se kada izvršitelj odbije podnošenje - najčešće zato što je gašenje već pokrenuto, ograničeni red zadataka je pun, ili host je nametnuo kvotu stvaranja."
+    },
+    "E0011": {
+      "title": "UI most izgubio svoju vezu",
+      "short_description": " Transport između HudHudScript-a i okvira UI domaćina prekinut je nakon uspješnog početnog rukovanja.",
+      "long_description": "UI most u `hudhudscript-ui-core` održava dugovječni kanal do ugrađenog okvira (Tauri, Dioxus, web prikaz, itd.). Nakon inicijalizacije, obje strane razmjenjuju naredbe renderiranja i povratne pozive događaja putem ovog kanala. Kada se kanal neočekivano zatvori - tipično zato što je prozor domaćina uništen, IPC cijev pukla, ili proces okvira srušio se - most podiže ovu grešku."
+    },
+    "E0012": {
+      "title": "Osnovni UI okvir prijavio je grešku",
+      "short_description": "Okvir domaćina vratio je grešku prilikom obrade zahtjeva mosta proslijeđenog iz HudHudScript-a.",
+      "long_description": "Kada most proslijedi poziv na Tauri, Dioxus, web prikaz, ili bilo koji drugi podržani backend, taj backend može odbiti poziv iz svojih razloga. Most doslovno omata osnovnu poruku tako da ne izgubite specifičan kontekst okvira prije nego što pretpostavite bug u HudHudScript-u."
+    },
+    "E0013": {
+      "title": "Inicijalizacija UI mosta nije uspjela",
+      "short_description": "Most nije mogao dovršiti svoje rukovanje s odabranim okvirom UI tijekom pokretanja.",
+      "long_description": "Inicijalizacija pokriva učitavanje okvira, dodjeljivanje prozora domaćina ili web prikaza, i razmjenu početnih deskriptora sposobnosti s HudHudScript-om. Svaki neuspjeh u tom slijedu - nedostajuća izvorna ovisnost, uskranjena dozvola, nevažeća konfiguracija, sukob portova - pojavljuje se kao `InitFailed`. Most još nije ušao u stanje izvođenja, tako da nijedne UI naredbe nisu poslane."
+    },
+    "E0014": {
+      "title": "Korak renderiranja UI mosta nije uspio",
+      "short_description": "Okvir domaćina odbio je naredbu renderiranja koju je izdao HudHudScript nakon uspješne inicijalizacije mosta.",
+      "long_description": "Neuspjesi renderiranja događaju se tijekom stvarnog prolaza crtanja ili rasporeda: nevažeći objekt za crtanje, čvor koji ne odgovara svom roditelju, greška u kompilaciji shadera, ili backend koji je potrošio resurse GPU-a. Most pretvara specifičan neuspjeh okvira u ovu jednu varijantu dok čuva izvornu poruku."
+    },
+    "E0015": {
+      "title": "Traženi UI okvir nije ugrađen",
+      "short_description": "Skripta je zatražila okvir UI za koji ovaj HudHudScript binarni nije kompajliran da podržava.",
+      "long_description": "HudHudScript podržava nekoliko UI backendova iza Cargo zastavica svojstava. Dati binarni sadrži samo one backendove koji su omogućeni u vrijeme izgradnje, pa traženje Tauri iz građevine koja uključuje samo web most - ili obrnuto - proizvodi ovu grešku. Ovo je odluka u vrijeme izgradnje, ne u vrijeme izvođenja."
+    },
+    "E0016": {
+      "title": "Ustavni unos nedostaje iz predmemorije",
+      "short_description": "Predmemorija nije mogla pronaći ustavni dokument s traženim identifikatorom.",
+      "long_description": "Ustavi su dokumenti upravljanja najviše razine u hijerarhiji predmemorije HudHudScript (ustav > zakon > pravilo). Ova greška se javlja pri pretraživanju ID-a ustava koji nikada nije umetnut, istekao je, ili izbrisan od drugog pisca."
+    },
+    "E0017": {
+      "title": "Deserijalizacija unosa predmemorije nije uspjela",
+      "short_description": "Predmemorirani blob nije mogao biti dekodiran natrag u svoju očekivanu tipiziranu vrijednost.",
+      "long_description": "Predmemorija pohranjuje vrijednosti kao serijalizirane bajtove (bincode/JSON ovisno o vrsti unosa) i dekodira ih pri čitanju. Ova greška znači da su bajtovi uspješno dohvaćeni ali je dekoder odbio - tipično zato što se shema promijenila između verzija programer i čitač."
+    },
+    "E0018": {
+      "title": "Identičan sadržaj već pohranjen pod drugim ključem",
+      "short_description": "Unos je odbijen jer identičan sadržaj već postoji u predmemoriji pod drugačijim ID-jem.",
+      "long_description": "Predmemorija provodi deduplikaciju adresiranu sadržajem: dva unosa s istim hash-em ne mogu koegzistirati pod različitim ID-jevima. Kada pokušate dodati sadržaj koji je već prisutan, predmemorija odbija pisanje i prijavljuje i traženi i postojeći ID. To tipično znači da ručno izračunavate ID-jeve umjesto da dopustite predmemoriji da hešira sadržaj za vas."
+    },
+    "E0019": {
+      "title": "Sudar ID-a predmemorije između različitih sadržaja",
+      "short_description": "Dva različita tereta heširala su u isti ID predmemorije, što upućuje na sudar heševa ili ručno ponovno korištenje ID-a.",
+      "long_description": "Svaki unos predmemorije ključan je hešem sadržaja. Sudar znači da isti ID mapira na dva različita niza bajtova, što se ne bi trebalo dogoditi s zadanim kriptografskim hešem osim ako ne dostavljate prilagođene ID-jeve."
+    },
+    "E0020": {
+      "title": "Zakon nedostaje u predmemoriji",
+      "short_description": "Određeni zakon dokument referenciran pod ustavom nije mogao biti lociran u predmemoriji.",
+      "long_description": "Zakoni žive jednu razinu ispod ustava u hijerarhiji predmemorije. Ova greška znači da roditeljski ustav može postojati, ali traženi ID zakona nije prisutan."
+    },
+    "E0031": {
+      "title": "Invalid Community Configuration",
+      "short_description": "Community config failed validation.",
+      "long_description": "Fields like cultural profile or quorum thresholds have problems.",
+      "hints": [
+        "Read message",
+        "Check quorum"
+      ]
+    },
+    "E0032": {
+      "title": "Agent Not Community Member",
+      "short_description": "Referenced non-existent agent ID.",
+      "long_description": "Member-targeted operations require current membership.",
+      "hints": [
+        "Use is_member",
+        "Check logs"
+      ]
+    },
+    "E0033": {
+      "title": "Resource Key Not Registered",
+      "short_description": "Searched for resource with non-existent key.",
+      "long_description": "Resource not added to this community or removed.",
+      "hints": [
+        "Check addition",
+        "Use has_resource"
+      ]
+    },
+    "E0034": {
+      "title": "Compiler Generic Error",
+      "short_description": "Generic error not fitting specific category.",
+      "long_description": "Usually from half-implemented features or malformed AST.",
+      "hints": [
+        "Check location",
+        "Create repro"
+      ]
+    },
+    "E0035": {
+      "title": "Generic Error At Source",
+      "short_description": "Generic error tied to source location.",
+      "long_description": "Generic compile error with attached source range.",
+      "hints": [
+        "Open highlighted",
+        "Try rewrite"
+      ]
+    },
+    "E0036": {
+      "title": "Compiler Produced Invalid Bytecode",
+      "short_description": "Generated instruction sequence failed validation.",
+      "long_description": "Validator rejected produced module.",
+      "hints": [
+        "Report as bug",
+        "Check debug logs"
+      ]
+    },
+    "E0037": {
+      "title": "Invalid Bytecode At Source",
+      "short_description": "Bytecode validation failed at source location.",
+      "long_description": "Bytecode validation failed and mapped to source.",
+      "hints": [
+        "Report as bug",
+        "Try workaround"
+      ]
+    },
+    "E0038": {
+      "title": "Runtime Error During Compile",
+      "short_description": "Compile-time runtime evaluation failed.",
+      "long_description": "Compile-time work may require code execution.",
+      "hints": [
+        "Read wrapped msg",
+        "Check const init"
+      ]
+    },
+    "E0039": {
+      "title": "Runtime Error At Source Location",
+      "short_description": "Compile evaluation failed with exact location.",
+      "long_description": "Runtime error during compile with precise source range.",
+      "hints": [
+        "Check highlighted",
+        "Fix const init"
+      ]
+    },
+    "E0040": {
+      "title": "Unsupported Language Feature",
+      "short_description": "Compiler recognized unimplemented construct.",
+      "long_description": "Parser accepted but bytecode emitter not implemented.",
+      "hints": [
+        "Check support status",
+        "Try alternative"
+      ]
+    },
+    "E0041": {
+      "title": "Unsupported Feature At Location",
+      "short_description": "Exact location of unsupported construct.",
+      "long_description": "Exact expression/statement not yet handled.",
+      "hints": [
+        "Inspect line",
+        "Rewrite simpler"
+      ]
+    },
+    "E0042": {
+      "title": "Invalid Constitution Version",
+      "short_description": "Version failed semantic version parsing.",
+      "long_description": "Version string could not be parsed.",
+      "hints": [
+        "Use MAJOR.MINOR.PATCH",
+        "Avoid v prefix"
+      ]
+    },
+    "E0043": {
+      "title": "Law Not In Constitution",
+      "short_description": "Tried to access non-existent law.",
+      "long_description": "constitution.law() requires law to exist.",
+      "hints": [
+        "Check with .laws()",
+        "Verify version"
+      ]
+    },
+    "E0044": {
+      "title": "No Previous Constitution Version",
+      "short_description": "Requested predecessor at first version.",
+      "long_description": "First published version has no parent.",
+      "hints": [
+        "Use has_previous_version",
+        "Treat as terminator"
+      ]
+    },
+    "E0045": {
+      "title": "Constitution Not Registered",
+      "short_description": "Looked up constitution by non-existent name.",
+      "long_description": "Name resolution failed for constitution lookup.",
+      "hints": [
+        "Register with add_constitution",
+        "Check spelling"
+      ]
+    },
+    "E0046": {
+      "title": "Conversation Has No Messages",
+      "short_description": "Operation attempted on empty conversation.",
+      "long_description": "Many AI features require at least one message.",
+      "hints": [
+        "Add a message",
+        "Use system prompt"
+      ]
+    },
+    "E0047": {
+      "title": "Conversation I/O Error",
+      "short_description": "Failed to read/write conversation store.",
+      "long_description": "OS error occurred during persistence.",
+      "hints": [
+        "Check directory",
+        "Check disk space"
+      ]
+    },
+    "E0048": {
+      "title": "Conversation Serialization Failed",
+      "short_description": "Failed to encode/decode conversation.",
+      "long_description": "Suspicious messages or schema change.",
+      "hints": [
+        "Run .migrate()",
+        "Check backup"
+      ]
+    },
+    "E0049": {
+      "title": "LLM Budget Exceeded",
+      "short_description": "LLM call blocked - would exceed budget.",
+      "long_description": "HudHudScript tracks spend and prevents over-budget.",
+      "hints": [
+        "Increase budget",
+        "Use cheaper model",
+        "Shorten context"
+      ]
+    },
+    "E0050": {
+      "title": "No Pricing For Model",
+      "short_description": "Cost engine has no pricing data.",
+      "long_description": "Model name not found in pricing table.",
+      "hints": [
+        "Add to pricing.toml",
+        "Check spelling"
+      ]
+    },
+    "E0021": {
+      "title": "Prekoračenje kvote keša",
+      "short_description": "E0021 error - professional translation in progress",
+      "long_description": "Detailed description for E0021 will be added.",
+      "hints": [
+        "Check documentation",
+        "Review error context"
+      ]
+    },
+    "E0022": {
+      "title": "Zakon nedostaje u kešu",
+      "short_description": "E0022 error - professional translation in progress",
+      "long_description": "Detailed description for E0022 will be added.",
+      "hints": [
+        "Check documentation",
+        "Review error context"
+      ]
+    },
+    "E0023": {
+      "title": "Greška serijalizacije keša",
+      "short_description": "E0023 error - professional translation in progress",
+      "long_description": "Detailed description for E0023 will be added.",
+      "hints": [
+        "Check documentation",
+        "Review error context"
+      ]
+    },
+    "E0024": {
+      "title": "Greška U/I kataloga",
+      "short_description": "E0024 error - professional translation in progress",
+      "long_description": "Detailed description for E0024 will be added.",
+      "hints": [
+        "Check documentation",
+        "Review error context"
+      ]
+    },
+    "E0025": {
+      "title": "Greška parsiranja JSON kataloga",
+      "short_description": "E0025 error - professional translation in progress",
+      "long_description": "Detailed description for E0025 will be added.",
+      "hints": [
+        "Check documentation",
+        "Review error context"
+      ]
+    },
+    "E0026": {
+      "title": "Greška parsiranja YAML kataloga",
+      "short_description": "E0026 error - professional translation in progress",
+      "long_description": "Detailed description for E0026 will be added.",
+      "hints": [
+        "Check documentation",
+        "Review error context"
+      ]
+    },
+    "E0027": {
+      "title": "Vijeće nije pronađeno u zajednici",
+      "short_description": "E0027 error - professional translation in progress",
+      "long_description": "Detailed description for E0027 will be added.",
+      "hints": [
+        "Check documentation",
+        "Review error context"
+      ]
+    },
+    "E0028": {
+      "title": "Vijeće već pridruženo zajednici",
+      "short_description": "E0028 error - professional translation in progress",
+      "long_description": "Detailed description for E0028 will be added.",
+      "hints": [
+        "Check documentation",
+        "Review error context"
+      ]
+    },
+    "E0029": {
+      "title": "Agent već član zajednice",
+      "short_description": "E0029 error - professional translation in progress",
+      "long_description": "Detailed description for E0029 will be added.",
+      "hints": [
+        "Check documentation",
+        "Review error context"
+      ]
+    },
+    "E0030": {
+      "title": "Resurs već registrovan u zajednici",
+      "short_description": "E0030 error - professional translation in progress",
+      "long_description": "Detailed description for E0030 will be added.",
+      "hints": [
+        "Check documentation",
+        "Review error context"
+      ]
+    },
+    "E0051": {
+      "title": "Nema unosa cijene za dobavljača",
+      "short_description": "Greška E0051 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0051",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0052": {
+      "title": "Agent vijeća nije pronađen",
+      "short_description": "Greška E0052 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0052",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0053": {
+      "title": "Vezujući ustav vijeća nedostaje",
+      "short_description": "Greška E0053 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0053",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0054": {
+      "title": "Agent već postoji u vijeću",
+      "short_description": "Greška E0054 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0054",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0055": {
+      "title": "Izvršenje odluke vijeća nije uspjelo",
+      "short_description": "Greška E0055 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0055",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0056": {
+      "title": "Nevažeća uloga u vijeću",
+      "short_description": "Greška E0056 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0056",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0057": {
+      "title": "Nema članova u vijeću",
+      "short_description": "Greška E0057 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0057",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0058": {
+      "title": "Vijeće nije pronađeno u registru",
+      "short_description": "Greška E0058 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0058",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0059": {
+      "title": "Isteklo vrijeme za odluku vijeća",
+      "short_description": "Greška E0059 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0059",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0060": {
+      "title": "Agent udara nije pronađen",
+      "short_description": "Greška E0060 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0060",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0061": {
+      "title": "Vezujući ustav udara nije pronađen",
+      "short_description": "Greška E0061 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0061",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0062": {
+      "title": "Pisanje aktuatora kontrolne petlje nije uspjelo",
+      "short_description": "Greška E0062 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0062",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0063": {
+      "title": "Čitanje promatrača kontrolne petlje nije uspjelo",
+      "short_description": "Greška E0063 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0063",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0064": {
+      "title": "Validacija politike kontrolne petlje nije uspjela",
+      "short_description": "Greška E0064 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0064",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0065": {
+      "title": "Izvršenje politike kontrolne petlje nije uspjelo",
+      "short_description": "Greška E0065 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0065",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0066": {
+      "title": "Čitanje senzora kontrolne petlje nije uspjelo",
+      "short_description": "Greška E0066 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0066",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0067": {
+      "title": "Politika kontrolne petlje nije promijenila stanje",
+      "short_description": "Greška E0067 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0067",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0068": {
+      "title": "Povratna informacija aktuatora nije uspjela",
+      "short_description": "Greška E0068 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0068",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0069": {
+      "title": "Datoteka senzora kontrolne petlje nije pronađena",
+      "short_description": "Greška E0069 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0069",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0070": {
+      "title": "Zavisnost nije pronađena",
+      "short_description": "Greška E0070 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0070",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0071": {
+      "title": "Nevažeća zavisnost",
+      "short_description": "Greška E0071 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0071",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0072": {
+      "title": "Cirkularna zavisnost",
+      "short_description": "Greška E0072 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0072",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0073": {
+      "title": "Čitanje paketa diska nije uspjelo",
+      "short_description": "Greška E0073 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0073",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0074": {
+      "title": "Dohvaćanje HTTP paketa nije uspjelo",
+      "short_description": "Greška E0074 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0074",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0075": {
+      "title": "Rješavanje paketa nije uspjelo",
+      "short_description": "Greška E0075 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0075",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0076": {
+      "title": "Zahtjev za verzijom se ne podudara",
+      "short_description": "Greška E0076 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0076",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0077": {
+      "title": "Parsiranje YAML paketa nije uspjelo",
+      "short_description": "Greška E0077 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0077",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0078": {
+      "title": "Manifest paketa nedostaje ili je nevažeći",
+      "short_description": "Greška E0078 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0078",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0079": {
+      "title": "Verzija paketa nije pronađena",
+      "short_description": "Greška E0079 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0079",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0080": {
+      "title": "Dvostruka zavisnost",
+      "short_description": "Greška E0080 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0080",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0081": {
+      "title": "Učitavanje okruženja nije uspjelo",
+      "short_description": "Greška E0081 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0081",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0082": {
+      "title": "Inspekcija okruženja nije uspjela",
+      "short_description": "Greška E0082 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0082",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0083": {
+      "title": "Cirkularna roditeljska referenca okruženja",
+      "short_description": "Greška E0083 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0083",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0084": {
+      "title": "Funkcija očekivana",
+      "short_description": "Greška E0084 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0084",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0085": {
+      "title": "Broj argumenata se ne podudara",
+      "short_description": "Greška E0085 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0085",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0086": {
+      "title": "Pristup svojstvu na ne-objektnom tipu",
+      "short_description": "Greška E0086 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0086",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0087": {
+      "title": "Nedefinisana varijabla ili svojstvo",
+      "short_description": "Greška E0087 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0087",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0088": {
+      "title": "Indeks izvan granica",
+      "short_description": "Greška E0088 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0088",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0089": {
+      "title": "Numerički rezultat izvan granica",
+      "short_description": "Greška E0089 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0089",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0090": {
+      "title": "Registracija slušača nije uspjela",
+      "short_description": "Greška E0090 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0090",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0091": {
+      "title": "Upravljanje otkrilo nepoznati aktiv",
+      "short_description": "Greška E0091 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0091",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0092": {
+      "title": "Upravljanje otkrilo nepoznatog agenta",
+      "short_description": "Greška E0092 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0092",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0093": {
+      "title": "Upravljanje otkrilo nepoznato vijeće",
+      "short_description": "Greška E0093 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0093",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0094": {
+      "title": "Upravljanje otkrilo nepoznatu povelju",
+      "short_description": "Greška E0094 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0094",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0095": {
+      "title": "Upravljanje otkrilo nepoznatu zajednicu",
+      "short_description": "Greška E0095 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0095",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0096": {
+      "title": "Operacija upravljanja otkrila nepoznati aktiv",
+      "short_description": "Greška E0096 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0096",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0097": {
+      "title": "Nevažeća operacija upravljanja",
+      "short_description": "Greška E0097 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0097",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0098": {
+      "title": "Prijelaz stanja upravljanja nije uspio",
+      "short_description": "Greška E0098 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0098",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0099": {
+      "title": "Trkačka stanja upravljanja",
+      "short_description": "Greška E0099 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0099",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0100": {
+      "title": "Pristup upravljanju odbijen",
+      "short_description": "Greška E0100 - profesionalni prijevod",
+      "long_description": "Detaljan opis za E0100",
+      "hints": [
+        "Provjerite dokumentaciju",
+        "Provjerite kontekst"
+      ]
+    },
+    "E0101": {
+      "title": "Unicode kodna tačka van opsega",
+      "short_description": "E0101 error",
+      "long_description": "Description for E0101",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0102": {
+      "title": "Izolirani surogat",
+      "short_description": "E0102 error",
+      "long_description": "Description for E0102",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0103": {
+      "title": "Nevažeća UTF-8 sekvenca",
+      "short_description": "E0103 error",
+      "long_description": "Description for E0103",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0104": {
+      "title": "Nevažeća escape sekvenca",
+      "short_description": "E0104 error",
+      "long_description": "Description for E0104",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0105": {
+      "title": "Nevažeći karakter",
+      "short_description": "E0105 error",
+      "long_description": "Description for E0105",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0106": {
+      "title": "Nevažeći kraj komentara",
+      "short_description": "E0106 error",
+      "long_description": "Description for E0106",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0107": {
+      "title": "Nevažeća regex zastavica",
+      "short_description": "E0107 error",
+      "long_description": "Description for E0107",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0108": {
+      "title": "Nevažeći regex",
+      "short_description": "E0108 error",
+      "long_description": "Description for E0108",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0109": {
+      "title": "Nevažeća backreference",
+      "short_description": "E0109 error",
+      "long_description": "Description for E0109",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0110": {
+      "title": "Prazna klasa karaktera",
+      "short_description": "E0110 error",
+      "long_description": "Description for E0110",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0111": {
+      "title": "Kvantifikator nakon kvantifikatora",
+      "short_description": "E0111 error",
+      "long_description": "Description for E0111",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0112": {
+      "title": "Nezatvorena grupa",
+      "short_description": "E0112 error",
+      "long_description": "Description for E0112",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0113": {
+      "title": "Opseg van granica",
+      "short_description": "E0113 error",
+      "long_description": "Description for E0113",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0114": {
+      "title": "Nema elementa prije kvantifikatora",
+      "short_description": "E0114 error",
+      "long_description": "Description for E0114",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0115": {
+      "title": "Nevažeći Unicode escape",
+      "short_description": "E0115 error",
+      "long_description": "Description for E0115",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0116": {
+      "title": "Nevažeći heksadecimalni escape",
+      "short_description": "E0116 error",
+      "long_description": "Description for E0116",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0117": {
+      "title": "Nevažeći escape kontrolnog karaktera",
+      "short_description": "E0117 error",
+      "long_description": "Description for E0117",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0118": {
+      "title": "Nevažeći naziv identifikatora",
+      "short_description": "E0118 error",
+      "long_description": "Description for E0118",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0119": {
+      "title": "Duplicirana imenovana grupa",
+      "short_description": "E0119 error",
+      "long_description": "Description for E0119",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0120": {
+      "title": "Imenovana grupa nije pronađena",
+      "short_description": "E0120 error",
+      "long_description": "Description for E0120",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0121": {
+      "title": "Nevažeća forward referenca",
+      "short_description": "E0121 error",
+      "long_description": "Description for E0121",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0122": {
+      "title": "Preveliko minimalno ponavljanje",
+      "short_description": "E0122 error",
+      "long_description": "Description for E0122",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0123": {
+      "title": "Nevažeća grana",
+      "short_description": "E0123 error",
+      "long_description": "Description for E0123",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0124": {
+      "title": "Nevažeći opseg u klasi",
+      "short_description": "E0124 error",
+      "long_description": "Description for E0124",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0125": {
+      "title": "Nevažeći escape u klasi",
+      "short_description": "E0125 error",
+      "long_description": "Description for E0125",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0126": {
+      "title": "Nevažeći tip naziva grupe",
+      "short_description": "E0126 error",
+      "long_description": "Description for E0126",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0127": {
+      "title": "Nevažeći uslov",
+      "short_description": "E0127 error",
+      "long_description": "Description for E0127",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0128": {
+      "title": "Nevažeći naziv svojstva",
+      "short_description": "E0128 error",
+      "long_description": "Description for E0128",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0129": {
+      "title": "Nevažeća vrijednost svojstva",
+      "short_description": "E0129 error",
+      "long_description": "Description for E0129",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0130": {
+      "title": "Nevažeća kombinacija zastavica",
+      "short_description": "E0130 error",
+      "long_description": "Description for E0130",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0131": {
+      "title": "Previše dug identifikator",
+      "short_description": "E0131 error",
+      "long_description": "Description for E0131",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0132": {
+      "title": "Previše duga niska",
+      "short_description": "E0132 error",
+      "long_description": "Description for E0132",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0133": {
+      "title": "Preveliki broj",
+      "short_description": "E0133 error",
+      "long_description": "Description for E0133",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0134": {
+      "title": "Previše duboka ugniježđenost",
+      "short_description": "E0134 error",
+      "long_description": "Description for E0134",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0135": {
+      "title": "Previše dug popis argumenata",
+      "short_description": "E0135 error",
+      "long_description": "Description for E0135",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0136": {
+      "title": "Preveliko tijelo funkcije",
+      "short_description": "E0136 error",
+      "long_description": "Description for E0136",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0137": {
+      "title": "Previše kompleksan regex uzorak",
+      "short_description": "E0137 error",
+      "long_description": "Description for E0137",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0138": {
+      "title": "Previše malo BigInt",
+      "short_description": "E0138 error",
+      "long_description": "Description for E0138",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0139": {
+      "title": "Previše veliko BigInt",
+      "short_description": "E0139 error",
+      "long_description": "Description for E0139",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0140": {
+      "title": "Statičko polje nije pronađeno",
+      "short_description": "E0140 error",
+      "long_description": "Description for E0140",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0141": {
+      "title": "Nedefinirani statički poziv",
+      "short_description": "E0141 error",
+      "long_description": "Description for E0141",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0142": {
+      "title": "Privatno polje nije pronađeno",
+      "short_description": "E0142 error",
+      "long_description": "Description for E0142",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0143": {
+      "title": "Privatna metoda nije pronađena",
+      "short_description": "E0143 error",
+      "long_description": "Description for E0143",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0144": {
+      "title": "Privatno statičko polje",
+      "short_description": "E0144 error",
+      "long_description": "Description for E0144",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0145": {
+      "title": "Privatna statička metoda",
+      "short_description": "E0145 error",
+      "long_description": "Description for E0145",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0146": {
+      "title": "Javno polje nije pronađeno",
+      "short_description": "E0146 error",
+      "long_description": "Description for E0146",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0147": {
+      "title": "Javna metoda nije pronađena",
+      "short_description": "E0147 error",
+      "long_description": "Description for E0147",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0148": {
+      "title": "Getter nije pronađen",
+      "short_description": "E0148 error",
+      "long_description": "Description for E0148",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0149": {
+      "title": "Setter nije pronađen",
+      "short_description": "E0149 error",
+      "long_description": "Description for E0149",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0150": {
+      "title": "Konstruktor nije pronađen",
+      "short_description": "E0150 error",
+      "long_description": "Description for E0150",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0151": {
+      "title": "Lanac nasljeđivanja predug",
+      "short_description": "E0151 error",
+      "long_description": "Description for E0151",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0152": {
+      "title": "Lanac opsega predug",
+      "short_description": "E0152 error",
+      "long_description": "Description for E0152",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0153": {
+      "title": "Zatvaranje preveliko",
+      "short_description": "E0153 error",
+      "long_description": "Description for E0153",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0154": {
+      "title": "Objektni literal preveliki",
+      "short_description": "E0154 error",
+      "long_description": "Description for E0154",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0155": {
+      "title": "Nizovni literal preveliki",
+      "short_description": "E0155 error",
+      "long_description": "Description for E0155",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0156": {
+      "title": "Mapa prevelika",
+      "short_description": "E0156 error",
+      "long_description": "Description for E0156",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0157": {
+      "title": "Set preveliki",
+      "short_description": "E0157 error",
+      "long_description": "Description for E0157",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0158": {
+      "title": "Lanac prototipa predug",
+      "short_description": "E0158 error",
+      "long_description": "Description for E0158",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0159": {
+      "title": "Lanac obećanja pre dug",
+      "short_description": "E0159 error",
+      "long_description": "Description for E0159",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0160": {
+      "title": "Async stek predubok",
+      "short_description": "E0160 error",
+      "long_description": "Description for E0160",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0161": {
+      "title": "Generator stek predubok",
+      "short_description": "E0161 error",
+      "long_description": "Description for E0161",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0162": {
+      "title": "Iterator previše kompleksan",
+      "short_description": "E0162 error",
+      "long_description": "Description for E0162",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0163": {
+      "title": "Previše simbola",
+      "short_description": "E0163 error",
+      "long_description": "Description for E0163",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0164": {
+      "title": "WeakMap prevelika",
+      "short_description": "E0164 error",
+      "long_description": "Description for E0164",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0165": {
+      "title": "WeakSet preveliki",
+      "short_description": "E0165 error",
+      "long_description": "Description for E0165",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0166": {
+      "title": "Proxy previše kompleksan",
+      "short_description": "E0166 error",
+      "long_description": "Description for E0166",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0167": {
+      "title": "Reflect operacija nije uspjela",
+      "short_description": "E0167 error",
+      "long_description": "Description for E0167",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0168": {
+      "title": "Intl objekt nevažeći",
+      "short_description": "E0168 error",
+      "long_description": "Description for E0168",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0169": {
+      "title": "Datum/vrijeme nevažeće",
+      "short_description": "E0169 error",
+      "long_description": "Description for E0169",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0170": {
+      "title": "Math greška domene",
+      "short_description": "E0170 error",
+      "long_description": "Description for E0170",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0171": {
+      "title": "JSON parse predubok",
+      "short_description": "E0171 error",
+      "long_description": "Description for E0171",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0172": {
+      "title": "JSON stringifikacija nije uspjela",
+      "short_description": "E0172 error",
+      "long_description": "Description for E0172",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0173": {
+      "title": "ArrayBuffer prevelik",
+      "short_description": "E0173 error",
+      "long_description": "Description for E0173",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0174": {
+      "title": "SharedArrayBuffer nije uspio",
+      "short_description": "E0174 error",
+      "long_description": "Description for E0174",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0175": {
+      "title": "TypedArray nevažeći",
+      "short_description": "E0175 error",
+      "long_description": "Description for E0175",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0176": {
+      "title": "DataView van granica",
+      "short_description": "E0176 error",
+      "long_description": "Description for E0176",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0177": {
+      "title": "WebAssembly nevažeći",
+      "short_description": "E0177 error",
+      "long_description": "Description for E0177",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0178": {
+      "title": "Cirkularna zavisnost modula",
+      "short_description": "E0178 error",
+      "long_description": "Description for E0178",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0179": {
+      "title": "Export modula nije uspio",
+      "short_description": "E0179 error",
+      "long_description": "Description for E0179",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0180": {
+      "title": "Import modula nije uspio",
+      "short_description": "E0180 error",
+      "long_description": "Description for E0180",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0181": {
+      "title": "Učitavanje modula nije uspjelo",
+      "short_description": "E0181 error",
+      "long_description": "Description for E0181",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0182": {
+      "title": "Evaluacija modula nije uspjela",
+      "short_description": "E0182 error",
+      "long_description": "Description for E0182",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0183": {
+      "title": "Instanciranje modula nije uspjelo",
+      "short_description": "E0183 error",
+      "long_description": "Description for E0183",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0184": {
+      "title": "Linkovanje modula nije uspjelo",
+      "short_description": "E0184 error",
+      "long_description": "Description for E0184",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0185": {
+      "title": "Izvor modula nevažeći",
+      "short_description": "E0185 error",
+      "long_description": "Description for E0185",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0186": {
+      "title": "Dinamički import nije uspio",
+      "short_description": "E0186 error",
+      "long_description": "Description for E0186",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0187": {
+      "title": "Top-level await nevažeći",
+      "short_description": "E0187 error",
+      "long_description": "Description for E0187",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0188": {
+      "title": "import.meta nevažeći",
+      "short_description": "E0188 error",
+      "long_description": "Description for E0188",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0189": {
+      "title": "Ime eksporta nevažeće",
+      "short_description": "E0189 error",
+      "long_description": "Description for E0189",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0190": {
+      "title": "Duplirani default eksport",
+      "short_description": "E0190 error",
+      "long_description": "Description for E0190",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0191": {
+      "title": "Imenovani eksport ne postoji",
+      "short_description": "E0191 error",
+      "long_description": "Description for E0191",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0192": {
+      "title": "Namespace eksport nevažeći",
+      "short_description": "E0192 error",
+      "long_description": "Description for E0192",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0193": {
+      "title": "Re-eksport nevažeći",
+      "short_description": "E0193 error",
+      "long_description": "Description for E0193",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0194": {
+      "title": "Star import nevažeći",
+      "short_description": "E0194 error",
+      "long_description": "Description for E0194",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0195": {
+      "title": "Metaproperty nevažeća",
+      "short_description": "E0195 error",
+      "long_description": "Description for E0195",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0196": {
+      "title": "new.target nevažeći",
+      "short_description": "E0196 error",
+      "long_description": "Description for E0196",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0197": {
+      "title": "Super poziv nevažeći",
+      "short_description": "E0197 error",
+      "long_description": "Description for E0197",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0198": {
+      "title": "Super svojstvo nevažeće",
+      "short_description": "E0198 error",
+      "long_description": "Description for E0198",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0199": {
+      "title": "Korištenje arguments izvan funkcije",
+      "short_description": "E0199 error",
+      "long_description": "Description for E0199",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0200": {
+      "title": "Korištenje eval izvan opsega",
+      "short_description": "E0200 error",
+      "long_description": "Description for E0200",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0201": {
+      "title": "with naredba zabranjena u striktnom režimu",
+      "short_description": "E0201 error",
+      "long_description": "Description for E0201",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0202": {
+      "title": "debugger naredba nije uspjela",
+      "short_description": "E0202 error",
+      "long_description": "Description for E0202",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0203": {
+      "title": "プロバイダー未設定",
+      "short_description": "E0203 error",
+      "long_description": "Detailed description for E0203",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0204": {
+      "title": "プロバイダー不明",
+      "short_description": "E0204 error",
+      "long_description": "Detailed description for E0204",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0205": {
+      "title": "トークン最適化失敗",
+      "short_description": "E0205 error",
+      "long_description": "Detailed description for E0205",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0206": {
+      "title": "シリアライズ失敗",
+      "short_description": "E0206 error",
+      "long_description": "Detailed description for E0206",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0207": {
+      "title": "レート制限超過",
+      "short_description": "E0207 error",
+      "long_description": "Detailed description for E0207",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0208": {
+      "title": "ツールレジストリ失敗",
+      "short_description": "E0208 error",
+      "long_description": "Detailed description for E0208",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0209": {
+      "title": "ツール発見失敗",
+      "short_description": "E0209 error",
+      "long_description": "Detailed description for E0209",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0210": {
+      "title": "ツール重複登録",
+      "short_description": "E0210 error",
+      "long_description": "Detailed description for E0210",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0211": {
+      "title": "ツールサーバー不明",
+      "short_description": "E0211 error",
+      "long_description": "Detailed description for E0211",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0212": {
+      "title": "ツール不明",
+      "short_description": "E0212 error",
+      "long_description": "Detailed description for E0212",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0213": {
+      "title": "ツールスキーマ無効",
+      "short_description": "E0213 error",
+      "long_description": "Detailed description for E0213",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0214": {
+      "title": "モジュール解決失敗",
+      "short_description": "E0214 error",
+      "long_description": "Detailed description for E0214",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0215": {
+      "title": "リソース発見失敗",
+      "short_description": "E0215 error",
+      "long_description": "Detailed description for E0215",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0216": {
+      "title": "リソースURI無効",
+      "short_description": "E0216 error",
+      "long_description": "Detailed description for E0216",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0217": {
+      "title": "リソース不明",
+      "short_description": "E0217 error",
+      "long_description": "Detailed description for E0217",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0218": {
+      "title": "リソース読み込み失敗",
+      "short_description": "E0218 error",
+      "long_description": "Detailed description for E0218",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0219": {
+      "title": "ロール定義無効",
+      "short_description": "E0219 error",
+      "long_description": "Detailed description for E0219",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0220": {
+      "title": "ロール権限不明",
+      "short_description": "E0220 error",
+      "long_description": "Detailed description for E0220",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0221": {
+      "title": "ロール不明",
+      "short_description": "E0221 error",
+      "long_description": "Detailed description for E0221",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0222": {
+      "title": "エージェント重複",
+      "short_description": "E0222 error",
+      "long_description": "Detailed description for E0222",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0223": {
+      "title": "エージェント不明",
+      "short_description": "E0223 error",
+      "long_description": "Detailed description for E0223",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0224": {
+      "title": "break文無効",
+      "short_description": "E0224 error",
+      "long_description": "Detailed description for E0224",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0225": {
+      "title": "呼び出し失敗",
+      "short_description": "E0225 error",
+      "long_description": "Detailed description for E0225",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0226": {
+      "title": "continue文無効",
+      "short_description": "E0226 error",
+      "long_description": "Detailed description for E0226",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0227": {
+      "title": "カスタムランタイムエラー",
+      "short_description": "E0227 error",
+      "long_description": "Detailed description for E0227",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0228": {
+      "title": "ゼロ除算",
+      "short_description": "E0228 error",
+      "long_description": "Detailed description for E0228",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0229": {
+      "title": "ランタイム実行失敗",
+      "short_description": "E0229 error",
+      "long_description": "Detailed description for E0229",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0230": {
+      "title": "憲法違反",
+      "short_description": "E0230 error",
+      "long_description": "Detailed description for E0230",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0231": {
+      "title": "定数代入",
+      "short_description": "E0231 error",
+      "long_description": "Detailed description for E0231",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0232": {
+      "title": "配列範囲外",
+      "short_description": "E0232 error",
+      "long_description": "Detailed description for E0232",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0233": {
+      "title": "無効なオペランド型",
+      "short_description": "E0233 error",
+      "long_description": "Detailed description for E0233",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0234": {
+      "title": "モジュールエラー",
+      "short_description": "E0234 error",
+      "long_description": "Detailed description for E0234",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0235": {
+      "title": "ガス不足",
+      "short_description": "E0235 error",
+      "long_description": "Detailed description for E0235",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0236": {
+      "title": "プロミス拒否",
+      "short_description": "E0236 error",
+      "long_description": "Detailed description for E0236",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0237": {
+      "title": "プロパティ不明",
+      "short_description": "E0237 error",
+      "long_description": "Detailed description for E0237",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0238": {
+      "title": "リソース失敗",
+      "short_description": "E0238 error",
+      "long_description": "Detailed description for E0238",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0239": {
+      "title": "return文無効",
+      "short_description": "E0239 error",
+      "long_description": "Detailed description for E0239",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0240": {
+      "title": "セキュリティ違反",
+      "short_description": "E0240 error",
+      "long_description": "Detailed description for E0240",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0241": {
+      "title": "スタックオーバーフロー",
+      "short_description": "E0241 error",
+      "long_description": "Detailed description for E0241",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0242": {
+      "title": "無効なランタイム状態",
+      "short_description": "E0242 error",
+      "long_description": "Detailed description for E0242",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0243": {
+      "title": "STM再試行制限超過",
+      "short_description": "E0243 error",
+      "long_description": "Detailed description for E0243",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0244": {
+      "title": "STMタイムアウト",
+      "short_description": "E0244 error",
+      "long_description": "Detailed description for E0244",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0245": {
+      "title": "タスク不明",
+      "short_description": "E0245 error",
+      "long_description": "Detailed description for E0245",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0246": {
+      "title": "未処理例外",
+      "short_description": "E0246 error",
+      "long_description": "Detailed description for E0246",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0247": {
+      "title": "ツール呼び出し失敗",
+      "short_description": "E0247 error",
+      "long_description": "Detailed description for E0247",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0248": {
+      "title": "ランタイム型不一致",
+      "short_description": "E0248 error",
+      "long_description": "Detailed description for E0248",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0249": {
+      "title": "Error E0249",
+      "short_description": "E0249 error",
+      "long_description": "Detailed description for E0249",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0250": {
+      "title": "Error E0250",
+      "short_description": "E0250 error",
+      "long_description": "Detailed description for E0250",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0251": {
+      "title": "Tanımsız değişken",
+      "short_description": "E0251 error",
+      "long_description": "Description for E0251",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0252": {
+      "title": "TDZ erişim",
+      "short_description": "E0252 error",
+      "long_description": "Description for E0252",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0253": {
+      "title": "Değişken zaten tanımlı",
+      "short_description": "E0253 error",
+      "long_description": "Description for E0253",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0254": {
+      "title": "yield jeneratör dışında",
+      "short_description": "E0254 error",
+      "long_description": "Description for E0254",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0255": {
+      "title": "Kum havuzu dosya erişimi reddedildi",
+      "short_description": "E0255 error",
+      "long_description": "Description for E0255",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0256": {
+      "title": "Kum havuzu yapılandırması geçersiz",
+      "short_description": "E0256 error",
+      "long_description": "Description for E0256",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0257": {
+      "title": "Kum havuzu ağ erişimi reddedildi",
+      "short_description": "E0257 error",
+      "long_description": "Description for E0257",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0258": {
+      "title": "Kum havuzu işlem yürütmesi reddedildi",
+      "short_description": "E0258 error",
+      "long_description": "Description for E0258",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0259": {
+      "title": "Kum havuzu kaynak limiti aşıldı",
+      "short_description": "E0259 error",
+      "long_description": "Description for E0259",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0260": {
+      "title": "Kum havuzu sistem çağrısı başarısız",
+      "short_description": "E0260 error",
+      "long_description": "Description for E0260",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0261": {
+      "title": "Beceri tanımı doğrulama başarısız",
+      "short_description": "E0261 error",
+      "long_description": "Description for E0261",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0262": {
+      "title": "Beceri tanımı YAML hatası",
+      "short_description": "E0262 error",
+      "long_description": "Description for E0262",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0263": {
+      "title": "Vektör deposu boyut uyuşmazlığı",
+      "short_description": "E0263 error",
+      "long_description": "Description for E0263",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0264": {
+      "title": "Vektör deposu yapılandırması geçersiz",
+      "short_description": "E0264 error",
+      "long_description": "Description for E0264",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0265": {
+      "title": "Depo anahtarıyla kayıt bulunamadı",
+      "short_description": "E0265 error",
+      "long_description": "Description for E0265",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0266": {
+      "title": "Vektör deposu kalıcılık hatası",
+      "short_description": "E0266 error",
+      "long_description": "Description for E0266",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0267": {
+      "title": "Metin akışı kanalı kapatıldı",
+      "short_description": "E0267 error",
+      "long_description": "Description for E0267",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0268": {
+      "title": "Metin akışı kod çözme hatası",
+      "short_description": "E0268 error",
+      "long_description": "Description for E0268",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0269": {
+      "title": "Metin akışı kodlama hatası",
+      "short_description": "E0269 error",
+      "long_description": "Description for E0269",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0270": {
+      "title": "Sürü ajan yürütme başarısız",
+      "short_description": "E0270 error",
+      "long_description": "Description for E0270",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0271": {
+      "title": "Ajan sürüde değil",
+      "short_description": "E0271 error",
+      "long_description": "Description for E0271",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0272": {
+      "title": "Ajan zaten sürüde",
+      "short_description": "E0272 error",
+      "long_description": "Description for E0272",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0273": {
+      "title": "Sürü başarı koşuluna ulaşamadı",
+      "short_description": "E0273 error",
+      "long_description": "Description for E0273",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0274": {
+      "title": "Sürüde ajan yok",
+      "short_description": "E0274 error",
+      "long_description": "Description for E0274",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0275": {
+      "title": "Sürü durum anahtarı bulunamadı",
+      "short_description": "E0275 error",
+      "long_description": "Description for E0275",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0276": {
+      "title": "Sürü yürütme zaman aşımı",
+      "short_description": "E0276 error",
+      "long_description": "Description for E0276",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0277": {
+      "title": "Adlandırılmış bütçe mevcut değil",
+      "short_description": "E0277 error",
+      "long_description": "Description for E0277",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0278": {
+      "title": "Tokenomik önbellek katmanı hatası",
+      "short_description": "E0278 error",
+      "long_description": "Description for E0278",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0279": {
+      "title": "ML maliyet tahminicisinde eğitim verisi yok",
+      "short_description": "E0279 error",
+      "long_description": "Description for E0279",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0280": {
+      "title": "Tokenomik yapılandırması geçersiz",
+      "short_description": "E0280 error",
+      "long_description": "Description for E0280",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0281": {
+      "title": "Tokenomik veritabanı arka ucu başarısız",
+      "short_description": "E0281 error",
+      "long_description": "Description for E0281",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0282": {
+      "title": "Federated Learning senkronizasyon başarısız",
+      "short_description": "E0282 error",
+      "long_description": "Description for E0282",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0283": {
+      "title": "Yeterli bütçe kalmadı",
+      "short_description": "E0283 error",
+      "long_description": "Description for E0283",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0284": {
+      "title": "Bütçe tutarı geçersiz",
+      "short_description": "E0284 error",
+      "long_description": "Description for E0284",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0285": {
+      "title": "Tokenomik dosya G/Ç hatası",
+      "short_description": "E0285 error",
+      "long_description": "Description for E0285",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0286": {
+      "title": "Maliyet modeli doğruluk eşiğinin altına düştü",
+      "short_description": "E0286 error",
+      "long_description": "Description for E0286",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0287": {
+      "title": "ML maliyet modeli iç hatası",
+      "short_description": "E0287 error",
+      "long_description": "Description for E0287",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0288": {
+      "title": "Maliyet modeli aşırı uyuyor",
+      "short_description": "E0288 error",
+      "long_description": "Description for E0288",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0289": {
+      "title": "Maliyet tahmini hesaplanamadı",
+      "short_description": "E0289 error",
+      "long_description": "Description for E0289",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0290": {
+      "title": "Tokenomik Redis arka ucu başarısız",
+      "short_description": "E0290 error",
+      "long_description": "Description for E0290",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0291": {
+      "title": "Pekiştirmeli öğrenme adımı başarısız",
+      "short_description": "E0291 error",
+      "long_description": "Description for E0291",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0292": {
+      "title": "Tokenomik değer serileştirme başarısız",
+      "short_description": "E0292 error",
+      "long_description": "Description for E0292",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0293": {
+      "title": "Tokenomik depolama arka ucu başarısız",
+      "short_description": "E0293 error",
+      "long_description": "Description for E0293",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0294": {
+      "title": "Sınıflandırılmamış tokenomik hatası",
+      "short_description": "E0294 error",
+      "long_description": "Description for E0294",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0295": {
+      "title": "Araç dağıtımı başarısız ama çalıştı",
+      "short_description": "E0295 error",
+      "long_description": "Description for E0295",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0296": {
+      "title": "Araç geçersiz argümanlar",
+      "short_description": "E0296 error",
+      "long_description": "Description for E0296",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0297": {
+      "title": "Araç çağrısı güvenlik politikası tarafından engellendi",
+      "short_description": "E0297 error",
+      "long_description": "Description for E0297",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0298": {
+      "title": "Araç girdisi anlamsal doğrulamadan başarısız",
+      "short_description": "E0298 error",
+      "long_description": "Description for E0298",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0299": {
+      "title": "STM'de await yasak",
+      "short_description": "E0299 error",
+      "long_description": "Description for E0299",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0300": {
+      "title": "Yinelenen değişken bildirimi",
+      "short_description": "E0300 error",
+      "long_description": "Description for E0300",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0301": {
+      "title": "Promise olmayan değerde await",
+      "short_description": "E0301 error",
+      "long_description": "Description for E0301",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0302": {
+      "title": "Dizinlenebilir olmayan türde dizinleme",
+      "short_description": "E0302 error",
+      "long_description": "Description for E0302",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0303": {
+      "title": "Olmayan alana üye erişimi",
+      "short_description": "E0303 error",
+      "long_description": "Description for E0303",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0304": {
+      "title": "İşlenen türleri için işleç tanımsız",
+      "short_description": "E0304 error",
+      "long_description": "Description for E0304",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0305": {
+      "title": "Beklenen ve gerçek arasında tip uyuşmazlığı",
+      "short_description": "E0305 error",
+      "long_description": "Description for E0305",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0306": {
+      "title": "Bildirimde tip uyuşmazlığı",
+      "short_description": "E0306 error",
+      "long_description": "Description for E0306",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0307": {
+      "title": "Tanımsız fonksiyon çağrısı",
+      "short_description": "E0307 error",
+      "long_description": "Description for E0307",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0308": {
+      "title": "Tanımsız değişken referansı",
+      "short_description": "E0308 error",
+      "long_description": "Description for E0308",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0309": {
+      "title": "Fonksiyon çağrısında yanlış argüman sayısı",
+      "short_description": "E0309 error",
+      "long_description": "Description for E0309",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0310": {
+      "title": "Özel doğrulama kuralı başarısız",
+      "short_description": "E0310 error",
+      "long_description": "Description for E0310",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0311": {
+      "title": "Değer geçersiz biçimde",
+      "short_description": "E0311 error",
+      "long_description": "Description for E0311",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0312": {
+      "title": "Değer geçersiz uzunlukta",
+      "short_description": "E0312 error",
+      "long_description": "Description for E0312",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0313": {
+      "title": "Gerekli şema alanı eksik",
+      "short_description": "E0313 error",
+      "long_description": "Description for E0313",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0314": {
+      "title": "Sayısal değer aralık dışında",
+      "short_description": "E0314 error",
+      "long_description": "Description for E0314",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0315": {
+      "title": "Değer desenle eşleşmiyor",
+      "short_description": "E0315 error",
+      "long_description": "Description for E0315",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0316": {
+      "title": "Girdi gerekli alan eksik",
+      "short_description": "E0316 error",
+      "long_description": "Description for E0316",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0317": {
+      "title": "Şema tip uyuşmazlığı",
+      "short_description": "E0317 error",
+      "long_description": "Description for E0317",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0318": {
+      "title": "Bilinmeyen şema tipi",
+      "short_description": "E0318 error",
+      "long_description": "Description for E0318",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0319": {
+      "title": "Dallanma adı zaten kullanımda",
+      "short_description": "E0319 error",
+      "long_description": "Description for E0319",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0320": {
+      "title": "Dal depoda bulunamadı",
+      "short_description": "E0320 error",
+      "long_description": "Description for E0320",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0321": {
+      "title": "VCS işleme izni yok",
+      "short_description": "E0321 error",
+      "long_description": "Description for E0321",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0322": {
+      "title": "Birleştirme çakışması",
+      "short_description": "E0322 error",
+      "long_description": "Description for E0322",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0323": {
+      "title": "VCS çıktısı ayrıştırma başarısız",
+      "short_description": "E0323 error",
+      "long_description": "Description for E0323",
+      "hints": [
+        "Check documentation"
+      ]
+    }
+  }
+}

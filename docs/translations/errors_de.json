@@ -1,0 +1,2707 @@
+{
+  "locale": "de",
+  "language": "Deutsch",
+  "errors": {
+    "E0001": {
+      "title": "Onay Zustandu Übergangi ungültig",
+      "short_description": "Eine Genehmigungsanforderung kann unter den Genehmigungs-Workflow-Regeln nicht von ihrem aktuellen Zustand in den angeforderten Zustand übergehen.",
+      "long_description": "Genehmigungsanforderungen folgen einer endlichen Zustandsmaschine: typischerweise Ausstehend → Genehmigt oder Ausstehend → Abgelehnt, mit Endzuständen, die nicht erneut betreten werden können. Dieser Fehler bedeutet, dass ein Aufrufer einen illegalen Übergang versucht hat, z.B. die Genehmigung einer bereits abgelehnten Anforderung oder die Wiedereröffnung einer zuvor gelösten Anforderung. Behebung durch Inspektion des aktuellen Status vor dem Übergang und Sicherstellung, dass zwei Aufrufer nicht um dieselbe Anforderung konkurrieren.",
+      "hints": [
+        "Holen Sie den aktuellen Genehmigungsstatus vor dem Aufruf von approve/deny ab",
+        "Behandeln Sie Genehmigt und Abgelehnt als terminal — niemals heraus transitionieren",
+        "Machen Sie Entscheidungsendpunkte idempotent, damit Wiederholungen sicher sind",
+        "Erstellen Sie eine neue Genehmigungsanforderung, wenn eine neue Entscheidung benötigt wird"
+      ]
+    },
+    "E0002": {
+      "title": "Onay isteği kimliği nicht gefunden",
+      "short_description": "Der Genehmigungsspeicher hat keinen Eintrag, der mit der bereitgestellten Anforderungs-ID übereinstimmt.",
+      "long_description": "Das Genehmigungs-Subsystem speichert Anforderungen anhand einer nicht-transparenten ID. Dieser Fehler bedeutet, dass diese ID unbekannt ist — sie wurde nie erstellt, ist abgelaufen und wurde als Müll gesammelt, oder gehört zu einem anderen Genehmigungsspeicher als dem, der abgefragt wird.",
+      "hints": [
+        "Überprüfen Sie, dass die ID von einem erfolgreichen approval::request()-Aufruf stammt",
+        "Überprüfen Sie, dass Anforderer und Genehmigender denselben Backend-Speicher teilen",
+        "Achten Sie auf ID-Abschneiden über JSON/DB/Grenzen hinweg",
+        "Bestätigen Sie, dass die Anforderung ihre TTL nicht überschritten und gelöscht wurde"
+      ]
+    },
+    "E0003": {
+      "title": "CLI argüman değeri ungültig",
+      "short_description": "Ein Befehlszeilenargument wurde mit einem Wert bereitgestellt, der seinen deklarierten Typ oder akzeptierten Satz nicht erfüllt.",
+      "long_description": "Der CLI-Parser hat das bereitgestellte Flag oder Positional erfolgreich abgeglichen, aber der angehängte Wert ist bei der Konvertierung oder Validierung fehlgeschlagen. Dies geschieht häufig, wenn ein numerisches Flag ein nicht-numerisches Token erhält, ein Enum-Style-Flag einen Namen außerhalb der erlaubten Liste erhält, oder ein Pfad-Flag eine Zeichenfolge erhält, die das Betriebssystem ablehnt.",
+      "hints": [
+        "Überprüfen Sie den erwarteten Typ mit `hhs <befehl> --help`",
+        "Zitieren Sie Werte, die Leerzeichen oder Shell-Metazeichen enthalten",
+        "Für Enum-Flags kopieren Sie die exakte Schreibweise aus --help Ausgabe",
+        "Überprüfen Sie numerische Bereiche — einige Flags akzeptieren nur positive Ganzzahlen"
+      ]
+    },
+    "E0004": {
+      "title": "Gerekli CLI argümanı sağlanmadı",
+      "short_description": "Ein als erforderlich markiertes Befehlszeilenargument vom aktiven Unterbefehl wurde vom Aufruf weggelassen.",
+      "long_description": "Jeder HudHudScript-Unterbefehl deklariert, welche Flags und Positionals obligatorisch sind. Wenn Sie einen Unterbefehl ohne eine dieser erforderlichen Eingaben aufrufen, hält der Parser vor dem Dispatch an und meldet den fehlenden Namen.",
+      "hints": [
+        "Führen Sie `hhs <unterbefehl> --help` aus, um alle erforderlichen Argumente zu sehen",
+        "Überprüfen Sie, ob der Wert stattdessen über Umgebungsvariable bereitgestellt werden kann",
+        "Überprüfen Sie, dass Sie den beabsichtigten Unterbefehl aufrufen",
+        "Verwenden Sie Shell-Verlauf nur nach Bestätigung, dass der vorherige Aufruf korrekt war"
+      ]
+    },
+    "E0005": {
+      "title": "Alt Befehl belirtilmedi",
+      "short_description": "Das CLI wurde ohne Auswahl eines Unterbefehls aufgerufen und keine Standardaktion ist für die nackte Binärdatei konfiguriert.",
+      "long_description": "`hhs` ist ein Multi-Tool: die meiste nützliche Arbeit geschieht über Unterbefehle wie run, build, deploy, lsp oder repl. Das Aufrufen der Binärdatei ohne Unterbefehl (und ohne globale Flag wie --version) lässt den Parser ohne eine Aktion zum Senden.",
+      "hints": [
+        "Führen Sie `hhs --help` aus, um alle verfügbaren Unterbefehle aufzulisten",
+        "Häufige Unterbefehle: run, build, deploy, lsp, repl",
+        "Verwenden Sie `hhs --version`, wenn Sie nur die Versionszeichenfolge wollten",
+        "Shell-Aliase, die Argumente entfernen, sind eine häufige Ursache"
+      ]
+    },
+    "E0006": {
+      "title": "Genel CLI ayrıştırma Fehlersı",
+      "short_description": "Der Argumentparser ist aus einem Grund fehlgeschlagen, der nicht in die spezifischeren CLI-Fehlerkategorien passt.",
+      "long_description": "Dies ist eine allgemeine Abfangvariante, die ausgegeben wird, wenn `hudhudscript-cli` auf ein Parsing-Problem außerhalb der bekannten Kategorien für unbekanntes Argument, fehlendes Erforderliches, fehlenden Unterbefehl oder ungültigen Wert stößt. Beispiele umfassen widersprüchliche Flag-Kombinationen, fehlerhafte UTF-8-Zeichen in argv oder interne `clap`-Fehler, die der Wrapper nicht klassifiziert hat.",
+      "hints": [
+        "Lesen Sie die eingebettete Nachricht — sie trägt die tatsächliche Ursache",
+        "Suchen Sie nach widersprüchlichen Flag-Paaren (z.B. --quiet und --verbose)",
+        "Überprüfen Sie LANG/LC_ALL, wenn Nicht-ASCII-Zeichen beteiligt sind",
+        "Reproduzieren Sie mit `--help`, nachdem Sie jeweils eine verdächtige Flag entfernt haben"
+      ]
+    },
+    "E0007": {
+      "title": "Tanımlanamayan CLI argümanı",
+      "short_description": "Der CLI-Parser ist auf ein Flag oder Positional gestoßen, das der aktive Unterbefehl nicht deklariert.",
+      "long_description": "Jeder Unterbefehl hat einen festen Satz akzeptierter Flags und Positionals. Wenn Sie etwas außerhalb dieses Satzes einreichen — sei es durch Tippfehler, veraltetes Tutorial oder Flag, das zu einem anderen Unterbefehl gehört — weigert sich der Parser zu erraten und meldet das problematische Token.",
+      "hints": [
+        "Führen Sie `hhs <unterbefehl> --help` aus, um die unterstützten Flags zu sehen",
+        "Überprüfen Sie auf Tippfehler — `--verbsoe` vs `--verbose`",
+        "Stellen Sie sicher, dass das Flag zum Unterbefehl gehört, den Sie eingeben",
+        "Lange Flags verwenden `--name`, kurze Flags verwenden `-n`"
+      ]
+    },
+    "E0008": {
+      "title": "Promise tutamacı çalışma zamanında nicht gefunden",
+      "short_description": "Die asynchrone Laufzeit konnte ein Promise nicht anhand seines Handles lokalisieren, normalerweise weil es bereits konsumiert oder nie registriert wurde.",
+      "long_description": "Die asynchrone Laufzeit hält ein Register lebender Promises, die durch ein internes Handle geschlüsselt sind. Als der Interpreter versuchte, ein Promise aufzulösen, abzulehnen oder darauf zu warten, fand die Laufzeit keinen Eintrag für das gegebene Handle. Dies bedeutet normalerweise, dass das Promise bereits gelöst und garbage-collected wurde, in einer anderen Laufzeitinstanz erstellt wurde, oder das Handle manipuliert oder beschädigt wurde.",
+      "hints": [
+        "Warten Sie nicht zweimal auf dasselbe Promise — das zweite Warten sieht kein Handle",
+        "Stellen Sie sicher, dass die asynchrone Laufzeit nicht vor dem Lösen des Promise zerstört wurde",
+        "Überprüfen Sie, dass Sie nicht Promises aus verschiedenen Laufzeitinstanzen vermischen",
+        "Vermeiden Sie das Speichern roher Handles über Suspensionspunkte hinweg"
+      ]
+    },
+    "E0009": {
+      "title": "Async çalışma zamanı dahili Fehlersı",
+      "short_description": "Der asynchrone Executor meldete einen internen Fehler beim Planen, Polling oder Ausführen einer Aufgabe bis zum Abschluss.",
+      "long_description": "Dies ist ein allgemeiner Fehler, der an die Oberfläche tritt, wenn die asynchrone Laufzeit selbst — nicht Benutzercode — auf einen Fehler stößt. Ursachen umfassen einen fallengelassenen Waker, einen panikerenden Future, Reaktor-I/O-Fehler oder eine Invariantenverletzung innerhalb des Executors.",
+      "hints": [
+        "Lesen Sie die eingebettete Nachricht — sie identifiziert den Teilfehler genau",
+        "Vermeiden Sie das Herunterfahren der asynchronen Laufzeit, während Aufgaben noch aktiv sind",
+        "Wenn durch einfachen Skriptcode ausgelöst, melden Sie einen Bug gegen hudhudscript-async",
+        "Überprüfen Sie Host-Logs auf Paniken von nativen Futures, die über FFI registriert wurden"
+      ]
+    },
+    "E0010": {
+      "title": "Async görev oluşturulamadı",
+      "short_description": "Die Laufzeit weigerte sich, eine neue asynchrone Aufgabe zu erstellen, typischerweise weil sie herunterfährt oder ihre Arbeitskapazität erschöpft hat.",
+      "long_description": "Wenn `async fn`-Aufrufe oder `spawn(...)`-Aufrufe eine neue Aufgabe erstellen, muss der Executor sie auf einem seiner Worker-Threads akzeptieren. Dieser Fehler wird zurückgegeben, wenn der Executor die Einreichung ablehnt — am häufigsten, weil das Herunterfahren bereits eingeleitet wurde, eine begrenzte Aufgabenwarteschlange voll ist, oder der Host eine Spawn-Quote auferlegt hat.",
+      "hints": [
+        "Rufen Sie `spawn` nicht von Shutdown-Hooks oder nach `runtime.stop()` auf",
+        "Drosseln Sie Produzenten, damit begrenzte Aufgabenwarteschlangen nicht überlaufen",
+        "Überprüfen Sie Sandbox/Embedder-Richtlinien, die die Anzahl gleichzeitiger Aufgaben begrenzen",
+        "Bevorzugen Sie das Beitreteng bestehender Aufgaben gegenüber unbegrenztem Fan-out"
+      ]
+    },
+    "E0011": {
+      "title": "UI köprüsü bağlantısını kaybetti",
+      "short_description": "Der Transport zwischen HudHudScript und dem UI-Host-Framework wurde nach einem erfolgreichen initialen Handshake unterbrochen.",
+      "long_description": "Die UI-Bridge in `hudhudscript-ui-core` hält einen langlebigen Kanal zum eingebetteten Framework (Tauri, Dioxus, Web-View usw.). Nach der Initialisierung tauschen beide Seiten Render-Befehle und Ereignis-Callbacks über diesen Kanal aus. Wenn der Kanal unerwartet geschlossen wird — normalerweise, weil das Host-Fenster zerstört wurde, die IPC-Pipe brach, oder der Framework-Prozess abstürzte — erhebt die Bridge diesen Fehler.",
+      "hints": [
+        "Überprüfen Sie, ob das Host-Fenster oder Web-View vom Benutzer geschlossen wurde",
+        "Überprüfen Sie Host-Prozess-Logs auf Abstürze um die Trennungszeit herum",
+        "Wickeln Sie langlaufende UI-Sitzungen in einen Supervisor ein, der die Bridge neu erstellt",
+        "Brechen Sie ausstehende UI-Wartungen ab, wenn dieser Fehler ausgelöst wird, um Lecks zu vermeiden"
+      ]
+    },
+    "E0012": {
+      "title": "Temel UI çerçevesi Fehlersı bildirdi",
+      "short_description": "Das Host-Framework gab einen Fehler zurück, während es eine von HudHudScript weitergeleitete Bridge-Anfrage bearbeitete.",
+      "long_description": "Wenn die Bridge einen Aufruf an Tauri, Dioxus, den Web-View oder jedes andere unterstützte Backend weiterleitet, kann dieses Backend die Anfrage aus eigenen Gründen ablehnen. Die Bridge wickelt die zugrunde liegende Nachricht wörtlich ein, damit Sie den frameworkspezifischen Kontext nicht verlieren, bevor Sie einen Fehler in HudHudScript annehmen.",
+      "hints": [
+        "Lesen Sie die eingebettete Nachricht — sie kommt wörtlich vom Host-Framework",
+        "Verwenden Sie Framework-spezifische Dokumentationen für den Fehlertext",
+        "Stellen Sie sicher, dass der Widget-Baum mit dem übereinstimmt, was das Framework erwartet",
+        "Reproduzieren Sie gegen eine minimale Szene, um den problematischen Aufruf zu isolieren"
+      ]
+    },
+    "E0013": {
+      "title": "UI köprüsü başlatma fehlgeschlagen",
+      "short_description": "Die Bridge konnte ihren Handshake mit dem ausgewählten UI-Framework während des Starts nicht vervollständigen.",
+      "long_description": "Die Initialisierung umfasst das Laden des Frameworks, das Zuweisen des Host-Fensters oder Web-View, und den Austausch der anfänglichen Fähigkeitsdeskriptoren mit HudHudScript. Jeder Fehler in dieser Sequenz fehlende native Abhängigkeit, verweigerte Berechtigung, ungültige Konfiguration, Port-Konflikt erscheint als `InitFailed`. Die Bridge ist noch nicht in den laufenden Zustand eingetreten, also wurden keine UI-Befehle gesendet.",
+      "hints": [
+        "Überprüfen Sie, dass nativen Abhängigkeiten für das ausgewählte Backend installiert sind",
+        "Stellen Sie sicher, dass die Binärdatei mit dem Framework-Feature gebaut wurde",
+        "Überprüfen Sie die eingebettete Nachricht auf OS-Level Berechtigungsprobleme",
+        "Versuchen Sie ein anderes Backend, um Plattform vs Konfiguration zu isolieren"
+      ]
+    },
+    "E0014": {
+      "title": "UI köprüsü render adımı fehlgeschlagen",
+      "short_description": "Das Host-Framework lehnte einen Render-Befehl ab, der von HudHudScript nach erfolgreicher Bridge-Initialisierung ausgegeben wurde.",
+      "long_description": "Render-Fehler treten während des tatsächlichen Zeichen- oder Layout-Durchlaufs auf ein ungültiges Zeichenobjekt, ein Knoten, der nicht in sein übergeordnetes Element passt, ein Shader-Kompilierungsfehler, oder ein Backend, das GPU-Ressourcen aufgebraucht hat. Die Bridge konvertiert das frameworkspezifische Versagen in diese einzelne Variante unter Beibehaltung der ursprünglichen Nachricht.",
+      "hints": [
+        "Suchen Sie nach unmöglichen Layout-Beschränkungen oder Knoten mit Größe Null",
+        "Überprüfen Sie den GPU-Speicher, wenn Shader oder große Texturen beteiligt sind",
+        "Reproduzieren Sie gegen einen minimalen Widget-Baum, um den Auslöser zu isolieren",
+        "Fügen Sie Fähigkeitsprüfungen hinzu, bevor Sie optionale Zeichenfunktionen aufrufen"
+      ]
+    },
+    "E0015": {
+      "title": "İstenen UI çerçevesi yerleşik değil",
+      "short_description": "Das Skript fragte ein UI-Framework an, für das diese HudHudScript-Binärdatei nicht kompiliert wurde.",
+      "long_description": "HudHudScript unterstützt mehrere UI-Backends hinter Cargo-Feature-Flags. Eine gegebene Binärdatei enthält nur die Backends, die zur Build-Zeit aktiviert wurden, so dass die Anforderung von Tauri von einem Build, der nur die Web-Bridge enthält — oder umgekehrt — diesen Fehler erzeugt. Dies ist eine Build-Zeit-Entscheidung, keine Laufzeit-Entscheidung.",
+      "hints": [
+        "Bauen Sie mit den entsprechenden `--features ui-tauri` (oder ähnlich) neu",
+        "Führen Sie `hhs --version` aus, um zu sehen, welche Backends kompiliert sind",
+        "Wechseln Sie das Skript, um auf ein bereits unterstütztes Backend zu zielen",
+        "Verwenden Sie einen Feature-Erkennungshelfer, bevor Sie ein optionales Backend anfordern"
+      ]
+    },
+    "E0016": {
+      "title": "Anayasa Cachete fehlt",
+      "short_description": "Der Cache konnte kein Verfassungsdokument mit dem angeforderten Identifikator finden.",
+      "long_description": "Verfassungen sind übergeordnete Governance-Dokumente in der HudHudScript-Cache-Hierarchie (Verfassung > Gesetz > Regel). Dieser Fehler wird ausgelöst, wenn nach einer Verfassungs-ID gesucht wird, die niemals eingefügt wurde, abgelaufen ist oder von einem anderen Autor gelöscht wurde.",
+      "hints": [
+        "Rufen Sie `cache.warm()` während des Starts auf, um Verfassungen vorzuladen",
+        "Verwenden Sie `cache.contains(id)` vor `get`, um das Werfen zu vermeiden",
+        "Stellen Sie sicher, dass die ID der Content-Hash ist, nicht ein Anzeigename",
+        "Überprüfen Sie, dass die Ablaufrichtlinie selten zugegriffene Stämme nicht entfernt"
+      ]
+    },
+    "E0017": {
+      "title": "Önbellek kaydı seri kaldırılamadı",
+      "short_description": "Ein gecachter BLOB konnte nicht zurück in seinen erwarteten getypten Wert dekodiert werden.",
+      "long_description": "Der Cache speichert Werte als serialisierte Bytes (bincode/JSON je nach Eintragstyp) und dekodiert sie beim Lesen. Dieser Fehler bedeutet, dass die Bytes erfolgreich abgerufen wurden, aber der Dekodierer sie abgelehnt hat — normalerweise weil sich das Schema zwischen Writer- und Reader-Versionen geändert hat."
+    },
+    "E0018": {
+      "title": "Aynı içerik zaten başka bir anahtar altında saklı",
+      "short_description": "Eine Einfügung wurde abgelehnt, weil identischer Inhalt bereits im Cache unter einer anderen ID existiert.",
+      "long_description": "Der Cache erzwingt inhaltsadressierte Deduplizierung: Zwei Einträge mit demselben Hash können nicht unter verschiedenen IDs koexistieren. Wenn Sie versuchen, bereits vorhandenen Inhalt hinzuzufügen, lehnt der Cache den Schreibvorgang ab und meldet sowohl die angeforderte als auch die vorhandene ID. Dies bedeutet normalerweise, dass Sie IDs manuell berechnen, anstatt den Cache den Inhalt für Sie hashen zu lassen."
+    },
+    "E0019": {
+      "title": "Farklı içerikler arasında Cache kimliği çakışması",
+      "short_description": "Zwei unterschiedliche Payloads hashten auf dieselbe Cache-ID, was auf einen Hash-Kollisions- oder manuellen ID-Wiederverwendung hinweist.",
+      "long_description": "Jeder Cache-Eintrag wird nach einem Content-Hash geschlüsselt. Eine Kollision bedeutet, dass dieselbe ID auf zwei verschiedene Byte-Sequenzen abbildet, was mit dem Standard-Kryptographie-Hash nicht passieren sollte, es sei denn, Sie liefern benutzerdefinierte IDs."
+    },
+    "E0020": {
+      "title": "Yasa Cachete fehlt",
+      "short_description": "Ein bestimmtes Gesetzdokument, das unter einer Verfassung referenziert wurde, konnte im Cache nicht lokalisiert werden.",
+      "long_description": "Gesetze leben eine Ebene unterhalb von Verfassungen in der Cache-Hierarchie. Dieser Fehler bedeutet, dass die übergeordnete Verfassung existieren könnte, aber die angeforderte Gesetzes-ID nicht vorhanden ist."
+    },
+    "E0021": {
+      "title": "Önbellek kotası überschritten",
+      "short_description": "Einfügen aufgrund Kapazitätskontingent abgelehnt.",
+      "long_description": "Cache erzwingt strenge Quote. Wenn voll, werden Schreibvorgänge abgelehnt.",
+      "hints": [
+        "Erhöhe max_bytes",
+        "Wechsle zu LRU-Richtlinie"
+      ]
+    },
+    "E0022": {
+      "title": "Kural Cachete fehlt",
+      "short_description": "Rechtsdokument nicht im Cache gefunden.",
+      "long_description": "Gesetze existieren eine Ebene unter Verfassungen. Gesetz-ID nicht vorhanden.",
+      "hints": [
+        "Gesetze auflisten",
+        "Kritische Gesetze anpinnen"
+      ]
+    },
+    "E0023": {
+      "title": "Önbellek serileştirme Fehlersı",
+      "short_description": "Wert konnte nicht codiert werden.",
+      "long_description": "Codierer lehnt nicht-serialisierbare Felder oder zirkuläre Strukturen ab.",
+      "hints": [
+        "#[serde(skip)] hinzufügen",
+        "Schließungen ersetzen"
+      ]
+    },
+    "E0024": {
+      "title": "Katalog G/Ç Fehlersı",
+      "short_description": "Lesen der Lokalisierungskatalogdatei fehlgeschlagen.",
+      "long_description": "Dateisystemfehler wie fehlender Pfad oder Zugriff verweigert.",
+      "hints": [
+        "Pfad überprüfen",
+        "Berechtigungen prüfen"
+      ]
+    },
+    "E0025": {
+      "title": "Katalog JSON ayrıştırma Fehlersı",
+      "short_description": "JSON-Katalog konnte nicht geparst werden.",
+      "long_description": "JSON-Datei syntaktisch ungültig.",
+      "hints": [
+        "Mit jq validieren",
+        "Strenges JSON ohne abschließende Kommas"
+      ]
+    },
+    "E0026": {
+      "title": "Katalog YAML ayrıştırma Fehlersı",
+      "short_description": "YAML-Katalog konnte nicht geparst werden.",
+      "long_description": "YAML ist leerzeichenempfindlich.",
+      "hints": [
+        "Tabs durch Leerzeichen ersetzen",
+        "Sonderzeichen zitieren"
+      ]
+    },
+    "E0027": {
+      "title": "Konsey toplulukta bulunmuyor",
+      "short_description": "Rat in nicht ihn hostender Gemeinschaft gesucht.",
+      "long_description": "Gemeinschaft führt Index angefügter Räte.",
+      "hints": [
+        "Anhänge prüfen",
+        "Groß-/Kleinschreibung prüfen"
+      ]
+    },
+    "E0028": {
+      "title": "Konsey zaten toplulukta ekli",
+      "short_description": "Versuch bereits angehängten Rat anzufügen.",
+      "long_description": "Ratnamen müssen innerhalb Gemeinschaft eindeutig sein.",
+      "hints": [
+        "Eindeutigen Namen verwenden",
+        "Zuerst abtrennen"
+      ]
+    },
+    "E0029": {
+      "title": "Ajan zaten topluluğun üyesi",
+      "short_description": "Versuch bereits Mitglied existierenden Agenten hinzuzufügen.",
+      "long_description": "Mitgliedschaft ist Menge - jede Agent-ID höchstens einmal.",
+      "hints": [
+        "Vorher is_member prüfen",
+        "Duplikate entfernen"
+      ]
+    },
+    "E0030": {
+      "title": "Kaynak zaten topluluğa kayıtlı",
+      "short_description": "Versuch Ressource mit bereits vergebenem Schlüssel zu registrieren.",
+      "long_description": "Ressourcenschlüssel müssen eindeutig sein.",
+      "hints": [
+        "Einzigartigen Schlüssel wählen",
+        "Alte zuerst entfernen"
+      ]
+    },
+    "E0031": {
+      "title": "Geçersiz topluluk yapılandırması",
+      "short_description": "Community config failed validation.",
+      "long_description": "Fields like cultural profile or quorum thresholds have problems.",
+      "hints": [
+        "Read message",
+        "Check quorum"
+      ]
+    },
+    "E0032": {
+      "title": "Ajan bu topluluğun üyesi değil",
+      "short_description": "Referenced non-existent agent ID.",
+      "long_description": "Member-targeted operations require current membership.",
+      "hints": [
+        "Use is_member",
+        "Check logs"
+      ]
+    },
+    "E0033": {
+      "title": "Kaynak anahtarı toplulukta kayıtlı değil",
+      "short_description": "Searched for resource with non-existent key.",
+      "long_description": "Resource not added to this community or removed.",
+      "hints": [
+        "Check addition",
+        "Use has_resource"
+      ]
+    },
+    "E0034": {
+      "title": "Derleyici genel Fehler",
+      "short_description": "Generic error not fitting specific category.",
+      "long_description": "Usually from half-implemented features or malformed AST.",
+      "hints": [
+        "Check location",
+        "Create repro"
+      ]
+    },
+    "E0035": {
+      "title": "Kaynak konumunda derleme Fehlersı",
+      "short_description": "Generic error tied to source location.",
+      "long_description": "Generic compile error with attached source range.",
+      "hints": [
+        "Open highlighted",
+        "Try rewrite"
+      ]
+    },
+    "E0036": {
+      "title": "Derleyici ungültig bayt kodu üretti",
+      "short_description": "Generated instruction sequence failed validation.",
+      "long_description": "Validator rejected produced module.",
+      "hints": [
+        "Report as bug",
+        "Check debug logs"
+      ]
+    },
+    "E0037": {
+      "title": "Belirli konumda ungültig bayt kodu",
+      "short_description": "Bytecode validation failed at source location.",
+      "long_description": "Bytecode validation failed and mapped to source.",
+      "hints": [
+        "Report as bug",
+        "Try workaround"
+      ]
+    },
+    "E0038": {
+      "title": "Derleme sırasında çalışma zamanı Fehlersı",
+      "short_description": "Compile-time runtime evaluation failed.",
+      "long_description": "Compile-time work may require code execution.",
+      "hints": [
+        "Read wrapped msg",
+        "Check const init"
+      ]
+    },
+    "E0039": {
+      "title": "Derleme sırasında kaynak konumunda çalışma zamanı Fehlersı",
+      "short_description": "Compile evaluation failed with exact location.",
+      "long_description": "Runtime error during compile with precise source range.",
+      "hints": [
+        "Check highlighted",
+        "Fix const init"
+      ]
+    },
+    "E0040": {
+      "title": "Dil özelliği henüz desteklenmiyor",
+      "short_description": "Compiler recognized unimplemented construct.",
+      "long_description": "Parser accepted but bytecode emitter not implemented.",
+      "hints": [
+        "Check support status",
+        "Try alternative"
+      ]
+    },
+    "E0041": {
+      "title": "Kaynak konumunda desteklenmeyen Eigenschaft",
+      "short_description": "Exact location of unsupported construct.",
+      "long_description": "Exact expression/statement not yet handled.",
+      "hints": [
+        "Inspect line",
+        "Rewrite simpler"
+      ]
+    },
+    "E0042": {
+      "title": "Geçersiz anayasa sürümü",
+      "short_description": "Version failed semantic version parsing.",
+      "long_description": "Version string could not be parsed.",
+      "hints": [
+        "Use MAJOR.MINOR.PATCH",
+        "Avoid v prefix"
+      ]
+    },
+    "E0043": {
+      "title": "Anayasada yasa mevcut değil",
+      "short_description": "Tried to access non-existent law.",
+      "long_description": "constitution.law() requires law to exist.",
+      "hints": [
+        "Check with .laws()",
+        "Verify version"
+      ]
+    },
+    "E0044": {
+      "title": "Anayasada önceki sürüm yok",
+      "short_description": "Requested predecessor at first version.",
+      "long_description": "First published version has no parent.",
+      "hints": [
+        "Use has_previous_version",
+        "Treat as terminator"
+      ]
+    },
+    "E0045": {
+      "title": "Anayasa kayıtlı değil",
+      "short_description": "Looked up constitution by non-existent name.",
+      "long_description": "Name resolution failed for constitution lookup.",
+      "hints": [
+        "Register with add_constitution",
+        "Check spelling"
+      ]
+    },
+    "E0046": {
+      "title": "Konuşmanın mesajı yok",
+      "short_description": "Operation attempted on empty conversation.",
+      "long_description": "Many AI features require at least one message.",
+      "hints": [
+        "Add a message",
+        "Use system prompt"
+      ]
+    },
+    "E0047": {
+      "title": "Konuşma G/Ç Fehlersı",
+      "short_description": "Failed to read/write conversation store.",
+      "long_description": "OS error occurred during persistence.",
+      "hints": [
+        "Check directory",
+        "Check disk space"
+      ]
+    },
+    "E0048": {
+      "title": "Konuşma serileştirme fehlgeschlagen",
+      "short_description": "Failed to encode/decode conversation.",
+      "long_description": "Suspicious messages or schema change.",
+      "hints": [
+        "Run .migrate()",
+        "Check backup"
+      ]
+    },
+    "E0049": {
+      "title": "LLM bütçesi überschritten",
+      "short_description": "LLM call blocked - would exceed budget.",
+      "long_description": "HudHudScript tracks spend and prevents over-budget.",
+      "hints": [
+        "Increase budget",
+        "Use cheaper model",
+        "Shorten context"
+      ]
+    },
+    "E0050": {
+      "title": "Model için fiyatlandırma yok",
+      "short_description": "Cost engine has no pricing data.",
+      "long_description": "Model name not found in pricing table.",
+      "hints": [
+        "Add to pricing.toml",
+        "Check spelling"
+      ]
+    },
+    "E0051": {
+      "title": "Kein Preiseintrag für Anbieter",
+      "short_description": "E0051 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0051",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0052": {
+      "title": "Rat-Agent nicht gefunden",
+      "short_description": "E0052 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0052",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0053": {
+      "title": "Bindende Verfassung des Rates fehlt",
+      "short_description": "E0053 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0053",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0054": {
+      "title": "Agent existiert bereits im Rat",
+      "short_description": "E0054 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0054",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0055": {
+      "title": "Ausführung des Beschlusses des Rates fehlgeschlagen",
+      "short_description": "E0055 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0055",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0056": {
+      "title": "Ungültige Rolle im Rat",
+      "short_description": "E0056 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0056",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0057": {
+      "title": "Keine Mitglieder im Rat",
+      "short_description": "E0057 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0057",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0058": {
+      "title": "Rat im Register nicht gefunden",
+      "short_description": "E0058 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0058",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0059": {
+      "title": "Zeitüberschreitung bei Entscheidung des Rates",
+      "short_description": "E0059 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0059",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0060": {
+      "title": "Putsch-Agent nicht gefunden",
+      "short_description": "E0060 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0060",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0061": {
+      "title": "Putsch-bindende Verfassung nicht gefunden",
+      "short_description": "E0061 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0061",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0062": {
+      "title": "Schreiben des Regelkreis-Aktuators fehlgeschlagen",
+      "short_description": "E0062 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0062",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0063": {
+      "title": "Lesen des Regelkreis-Beobachters fehlgeschlagen",
+      "short_description": "E0063 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0063",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0064": {
+      "title": "Regelkreis-Richtlinienvalidierung fehlgeschlagen",
+      "short_description": "E0064 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0064",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0065": {
+      "title": "Ausführung der Regelkreis-Richtlinie fehlgeschlagen",
+      "short_description": "E0065 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0065",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0066": {
+      "title": "Regelkreis-Sensorlesung fehlgeschlagen",
+      "short_description": "E0066 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0066",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0067": {
+      "title": "Regelkreis-Richtlinie änderte Zustand nicht",
+      "short_description": "E0067 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0067",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0068": {
+      "title": "Regelkreis-Aktuator-Rückkopplung fehlgeschlagen",
+      "short_description": "E0068 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0068",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0069": {
+      "title": "Regelkreis-Sensordatei nicht gefunden",
+      "short_description": "E0069 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0069",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0070": {
+      "title": "Abhängigkeit nicht gefunden",
+      "short_description": "E0070 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0070",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0071": {
+      "title": "Ungültige Abhängigkeit",
+      "short_description": "E0071 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0071",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0072": {
+      "title": "Zirkuläre Abhängigkeit",
+      "short_description": "E0072 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0072",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0073": {
+      "title": "Lesen des Datenträger-Pakets fehlgeschlagen",
+      "short_description": "E0073 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0073",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0074": {
+      "title": "HTTP-Paket-Abruf fehlgeschlagen",
+      "short_description": "E0074 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0074",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0075": {
+      "title": "Paketauflösung fehlgeschlagen",
+      "short_description": "E0075 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0075",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0076": {
+      "title": "Versionsanforderung stimmt nicht überein",
+      "short_description": "E0076 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0076",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0077": {
+      "title": "Paket-YAML-Parsing fehlgeschlagen",
+      "short_description": "E0077 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0077",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0078": {
+      "title": "Paketmanifest fehlt oder ungültig",
+      "short_description": "E0078 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0078",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0079": {
+      "title": "Paketversion nicht gefunden",
+      "short_description": "E0079 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0079",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0080": {
+      "title": "Doppelte Abhängigkeit",
+      "short_description": "E0080 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0080",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0081": {
+      "title": "Umgebungsladung fehlgeschlagen",
+      "short_description": "E0081 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0081",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0082": {
+      "title": "Umgebungsinspektion fehlgeschlagen",
+      "short_description": "E0082 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0082",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0083": {
+      "title": "Zyklische Umgebungselternreferenz",
+      "short_description": "E0083 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0083",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0084": {
+      "title": "Funktion erwartet",
+      "short_description": "E0084 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0084",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0085": {
+      "title": "Argumentanzahl stimmt nicht überein",
+      "short_description": "E0085 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0085",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0086": {
+      "title": "Eigenschaftszugriff auf Nicht-Objekt-Typ",
+      "short_description": "E0086 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0086",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0087": {
+      "title": "Undefinierte Variable oder Eigenschaft",
+      "short_description": "E0087 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0087",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0088": {
+      "title": "Index außerhalb des Bereichs",
+      "short_description": "E0088 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0088",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0089": {
+      "title": "Numerisches Ergebnis außerhalb des Bereichs",
+      "short_description": "E0089 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0089",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0090": {
+      "title": "Listener-Registrierung fehlgeschlagen",
+      "short_description": "E0090 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0090",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0091": {
+      "title": "Governance fand unbekanntes aktives Asset",
+      "short_description": "E0091 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0091",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0092": {
+      "title": "Governance fand unbekannten aktiven Agenten",
+      "short_description": "E0092 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0092",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0093": {
+      "title": "Governance fand unbekannten aktiven Rat",
+      "short_description": "E0093 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0093",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0094": {
+      "title": "Governance fand unbekannte aktive Verfassung",
+      "short_description": "E0094 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0094",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0095": {
+      "title": "Governance fand unbekannte aktive Gemeinschaft",
+      "short_description": "E0095 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0095",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0096": {
+      "title": "Governance-Operation fand unbekanntes Asset",
+      "short_description": "E0096 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0096",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0097": {
+      "title": "Ungültige Governance-Operation",
+      "short_description": "E0097 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0097",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0098": {
+      "title": "Governance-Zustandsübergang fehlgeschlagen",
+      "short_description": "E0098 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0098",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0099": {
+      "title": "Governance-Racebedingung",
+      "short_description": "E0099 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0099",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0100": {
+      "title": "Governance-Zugriff verweigert",
+      "short_description": "E0100 Fehler - professionelle Übersetzung",
+      "long_description": "Detaillierte Beschreibung für E0100",
+      "hints": [
+        "Dokumentation prüfen",
+        "Fehlerkontext überprüfen"
+      ]
+    },
+    "E0101": {
+      "title": "Unicode-Codepunkt außerhalb des Bereichs",
+      "short_description": "E0101 error - professional translation",
+      "long_description": "Detailed description for E0101 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0102": {
+      "title": "Einsames Surrogat",
+      "short_description": "E0102 error - professional translation",
+      "long_description": "Detailed description for E0102 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0103": {
+      "title": "Ungültige UTF-8-Sequenz",
+      "short_description": "E0103 error - professional translation",
+      "long_description": "Detailed description for E0103 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0104": {
+      "title": "Ungültige Escapesequenz",
+      "short_description": "E0104 error - professional translation",
+      "long_description": "Detailed description for E0104 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0105": {
+      "title": "Ungültiges Zeichen",
+      "short_description": "E0105 error - professional translation",
+      "long_description": "Detailed description for E0105 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0106": {
+      "title": "Ungültiger Kommentarende",
+      "short_description": "E0106 error - professional translation",
+      "long_description": "Detailed description for E0106 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0107": {
+      "title": "Ungültiges Regex-Flag",
+      "short_description": "E0107 error - professional translation",
+      "long_description": "Detailed description for E0107 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0108": {
+      "title": "Ungültiger Regex",
+      "short_description": "E0108 error - professional translation",
+      "long_description": "Detailed description for E0108 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0109": {
+      "title": "Ungültiger Backreference",
+      "short_description": "E0109 error - professional translation",
+      "long_description": "Detailed description for E0109 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0110": {
+      "title": "Leere Zeichenklasse",
+      "short_description": "E0110 error - professional translation",
+      "long_description": "Detailed description for E0110 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0111": {
+      "title": "Quantifikator nach Quantifikator",
+      "short_description": "E0111 error - professional translation",
+      "long_description": "Detailed description for E0111 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0112": {
+      "title": "Unvollständige Gruppe",
+      "short_description": "E0112 error - professional translation",
+      "long_description": "Detailed description for E0112 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0113": {
+      "title": "Bereich außerhalb des Bereichs",
+      "short_description": "E0113 error - professional translation",
+      "long_description": "Detailed description for E0113 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0114": {
+      "title": "Kein Element vor Quantifikator",
+      "short_description": "E0114 error - professional translation",
+      "long_description": "Detailed description for E0114 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0115": {
+      "title": "Ungültiger Unicode-Escape",
+      "short_description": "E0115 error - professional translation",
+      "long_description": "Detailed description for E0115 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0116": {
+      "title": "Ungültiger Hexadezimal-Escape",
+      "short_description": "E0116 error - professional translation",
+      "long_description": "Detailed description for E0116 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0117": {
+      "title": "Ungültiger Steuerzeichen-Escape",
+      "short_description": "E0117 error - professional translation",
+      "long_description": "Detailed description for E0117 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0118": {
+      "title": "Ungültiger Bezeichnername",
+      "short_description": "E0118 error - professional translation",
+      "long_description": "Detailed description for E0118 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0119": {
+      "title": "Doppelte benannte Gruppe",
+      "short_description": "E0119 error - professional translation",
+      "long_description": "Detailed description for E0119 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0120": {
+      "title": "Benannte Gruppe nicht gefunden",
+      "short_description": "E0120 error - professional translation",
+      "long_description": "Detailed description for E0120 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0121": {
+      "title": "Ungültiger Vorwärtsverweis",
+      "short_description": "E0121 error - professional translation",
+      "long_description": "Detailed description for E0121 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0122": {
+      "title": "Zu große Mindestwiederholung",
+      "short_description": "E0122 error - professional translation",
+      "long_description": "Detailed description for E0122 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0123": {
+      "title": "Ungültiger Zweig",
+      "short_description": "E0123 error - professional translation",
+      "long_description": "Detailed description for E0123 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0124": {
+      "title": "Ungültiger Bereich in Klasse",
+      "short_description": "E0124 error - professional translation",
+      "long_description": "Detailed description for E0124 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0125": {
+      "title": "Ungültiger Escape in Klasse",
+      "short_description": "E0125 error - professional translation",
+      "long_description": "Detailed description for E0125 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0126": {
+      "title": "Ungültiger Gruppennamenstyp",
+      "short_description": "E0126 error - professional translation",
+      "long_description": "Detailed description for E0126 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0127": {
+      "title": "Ungültige Bedingung",
+      "short_description": "E0127 error - professional translation",
+      "long_description": "Detailed description for E0127 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0128": {
+      "title": "Ungültiger Eigenschaftsname",
+      "short_description": "E0128 error - professional translation",
+      "long_description": "Detailed description for E0128 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0129": {
+      "title": "Ungültiger Eigenschaftswert",
+      "short_description": "E0129 error - professional translation",
+      "long_description": "Detailed description for E0129 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0130": {
+      "title": "Ungültige Flag-Kombination",
+      "short_description": "E0130 error - professional translation",
+      "long_description": "Detailed description for E0130 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0131": {
+      "title": "Bezeichner zu lang",
+      "short_description": "E0131 error - professional translation",
+      "long_description": "Detailed description for E0131 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0132": {
+      "title": "Zeichenkette zu lang",
+      "short_description": "E0132 error - professional translation",
+      "long_description": "Detailed description for E0132 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0133": {
+      "title": "Zahl zu groß",
+      "short_description": "E0133 error - professional translation",
+      "long_description": "Detailed description for E0133 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0134": {
+      "title": "Zu tiefe Verschachtelung",
+      "short_description": "E0134 error - professional translation",
+      "long_description": "Detailed description for E0134 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0135": {
+      "title": "Zu lange Argumentenliste",
+      "short_description": "E0135 error - professional translation",
+      "long_description": "Detailed description for E0135 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0136": {
+      "title": "Zu großer Funktionskörper",
+      "short_description": "E0136 error - professional translation",
+      "long_description": "Detailed description for E0136 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0137": {
+      "title": "Zu komplexes Regex-Muster",
+      "short_description": "E0137 error - professional translation",
+      "long_description": "Detailed description for E0137 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0138": {
+      "title": "Zu kleines BigInt",
+      "short_description": "E0138 error - professional translation",
+      "long_description": "Detailed description for E0138 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0139": {
+      "title": "Zu großes BigInt",
+      "short_description": "E0139 error - professional translation",
+      "long_description": "Detailed description for E0139 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0140": {
+      "title": "Statische Eigenschaft nicht gefunden",
+      "short_description": "E0140 error - professional translation",
+      "long_description": "Detailed description for E0140 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0141": {
+      "title": "Undefinierter statischer Aufruf",
+      "short_description": "E0141 error - professional translation",
+      "long_description": "Detailed description for E0141 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0142": {
+      "title": "Privates Feld nicht gefunden",
+      "short_description": "E0142 error - professional translation",
+      "long_description": "Detailed description for E0142 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0143": {
+      "title": "Private Methode nicht gefunden",
+      "short_description": "E0143 error - professional translation",
+      "long_description": "Detailed description for E0143 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0144": {
+      "title": "Privates statisches Feld",
+      "short_description": "E0144 error - professional translation",
+      "long_description": "Detailed description for E0144 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0145": {
+      "title": "Private statische Methode",
+      "short_description": "E0145 error - professional translation",
+      "long_description": "Detailed description for E0145 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0146": {
+      "title": "Öffentliches Feld nicht gefunden",
+      "short_description": "E0146 error - professional translation",
+      "long_description": "Detailed description for E0146 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0147": {
+      "title": "Öffentliche Methode nicht gefunden",
+      "short_description": "E0147 error - professional translation",
+      "long_description": "Detailed description for E0147 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0148": {
+      "title": "Getter nicht gefunden",
+      "short_description": "E0148 error - professional translation",
+      "long_description": "Detailed description for E0148 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0149": {
+      "title": "Setter nicht gefunden",
+      "short_description": "E0149 error - professional translation",
+      "long_description": "Detailed description for E0149 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0150": {
+      "title": "Konstruktor nicht gefunden",
+      "short_description": "E0150 error - professional translation",
+      "long_description": "Detailed description for E0150 - to be completed",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0151": {
+      "title": "Vererbungskette zu lang",
+      "short_description": "E0151 error",
+      "long_description": "Description for E0151",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0152": {
+      "title": "Geltungsbereichskette zu lang",
+      "short_description": "E0152 error",
+      "long_description": "Description for E0152",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0153": {
+      "title": "Closure zu groß",
+      "short_description": "E0153 error",
+      "long_description": "Description for E0153",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0154": {
+      "title": "Objektliteral zu groß",
+      "short_description": "E0154 error",
+      "long_description": "Description for E0154",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0155": {
+      "title": "Array-Literal zu groß",
+      "short_description": "E0155 error",
+      "long_description": "Description for E0155",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0156": {
+      "title": "Map zu groß",
+      "short_description": "E0156 error",
+      "long_description": "Description for E0156",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0157": {
+      "title": "Set zu groß",
+      "short_description": "E0157 error",
+      "long_description": "Description for E0157",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0158": {
+      "title": "Prototypkette zu lang",
+      "short_description": "E0158 error",
+      "long_description": "Description for E0158",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0159": {
+      "title": "Promise-Kette zu lang",
+      "short_description": "E0159 error",
+      "long_description": "Description for E0159",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0160": {
+      "title": "Async-Stack zu tief",
+      "short_description": "E0160 error",
+      "long_description": "Description for E0160",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0161": {
+      "title": "Generator-Stack zu tief",
+      "short_description": "E0161 error",
+      "long_description": "Description for E0161",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0162": {
+      "title": "Iterator zu komplex",
+      "short_description": "E0162 error",
+      "long_description": "Description for E0162",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0163": {
+      "title": "Zu viele Symbole",
+      "short_description": "E0163 error",
+      "long_description": "Description for E0163",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0164": {
+      "title": "WeakMap zu groß",
+      "short_description": "E0164 error",
+      "long_description": "Description for E0164",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0165": {
+      "title": "WeakSet zu groß",
+      "short_description": "E0165 error",
+      "long_description": "Description for E0165",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0166": {
+      "title": "Proxy zu komplex",
+      "short_description": "E0166 error",
+      "long_description": "Description for E0166",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0167": {
+      "title": "Reflect-Operation fehlgeschlagen",
+      "short_description": "E0167 error",
+      "long_description": "Description for E0167",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0168": {
+      "title": "Intl-Objekt ungültig",
+      "short_description": "E0168 error",
+      "long_description": "Description for E0168",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0169": {
+      "title": "Datum/Uhrzeit ungültig",
+      "short_description": "E0169 error",
+      "long_description": "Description for E0169",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0170": {
+      "title": "Math-Bereichsfehler",
+      "short_description": "E0170 error",
+      "long_description": "Description for E0170",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0171": {
+      "title": "JSON-Parse zu tief",
+      "short_description": "E0171 error",
+      "long_description": "Description for E0171",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0172": {
+      "title": "JSON-Stringifizierung fehlgeschlagen",
+      "short_description": "E0172 error",
+      "long_description": "Description for E0172",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0173": {
+      "title": "ArrayBuffer zu groß",
+      "short_description": "E0173 error",
+      "long_description": "Description for E0173",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0174": {
+      "title": "SharedArrayBuffer fehlgeschlagen",
+      "short_description": "E0174 error",
+      "long_description": "Description for E0174",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0175": {
+      "title": "TypedArray ungültig",
+      "short_description": "E0175 error",
+      "long_description": "Description for E0175",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0176": {
+      "title": "DataView außerhalb der Grenzen",
+      "short_description": "E0176 error",
+      "long_description": "Description for E0176",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0177": {
+      "title": "WebAssembly ungültig",
+      "short_description": "E0177 error",
+      "long_description": "Description for E0177",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0178": {
+      "title": "Zyklische Modulabhängigkeit",
+      "short_description": "E0178 error",
+      "long_description": "Description for E0178",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0179": {
+      "title": "Modul-Export fehlgeschlagen",
+      "short_description": "E0179 error",
+      "long_description": "Description for E0179",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0180": {
+      "title": "Modul-Import fehlgeschlagen",
+      "short_description": "E0180 error",
+      "long_description": "Description for E0180",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0181": {
+      "title": "Modul-Laden fehlgeschlagen",
+      "short_description": "E0181 error",
+      "long_description": "Description for E0181",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0182": {
+      "title": "Modul-Auswertung fehlgeschlagen",
+      "short_description": "E0182 error",
+      "long_description": "Description for E0182",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0183": {
+      "title": "Modul-Instanziierung fehlgeschlagen",
+      "short_description": "E0183 error",
+      "long_description": "Description for E0183",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0184": {
+      "title": "Modul-Verknüpfung fehlgeschlagen",
+      "short_description": "E0184 error",
+      "long_description": "Description for E0184",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0185": {
+      "title": "Modulquelle ungültig",
+      "short_description": "E0185 error",
+      "long_description": "Description for E0185",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0186": {
+      "title": "Dynamischer Import fehlgeschlagen",
+      "short_description": "E0186 error",
+      "long_description": "Description for E0186",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0187": {
+      "title": "Top-Level-await ungültig",
+      "short_description": "E0187 error",
+      "long_description": "Description for E0187",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0188": {
+      "title": "import.meta ungültig",
+      "short_description": "E0188 error",
+      "long_description": "Description for E0188",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0189": {
+      "title": "Exportname ungültig",
+      "short_description": "E0189 error",
+      "long_description": "Description for E0189",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0190": {
+      "title": "Doppelter Standardexport",
+      "short_description": "E0190 error",
+      "long_description": "Description for E0190",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0191": {
+      "title": "Benannter Export existiert nicht",
+      "short_description": "E0191 error",
+      "long_description": "Description for E0191",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0192": {
+      "title": "Namespace-Export ungültig",
+      "short_description": "E0192 error",
+      "long_description": "Description for E0192",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0193": {
+      "title": "Re-Export ungültig",
+      "short_description": "E0193 error",
+      "long_description": "Description for E0193",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0194": {
+      "title": "Stern-Import ungültig",
+      "short_description": "E0194 error",
+      "long_description": "Description for E0194",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0195": {
+      "title": "Metaproperty ungültig",
+      "short_description": "E0195 error",
+      "long_description": "Description for E0195",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0196": {
+      "title": "new.target ungültig",
+      "short_description": "E0196 error",
+      "long_description": "Description for E0196",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0197": {
+      "title": "Super-Aufruf ungültig",
+      "short_description": "E0197 error",
+      "long_description": "Description for E0197",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0198": {
+      "title": "Super-Property ungültig",
+      "short_description": "E0198 error",
+      "long_description": "Description for E0198",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0199": {
+      "title": "Außerhalb der Funktion verwendet",
+      "short_description": "E0199 error",
+      "long_description": "Description for E0199",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0200": {
+      "title": "Außerhalb des Gültigkeitsbereichs verwendet",
+      "short_description": "E0200 error",
+      "long_description": "Description for E0200",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0201": {
+      "title": "with-Anweisung im strikten Modus verboten",
+      "short_description": "E0201 error",
+      "long_description": "Description for E0201",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0202": {
+      "title": "debugger-Anweisung fehlgeschlagen",
+      "short_description": "E0202 error",
+      "long_description": "Description for E0202",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0203": {
+      "title": "プロバイダー未設定",
+      "short_description": "E0203 error",
+      "long_description": "Detailed description for E0203",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0204": {
+      "title": "プロバイダー不明",
+      "short_description": "E0204 error",
+      "long_description": "Detailed description for E0204",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0205": {
+      "title": "トークン最適化失敗",
+      "short_description": "E0205 error",
+      "long_description": "Detailed description for E0205",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0206": {
+      "title": "シリアライズ失敗",
+      "short_description": "E0206 error",
+      "long_description": "Detailed description for E0206",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0207": {
+      "title": "レート制限超過",
+      "short_description": "E0207 error",
+      "long_description": "Detailed description for E0207",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0208": {
+      "title": "ツールレジストリ失敗",
+      "short_description": "E0208 error",
+      "long_description": "Detailed description for E0208",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0209": {
+      "title": "ツール発見失敗",
+      "short_description": "E0209 error",
+      "long_description": "Detailed description for E0209",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0210": {
+      "title": "ツール重複登録",
+      "short_description": "E0210 error",
+      "long_description": "Detailed description for E0210",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0211": {
+      "title": "ツールサーバー不明",
+      "short_description": "E0211 error",
+      "long_description": "Detailed description for E0211",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0212": {
+      "title": "ツール不明",
+      "short_description": "E0212 error",
+      "long_description": "Detailed description for E0212",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0213": {
+      "title": "ツールスキーマ無効",
+      "short_description": "E0213 error",
+      "long_description": "Detailed description for E0213",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0214": {
+      "title": "モジュール解決失敗",
+      "short_description": "E0214 error",
+      "long_description": "Detailed description for E0214",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0215": {
+      "title": "リソース発見失敗",
+      "short_description": "E0215 error",
+      "long_description": "Detailed description for E0215",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0216": {
+      "title": "リソースURI無効",
+      "short_description": "E0216 error",
+      "long_description": "Detailed description for E0216",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0217": {
+      "title": "リソース不明",
+      "short_description": "E0217 error",
+      "long_description": "Detailed description for E0217",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0218": {
+      "title": "リソース読み込み失敗",
+      "short_description": "E0218 error",
+      "long_description": "Detailed description for E0218",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0219": {
+      "title": "ロール定義無効",
+      "short_description": "E0219 error",
+      "long_description": "Detailed description for E0219",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0220": {
+      "title": "ロール権限不明",
+      "short_description": "E0220 error",
+      "long_description": "Detailed description for E0220",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0221": {
+      "title": "ロール不明",
+      "short_description": "E0221 error",
+      "long_description": "Detailed description for E0221",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0222": {
+      "title": "エージェント重複",
+      "short_description": "E0222 error",
+      "long_description": "Detailed description for E0222",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0223": {
+      "title": "エージェント不明",
+      "short_description": "E0223 error",
+      "long_description": "Detailed description for E0223",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0224": {
+      "title": "break文無効",
+      "short_description": "E0224 error",
+      "long_description": "Detailed description for E0224",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0225": {
+      "title": "呼び出し失敗",
+      "short_description": "E0225 error",
+      "long_description": "Detailed description for E0225",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0226": {
+      "title": "continue文無効",
+      "short_description": "E0226 error",
+      "long_description": "Detailed description for E0226",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0227": {
+      "title": "カスタムランタイムエラー",
+      "short_description": "E0227 error",
+      "long_description": "Detailed description for E0227",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0228": {
+      "title": "ゼロ除算",
+      "short_description": "E0228 error",
+      "long_description": "Detailed description for E0228",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0229": {
+      "title": "ランタイム実行失敗",
+      "short_description": "E0229 error",
+      "long_description": "Detailed description for E0229",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0230": {
+      "title": "憲法違反",
+      "short_description": "E0230 error",
+      "long_description": "Detailed description for E0230",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0231": {
+      "title": "定数代入",
+      "short_description": "E0231 error",
+      "long_description": "Detailed description for E0231",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0232": {
+      "title": "配列範囲外",
+      "short_description": "E0232 error",
+      "long_description": "Detailed description for E0232",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0233": {
+      "title": "無効なオペランド型",
+      "short_description": "E0233 error",
+      "long_description": "Detailed description for E0233",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0234": {
+      "title": "モジュールエラー",
+      "short_description": "E0234 error",
+      "long_description": "Detailed description for E0234",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0235": {
+      "title": "ガス不足",
+      "short_description": "E0235 error",
+      "long_description": "Detailed description for E0235",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0236": {
+      "title": "プロミス拒否",
+      "short_description": "E0236 error",
+      "long_description": "Detailed description for E0236",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0237": {
+      "title": "プロパティ不明",
+      "short_description": "E0237 error",
+      "long_description": "Detailed description for E0237",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0238": {
+      "title": "リソース失敗",
+      "short_description": "E0238 error",
+      "long_description": "Detailed description for E0238",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0239": {
+      "title": "return文無効",
+      "short_description": "E0239 error",
+      "long_description": "Detailed description for E0239",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0240": {
+      "title": "セキュリティ違反",
+      "short_description": "E0240 error",
+      "long_description": "Detailed description for E0240",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0241": {
+      "title": "スタックオーバーフロー",
+      "short_description": "E0241 error",
+      "long_description": "Detailed description for E0241",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0242": {
+      "title": "無効なランタイム状態",
+      "short_description": "E0242 error",
+      "long_description": "Detailed description for E0242",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0243": {
+      "title": "STM再試行制限超過",
+      "short_description": "E0243 error",
+      "long_description": "Detailed description for E0243",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0244": {
+      "title": "STMタイムアウト",
+      "short_description": "E0244 error",
+      "long_description": "Detailed description for E0244",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0245": {
+      "title": "タスク不明",
+      "short_description": "E0245 error",
+      "long_description": "Detailed description for E0245",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0246": {
+      "title": "未処理例外",
+      "short_description": "E0246 error",
+      "long_description": "Detailed description for E0246",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0247": {
+      "title": "ツール呼び出し失敗",
+      "short_description": "E0247 error",
+      "long_description": "Detailed description for E0247",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0248": {
+      "title": "ランタイム型不一致",
+      "short_description": "E0248 error",
+      "long_description": "Detailed description for E0248",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0249": {
+      "title": "Error E0249",
+      "short_description": "E0249 error",
+      "long_description": "Detailed description for E0249",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0250": {
+      "title": "Error E0250",
+      "short_description": "E0250 error",
+      "long_description": "Detailed description for E0250",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0251": {
+      "title": "Tanımsız değişken",
+      "short_description": "E0251 error",
+      "long_description": "Description for E0251",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0252": {
+      "title": "TDZ erişim",
+      "short_description": "E0252 error",
+      "long_description": "Description for E0252",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0253": {
+      "title": "Değişken zaten tanımlı",
+      "short_description": "E0253 error",
+      "long_description": "Description for E0253",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0254": {
+      "title": "yield jeneratör dışında",
+      "short_description": "E0254 error",
+      "long_description": "Description for E0254",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0255": {
+      "title": "Kum havuzu dosya erişimi reddedildi",
+      "short_description": "E0255 error",
+      "long_description": "Description for E0255",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0256": {
+      "title": "Kum havuzu yapılandırması geçersiz",
+      "short_description": "E0256 error",
+      "long_description": "Description for E0256",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0257": {
+      "title": "Kum havuzu ağ erişimi reddedildi",
+      "short_description": "E0257 error",
+      "long_description": "Description for E0257",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0258": {
+      "title": "Kum havuzu işlem yürütmesi reddedildi",
+      "short_description": "E0258 error",
+      "long_description": "Description for E0258",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0259": {
+      "title": "Kum havuzu kaynak limiti aşıldı",
+      "short_description": "E0259 error",
+      "long_description": "Description for E0259",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0260": {
+      "title": "Kum havuzu sistem çağrısı başarısız",
+      "short_description": "E0260 error",
+      "long_description": "Description for E0260",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0261": {
+      "title": "Beceri tanımı doğrulama başarısız",
+      "short_description": "E0261 error",
+      "long_description": "Description for E0261",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0262": {
+      "title": "Beceri tanımı YAML hatası",
+      "short_description": "E0262 error",
+      "long_description": "Description for E0262",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0263": {
+      "title": "Vektör deposu boyut uyuşmazlığı",
+      "short_description": "E0263 error",
+      "long_description": "Description for E0263",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0264": {
+      "title": "Vektör deposu yapılandırması geçersiz",
+      "short_description": "E0264 error",
+      "long_description": "Description for E0264",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0265": {
+      "title": "Depo anahtarıyla kayıt bulunamadı",
+      "short_description": "E0265 error",
+      "long_description": "Description for E0265",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0266": {
+      "title": "Vektör deposu kalıcılık hatası",
+      "short_description": "E0266 error",
+      "long_description": "Description for E0266",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0267": {
+      "title": "Metin akışı kanalı kapatıldı",
+      "short_description": "E0267 error",
+      "long_description": "Description for E0267",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0268": {
+      "title": "Metin akışı kod çözme hatası",
+      "short_description": "E0268 error",
+      "long_description": "Description for E0268",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0269": {
+      "title": "Metin akışı kodlama hatası",
+      "short_description": "E0269 error",
+      "long_description": "Description for E0269",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0270": {
+      "title": "Sürü ajan yürütme başarısız",
+      "short_description": "E0270 error",
+      "long_description": "Description for E0270",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0271": {
+      "title": "Ajan sürüde değil",
+      "short_description": "E0271 error",
+      "long_description": "Description for E0271",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0272": {
+      "title": "Ajan zaten sürüde",
+      "short_description": "E0272 error",
+      "long_description": "Description for E0272",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0273": {
+      "title": "Sürü başarı koşuluna ulaşamadı",
+      "short_description": "E0273 error",
+      "long_description": "Description for E0273",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0274": {
+      "title": "Sürüde ajan yok",
+      "short_description": "E0274 error",
+      "long_description": "Description for E0274",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0275": {
+      "title": "Sürü durum anahtarı bulunamadı",
+      "short_description": "E0275 error",
+      "long_description": "Description for E0275",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0276": {
+      "title": "Sürü yürütme zaman aşımı",
+      "short_description": "E0276 error",
+      "long_description": "Description for E0276",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0277": {
+      "title": "Adlandırılmış bütçe mevcut değil",
+      "short_description": "E0277 error",
+      "long_description": "Description for E0277",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0278": {
+      "title": "Tokenomik önbellek katmanı hatası",
+      "short_description": "E0278 error",
+      "long_description": "Description for E0278",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0279": {
+      "title": "ML maliyet tahminicisinde eğitim verisi yok",
+      "short_description": "E0279 error",
+      "long_description": "Description for E0279",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0280": {
+      "title": "Tokenomik yapılandırması geçersiz",
+      "short_description": "E0280 error",
+      "long_description": "Description for E0280",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0281": {
+      "title": "Tokenomik veritabanı arka ucu başarısız",
+      "short_description": "E0281 error",
+      "long_description": "Description for E0281",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0282": {
+      "title": "Federated Learning senkronizasyon başarısız",
+      "short_description": "E0282 error",
+      "long_description": "Description for E0282",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0283": {
+      "title": "Yeterli bütçe kalmadı",
+      "short_description": "E0283 error",
+      "long_description": "Description for E0283",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0284": {
+      "title": "Bütçe tutarı geçersiz",
+      "short_description": "E0284 error",
+      "long_description": "Description for E0284",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0285": {
+      "title": "Tokenomik dosya G/Ç hatası",
+      "short_description": "E0285 error",
+      "long_description": "Description for E0285",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0286": {
+      "title": "Maliyet modeli doğruluk eşiğinin altına düştü",
+      "short_description": "E0286 error",
+      "long_description": "Description for E0286",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0287": {
+      "title": "ML maliyet modeli iç hatası",
+      "short_description": "E0287 error",
+      "long_description": "Description for E0287",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0288": {
+      "title": "Maliyet modeli aşırı uyuyor",
+      "short_description": "E0288 error",
+      "long_description": "Description for E0288",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0289": {
+      "title": "Maliyet tahmini hesaplanamadı",
+      "short_description": "E0289 error",
+      "long_description": "Description for E0289",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0290": {
+      "title": "Tokenomik Redis arka ucu başarısız",
+      "short_description": "E0290 error",
+      "long_description": "Description for E0290",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0291": {
+      "title": "Pekiştirmeli öğrenme adımı başarısız",
+      "short_description": "E0291 error",
+      "long_description": "Description for E0291",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0292": {
+      "title": "Tokenomik değer serileştirme başarısız",
+      "short_description": "E0292 error",
+      "long_description": "Description for E0292",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0293": {
+      "title": "Tokenomik depolama arka ucu başarısız",
+      "short_description": "E0293 error",
+      "long_description": "Description for E0293",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0294": {
+      "title": "Sınıflandırılmamış tokenomik hatası",
+      "short_description": "E0294 error",
+      "long_description": "Description for E0294",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0295": {
+      "title": "Araç dağıtımı başarısız ama çalıştı",
+      "short_description": "E0295 error",
+      "long_description": "Description for E0295",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0296": {
+      "title": "Araç geçersiz argümanlar",
+      "short_description": "E0296 error",
+      "long_description": "Description for E0296",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0297": {
+      "title": "Araç çağrısı güvenlik politikası tarafından engellendi",
+      "short_description": "E0297 error",
+      "long_description": "Description for E0297",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0298": {
+      "title": "Araç girdisi anlamsal doğrulamadan başarısız",
+      "short_description": "E0298 error",
+      "long_description": "Description for E0298",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0299": {
+      "title": "STM'de await yasak",
+      "short_description": "E0299 error",
+      "long_description": "Description for E0299",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0300": {
+      "title": "Yinelenen değişken bildirimi",
+      "short_description": "E0300 error",
+      "long_description": "Description for E0300",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0301": {
+      "title": "Promise olmayan değerde await",
+      "short_description": "E0301 error",
+      "long_description": "Description for E0301",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0302": {
+      "title": "Dizinlenebilir olmayan türde dizinleme",
+      "short_description": "E0302 error",
+      "long_description": "Description for E0302",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0303": {
+      "title": "Olmayan alana üye erişimi",
+      "short_description": "E0303 error",
+      "long_description": "Description for E0303",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0304": {
+      "title": "İşlenen türleri için işleç tanımsız",
+      "short_description": "E0304 error",
+      "long_description": "Description for E0304",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0305": {
+      "title": "Beklenen ve gerçek arasında tip uyuşmazlığı",
+      "short_description": "E0305 error",
+      "long_description": "Description for E0305",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0306": {
+      "title": "Bildirimde tip uyuşmazlığı",
+      "short_description": "E0306 error",
+      "long_description": "Description for E0306",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0307": {
+      "title": "Tanımsız fonksiyon çağrısı",
+      "short_description": "E0307 error",
+      "long_description": "Description for E0307",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0308": {
+      "title": "Tanımsız değişken referansı",
+      "short_description": "E0308 error",
+      "long_description": "Description for E0308",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0309": {
+      "title": "Fonksiyon çağrısında yanlış argüman sayısı",
+      "short_description": "E0309 error",
+      "long_description": "Description for E0309",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0310": {
+      "title": "Özel doğrulama kuralı başarısız",
+      "short_description": "E0310 error",
+      "long_description": "Description for E0310",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0311": {
+      "title": "Değer geçersiz biçimde",
+      "short_description": "E0311 error",
+      "long_description": "Description for E0311",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0312": {
+      "title": "Değer geçersiz uzunlukta",
+      "short_description": "E0312 error",
+      "long_description": "Description for E0312",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0313": {
+      "title": "Gerekli şema alanı eksik",
+      "short_description": "E0313 error",
+      "long_description": "Description for E0313",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0314": {
+      "title": "Sayısal değer aralık dışında",
+      "short_description": "E0314 error",
+      "long_description": "Description for E0314",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0315": {
+      "title": "Değer desenle eşleşmiyor",
+      "short_description": "E0315 error",
+      "long_description": "Description for E0315",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0316": {
+      "title": "Girdi gerekli alan eksik",
+      "short_description": "E0316 error",
+      "long_description": "Description for E0316",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0317": {
+      "title": "Şema tip uyuşmazlığı",
+      "short_description": "E0317 error",
+      "long_description": "Description for E0317",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0318": {
+      "title": "Bilinmeyen şema tipi",
+      "short_description": "E0318 error",
+      "long_description": "Description for E0318",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0319": {
+      "title": "Dallanma adı zaten kullanımda",
+      "short_description": "E0319 error",
+      "long_description": "Description for E0319",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0320": {
+      "title": "Dal depoda bulunamadı",
+      "short_description": "E0320 error",
+      "long_description": "Description for E0320",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0321": {
+      "title": "VCS işleme izni yok",
+      "short_description": "E0321 error",
+      "long_description": "Description for E0321",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0322": {
+      "title": "Birleştirme çakışması",
+      "short_description": "E0322 error",
+      "long_description": "Description for E0322",
+      "hints": [
+        "Check documentation"
+      ]
+    },
+    "E0323": {
+      "title": "VCS çıktısı ayrıştırma başarısız",
+      "short_description": "E0323 error",
+      "long_description": "Description for E0323",
+      "hints": [
+        "Check documentation"
+      ]
+    }
+  }
+}

@@ -62,7 +62,7 @@ members = [
     "crates/hudhud-serial",
     "crates/hudpkg",
     "crates/hudhud-ffi",
-    "tests", "crates/hudhud-env", "crates/hudhud-os", "crates/hudhud-datetime", "crates/hudhud-linalg", "crates/hudhud-stats", "crates/hudhud-math", "crates/hudhud-regex", "crates/hudhud-scheduler", "crates/hudhud-url",
+    "hudhudscript-tests", "crates/hudhud-env", "crates/hudhud-os", "crates/hudhud-datetime", "crates/hudhud-linalg", "crates/hudhud-stats", "crates/hudhud-math", "crates/hudhud-regex", "crates/hudhud-scheduler", "crates/hudhud-url",
     "crates/hudhud-term",
     "crates/hudhud-download",
     "crates/hudhud-archive",
