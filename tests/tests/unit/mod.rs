@@ -1,0 +1,11 @@
+mod test_ast_visitor;
+mod test_builtins_crypto;
+mod test_errors_exception;
+mod test_exception_lib;
+mod test_parser_lang_directive;
+mod test_types_checker;
+mod test_utils_cache_strategy;
+mod test_utils_cache_trait;
+mod test_utils_error;
+mod test_utils_registry_trait;
+mod test_utils_simple_cache;

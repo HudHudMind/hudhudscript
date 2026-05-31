@@ -1,0 +1,9 @@
+mod declarations_test;
+mod fuzz_parser;
+mod test_bidi;
+mod test_cache;
+mod test_converters;
+mod test_declarations;
+mod test_error;
+mod test_interner;
+mod test_parse;

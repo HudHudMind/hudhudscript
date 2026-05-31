@@ -1,0 +1,10 @@
+mod test_chunking;
+mod test_document;
+mod test_embedding;
+mod test_hnsw;
+mod test_index;
+mod test_lib;
+mod test_provider;
+mod test_search;
+mod test_store;
+mod test_full_api;

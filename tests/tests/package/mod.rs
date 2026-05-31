@@ -1,0 +1,15 @@
+mod test_builder;
+mod test_cache;
+mod test_config;
+mod test_error;
+mod test_installer;
+mod test_lib;
+mod test_marketplace;
+mod test_publisher;
+mod test_rating;
+mod test_registry;
+mod test_resolver;
+mod test_runner;
+mod test_security;
+mod test_signature;
+mod test_update;

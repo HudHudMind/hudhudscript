@@ -1,0 +1,149 @@
+#![cfg(feature = "stack-vm-legacy")]
+#![cfg(feature = "stack-vm-legacy")]
+//! Comprehensive bytecode coverage tests
+//! Covers: Value16, Instruction variants, Bytecode, SymId, Repr, DynamicData
+
+use hudhudscript_bytecode::*;
+use hudhudscript_shared_builtins::interner::intern;
+use std::collections::HashMap;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Value16 construction — all types
+// ═══════════════════════════════════════════════════════════════════════════
+
+#[test] fn v16_null() { let v = Value16::null(); assert!(v.is_null()); }
+#[test] fn v16_bool_true() { let v = Value16::bool_(true); assert!(v.is_bool()); assert_eq!(v.as_bool(), Some(true)); }
+#[test] fn v16_bool_false() { let v = Value16::bool_(false); assert!(!v.as_bool().unwrap()); }
+#[test] fn v16_number_int() { let v = Value16::number(42.0); assert!(v.is_number()); assert_eq!(v.as_number(), Some(42.0)); }
+#[test] fn v16_number_neg() { let v = Value16::number(-3.14); assert_eq!(v.as_number(), Some(-3.14)); }
+#[test] fn v16_number_zero() { let v = Value16::number(0.0); assert_eq!(v.as_number(), Some(0.0)); }
+#[test] fn v16_string_empty() { let v = Value16::string(""); assert_eq!(v.as_str(), Some("")); }
+#[test] fn v16_string_unicode() { let v = Value16::string("merhaba dünya"); assert!(v.as_str().unwrap().contains("dünya")); }
+#[test] fn v16_string_turkish() { let v = Value16::string("değişken"); assert_eq!(v.as_str(), Some("değişken")); }
+#[test] fn v16_object_empty() { let v = Value16::object(HashMap::new()); assert!(v.is_object()); }
+#[test] fn v16_object_fields() { let mut m = HashMap::new(); m.insert("name".to_string(), Value16::string("Ali")); let v = Value16::object(m); assert!(v.is_object()); }
+#[test] fn v16_array_empty() { let v = Value16::array(vec![]); assert!(v.is_array()); }
+#[test] fn v16_array_numbers() { let v = Value16::array(vec![Value16::number(1.0), Value16::number(2.0)]); assert!(v.is_array()); }
+#[test] fn v16_array_mixed() { let v = Value16::array(vec![Value16::string("x"), Value16::number(1.0), Value16::bool_(true)]); assert!(v.is_array()); }
+#[test] fn v16_clone() { let v1 = Value16::number(42.0); let v2 = v1.clone(); assert_eq!(v1.as_number(), v2.as_number()); }
+#[test] fn v16_type_name() { assert!(Value16::null().type_name_str().contains("null")); assert!(Value16::string("x").type_name_str().contains("string")); }
+#[test] fn v16_display() { let v = Value16::number(3.14); assert!(format!("{}", v).contains("3.14")); }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SymId
+// ═══════════════════════════════════════════════════════════════════════════
+
+#[test] fn symid_intern() { let id = SymId(intern("hello").0); let id2 = SymId(intern("hello").0); assert_eq!(id.0, id2.0); }
+#[test] fn symid_different() { let a = SymId(intern("foo").0); let b = SymId(intern("bar").0); assert_ne!(a.0, b.0); }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Bytecode construction
+// ═══════════════════════════════════════════════════════════════════════════
+
+#[test] fn bc_new_empty() { let bc = Bytecode::new(); assert!(bc.instructions.is_empty()); }
+#[test] fn bc_push_instr() { let mut bc = Bytecode::new(); bc.instructions.push(Instruction::Return); assert_eq!(bc.instructions.len(), 1); }
+#[test] fn bc_constants_push() { let mut bc = Bytecode::new(); bc.constants.push(Value16::number(42.0)); assert_eq!(bc.constants.len(), 1); }
+#[test] fn bc_intern_symbol() { let mut bc = Bytecode::new(); let id1 = bc.intern_symbol("myVar"); let id2 = bc.intern_symbol("myVar"); assert_eq!(id1, id2); }
+#[test] fn bc_intern_different() { let mut bc = Bytecode::new(); let a = bc.intern_symbol("a"); let b = bc.intern_symbol("b"); assert_ne!(a, b); }
+#[test] fn bc_call_payload() { let mut bc = Bytecode::new(); let sym = SymId(intern("f").0); let payload = bc.add_call_payload(sym, 3); let _ = Instruction::Call(payload); }
+#[test] fn bc_opt_sym_some() { let mut bc = Bytecode::new(); let sym = SymId(intern("x").0); let p = bc.add_opt_sym_payload(Some(sym)); let _ = Instruction::LoadVar(p); }
+#[test] fn bc_opt_sym_none() { let mut bc = Bytecode::new(); let p = bc.add_opt_sym_payload(None); let _ = Instruction::LoadVar(p); }
+#[test] fn bc_two_sym() { let mut bc = Bytecode::new(); let a = bc.intern_symbol("A"); let b = bc.intern_symbol("B"); let p = bc.add_two_sym_payload(a, b); let _ = Instruction::MatchVariant(p); }
+#[test] fn bc_enum_decl() { let mut bc = Bytecode::new(); let p = EnumDeclPayload { name: SymId(intern("Color").0), variants: vec![SymId(intern("Red").0)] }; let idx = bc.add_enum_decl_payload(p); let _ = Instruction::EnumDecl(idx); }
+#[test] fn bc_class_decl() { let mut bc = Bytecode::new(); let p = ClassDeclPayload { name: SymId(intern("Point").0), parent: None, methods: vec![] }; let idx = bc.add_class_decl_payload(p); let _ = Instruction::ClassDecl(idx); }
+#[test] fn bc_class_decl_parent() { let mut bc = Bytecode::new(); let p = ClassDeclPayload { name: SymId(intern("Dog").0), parent: Some(SymId(intern("Animal").0)), methods: vec![SymId(intern("speak").0)] }; let idx = bc.add_class_decl_payload(p); let _ = Instruction::ClassDecl(idx); }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Instruction variants
+// ═══════════════════════════════════════════════════════════════════════════
+
+#[test] fn instr_return() { let _ = Instruction::Return; }
+#[test] fn instr_load_const() { let _ = Instruction::LoadConst(0); }
+#[test] fn instr_jump() { let _ = Instruction::Jump(5); }
+#[test] fn instr_jump_if_false() { let _ = Instruction::JumpIfFalse(3); }
+#[test] fn instr_jump_if_true() { let _ = Instruction::JumpIfTrue(2); }
+#[test] fn instr_pop() { let _ = Instruction::Pop; }
+#[test] fn instr_add() { let _ = Instruction::Add; }
+#[test] fn instr_sub() { let _ = Instruction::Sub; }
+#[test] fn instr_mul() { let _ = Instruction::Mul; }
+#[test] fn instr_div() { let _ = Instruction::Div; }
+#[test] fn instr_mod() { let _ = Instruction::Mod; }
+#[test] fn instr_neg() { let _ = Instruction::Neg; }
+#[test] fn instr_not() { let _ = Instruction::Not; }
+#[test] fn instr_eq() { let _ = Instruction::Eq; }
+#[test] fn instr_ne() { let _ = Instruction::Ne; }
+#[test] fn instr_lt() { let _ = Instruction::Lt; }
+#[test] fn instr_le() { let _ = Instruction::Le; }
+#[test] fn instr_gt() { let _ = Instruction::Gt; }
+#[test] fn instr_ge() { let _ = Instruction::Ge; }
+#[test] fn instr_and() { let _ = Instruction::And; }
+#[test] fn instr_or() { let _ = Instruction::Or; }
+#[test] fn instr_dup() { let _ = Instruction::Dup; }
+#[test] fn instr_make_array() { let _ = Instruction::MakeArray(3); }
+#[test] fn instr_make_object() { let _ = Instruction::MakeObject(2); }
+#[test] fn instr_index() { let _ = Instruction::Index; }
+#[test] fn instr_load_var() { let _ = Instruction::LoadVar(0); }
+#[test] fn instr_store_var() { let _ = Instruction::StoreVar(0); }
+#[test] fn instr_decl_var() { let _ = Instruction::DeclVar(0); }
+#[test] fn instr_call() { let _ = Instruction::Call(0); }
+#[test] fn instr_tail_call() { let _ = Instruction::TailCall(0); }
+#[test] fn instr_push_scope() { let _ = Instruction::PushScope; }
+#[test] fn instr_pop_scope() { let _ = Instruction::PopScope; }
+#[test] fn instr_print() { let _ = Instruction::Print; }
+#[test] fn instr_bind_var() { let _ = Instruction::BindVar(SymId(1)); }
+#[test] fn instr_break() { let _ = Instruction::Break; }
+#[test] fn instr_continue() { let _ = Instruction::Continue; }
+#[test] fn instr_push_try() { let _ = Instruction::PushTry(5); }
+#[test] fn instr_pop_try() { let _ = Instruction::PopTry; }
+#[test] fn instr_throw() { let _ = Instruction::Throw; }
+#[test] fn instr_push_finally() { let _ = Instruction::PushFinally(3); }
+#[test] fn instr_pop_finally() { let _ = Instruction::PopFinally; }
+#[test] fn instr_end_finally() { let _ = Instruction::EndFinally(0); }
+#[test] fn instr_spawn() { let _ = Instruction::Spawn(0); }
+#[test] fn instr_send() { let _ = Instruction::Send; }
+#[test] fn instr_receive() { let _ = Instruction::Receive(SymId(5)); }
+#[test] fn instr_require() { let _ = Instruction::Require; }
+#[test] fn instr_perform() { let _ = Instruction::Perform; }
+#[test] fn instr_remember() { let _ = Instruction::Remember(0); }
+#[test] fn instr_recall() { let _ = Instruction::Recall(0); }
+#[test] fn instr_forget() { let _ = Instruction::Forget(0); }
+#[test] fn instr_decl_store() { let _ = Instruction::DeclStore(0); }
+#[test] fn instr_new_instance() { let _ = Instruction::NewInstance(0); }
+#[test] fn instr_trait_check() { let _ = Instruction::TraitCheck(0); }
+#[test] fn instr_get_property() { let _ = Instruction::GetProperty(SymId(intern("prop").0)); }
+#[test] fn instr_set_property() { let _ = Instruction::SetProperty(SymId(intern("prop").0)); }
+#[test] fn instr_enum_decl() { let mut bc = Bytecode::new(); let p = EnumDeclPayload { name: SymId(intern("E").0), variants: vec![] }; let idx = bc.add_enum_decl_payload(p); let _ = Instruction::EnumDecl(idx); }
+#[test] fn instr_match_variant() { let mut bc = Bytecode::new(); let a = bc.intern_symbol("E"); let b = bc.intern_symbol("V"); let p = bc.add_two_sym_payload(a, b); let _ = Instruction::MatchVariant(p); }
+#[test] fn instr_for_in() { let _ = Instruction::ForIn(SymId(intern("iter").0)); }
+#[test] fn instr_iter_next() { let _ = Instruction::IterNext(10); }
+#[test] fn instr_store_const() { let _ = Instruction::StoreConst(0); }
+#[test] fn instr_store_typed() { let _ = Instruction::StoreTyped(0); }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Serialization (via serde)
+// ═══════════════════════════════════════════════════════════════════════════
+
+#[test] fn bc_serde_empty() { let bc = Bytecode::new(); let json = serde_json::to_string(&bc).unwrap(); let bc2: Bytecode = serde_json::from_str(&json).unwrap(); assert_eq!(bc2.instructions.len(), 0); }
+#[test] fn bc_serde_with_instr() { let mut bc = Bytecode::new(); bc.constants.push(Value16::number(1.0)); bc.instructions.push(Instruction::LoadConst(0)); bc.instructions.push(Instruction::Return); let json = serde_json::to_string(&bc).unwrap(); let bc2: Bytecode = serde_json::from_str(&json).unwrap(); assert_eq!(bc2.instructions.len(), 2); }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Repr / ReprTag
+// ═══════════════════════════════════════════════════════════════════════════
+
+#[test] fn repr_tag_variants() { assert_ne!(ReprTag::Null as u8, ReprTag::Bool as u8); assert_ne!(ReprTag::Number as u8, ReprTag::Int as u8); }
+#[test] fn repr_new() { let r = Repr(0); let _ = r.0; }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SourcePosition / DynamicData / DynamicObject / DynamicKind / PromiseState16
+// ═══════════════════════════════════════════════════════════════════════════
+
+#[test] fn source_pos() { let p = SourcePosition::new(10, 5); assert_eq!(p.line, 10); assert_eq!(p.column, 5); }
+#[test] fn dynamic_string() { let d = DynamicData::String("hello".to_string()); assert!(matches!(d, DynamicData::String(_))); }
+#[test] fn dynamic_array() { let d = DynamicData::Array(vec![Value16::number(1.0)]); assert!(matches!(d, DynamicData::Array(_))); }
+#[test] fn dynamic_object() { let d = DynamicData::Object(HashMap::new()); assert!(matches!(d, DynamicData::Object(_))); }
+#[test] fn dynamic_obj() { let _obj = DynamicObject { kind: DynamicKind::Object, data: DynamicData::String("x".into()) }; }
+#[test] fn dynamic_kind() { let _k = DynamicKind::Object; let _a = DynamicKind::Array; }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// End of file — compile-only tests for remaining types
+// ═══════════════════════════════════════════════════════════════════════════

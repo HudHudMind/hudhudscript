@@ -1,0 +1,84 @@
+#![cfg(feature = "stack-vm-legacy")]
+#![cfg(feature = "stack-vm-legacy")]
+use hudhudscript_bytecode::interner::intern;
+use hudhudscript_bytecode::{Bytecode, Instruction, PromiseState16, Value16};
+use hudhudscript_compiler::VM;
+
+fn as_number(v: &Value16) -> f64 {
+    v.as_number()
+        .or_else(|| v.as_int().map(|i| i as f64))
+        .unwrap_or_else(|| panic!("expected number, got {:?}", v))
+}
+
+fn as_string(v: &Value16) -> String {
+    v.as_string()
+        .unwrap_or_else(|| panic!("expected string, got {:?}", v))
+}
+
+#[test]
+fn test_vm_async_pending_await_resolves() {
+    let mut vm = VM::new();
+    let promise_id = "test-promise-1".to_string();
+    let (tx, rx) = std::sync::mpsc::channel::<Result<Value16, String>>();
+    vm.register_promise(promise_id.clone(), rx);
+
+    std::thread::spawn(move || {
+        let _ = tx.send(Ok(Value16::number(42.0)));
+    });
+
+    let mut bytecode = Bytecode::new();
+    let promise_idx =
+        bytecode.add_constant(Value16::promise(PromiseState16::AsyncPending(promise_id)));
+    bytecode.instructions = vec![
+        Instruction::LoadConst(promise_idx),
+        Instruction::Await,
+        Instruction::StoreVar(intern("result").0),
+    ];
+
+    vm.execute(&bytecode).expect("vm execute failed");
+    let result = vm.get_variable("result").expect("missing result");
+    assert_eq!(as_number(result), 42.0);
+}
+
+#[test]
+fn test_vm_actor_send_receive_roundtrip() {
+    let mut vm = VM::new();
+    let mut bytecode = Bytecode::new();
+    let msg_idx = bytecode.add_constant(Value16::string("hello"));
+    // CROSS-2c: Spawn now carries a u32 call_payloads index.
+    let spawn_idx = bytecode.add_call_payload("Worker".into(), 0);
+
+    bytecode.instructions = vec![
+        Instruction::Spawn(spawn_idx),
+        Instruction::StoreVar(intern("worker").0),
+        Instruction::LoadConst(msg_idx),
+        Instruction::LoadVar(intern("worker").0),
+        Instruction::Send,
+        //Pop removed (register VM),
+        Instruction::LoadVar(intern("worker").0),
+        Instruction::Receive("received".into()),
+    ];
+
+    vm.execute(&bytecode).expect("vm execute failed");
+    let received = vm.get_variable("received").expect("missing received");
+    assert_eq!(as_string(received), "hello".to_string());
+}
+
+#[test]
+fn test_vm_receive_rejects_non_actor_source() {
+    let mut vm = VM::new();
+    let mut bytecode = Bytecode::new();
+    let bad_source_idx = bytecode.add_constant(Value16::number(7.0));
+
+    bytecode.instructions = vec![
+        Instruction::LoadConst(bad_source_idx),
+        Instruction::Receive("msg".into()),
+    ];
+
+    let err = vm.execute(&bytecode).expect_err("expected receive to fail");
+    assert!(
+        err.to_string().contains("valid actor reference"),
+        "unexpected error: {}",
+        err
+    );
+}

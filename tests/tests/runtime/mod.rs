@@ -1,0 +1,16 @@
+mod core_integration_test;
+mod system_test;
+mod system_vm_test;
+mod test_agent;
+mod test_anthropic;
+mod test_deepseek;
+mod test_ollama;
+mod test_openai;
+mod test_persistence;
+mod test_perspective;
+mod test_provider;
+mod test_provider_inline;
+mod test_raii;
+mod test_response_cache;
+mod test_router;
+mod test_runtime;

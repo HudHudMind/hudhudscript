@@ -1,0 +1,204 @@
+#![cfg(feature = "stack-vm-legacy")]
+#![cfg(feature = "stack-vm-legacy")]
+#[cfg(test)]
+mod licm_tests {
+    //! PERF-48 (S3.2) — Unit tests for LICM hoisting.
+    //!
+    //! Exercise `loop_invariant_motion` directly on hand-built
+    //! instruction streams so we can verify the hoist prelude, slot
+    //! allocation, and jump-offset fix-up in isolation (the main
+    //! compiler path uses `OptimizationLevel::Basic` which skips LICM,
+    //! so integration-level parity tests would not otherwise cover
+    //! this code path).
+    //!
+    //! CROSS-2b: `PushLoop` now carries a `u32` payload-pool index; the
+    //! loop-start / loop-end operands live in `loop_payloads[idx]`.  The
+    //! semantic assertions (prelude_len shift) still apply — just
+    //! expressed as `loop_payloads[0].start` / `.end` instead of the
+    //! old `PushLoop(s, e)` inline fields.
+    use hudhudscript_bytecode::LoopPayload;
+    use hudhudscript_compiler::bytecode::Instruction;
+    use hudhudscript_compiler::optimizer::licm::loop_invariant_motion;
+
+    /// Base case: `LoadVar(x)` appears twice inside a loop body,
+    /// `x` is never written, no calls.  We expect the LoadVars to be
+    /// rewritten to `LoadLocal(0)` and a `LoadVar(x); DeclLocal(0)`
+    /// prelude spliced before the condition.
+    #[test]
+    fn licm_hoists_repeated_loadvar() {
+        // Pseudocode:
+        //   while (true) { /* LoadVar(x) twice */ }
+        //
+        // IP layout before optimization:
+        //   0: LoadConst(true)           — loop condition
+        //   1: JumpIfFalse(+7)           — exit to IP 8
+        //   2: PushLoop(payload#0)       — payload = {start:0, end:9}
+        //   3: LoadVar(x)
+        //   4: Pop
+        //   5: LoadVar(x)
+        //   6: Pop
+        //   7: PopLoop
+        //   8: Jump(-8)                  — back to condition
+        //   (end at 9)
+        let mut instrs = vec![
+            Instruction::LoadConst(0),   // 0
+            Instruction::JumpIfFalse(7), // 1 — 1+7=8
+            Instruction::PushLoop(0),    // 2
+            Instruction::LoadVar(42),    // 3
+            //Pop removed (register VM),            // 4
+            Instruction::LoadVar(42),    // 5
+            //Pop removed (register VM),            // 6
+            Instruction::PopLoop,        // 7
+            Instruction::Jump(-8),       // 8 — 8-8=0
+        ];
+        let mut payloads: Vec<LoopPayload> = vec![LoopPayload { start: 0, end: 9 }];
+        let mut sp: Vec<Option<(usize, usize)>> = vec![None; instrs.len()];
+        loop_invariant_motion(&mut instrs, &[], &mut payloads, &mut sp);
+
+        // After hoist, 2 prelude instructions (LoadVar + DeclLocal) are
+        // inserted at IP 0.  Everything shifts by 2.
+        // New layout:
+        //   0: LoadVar(42)         <- prelude
+        //   1: DeclLocal(0)        <- prelude
+        //   2: LoadConst(0)        <- old condition (was IP 0)
+        //   3: JumpIfFalse(7)      <- still +7 (same-side)
+        //   4: PushLoop(payload#0) <- payload.start=2, payload.end=11
+        //   5: LoadLocal(0)        <- was LoadVar(42)
+        //   6: Pop
+        //   7: LoadLocal(0)        <- was LoadVar(42)
+        //   8: Pop
+        //   9: PopLoop
+        //  10: Jump(-8)            <- back to condition at IP 2
+        assert_eq!(instrs.len(), 11, "expected 2 prelude instructions inserted");
+        assert!(
+            matches!(instrs[0], Instruction::LoadVar(42)),
+            "prelude[0] must LoadVar"
+        );
+        assert!(
+            matches!(instrs[1], Instruction::DeclLocal(0)),
+            "prelude[1] must DeclLocal(0)"
+        );
+        assert!(
+            matches!(instrs[2], Instruction::LoadConst(0)),
+            "condition shifted"
+        );
+        match instrs[3] {
+            Instruction::JumpIfFalse(o) => {
+                // jump site now at IP 3, target was IP 8 (old) → IP 10 (new).
+                // Both were after insertion point 0, so offset unchanged.
+                assert_eq!(o, 7, "same-side jump offset preserved");
+            }
+            _ => panic!("expected JumpIfFalse at IP 3"),
+        }
+        match instrs[4] {
+            Instruction::PushLoop(idx) => {
+                // CROSS-2b: operand fields live in the payload pool.
+                let p = payloads[idx as usize];
+                assert_eq!(p.start, 2, "PushLoop.start shifted by prelude_len");
+                assert_eq!(p.end, 11, "PushLoop.end shifted by prelude_len");
+            }
+            _ => panic!("expected PushLoop at IP 4"),
+        }
+        assert!(
+            matches!(instrs[5], Instruction::LoadLocal(0)),
+            "LoadVar→LoadLocal"
+        );
+        assert!(
+            matches!(instrs[7], Instruction::LoadLocal(0)),
+            "LoadVar→LoadLocal"
+        );
+        match instrs[10] {
+            Instruction::Jump(o) => {
+                // Jump site now at 10, was at 8; target was at 0, now at 2
+                // (first prelude instr).  Wait — the back-edge should go to
+                // the CONDITION, which is now at IP 2.  Old offset -8 meant
+                // "from IP 8 go to IP 0".  After splice, the jump site at
+                // IP 10 should go to IP 2 → offset -8.  The fix-up
+                // adjusts because insertion (0) is ≤ both site (was 8,
+                // now 10) and target (was 0, now 2) — they both shifted
+                // by +2, so the relative offset is unchanged.
+                assert_eq!(o, -8, "back-edge offset preserved");
+            }
+            _ => panic!("expected Jump at IP 10"),
+        }
+        assert_eq!(sp.len(), instrs.len(), "source_positions stayed parallel");
+    }
+
+    /// Loops containing a `Call` are opaque — no hoisting.
+    #[test]
+    fn licm_skips_loop_with_call() {
+        // CROSS-2c: `Call` now carries a u32 call_payloads index.
+        // The exact index doesn't matter for this opacity test (LICM
+        // bails on `Call` without resolving the callee), so a fixed 0
+        // suffices — we're proving the pass refuses to hoist.
+        let mut instrs = vec![
+            Instruction::LoadConst(0),
+            Instruction::JumpIfFalse(6),
+            Instruction::PushLoop(0),
+            Instruction::LoadVar(42),
+            Instruction::Call(0),
+            //Pop removed (register VM),
+            Instruction::LoadVar(42),
+            Instruction::PopLoop,
+            Instruction::Jump(-8),
+        ];
+        let mut payloads: Vec<LoopPayload> = vec![LoopPayload { start: 0, end: 8 }];
+        let before = instrs.clone();
+        let mut sp: Vec<Option<(usize, usize)>> = vec![None; instrs.len()];
+        loop_invariant_motion(&mut instrs, &[], &mut payloads, &mut sp);
+        assert_eq!(
+            instrs.len(),
+            before.len(),
+            "opaque loop must not be hoisted"
+        );
+    }
+
+    /// A variable written inside the loop is NOT invariant — no hoist.
+    #[test]
+    fn licm_skips_written_variable() {
+        let mut instrs = vec![
+            Instruction::LoadConst(0),
+            Instruction::JumpIfFalse(7),
+            Instruction::PushLoop(0),
+            Instruction::LoadVar(42),
+            //Pop removed (register VM),
+            Instruction::LoadConst(1),
+            Instruction::StoreVar(42), // write → invalidates invariance
+            Instruction::LoadVar(42),
+            Instruction::PopLoop,
+            Instruction::Jump(-9),
+        ];
+        let mut payloads: Vec<LoopPayload> = vec![LoopPayload { start: 0, end: 9 }];
+        let before = instrs.clone();
+        let mut sp: Vec<Option<(usize, usize)>> = vec![None; instrs.len()];
+        loop_invariant_motion(&mut instrs, &[], &mut payloads, &mut sp);
+        assert_eq!(
+            instrs.len(),
+            before.len(),
+            "written var must not be hoisted"
+        );
+    }
+
+    /// Single use of a LoadVar has no benefit — skip (≥2 use threshold).
+    #[test]
+    fn licm_skips_single_use() {
+        let mut instrs = vec![
+            Instruction::LoadConst(0),
+            Instruction::JumpIfFalse(5),
+            Instruction::PushLoop(0),
+            Instruction::LoadVar(42),
+            //Pop removed (register VM),
+            Instruction::PopLoop,
+            Instruction::Jump(-6),
+        ];
+        let mut payloads: Vec<LoopPayload> = vec![LoopPayload { start: 0, end: 7 }];
+        let before = instrs.clone();
+        let mut sp: Vec<Option<(usize, usize)>> = vec![None; instrs.len()];
+        loop_invariant_motion(&mut instrs, &[], &mut payloads, &mut sp);
+        assert_eq!(
+            instrs.len(),
+            before.len(),
+            "single-use LoadVar not worth hoisting"
+        );
+    }
+}

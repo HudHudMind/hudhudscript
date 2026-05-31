@@ -1,0 +1,13 @@
+mod test_approval;
+mod test_database;
+mod test_git;
+mod test_http;
+mod test_lib;
+mod test_mcp_bridge;
+mod test_memory;
+mod test_openapi;
+mod test_registry;
+mod test_registry_inline;
+mod test_retry;
+mod test_standard;
+mod test_telemetry;

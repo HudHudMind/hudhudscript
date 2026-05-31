@@ -1,0 +1,320 @@
+[package]
+name = "hudhudscript-tests"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "External test suite for HudHudScript — tests live here, code lives in hudhudscript"
+
+# Tüm crate'leri path dependency olarak al
+[dependencies]
+hudhudscript-tokenomics = { path = "../crates/hudhudscript-tokenomics" }
+hudhudscript-runtime = { path = "../crates/hudhudscript-runtime" }
+hudhudscript-parser = { path = "../crates/hudhudscript-parser" }
+hudhudscript-ast = { path = "../crates/hudhudscript-ast" }
+hudhudscript-lexer = { path = "../crates/hudhudscript-lexer" }
+hudhudscript-types = { path = "../crates/hudhudscript-types" }
+hudhudscript-compiler = { path = "../crates/hudhudscript-compiler" }
+hudhudscript-vm = { path = "../crates/hudhudscript-vm" }
+hudhudscript-bytecode = { path = "../crates/hudhudscript-bytecode" }
+hudhudscript-governance = { path = "../crates/hudhudscript-governance" }
+hudhudscript-ids = { path = "../crates/hudhudscript-ids" }
+hudhudscript-orchestration = { path = "../crates/hudhudscript-orchestration" }
+hudhudscript-cybernetics = { path = "../crates/hudhudscript-cybernetics" }
+hudhudscript-text-stream = { path = "../crates/hudhudscript-text-stream" }
+hudhudscript-cache = { path = "../crates/hudhudscript-cache" }
+hudhudscript-rules = { path = "../crates/hudhudscript-rules" }
+hudhudscript-sandbox = { path = "../crates/hudhudscript-sandbox" }
+hudhudscript-mcp = { path = "../crates/hudhudscript-mcp" }
+hudhudscript-tools = { path = "../crates/hudhudscript-tools" }
+hudhudscript-tools-schema = { path = "../crates/hudhudscript-tools-schema" }
+hudhudscript-tools-io = { path = "../crates/hudhudscript-tools-io" }
+hudhudscript-tools-net = { path = "../crates/hudhudscript-tools-net" }
+hudhudscript-tools-vcs = { path = "../crates/hudhudscript-tools-vcs" }
+hudhudscript-tools-ai = { path = "../crates/hudhudscript-tools-ai" }
+hudhudscript-tools-ops = { path = "../crates/hudhudscript-tools-ops" }
+hudhudscript-package = { path = "../crates/hudhudscript-package" }
+hudhudscript-modules = { path = "../crates/hudhudscript-modules" }
+hudhudscript-validation = { path = "../crates/hudhudscript-validation" }
+hudhudscript-errors = { path = "../crates/hudhudscript-errors" }
+hudhudscript-async = { path = "../crates/hudhudscript-async" }
+hudhudscript-debug = { path = "../crates/hudhudscript-debug" }
+hudhudscript-native = { path = "../crates/hudhudscript-native" }
+hudhudscript-localization = { path = "../crates/hudhudscript-localization" }
+hudhudscript-rag = { path = "../crates/hudhudscript-rag" }
+hudhudscript-test = { path = "../crates/hudhudscript-test" }
+hudhudscript-formatter = { path = "../crates/hudhudscript-formatter" }
+hudhudscript-markdown = { path = "../crates/hudhudscript-markdown" }
+hudhudscript-linter = { path = "../crates/hudhudscript-linter" }
+hudhudscript-utils = { path = "../crates/hudhudscript-utils" }
+hudhudscript-vcs = { path = "../crates/hudhudscript-vcs" }
+hudhudscript-ui-core = { path = "../crates/hudhudscript-ui-core" }
+hudhudscript-ui-bridge = { path = "../crates/hudhudscript-ui-bridge" }
+hudhudscript-deploy-core = { path = "../crates/hudhudscript-deploy-core" }
+hudconv = { path = "../crates/hudconv" }
+hudhudscript-lsp = { path = "../crates/hudhudscript-lsp" }
+hudhudscript-resources = { path = "../crates/hudhudscript-resources" }
+hudhudscript-cli = { path = "../crates/hudhudscript-cli" }
+hudhudscript-exception = { path = "../crates/hudhudscript-exception" }
+hudhudscript-shared-builtins = { path = "../crates/hudhudscript-shared-builtins" }
+hudhud-sop = { path = "../crates/hudhud-sop" }
+hudhud-print = { path = "../crates/hudhud-print" }
+hudhud-apt = { path = "../crates/hudhud-apt" }
+hudhud-docker = { path = "../crates/hudhud-docker" }
+hudhud-firewall = { path = "../crates/hudhud-firewall" }
+hudhud-ocr = { path = "../crates/hudhud-ocr" }
+hudhud-pdf = { path = "../crates/hudhud-pdf" }
+hudhud-translate = { path = "../crates/hudhud-translate" }
+hudhud-workflow = { path = "../crates/hudhud-workflow" }
+hudhud-download = { path = "../crates/hudhud-download" }
+hudhud-email = { path = "../crates/hudhud-email" }
+hudhud-browser = { path = "../crates/hudhud-browser" }
+hudhud-notify = { path = "../crates/hudhud-notify" }
+hudhud-hardware = { path = "../crates/hudhud-hardware" }
+hudhud-media = { path = "../crates/hudhud-media" }
+hudhud-gpu = { path = "../crates/hudhud-gpu" }
+hudhud-security = { path = "../crates/hudhud-security" }
+hudhud-project = { path = "../crates/hudhud-project" }
+hudhudscript-stm = { path = "../crates/hudhudscript-stm" }
+
+# Test dependencies
+[dev-dependencies]
+mimalloc = { version = "0.1", default-features = false }
+tokio = { version = "1", features = ["full"] }
+serde_json = "1"
+serde = { version = "1", features = ["derive"] }
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+toml = "0.8"
+proptest = "1"
+tempfile = "3"
+regex = "1"
+async-trait = "0.1"
+tower-lsp = "0.20"
+flate2 = "1"
+tar = "0.4"
+semver = "1"
+anyhow = "1"
+reqwest = { version = "0.12", features = ["json"] }
+hex = "0.4"
+parking_lot = "0.12"
+
+[[test]]
+name = "unit"
+path = "tests/unit/mod.rs"
+
+[[test]]
+name = "ast"
+path = "tests/ast/mod.rs"
+
+[[test]]
+name = "async_runtime"
+path = "tests/async_runtime/mod.rs"
+
+[[test]]
+name = "builtins"
+path = "tests/builtins/mod.rs"
+
+[[test]]
+name = "bytecode"
+path = "tests/bytecode/mod.rs"
+
+[[test]]
+name = "cache"
+path = "tests/cache/mod.rs"
+
+[[test]]
+name = "cli"
+path = "tests/cli/mod.rs"
+
+[[test]]
+name = "compiler"
+path = "tests/compiler/mod.rs"
+
+[[test]]
+name = "cybernetics"
+path = "tests/cybernetics/mod.rs"
+
+[[test]]
+name = "debug"
+path = "tests/debug/mod.rs"
+
+[[test]]
+name = "deploy"
+path = "tests/deploy/mod.rs"
+
+[[test]]
+name = "errors"
+path = "tests/errors/mod.rs"
+
+[[test]]
+name = "formatter"
+path = "tests/formatter/mod.rs"
+
+[[test]]
+name = "governance"
+path = "tests/governance/mod.rs"
+
+[[test]]
+name = "hudconv"
+path = "tests/hudconv/mod.rs"
+
+[[test]]
+name = "ids"
+path = "tests/ids/mod.rs"
+
+[[test]]
+name = "integration"
+path = "tests/integration/mod.rs"
+
+[[test]]
+name = "lexer"
+path = "tests/lexer/mod.rs"
+
+[[test]]
+name = "linter"
+path = "tests/linter/mod.rs"
+
+[[test]]
+name = "localization"
+path = "tests/localization/mod.rs"
+
+[[test]]
+name = "lsp"
+path = "tests/lsp/mod.rs"
+
+[[test]]
+name = "markdown"
+path = "tests/markdown/mod.rs"
+
+[[test]]
+name = "mcp"
+path = "tests/mcp/mod.rs"
+
+[[test]]
+name = "modules"
+path = "tests/modules/mod.rs"
+
+[[test]]
+name = "native"
+path = "tests/native/mod.rs"
+
+[[test]]
+name = "orchestration"
+path = "tests/orchestration/mod.rs"
+
+[[test]]
+name = "package"
+path = "tests/package/mod.rs"
+
+[[test]]
+name = "parser"
+path = "tests/parser/mod.rs"
+
+[[test]]
+name = "python"
+path = "tests/python/mod.rs"
+
+[[test]]
+name = "rag"
+path = "tests/rag/mod.rs"
+
+[[test]]
+name = "rules"
+path = "tests/rules/mod.rs"
+
+[[test]]
+name = "runtime"
+path = "tests/runtime/mod.rs"
+
+[[test]]
+name = "sandbox"
+path = "tests/sandbox/mod.rs"
+
+[[test]]
+name = "text_stream"
+path = "tests/text_stream/mod.rs"
+
+[[test]]
+name = "tokenomics"
+path = "tests/tokenomics/mod.rs"
+
+[[test]]
+name = "tools"
+path = "tests/tools/mod.rs"
+
+[[test]]
+name = "tools_ai"
+path = "tests/tools_ai/mod.rs"
+
+[[test]]
+name = "tools_io"
+path = "tests/tools_io/mod.rs"
+
+[[test]]
+name = "tools_net"
+path = "tests/tools_net/mod.rs"
+
+[[test]]
+name = "tools_ops"
+path = "tests/tools_ops/mod.rs"
+
+[[test]]
+name = "tools_schema"
+path = "tests/tools_schema/mod.rs"
+
+[[test]]
+name = "tools_vcs"
+path = "tests/tools_vcs/mod.rs"
+
+[[test]]
+name = "types"
+path = "tests/types/mod.rs"
+
+[[test]]
+name = "ui"
+path = "tests/ui/mod.rs"
+
+[[test]]
+name = "ui_bridge"
+path = "tests/ui_bridge/mod.rs"
+
+[[test]]
+name = "ui_core"
+path = "tests/ui_core/mod.rs"
+
+[[test]]
+name = "utils"
+path = "tests/utils/mod.rs"
+
+[[test]]
+name = "validation"
+path = "tests/validation/mod.rs"
+
+[[test]]
+name = "vcs"
+path = "tests/vcs/mod.rs"
+
+[[test]]
+name = "vm"
+path = "tests/vm/mod.rs"
+
+[[test]]
+name = "sop"
+path = "tests/sop/mod.rs"
+
+[[test]]
+name = "stm"
+path = "tests/stm/mod.rs"
+
+[[test]]
+name = "examples"
+path = "tests/examples/mod.rs"
+
+[[test]]
+name = "exception"
+path = "tests/exception/mod.rs"
+
+[[test]]
+name = "resources"
+path = "tests/resources/mod.rs"
+
