@@ -3,7 +3,7 @@
 > **Multi-lingual, register-based scripting language for AI orchestration, agent systems, and governance modeling.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.6.0-blue.svg)](Cargo.toml)
+[![Version](https://img.shields.io/badge/version-0.6.1-blue.svg)](Cargo.toml)
 [![Rust](https://img.shields.io/badge/built%20with-Rust-orange.svg)](https://www.rust-lang.org/)
 
 HudHudScript is a programming language designed to be written in **your own language** — Turkish, Arabic, Japanese, English, Kurdish, Persian, and 18 more. Every keyword, every built-in function, every error message is localized natively. It runs on a **fully register-based VM** written in Rust, with first-class support for AI providers, agent pipelines, council/governance models, and SOP (Subject-Oriented Programming).
@@ -389,7 +389,7 @@ HudHudScript follows a strict project constitution:
 
 ## License
 
-MIT License © 2024 Onur GÜZEL — see [`LICENSE`](LICENSE) for details.
+MIT License © 2026 Onur GÜZEL — see [`LICENSE`](LICENSE) for details.
 
 ---
 
