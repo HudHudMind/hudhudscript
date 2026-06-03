@@ -37,7 +37,7 @@
 pub mod catalog;
 pub use catalog::{ErrorCategory, ErrorCode, ErrorEntry, ERROR_GROUPS, ERROR_TABLE};
 
-mod embedded_translations;
+pub mod embedded_translations;
 pub use embedded_translations::{
     active_embedded_error_catalog, available_embedded_error_locales, embedded_error_catalog,
     localized_error_entry, EmbeddedErrorTranslation, EmbeddedLocaleCatalog, LocalizedErrorEntry,

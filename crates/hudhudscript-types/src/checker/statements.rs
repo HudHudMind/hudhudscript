@@ -8,15 +8,17 @@ impl TypeChecker {
             // Let/Const are separate statement kinds that must be registered in the symbol table
             Stmt::Let { name, value, span } => {
                 let ty = self.check_expr(value)?;
-                self.symbol_table
-                    .define_with_info(name.clone(), SymbolInfo::mutable_owned(ty))
-                    .map_err(|_| type_codes::duplicate_variable(name.clone(), *span))
+                if let Err(_) = self.symbol_table.define_with_info(name.clone(), SymbolInfo::mutable_owned(ty)) {
+                    return self.handle_duplicate(&name, *span);
+                }
+                Ok(())
             }
             Stmt::Const { name, value, span } => {
                 let ty = self.check_expr(value)?;
-                self.symbol_table
-                    .define_with_info(name.clone(), SymbolInfo::immutable_owned(ty))
-                    .map_err(|_| type_codes::duplicate_variable(name.clone(), *span))
+                if let Err(_) = self.symbol_table.define_with_info(name.clone(), SymbolInfo::immutable_owned(ty)) {
+                    return self.handle_duplicate(&name, *span);
+                }
+                Ok(())
             }
 
             Stmt::Assignment {
@@ -123,9 +125,9 @@ impl TypeChecker {
 
                 // Open a scope so the loop variable doesn't leak out
                 self.symbol_table.enter_scope();
-                self.symbol_table
-                    .define(variable.clone(), elem_type)
-                    .map_err(|_| type_codes::duplicate_variable(variable.clone(), *span))?;
+                if let Err(_) = self.symbol_table.define(variable.clone(), elem_type) {
+                    self.handle_duplicate(&variable, *span)?;
+                }
                 self.check_stmt(body)?;
                 self.symbol_table.exit_scope();
                 Ok(())

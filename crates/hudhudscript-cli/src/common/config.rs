@@ -245,6 +245,7 @@ fn merge_config(base: HudHudConfig, overlay: HudHudConfig) -> HudHudConfig {
         _stream: base._stream, // stream config from first found
         _security: base._security,
         providers: overlay.providers, // overlay wins (project > user > system)
+        lint: overlay.lint,
     }
 }
 

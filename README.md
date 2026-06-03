@@ -3,7 +3,7 @@
 > **Multi-lingual, register-based scripting language for AI orchestration, agent systems, and governance modeling.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.6.1-blue.svg)](Cargo.toml)
+[![Version](https://img.shields.io/badge/version-0.6.0-blue.svg)](Cargo.toml)
 [![Rust](https://img.shields.io/badge/built%20with-Rust-orange.svg)](https://www.rust-lang.org/)
 
 HudHudScript is a programming language designed to be written in **your own language** — Turkish, Arabic, Japanese, English, Kurdish, Persian, and 18 more. Every keyword, every built-in function, every error message is localized natively. It runs on a **fully register-based VM** written in Rust, with first-class support for AI providers, agent pipelines, council/governance models, and SOP (Subject-Oriented Programming).
@@ -296,9 +296,17 @@ hudhudscript/
 │   ├── hudhudscript-lsp/   # Editor language server
 │   ├── hudhudscript-python/ # PyO3 bindings
 │   └── hudhud-*            # Standard library crates
+├── examples/               # Curated example programs
+│   ├── 01-basics/
+│   ├── 02-multilingual/
+│   ├── 03-council/
+│   ├── 04-agents/
+│   └── 05-advanced/
 ├── samples/                # Compact one-file demos
-├── docs/                   # Documentation
-└── hudhudscript-tests/     # Cross-crate integration tests
+├── docs/                   # Language reference, book, paper
+├── editors/                # VS Code, Vim, Emacs plugins
+├── installer/              # Platform-specific installers
+└── hudhudscript-tests/    # Cross-crate integration tests
 ```
 
 ---
@@ -333,7 +341,7 @@ cargo build --release -p hudhudscript-cli
 
 ```bash
 sudo cp target/release/hudhud /usr/local/bin/
-hudhud run samples/hello.hud
+hudhud run examples/01-basics/hello_world.hud
 ```
 
 ### Build the Python Module
@@ -352,10 +360,10 @@ Full documentation, language reference, and guides are available on our website:
 
 | Resource | Link |
 |---|---|
-| **Official Website** | [www.hudhudscript.com](https://www.hudhudscript.com) |
-| **Language Reference** | [www.hudhudscript.com/docs](https://www.hudhudscript.com/docs) |
-| **API Reference** | [www.hudhudscript.com/api](https://www.hudhudscript.com/api) |
-| **Examples & Tutorials** | [www.hudhudscript.com/examples](https://www.hudhudscript.com/examples) |
+| **Official Website** | [hudhudscript.com](https://hudhudscript.com) |
+| **Language Reference** | [hudhudscript.com/docs](https://hudhudscript.com/docs) |
+| **API Reference** | [hudhudscript.com/api](https://hudhudscript.com/api) |
+| **Examples & Tutorials** | [hudhudscript.com/examples](https://hudhudscript.com/examples) |
 
 For implementation details, see the source code and comments in [`crates/`](crates/).
 
@@ -363,7 +371,7 @@ For implementation details, see the source code and comments in [`crates/`](crat
 
 ## Contributing
 
-HudHudScript follows a strict project constitution:
+HudHudScript follows a strict project constitution (see [`CLAUDE.md`](CLAUDE.md) and [`AGENTS.md`](AGENTS.md)):
 
 1. **Test sanctity** — approved unit tests are immutable; only new tests can be added.
 2. **VM is the single runtime** — no interpreter fallback, no hybrid stack/register designs.
@@ -389,7 +397,7 @@ HudHudScript follows a strict project constitution:
 
 ## License
 
-MIT License © 2026 Onur GÜZEL — see [`LICENSE`](LICENSE) for details.
+MIT License © 2024 Onur GÜZEL — see [`LICENSE`](LICENSE) for details.
 
 ---
 

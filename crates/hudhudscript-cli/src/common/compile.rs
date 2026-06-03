@@ -15,6 +15,7 @@ pub fn compile_file(
     output: Option<PathBuf>,
     verbose: bool,
     strict: bool,
+    lint: &crate::common::LintConfig,
 ) -> Result<(), CliError> {
     // Read file
     let source = fs::read_to_string(path)
@@ -58,6 +59,7 @@ pub fn compile_file(
             println!("🔒 Strict type checking...");
         }
         let mut type_checker = hudhudscript_types::TypeChecker::new_strict();
+        type_checker.set_redeclare_policy(lint_policy(lint));
         let annotated = type_checker.check_and_annotate(ast).map_err(|errors| {
             CliError::ParseCompile(
                 errors
@@ -115,7 +117,16 @@ pub fn compile_file(
     Ok(())
 }
 
-pub fn check_file(path: &PathBuf, show_ast: bool, strict: bool) -> Result<(), CliError> {
+/// G2: Convert CLI RedeclarePolicy to checker RedeclarePolicy (Kural 7 — single source).
+fn lint_policy(lint: &crate::common::LintConfig) -> hudhudscript_types::checker::RedeclarePolicy {
+    match lint.redeclare {
+        crate::common::RedeclarePolicy::Allow => hudhudscript_types::checker::RedeclarePolicy::Allow,
+        crate::common::RedeclarePolicy::Warn  => hudhudscript_types::checker::RedeclarePolicy::Warn,
+        crate::common::RedeclarePolicy::Error => hudhudscript_types::checker::RedeclarePolicy::Error,
+    }
+}
+
+pub fn check_file(path: &PathBuf, show_ast: bool, strict: bool, lint: &crate::common::LintConfig) -> Result<(), CliError> {
     // Read file
     let source = fs::read_to_string(path)
         .map_err(|e| CliError::Io(format!("Failed to read file: {}", e)))?;
@@ -150,8 +161,11 @@ pub fn check_file(path: &PathBuf, show_ast: bool, strict: bool) -> Result<(), Cl
         } else {
             hudhudscript_types::TypeChecker::new()
         };
+        type_checker.set_redeclare_policy(lint_policy(lint));
         if let Err(e) = type_checker.check_program(&ast) {
-            if strict {
+            // G2: redeclare="error" is always fatal, regardless of strict mode
+            let is_fatal = strict || matches!(lint.redeclare, crate::common::RedeclarePolicy::Error);
+            if is_fatal {
                 return Err(CliError::ParseCompile(format!("Type error: {}", e)));
             } else {
                 eprintln!("Type hint: {}", e);

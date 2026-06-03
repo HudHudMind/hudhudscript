@@ -22,6 +22,7 @@ pub(crate) static TR_KEYWORDS: &[(&'static str, &'static str)] = &[
     ("etmen", "agent"),
     ("eğer", "if"),
     ("eşzamansız", "async"),
+    ("eşle", "match"),
     ("fırlat", "throw"),
     ("gelecek", "future"),
     ("görev", "task"),

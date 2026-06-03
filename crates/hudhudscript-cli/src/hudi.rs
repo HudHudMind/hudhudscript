@@ -143,7 +143,7 @@ fn main() {
             }
         }
         Some(Commands::Check { file, ast }) => {
-            if let Err(e) = check_file(&file, ast, false) {
+            if let Err(e) = check_file(&file, ast, false, &Default::default()) {
                 eprintln!("Error: {}", e);
                 process::exit(e.exit_code());
             }

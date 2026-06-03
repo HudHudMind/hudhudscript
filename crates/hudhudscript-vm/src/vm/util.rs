@@ -19,11 +19,16 @@ pub(crate) fn builtin_name_set() -> &'static rustc_hash::FxHashSet<&'static str>
         let putf_aliases: &[&str] = crate::vm::builtin_aliases::PUTF_ALIASES;
         let other_builtins: &[&'static str] = &[
             "len",
+            "uzunluk",
             "toml",
             "type",
             "toString",
+            "metneÇevir",
             "toNumber",
+            "sayıyaÇevir",
             "toBoolean",
+            "mantıksalaÇevir",
+            "booleÇevir",
             "push",
             "pop",
             "keys",

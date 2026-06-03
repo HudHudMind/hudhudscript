@@ -117,7 +117,7 @@ impl crate::vm::VM {
                 Ok(true)
             }
 
-            "len" => {
+            "len" | "uzunluk" => {
                 self.check_arg_count("len()", 1, arg_count)?;
                 let val = self.registers[first_arg as usize];
                 let result = hudhud_typeops::types_ops::shared_len(&[val])?;
@@ -174,7 +174,7 @@ impl crate::vm::VM {
                 Ok(true)
             }
 
-            "toString" => {
+            "toString" | "metneÇevir" => {
                 self.check_arg_count("toString()", 1, arg_count)?;
                 let val = self.registers[first_arg as usize];
                 let result = hudhud_typeops::types_ops::shared_to_string(&[val])?;
@@ -183,7 +183,7 @@ impl crate::vm::VM {
                 Ok(true)
             }
 
-            "toNumber" => {
+            "toNumber" | "sayıyaÇevir" => {
                 self.check_arg_count("toNumber()", 1, arg_count)?;
                 let val = self.registers[first_arg as usize];
                 let result = hudhud_typeops::types_ops::shared_to_number(&[val])?;
@@ -192,7 +192,7 @@ impl crate::vm::VM {
                 Ok(true)
             }
 
-            "toBoolean" => {
+            "toBoolean" | "mantıksalaÇevir" | "booleÇevir" => {
                 self.check_arg_count("toBoolean()", 1, arg_count)?;
                 let val = self.registers[first_arg as usize];
                 let result = hudhud_typeops::types_ops::shared_to_boolean(&[val])?;

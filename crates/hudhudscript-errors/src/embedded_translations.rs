@@ -200,8 +200,10 @@ fn usable_translation(
         return None;
     }
 
-    if raw.hints.len() != english.hints.len() || raw.hints.iter().any(|hint| hint.trim().is_empty())
-    {
+    // Hint SAYISI İngilizce ile eşleşmek zorunda DEĞİL: başlık/açıklama çevrilmişse
+    // çeviri kullanılır. (Eskiden count mismatch tüm çeviriyi düşürüyordu → tüm
+    // hatalar İngilizce görünüyordu. B-full bug bu.) Sadece boş-string hint reddedilir.
+    if raw.hints.iter().any(|hint| hint.trim().is_empty()) {
         return None;
     }
 
@@ -370,4 +372,13 @@ pub fn localized_error_entry(code: ErrorCode, locale: &str) -> LocalizedErrorEnt
 
 pub(crate) fn active_locale_tag() -> Option<String> {
     current_error_locale()
+}
+
+/// G1: "E0182" short_code + locale → çevrili başlık/açıklama. Bulunamazsa None.
+pub fn localized_by_short_code(short_code: &str, locale: &str) -> Option<LocalizedErrorEntry> {
+    let num = short_code.strip_prefix('E')?.parse::<u32>().ok()?;
+    if num == 0 { return None; }
+    let code = ErrorCode(num);
+    if locale == "en" { return None; }
+    Some(localized_error_entry(code, locale))
 }

@@ -1,4 +1,5 @@
 use super::*;
+use hudhudscript_ast::Span;
 
 impl TypeChecker {
     /// Create a new type checker (non-strict mode by default)
@@ -11,6 +12,22 @@ impl TypeChecker {
             current_class: None,
             strict: false,
             generic_constraints: HashMap::new(),
+            redeclare_policy: RedeclarePolicy::Warn,
+        }
+    }
+
+    /// BOLEM-A: Set redeclare policy for shadowing behavior.
+    pub fn set_redeclare_policy(&mut self, policy: RedeclarePolicy) {
+        self.redeclare_policy = policy;
+    }
+
+    /// BOLEM-A: Handle duplicate variable according to policy.
+    pub(super) fn handle_duplicate(&mut self, name: &str, span: Span) -> Result<(), TypeError> {
+        let diag = type_codes::duplicate_variable(name.to_string(), span);
+        match self.redeclare_policy {
+            RedeclarePolicy::Allow => Ok(()),
+            RedeclarePolicy::Warn => { self.warnings.push(diag); Ok(()) }
+            RedeclarePolicy::Error => Err(diag),
         }
     }
 
@@ -29,6 +46,7 @@ impl TypeChecker {
             current_class: None,
             strict: true,
             generic_constraints: HashMap::new(),
+            redeclare_policy: RedeclarePolicy::Warn,
         }
     }
 

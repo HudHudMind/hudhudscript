@@ -4,7 +4,7 @@ use hudhudscript_compiler::{Bytecode, Compiler};
 use hudhudscript_deploy_core::adapters::{create_adapter, Adapter};
 use hudhudscript_formatter::Formatter;
 use hudhudscript_mcp::{McpClient, TransportConfig};
-use hudhudscript_parser::{parse, parse_with_recovery};
+use hudhudscript_parser::{parse, parse_lang_directive, parse_with_recovery};
 use hudhudscript_vm::{OutputLocale, VM};
 use std::collections::HashMap;
 use std::fs;
@@ -70,7 +70,7 @@ pub fn watch_and_run_with_config(
     println!("[watch] Running {}...", path.display());
     println!("{}", "=".repeat(60));
     if let Err(e) = run_file_vm_with_config(path, debug, config_path) {
-        eprintln!("Error: {}", e);
+        eprintln!("{}", crate::common::render_error(&e));
     }
     println!("{}", "=".repeat(60));
 
@@ -105,7 +105,7 @@ pub fn watch_and_run_with_config(
             println!("{}", "=".repeat(60));
 
             if let Err(e) = run_file_vm_with_config(path, debug, config_path) {
-                eprintln!("Error: {}", e);
+                eprintln!("{}", crate::common::render_error(&e));
             }
 
             println!("{}", "=".repeat(60));
@@ -158,10 +158,11 @@ pub fn run_file_vm_with_config(
     let source = fs::read_to_string(path)
         .map_err(|e| CliError::Io(format!("Failed to read file: {}", e)))?;
 
-    // Detect locale — mirror the interpreter path so Arabic numerals etc. work.
-    let locale_str = detect_locale(&source);
+    // Detect locale — directive (#!dil=tr) > script detection > default
+    let directive_locale = hudhudscript_parser::parse_lang_directive(&source);
+    let locale_str = directive_locale.unwrap_or_else(|| detect_locale(&source).to_string());
     if locale_str != "default" {
-        std::env::set_var("HUDHUD_LOCALE", locale_str);
+        std::env::set_var("HUDHUD_LOCALE", &locale_str);
     } else {
         std::env::remove_var("HUDHUD_LOCALE");
     }

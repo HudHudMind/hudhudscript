@@ -208,6 +208,16 @@ pub struct TypeChecker {
     /// Maps generic param name (e.g. "T") to its constraint type name (e.g. "Number").
     /// Populated when entering a scope with type_params, cleared when exiting.
     generic_constraints: HashMap<String, String>,
+    /// BOLEM-A: Shadowing redeclare policy
+    redeclare_policy: RedeclarePolicy,
+}
+
+/// BOLEM-A: Redeclaration severity
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RedeclarePolicy { Allow, Warn, Error }
+
+impl Default for RedeclarePolicy {
+    fn default() -> Self { RedeclarePolicy::Warn }
 }
 
 impl Default for TypeChecker {

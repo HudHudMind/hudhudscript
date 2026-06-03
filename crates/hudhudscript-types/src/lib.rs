@@ -2,7 +2,7 @@
 //!
 //! This crate provides static type checking and type inference.
 
-mod checker;
+pub mod checker;
 pub mod contracts;
 pub mod inference;
 pub mod semantics;

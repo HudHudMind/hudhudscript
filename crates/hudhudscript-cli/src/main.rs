@@ -240,14 +240,14 @@ fn run_cli(cli: Cli) {
             if watch {
                 if let Err(e) = watch_and_run_with_config(&file, debug || cli.verbose, config_path)
                 {
-                    eprintln!("Error: {}", e);
+                    eprintln!("{}", render_error(&e));
                     process::exit(e.exit_code());
                 }
             } else if let Some(framework) = ui {
                 if let Err(e) =
                     run_ui_with_config(&file, &framework, debug || cli.verbose, config_path)
                 {
-                    eprintln!("Error: {}", e);
+                    eprintln!("{}", render_error(&e));
                     process::exit(e.exit_code());
                 }
             } else if let Err(e) = {
@@ -256,7 +256,7 @@ fn run_cli(cli: Cli) {
                 }
                 run_file_vm_with_config(&file, debug || cli.verbose, config_path)
             } {
-                eprintln!("Error: {}", e);
+                eprintln!("{}", render_error(&e));
                 process::exit(e.exit_code());
             }
         }
@@ -273,7 +273,7 @@ fn run_cli(cli: Cli) {
                 debug || cli.verbose,
                 config_path,
             ) {
-                eprintln!("Error: {}", e);
+                eprintln!("{}", render_error(&e));
                 process::exit(e.exit_code());
             }
         }
@@ -283,32 +283,33 @@ fn run_cli(cli: Cli) {
             verbose,
             strict,
         }) => {
-            if let Err(e) = compile_file(&file, output, verbose || cli.verbose, strict) {
-                eprintln!("Error: {}", e);
+            if let Err(e) = compile_file(&file, output, verbose || cli.verbose, strict, &Default::default()) {
+                eprintln!("{}", render_error(&e));
                 process::exit(e.exit_code());
             }
         }
         Some(Commands::Repl { debug, load }) => {
             if let Err(e) = run_repl(debug || cli.verbose, load) {
-                eprintln!("Error: {}", e);
+                eprintln!("{}", render_error(&e));
                 process::exit(e.exit_code());
             }
         }
         Some(Commands::Check { file, ast, strict }) => {
-            if let Err(e) = check_file(&file, ast, strict) {
-                eprintln!("Error: {}", e);
+            let config = load_hudhud_config_with_path(false, None);
+            if let Err(e) = check_file(&file, ast, strict, &config.lint) {
+                eprintln!("{}", render_error(&e));
                 process::exit(e.exit_code());
             }
         }
         Some(Commands::Format { path, write, check }) => {
             if let Err(e) = format_path(&path, write, check) {
-                eprintln!("Error: {}", e);
+                eprintln!("{}", render_error(&e));
                 process::exit(e.exit_code());
             }
         }
         Some(Commands::Lint { file }) => {
             if let Err(e) = lint_file(&file) {
-                eprintln!("Error: {}", e);
+                eprintln!("{}", render_error(&e));
                 process::exit(e.exit_code());
             }
         }
@@ -333,7 +334,7 @@ fn run_cli(cli: Cli) {
         }
         Some(Commands::Dap { file }) => {
             if let Err(e) = run_dap_server(&file) {
-                eprintln!("Error: {}", e);
+                eprintln!("{}", render_error(&e));
                 process::exit(e.exit_code());
             }
         }
@@ -343,7 +344,7 @@ fn run_cli(cli: Cli) {
             stop_on_entry,
         }) => {
             if let Err(e) = run_debug_with_config(&file, &breakpoint, stop_on_entry, config_path) {
-                eprintln!("Error: {}", e);
+                eprintln!("{}", render_error(&e));
                 process::exit(e.exit_code());
             }
         }

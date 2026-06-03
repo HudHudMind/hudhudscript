@@ -13,7 +13,7 @@ pub fn call_string_method(s: &str, method: &str, args: &[Value16]) -> SharedResu
     match method {
         "length" => Ok(Value16::int(s.chars().count() as i64)),
 
-        "split" => {
+        "split" | "böl" | "ayır" => {
             let delimiter = args.first().and_then(|v| v.as_str()).unwrap_or(" ");
             let parts: Vec<Value16> = s
                 .split(delimiter)
@@ -22,9 +22,9 @@ pub fn call_string_method(s: &str, method: &str, args: &[Value16]) -> SharedResu
             Ok(Value16::array(parts))
         }
 
-        "trim" => Ok(Value16::string(s.trim().to_string())),
-        "toUpperCase" | "toUpper" | "to_upper" => Ok(Value16::string(s.to_uppercase())),
-        "toLowerCase" | "toLower" | "to_lower" => Ok(Value16::string(s.to_lowercase())),
+        "trim" | "kırp" => Ok(Value16::string(s.trim().to_string())),
+        "toUpperCase" | "toUpper" | "to_upper" | "büyükHarfeÇevir" | "büyült" => Ok(Value16::string(s.to_uppercase())),
+        "toLowerCase" | "toLower" | "to_lower" | "küçükHarfeÇevir" | "küçült" => Ok(Value16::string(s.to_lowercase())),
 
         "indexOf" => {
             let needle = args.first().and_then(|v| v.as_str()).unwrap_or("");
@@ -37,7 +37,7 @@ pub fn call_string_method(s: &str, method: &str, args: &[Value16]) -> SharedResu
             Ok(Value16::boolean(s.contains(needle)))
         }
 
-        "replace" => {
+        "replace" | "değiştir" => {
             let pattern = args.first().and_then(|v| v.as_str()).unwrap_or("");
             let replacement = args.get(1).and_then(|v| v.as_str()).unwrap_or("");
             Ok(Value16::string(s.replace(pattern, replacement)))

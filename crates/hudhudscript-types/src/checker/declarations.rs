@@ -46,8 +46,9 @@ impl TypeChecker {
         let mutable = !decl.is_const;
         let info = SymbolInfo::new(var_type, mutable, ownership);
 
-        self.symbol_table
-            .define_with_info(decl.name.clone(), info)
-            .map_err(|_| type_codes::duplicate_variable(decl.name.clone(), decl.span))
+        if let Err(_) = self.symbol_table.define_with_info(decl.name.clone(), info) {
+            return self.handle_duplicate(&decl.name, decl.span);
+        }
+        Ok(())
     }
 }

@@ -79,6 +79,35 @@ pub struct HudHudConfig {
     /// Values use ${VAR} syntax for env interpolation.
     #[serde(default)]
     pub providers: std::collections::HashMap<String, std::collections::HashMap<String, String>>,
+    /// BOLEM-A: lint configuration
+    #[serde(default)]
+    pub lint: LintConfig,
+}
+
+/// Shadowing severity policy
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum RedeclarePolicy {
+    Allow,
+    Warn,
+    Error,
+}
+
+impl Default for RedeclarePolicy {
+    fn default() -> Self { RedeclarePolicy::Warn }
+}
+
+/// [lint] section
+#[derive(Debug, Clone, Deserialize)]
+pub struct LintConfig {
+    #[serde(default, rename = "redeclare")]
+    pub redeclare: RedeclarePolicy,
+}
+
+impl Default for LintConfig {
+    fn default() -> Self {
+        Self { redeclare: RedeclarePolicy::Warn }
+    }
 }
 
 /// [runtime] section — interpreter / VM limits (Issue #446).
@@ -143,3 +172,38 @@ pub use provider::*;
 pub use repl::*;
 pub use run::*;
 pub use ui::*;
+
+/// BOLEM-B Adım2: Locale-aware error rendering.
+/// G1: Locale-aware error rendering with translated title when available.
+pub fn render_error(e: &CliError) -> String {
+    let locale = std::env::var("HUDHUD_LOCALE").unwrap_or_else(|_| "en".to_string());
+    let msg = format!("{}", e);
+    let prefix = locale_prefix(&locale);
+
+    // Try to extract [E####] code and get translated title
+    if locale != "en" {
+        if let Some(code) = extract_error_code(&msg) {
+            if let Some(entry) = hudhudscript_errors::embedded_translations::localized_by_short_code(&code, &locale) {
+                return format!("{}: [{}] {}", prefix, code, entry.title);
+            }
+        }
+    }
+    format!("{}: {}", prefix, msg)
+}
+
+fn locale_prefix(locale: &str) -> &str {
+    match locale {
+        "tr" => "Hata", "ar" => "خطأ", "ja" => "エラー", "ru" => "Ошибка", "zh" => "错误", _ => "Error",
+    }
+}
+
+fn extract_error_code(msg: &str) -> Option<String> {
+    let start = msg.find("[E")?;
+    let rel_end = msg[start..].find(']')?;
+    let code = &msg[start+1..start+rel_end];
+    if code.len() > 1 && code[1..].chars().all(|c| c.is_ascii_digit()) {
+        Some(code.to_string())
+    } else {
+        None
+    }
+}
