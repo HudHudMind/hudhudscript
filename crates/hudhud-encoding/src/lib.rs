@@ -240,7 +240,7 @@ pub fn uuid_parse_args(args: &[Value16]) -> HudHudResult<Value16> {
         .and_then(|v| v.as_str())
         .ok_or_else(|| runtime_error("uuid.parse() requires a string argument"))?;
     let parsed = uuid_parse(s).map_err(|e| runtime_error(format!("uuid.parse error: {}", e)))?;
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     obj.insert("value".to_string(), Value16::string(parsed.to_string()));
     obj.insert(
         "version".to_string(),

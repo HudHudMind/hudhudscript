@@ -31,7 +31,7 @@ pub fn hw_network_adapters(_args: &[Value16]) -> HudHudResult<Value16> {
                     .and_then(|p| p.file_name().map(|n| n.to_string_lossy().to_string()))
                     .unwrap_or_default();
 
-                let mut adapter = HashMap::new();
+                let mut adapter = hudhudscript_bytecode::ObjMap::default();
                 adapter.insert("name".to_string(), Value16::string(iface_name));
                 adapter.insert("driver".to_string(), Value16::string(driver));
                 adapter.insert("mac".to_string(), Value16::string(mac));
@@ -85,7 +85,7 @@ pub fn hw_usb_devices(_args: &[Value16]) -> HudHudResult<Value16> {
                         }
                     }
 
-                    let mut dev = HashMap::new();
+                    let mut dev = hudhudscript_bytecode::ObjMap::default();
                     dev.insert("vendor".to_string(), Value16::string(vendor));
                     dev.insert("product".to_string(), Value16::string(product));
                     dev.insert("bus".to_string(), Value16::string(bus));

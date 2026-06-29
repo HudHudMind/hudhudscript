@@ -1,5 +1,4 @@
-//! G6: MCP WebSocket transport — placeholder.
-//! Requires tokio-tungstenite dependency for full implementation.
+//! G6: MCP WebSocket transport (pending tokio-tungstenite dependency).
 
 /// WebSocket transport config.
 pub struct WebSocketTransport {

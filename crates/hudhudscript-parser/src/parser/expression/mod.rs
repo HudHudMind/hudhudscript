@@ -3,6 +3,7 @@
 use hudhudscript_ast::{
     ArrowFunctionBody, BinaryOp, Expr, Literal, Stmt, TemplateStringPart, UnaryOp,
 };
+use hudhudscript_lexer::is_reserved_keyword;
 use pest::iterators::Pair;
 
 use crate::error::{parse_codes, ParseResult};

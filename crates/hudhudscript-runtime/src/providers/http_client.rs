@@ -48,15 +48,35 @@ pub fn shared_http_client() -> Result<Client, ProviderError> {
     Ok(c)
 }
 
-/// Returns `true` when the URL points to a local or private-network endpoint
-/// that typically does not require an `Authorization` header.
+/// Returns `true` when the URL points to a local or private-network endpoint.
+/// Uses proper IP parsing (fixes S6: 172.16/12 range, not 172.0/8).
 pub fn is_local_url(url: &str) -> bool {
-    url.starts_with("http://localhost")
-        || url.starts_with("http://127.")
-        || url.starts_with("http://0.0.0.0")
-        || url.starts_with("http://192.")
-        || url.starts_with("http://10.")
-        || url.starts_with("http://172.")
+    let host = url
+        .strip_prefix("http://")
+        .or_else(|| url.strip_prefix("https://"))
+        .and_then(|rest| rest.split('/').next())
+        .and_then(|h| h.split(':').next())
+        .unwrap_or("");
+    if let Ok(ip) = host.parse::<std::net::IpAddr>() {
+        return ip.is_loopback() || ip.is_unspecified() || is_private_ip(&ip);
+    }
+    host == "localhost" || host.ends_with(".local") || host.ends_with(".internal")
+}
+
+/// Manual private IP check (std's is_private not available on all targets).
+fn is_private_ip(ip: &std::net::IpAddr) -> bool {
+    match ip {
+        std::net::IpAddr::V4(v4) => {
+            let octets = v4.octets();
+            octets[0] == 10
+                || (octets[0] == 172 && octets[1] >= 16 && octets[1] <= 31)
+                || (octets[0] == 192 && octets[1] == 168)
+                || octets[0] == 169 && octets[1] == 254
+        }
+        std::net::IpAddr::V6(v6) => {
+            v6.segments()[0] & 0xffc0 == 0xfe80 // link-local
+        }
+    }
 }
 
 /// Send `req` and retry once (after a 1-second delay) if the server returns a

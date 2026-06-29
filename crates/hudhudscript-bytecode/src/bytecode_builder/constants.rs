@@ -155,6 +155,7 @@ impl Bytecode {
         // COMPILE0001: snapshot interner into bytecode.symbols before serialize
         let mut bc = self.clone();
         bc.symbols = crate::interner::snapshot();
+        bc.serialized_function_names = self.function_keys();
         postcard::to_stdvec(&bc).map_err(|e| format!("postcard serialize: {}", e))
     }
 
@@ -163,7 +164,7 @@ impl Bytecode {
     /// expected [`BYTECODE_VERSION`] — old bincode-encoded caches are
     /// rejected here (Kural 7c: single encoding, no fallback).
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, String> {
-        let bc: Self =
+        let mut bc: Self =
             postcard::from_bytes(bytes).map_err(|e| format!("postcard deserialize: {}", e))?;
         if bc.version != BYTECODE_VERSION {
             return Err(format!(
@@ -176,6 +177,8 @@ impl Bytecode {
             crate::interner::restore(bc.symbols.clone())
                 .map_err(|e| format!("interner restore: {}", e))?;
         }
+        bc.rebuild_function_names();
+        bc.resolve_call_payload_function_indices();
         Ok(bc)
     }
 
@@ -198,10 +201,10 @@ impl Bytecode {
     /// - The same checks are applied to every function chunk.
     pub fn validate(&self) -> BytecodeResult<()> {
         Self::validate_instructions(&self.instructions, &self.constants, self, "main")?;
-        for (name, chunk) in self.functions.borrow().iter() {
+        for (idx, chunk) in self.functions.borrow().iter().enumerate() {
             // Function chunks share the parent bytecode pools; only their
             // `constants` pool is local.
-            Self::validate_instructions(&chunk.instructions, &chunk.constants, self, name)?;
+            Self::validate_instructions(&chunk.instructions, &chunk.constants, self, &format!("fn:{}", idx))?;
         }
         Ok(())
     }
@@ -345,8 +348,12 @@ impl Bytecode {
                 // ── CROSS-2c: 7 call-family variants share `call_payloads`.
                 //    Kural 7c: a bad idx is a compiler bug, not a runtime
                 //    fallback path.
-                Instruction::NewInstance { payload_idx: idx, .. }
-                | Instruction::MakeGenerator { payload_idx: idx, .. } => {
+                Instruction::NewInstance {
+                    payload_idx: idx, ..
+                }
+                | Instruction::MakeGenerator {
+                    payload_idx: idx, ..
+                } => {
                     if (*idx as usize) >= bc.call_payloads.len() {
                         return Err(compile_codes::runtime_error(format!(
                             "Invalid call_payload index {} at instruction {} in {}; pool size is {}",
@@ -368,8 +375,7 @@ impl Bytecode {
                     // These have validated payload indices at runtime; skip here
                 }
                 // ── CROSS-2d: 3 two-symbol variants share `two_sym_payloads`.
-                Instruction::MatchVariant(idx)
-                | Instruction::GetStatic(idx) => {
+                Instruction::MatchVariant(idx) | Instruction::GetStatic(idx) => {
                     if (*idx as usize) >= bc.two_sym_payloads.len() {
                         return Err(compile_codes::runtime_error(format!(
                             "Invalid two_sym_payload index {} at instruction {} in {}; pool size is {}",

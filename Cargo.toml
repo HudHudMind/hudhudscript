@@ -57,6 +57,7 @@ members = [
     "crates/hudhud-fs",
     "crates/hudhud-net",
     "crates/hudhud-crypto",
+    "crates/hudhud-channels",
     "crates/hudhud-exec",
     "crates/hudhud-encoding",
     "crates/hudhud-serial",
@@ -94,10 +95,19 @@ members = [
     "crates/hudhud-plugin",
     "crates/hudhud-log",
     "crates/hudhud-tui",
+    "crates/hudhud-web",
+    "crates/hudhud-web-server",
+    "crates/hudhud-web-prefork",
+    "crates/hudhud-web-request",
+    "crates/hudhud-web-response",
+    "crates/hudhud-web-template",
+    "crates/hudhud-web-session",
+    "crates/hudhud-web-markdown",
+    "crates/hudhud-web-static",
 ]
 
 [workspace.package]
-version = "0.6.11"
+version = "0.8.0"
 edition = "2021"
 authors = ["Onur GÜZEL"]
 license = "MIT"
@@ -183,6 +193,12 @@ panic = "abort"
 [profile.release-prof]
 inherits = "release"
 strip = false
+
+# LSP istek-izolasyonu için: panic yakalanabilir olmalı (catch_unwind abort'ta çalışmaz).
+# Diğer binary'ler abort kalır; SADECE LSP bu profille derlenir.
+[profile.lsp]
+inherits = "release"
+panic = "unwind"
 debug = true
 lto = false
 

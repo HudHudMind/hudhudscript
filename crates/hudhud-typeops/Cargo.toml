@@ -9,3 +9,4 @@ repository.workspace = true
 [dependencies]
 hudhudscript-bytecode = { path = "../hudhudscript-bytecode" }
 hudhudscript-errors = { path = "../hudhudscript-errors" }
+num-traits = "0.2"

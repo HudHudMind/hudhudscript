@@ -13,6 +13,8 @@ pub mod provider;
 pub mod resource;
 pub mod rule;
 pub mod subject;
+pub mod loop_engine;
+pub use loop_engine::*;
 pub mod compose;
 pub mod swarm;
 pub mod task;

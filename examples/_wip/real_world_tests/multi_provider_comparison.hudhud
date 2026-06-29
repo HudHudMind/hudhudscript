@@ -1,0 +1,122 @@
+// Multi-Provider Comparison Test
+// Compare DeepSeek, Ollama, and Anthropic
+// 
+// Required environment variables:
+// - DEEPSEEK_API_KEY
+// - ANTHROPIC_API_KEY
+// - Ollama running locally
+
+// Define agents for each provider
+agent deepseek_agent {
+    provider: "deepseek"
+    model: "deepseek-chat"
+}
+
+agent ollama_agent {
+    provider: "ollama"
+    model: "llama2"
+}
+
+agent claude_agent {
+    provider: "anthropic"
+    model: "claude-3-haiku-20240307"
+}
+
+// Test questions
+let questions = [
+    "What is the capital of Turkey?",
+    "Explain recursion in programming",
+    "Write a haiku about artificial intelligence"
+]
+
+print("=== Multi-Provider Comparison ===")
+print("")
+
+for (let question in questions) {
+    print("Question:", question)
+    print("=" * 60)
+    
+    // DeepSeek
+    let start_time = now()
+    let deepseek_response = deepseek_agent.call({
+        prompt: question,
+        temperature: 0.7,
+        max_tokens: 150
+    })
+    let deepseek_time = now() - start_time
+    
+    print("🔵 DeepSeek:")
+    print(deepseek_response.content)
+    print("Tokens:", deepseek_response.tokens_used)
+    print("Time:", deepseek_time, "ms")
+    print("")
+    
+    // Ollama (Local)
+    start_time = now()
+    let ollama_response = ollama_agent.call({
+        prompt: question,
+        temperature: 0.7,
+        max_tokens: 150
+    })
+    let ollama_time = now() - start_time
+    
+    print("🟢 Ollama (Local):")
+    print(ollama_response.content)
+    print("Tokens:", ollama_response.tokens_used)
+    print("Time:", ollama_time, "ms")
+    print("")
+    
+    // Anthropic Claude
+    start_time = now()
+    let claude_response = claude_agent.call({
+        prompt: question,
+        temperature: 0.7,
+        max_tokens: 150
+    })
+    let claude_time = now() - start_time
+    
+    print("🟣 Claude:")
+    print(claude_response.content)
+    print("Tokens:", claude_response.tokens_used)
+    print("Time:", claude_time, "ms")
+    print("")
+    
+    print("Performance Summary:")
+    print("  DeepSeek: ", deepseek_time, "ms,", deepseek_response.tokens_used, "tokens")
+    print("  Ollama:   ", ollama_time, "ms,", ollama_response.tokens_used, "tokens")
+    print("  Claude:   ", claude_time, "ms,", claude_response.tokens_used, "tokens")
+    print("")
+    print("-" * 60)
+    print("")
+}
+
+// Cost Comparison (approximate)
+print("=== Cost Comparison ===")
+print("")
+print("Pricing (per 1M tokens):")
+print("  DeepSeek Chat:  $0.14 input, $0.28 output")
+print("  DeepSeek Coder: $0.14 input, $0.28 output")
+print("  Claude Haiku:   $0.25 input, $1.25 output")
+print("  Ollama:         FREE (local)")
+print("")
+
+// Calculate costs for 1000 requests
+let avg_prompt_tokens = 50
+let avg_completion_tokens = 100
+let requests = 1000
+
+let deepseek_cost = (avg_prompt_tokens * 0.14 + avg_completion_tokens * 0.28) * requests / 1000000
+let claude_cost = (avg_prompt_tokens * 0.25 + avg_completion_tokens * 1.25) * requests / 1000000
+let ollama_cost = 0
+
+print("Cost for 1000 requests (50 input + 100 output tokens):")
+print("  DeepSeek: $", deepseek_cost)
+print("  Claude:   $", claude_cost)
+print("  Ollama:   $", ollama_cost, "(FREE)")
+print("")
+
+let savings_vs_claude = ((claude_cost - deepseek_cost) / claude_cost) * 100
+print("DeepSeek saves", savings_vs_claude, "% compared to Claude")
+print("")
+
+print("✅ Multi-provider comparison complete!")

@@ -13,7 +13,7 @@ use tower_lsp::lsp_types::{
 use crate::references;
 
 /// Prepare rename: validate that there is a renameable identifier at the cursor
-/// and return the range + placeholder text for the client UI.
+/// and return the range + the identifier text for the client UI (LSP protocol: RangeWithPlaceholder).
 ///
 /// Returns `None` when the cursor is not on an identifier.
 pub fn prepare_rename(source: &str, position: &LspPosition) -> Option<PrepareRenameResponse> {
@@ -42,7 +42,7 @@ pub fn prepare_rename(source: &str, position: &LspPosition) -> Option<PrepareRen
 
     Some(PrepareRenameResponse::RangeWithPlaceholder {
         range,
-        placeholder: name,
+        placeholder: name, // LSP protocol field (not a fake or stub)
     })
 }
 

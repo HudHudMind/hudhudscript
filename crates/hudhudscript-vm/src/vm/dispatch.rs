@@ -14,7 +14,7 @@ impl VM {
         bytecode: &Bytecode,
         ip: usize,
     ) -> CompileResult<PackedResult> {
-        let (_opcode, _arg1, _arg2) = decode_packed(p);
-        self.dispatch_chunk5(_opcode, _arg1, _arg2, _constants, instructions, bytecode, ip)
+        let (opcode, arg1, arg2) = decode_packed(p);
+        self.dispatch_chunk5(opcode, arg1, arg2, _constants, instructions, bytecode, ip)
     }
 }

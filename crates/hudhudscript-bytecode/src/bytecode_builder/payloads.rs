@@ -1,7 +1,7 @@
 use crate::{
     Bytecode, CallPayload, ClassDeclPayload, ClassStaticDeclPayload, DefineFunctionPayload,
     DestructObjectPayload, EnumDeclPayload, LoadModulePayload, LoopPayload, OptSymPayload,
-    SuperInstrPayload, SymId, TraitCheckPayload, TwoSymPayload,
+    SuperInstrPayload, CmpJumpPayload, SymId, TraitCheckPayload, TwoSymPayload,
 };
 
 impl Bytecode {
@@ -100,7 +100,24 @@ impl Bytecode {
     #[inline]
     pub fn add_call_payload(&mut self, sym: SymId, arg_count: u8) -> u32 {
         let idx = self.call_payloads.len() as u32;
-        self.call_payloads.push(CallPayload { sym, arg_count });
+        self.call_payloads.push(CallPayload { sym, arg_count, function_idx: u32::MAX, builtin_method_idx: u32::MAX });
+        idx
+    }
+
+    /// P6: Add a call payload with a known builtin method ID for fast dispatch.
+    pub fn add_call_payload_with_builtin(
+        &mut self,
+        sym: SymId,
+        arg_count: u8,
+        builtin_method_idx: u32,
+    ) -> u32 {
+        let idx = self.call_payloads.len() as u32;
+        self.call_payloads.push(CallPayload {
+            sym,
+            arg_count,
+            function_idx: u32::MAX,
+            builtin_method_idx,
+        });
         idx
     }
 
@@ -108,10 +125,10 @@ impl Bytecode {
     ///
     /// # Panics
     /// Panics on out-of-bounds — compiler invariant violation (Kural 7c,
-    /// no fallback).
+    /// P6: return reference to avoid copy on every Call/MethodCall.
     #[inline]
-    pub fn get_call_payload(&self, idx: u32) -> CallPayload {
-        self.call_payloads[idx as usize]
+    pub fn get_call_payload(&self, idx: u32) -> &CallPayload {
+        &self.call_payloads[idx as usize]
     }
 
     /// Register a two-symbol payload and return its index (CROSS-2d).
@@ -153,13 +170,21 @@ impl Bytecode {
     /// Register an A2 super-instruction payload and return its index.
     /// Currently used by `IntSubCall1(idx)`.
     #[inline]
-    pub fn add_super_instr_payload(&mut self, call_idx: u32, slot: u32, imm: i16, offset: i32) -> u32 {
+    pub fn add_super_instr_payload(
+        &mut self,
+        call_idx: u32,
+        slot: u32,
+        imm: i16,
+        offset: i32,
+    ) -> u32 {
         let idx = self.super_instr_payloads.len() as u32;
         self.super_instr_payloads.push(SuperInstrPayload {
             call_idx,
             slot,
             imm,
             offset,
+            call_dst: 255,
+            arg_reg: 1,
         });
         idx
     }
@@ -169,6 +194,16 @@ impl Bytecode {
     /// # Panics
     /// Panics on out-of-bounds — compiler invariant violation (Kural 7c).
     #[inline]
+    pub fn add_cmp_jump_payload(&mut self, src1: u8, src2: u8, target: u32) -> u32 {
+        let idx = self.cmp_jump_payloads.len() as u32;
+        self.cmp_jump_payloads.push(CmpJumpPayload { src1, src2, target });
+        idx
+    }
+
+    pub fn patch_cmp_jump_target(&mut self, idx: u32, target: u32) {
+        self.cmp_jump_payloads[idx as usize].target = target;
+    }
+
     pub fn get_super_instr_payload(&self, idx: u32) -> SuperInstrPayload {
         self.super_instr_payloads[idx as usize]
     }

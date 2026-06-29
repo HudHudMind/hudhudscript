@@ -359,6 +359,7 @@ pub(crate) fn collect_decl(decl: &Decl, name: &str, uri: &Url, out: &mut Vec<Loc
                 collect_expr(val, name, uri, out);
             }
         }
+        _ => {}
     }
 }
 

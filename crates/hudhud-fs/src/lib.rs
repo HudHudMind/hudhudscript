@@ -2,5 +2,6 @@
 pub mod file_ops;
 pub mod fs_builtins;
 pub mod glob_ops;
+pub mod patch;
 pub mod path;
 pub mod temp;

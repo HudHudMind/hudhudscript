@@ -7,7 +7,7 @@
 use crate::{Expr, ImportKind, McpServerDecl, Span, VarDecl};
 use serde::{Deserialize, Serialize};
 
-mod decl;
+pub mod decl;
 pub use decl::SubjectAbilityDef;
 mod impls;
 

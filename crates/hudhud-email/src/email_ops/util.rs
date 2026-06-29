@@ -35,7 +35,7 @@ pub fn send_via_sendmail(from: &str, to: &str, subject: &str, body: &str) -> Hud
         .wait_with_output()
         .map_err(|e| runtime_error(format!("sendmail error: {}", e)))?;
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("ok".to_string(), Value16::bool_(output.status.success()));
     result.insert(
         "message".to_string(),
@@ -44,7 +44,7 @@ pub fn send_via_sendmail(from: &str, to: &str, subject: &str, body: &str) -> Hud
     Ok(Value16::object(result))
 }
 
-pub fn obj_str(obj: &HashMap<String, Value16>, key: &str, ctx: &str) -> HudHudResult<String> {
+pub fn obj_str(obj: &hudhudscript_bytecode::ObjMap, key: &str, ctx: &str) -> HudHudResult<String> {
     match obj.get(key) {
         Some(v) => v
             .as_str()
@@ -57,7 +57,7 @@ pub fn obj_str(obj: &HashMap<String, Value16>, key: &str, ctx: &str) -> HudHudRe
     }
 }
 
-pub fn obj_str_opt(obj: &HashMap<String, Value16>, key: &str) -> Option<String> {
+pub fn obj_str_opt(obj: &hudhudscript_bytecode::ObjMap, key: &str) -> Option<String> {
     obj.get(key).and_then(|v| v.as_str()).map(|s| s.to_string())
 }
 
@@ -92,7 +92,7 @@ pub fn value_to_json_string(value: &Value16) -> String {
     if let Some(obj) = value.as_object() {
         let mut pairs: Vec<String> = obj
             .iter()
-            .filter(|(k, _)| !k.starts_with("__"))
+            .filter(|(k, _)| !k.to_string().starts_with("__"))
             .map(|(k, v)| format!("\"{}\":{}", k, value_to_json_string(v)))
             .collect();
         pairs.sort();

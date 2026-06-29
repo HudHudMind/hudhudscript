@@ -1,13 +1,17 @@
 //! Comprehensive public API tests for hudhudscript-orchestration
 
-use uuid::Uuid;
 use hudhudscript_orchestration::*;
+use uuid::Uuid;
 
+use hudhudscript_orchestration::orchestration::types::{StepConfig, StepType, WorkflowStep};
 use std::collections::HashMap;
 use std::sync::Arc;
-use hudhudscript_orchestration::orchestration::types::{StepConfig, StepType, WorkflowStep};
 
-fn create_test_engine() -> (OrchestrationEngine, Arc<LayerExecutor>, Arc<NetworkExecutor>) {
+fn create_test_engine() -> (
+    OrchestrationEngine,
+    Arc<LayerExecutor>,
+    Arc<NetworkExecutor>,
+) {
     let event_bus = Arc::new(EventBus::new());
     let layer_executor = Arc::new(LayerExecutor::new());
     let network_executor = Arc::new(NetworkExecutor::new(layer_executor.clone()));
@@ -20,7 +24,6 @@ fn create_test_engine() -> (OrchestrationEngine, Arc<LayerExecutor>, Arc<Network
     );
     (engine, layer_executor, network_executor)
 }
-
 
 /// Mock agent executor that always succeeds (for testing orchestration logic)
 struct SuccessExecutor;
@@ -72,7 +75,12 @@ async fn engine_with_agent_executor_registers_correctly() {
     // Engine should start empty
     assert!(engine.get_workflow(Uuid::new_v4()).await.is_none());
     // Register a layer and verify
-    let layer = Layer { id: Uuid::new_v4(), name: "test_layer".into(), agents: vec!["agent1".into()], config: LayerConfig::default() };
+    let layer = Layer {
+        id: Uuid::new_v4(),
+        name: "test_layer".into(),
+        agents: vec!["agent1".into()],
+        config: LayerConfig::default(),
+    };
     let lid = layer.id;
     le.register_layer(layer).await.unwrap();
     assert!(le.get_layer(lid).await.is_some());
@@ -82,7 +90,12 @@ async fn engine_with_agent_executor_registers_correctly() {
 #[tokio::test]
 async fn engine_register_layer() {
     let (engine, _, _) = create_test_engine();
-    let layer = Layer { id: Uuid::new_v4(), name: "test_layer".into(), agents: vec!["agent1".into()], config: LayerConfig::default() };
+    let layer = Layer {
+        id: Uuid::new_v4(),
+        name: "test_layer".into(),
+        agents: vec!["agent1".into()],
+        config: LayerConfig::default(),
+    };
     let id = layer.id;
     assert!(!id.is_nil());
 }
@@ -90,7 +103,12 @@ async fn engine_register_layer() {
 #[tokio::test]
 async fn engine_register_network() {
     let (engine, _, _) = create_test_engine();
-    let layer = Layer { id: Uuid::new_v4(), name: "l1".into(), agents: vec!["a1".into()], config: LayerConfig::default() };
+    let layer = Layer {
+        id: Uuid::new_v4(),
+        name: "l1".into(),
+        agents: vec!["a1".into()],
+        config: LayerConfig::default(),
+    };
     let layer_id = layer.id;
     let mut net = Network::new("pipeline".into());
     net.add_layer(layer_id);
@@ -101,13 +119,27 @@ async fn engine_register_network() {
 #[tokio::test]
 async fn engine_register_workflow() {
     let (engine, _, _) = create_test_engine();
-    let layer = Layer { id: Uuid::new_v4(), name: "l".into(), agents: vec!["a".into()], config: LayerConfig::default() };
+    let layer = Layer {
+        id: Uuid::new_v4(),
+        name: "l".into(),
+        agents: vec!["a".into()],
+        config: LayerConfig::default(),
+    };
     let lid = layer.id;
     let mut net = Network::new("n".into());
     net.add_layer(lid);
     let nid = net.id;
-    let mut wf = Workflow { id: Uuid::new_v4(), name: "main_wf".into(), steps: vec![], config: WorkflowConfig::default() };
-    wf.steps.push(WorkflowStep { name: "step".to_string(), step_type: StepType::Network { network_id: nid }, config: StepConfig::default() });
+    let mut wf = Workflow {
+        id: Uuid::new_v4(),
+        name: "main_wf".into(),
+        steps: vec![],
+        config: WorkflowConfig::default(),
+    };
+    wf.steps.push(WorkflowStep {
+        name: "step".to_string(),
+        step_type: StepType::Network { network_id: nid },
+        config: StepConfig::default(),
+    });
     let wfid = engine.register_workflow(wf).await.unwrap();
     assert!(!wfid.is_nil());
 }
@@ -115,13 +147,27 @@ async fn engine_register_workflow() {
 #[tokio::test]
 async fn engine_get_workflow() {
     let (engine, _, _) = create_test_engine();
-    let layer = Layer { id: Uuid::new_v4(), name: "l".into(), agents: vec!["a".into()], config: LayerConfig::default() };
+    let layer = Layer {
+        id: Uuid::new_v4(),
+        name: "l".into(),
+        agents: vec!["a".into()],
+        config: LayerConfig::default(),
+    };
     let lid = layer.id;
     let mut net = Network::new("n".into());
     net.add_layer(lid);
     let nid = net.id;
-    let mut wf = Workflow { id: Uuid::new_v4(), name: "my_wf".into(), steps: vec![], config: WorkflowConfig::default() };
-    wf.steps.push(WorkflowStep { name: "step".to_string(), step_type: StepType::Network { network_id: nid }, config: StepConfig::default() });
+    let mut wf = Workflow {
+        id: Uuid::new_v4(),
+        name: "my_wf".into(),
+        steps: vec![],
+        config: WorkflowConfig::default(),
+    };
+    wf.steps.push(WorkflowStep {
+        name: "step".to_string(),
+        step_type: StepType::Network { network_id: nid },
+        config: StepConfig::default(),
+    });
     let wfid = engine.register_workflow(wf).await.unwrap();
     let got = engine.get_workflow(wfid).await;
     assert!(got.is_some());
@@ -131,13 +177,27 @@ async fn engine_get_workflow() {
 #[tokio::test]
 async fn engine_get_workflow_by_name() {
     let (engine, _, _) = create_test_engine();
-    let layer = Layer { id: Uuid::new_v4(), name: "l".into(), agents: vec!["a".into()], config: LayerConfig::default() };
+    let layer = Layer {
+        id: Uuid::new_v4(),
+        name: "l".into(),
+        agents: vec!["a".into()],
+        config: LayerConfig::default(),
+    };
     let lid = layer.id;
     let mut net = Network::new("n".into());
     net.add_layer(lid);
     let nid = net.id;
-    let mut wf = Workflow { id: Uuid::new_v4(), name: "named_wf".into(), steps: vec![], config: WorkflowConfig::default() };
-    wf.steps.push(WorkflowStep { name: "step".to_string(), step_type: StepType::Network { network_id: nid }, config: StepConfig::default() });
+    let mut wf = Workflow {
+        id: Uuid::new_v4(),
+        name: "named_wf".into(),
+        steps: vec![],
+        config: WorkflowConfig::default(),
+    };
+    wf.steps.push(WorkflowStep {
+        name: "step".to_string(),
+        step_type: StepType::Network { network_id: nid },
+        config: StepConfig::default(),
+    });
     engine.register_workflow(wf).await.unwrap();
     assert!(engine.get_workflow_by_name("named_wf").await.is_some());
     assert!(engine.get_workflow_by_name("nonexistent").await.is_none());
@@ -146,16 +206,39 @@ async fn engine_get_workflow_by_name() {
 #[tokio::test]
 async fn engine_duplicate_workflow_name_error() {
     let (engine, _, _) = create_test_engine();
-    let layer = Layer { id: Uuid::new_v4(), name: "l".into(), agents: vec!["a".into()], config: LayerConfig::default() };
+    let layer = Layer {
+        id: Uuid::new_v4(),
+        name: "l".into(),
+        agents: vec!["a".into()],
+        config: LayerConfig::default(),
+    };
     let lid = layer.id;
     let mut net = Network::new("n".into());
     net.add_layer(lid);
     let nid = net.id;
-    let mut wf1 = Workflow { id: Uuid::new_v4(), name: "dup".into(), steps: vec![], config: WorkflowConfig::default() };
-    wf1.steps.push(WorkflowStep { name: "step".to_string(), step_type: StepType::Network { network_id: nid }, config: StepConfig::default() });
+    let mut wf1 = Workflow {
+        id: Uuid::new_v4(),
+        name: "dup".into(),
+        steps: vec![],
+        config: WorkflowConfig::default(),
+    };
+    wf1.steps.push(WorkflowStep {
+        name: "step".to_string(),
+        step_type: StepType::Network { network_id: nid },
+        config: StepConfig::default(),
+    });
     engine.register_workflow(wf1).await.unwrap();
-    let mut wf2 = Workflow { id: Uuid::new_v4(), name: "dup".into(), steps: vec![], config: WorkflowConfig::default() };
-    wf2.steps.push(WorkflowStep { name: "step".to_string(), step_type: StepType::Network { network_id: nid }, config: StepConfig::default() });
+    let mut wf2 = Workflow {
+        id: Uuid::new_v4(),
+        name: "dup".into(),
+        steps: vec![],
+        config: WorkflowConfig::default(),
+    };
+    wf2.steps.push(WorkflowStep {
+        name: "step".to_string(),
+        step_type: StepType::Network { network_id: nid },
+        config: StepConfig::default(),
+    });
     assert!(engine.register_workflow(wf2).await.is_err());
 }
 
@@ -165,7 +248,12 @@ async fn engine_duplicate_workflow_name_error() {
 
 #[test]
 fn layer_new() {
-    let l = Layer { id: Uuid::new_v4(), name: "process".into(), agents: vec!["agent1".into(), "agent2".into()], config: LayerConfig::default() };
+    let l = Layer {
+        id: Uuid::new_v4(),
+        name: "process".into(),
+        agents: vec!["agent1".into(), "agent2".into()],
+        config: LayerConfig::default(),
+    };
     assert_eq!(l.name, "process");
     assert_eq!(l.agents.len(), 2);
     assert!(l.config.dependencies.is_empty());
@@ -173,7 +261,12 @@ fn layer_new() {
 
 #[test]
 fn layer_add_dependency() {
-    let mut l = Layer { id: Uuid::new_v4(), name: "l".into(), agents: vec!["a".into()], config: LayerConfig::default() };
+    let mut l = Layer {
+        id: Uuid::new_v4(),
+        name: "l".into(),
+        agents: vec!["a".into()],
+        config: LayerConfig::default(),
+    };
     let dep_id = uuid::Uuid::new_v4();
     l.config.dependencies.push(dep_id);
     assert!(!l.config.dependencies.is_empty());
@@ -182,7 +275,12 @@ fn layer_add_dependency() {
 
 #[test]
 fn layer_add_dependency_dedup() {
-    let mut l = Layer { id: Uuid::new_v4(), name: "l".into(), agents: vec![], config: LayerConfig::default() };
+    let mut l = Layer {
+        id: Uuid::new_v4(),
+        name: "l".into(),
+        agents: vec![],
+        config: LayerConfig::default(),
+    };
     let dep_id = uuid::Uuid::new_v4();
     l.config.dependencies.push(dep_id);
     l.config.dependencies.push(dep_id);
@@ -280,16 +378,30 @@ fn error_strategy_variants() {
 
 #[test]
 fn workflow_new() {
-    let wf = Workflow { id: Uuid::new_v4(), name: "main".into(), steps: vec![], config: WorkflowConfig::default() };
+    let wf = Workflow {
+        id: Uuid::new_v4(),
+        name: "main".into(),
+        steps: vec![],
+        config: WorkflowConfig::default(),
+    };
     assert_eq!(wf.name, "main");
     assert!(wf.steps.is_empty());
 }
 
 #[test]
 fn workflow_add_network() {
-    let mut wf = Workflow { id: Uuid::new_v4(), name: "w".into(), steps: vec![], config: WorkflowConfig::default() };
+    let mut wf = Workflow {
+        id: Uuid::new_v4(),
+        name: "w".into(),
+        steps: vec![],
+        config: WorkflowConfig::default(),
+    };
     let nid = uuid::Uuid::new_v4();
-    wf.steps.push(WorkflowStep { name: "step".to_string(), step_type: StepType::Network { network_id: nid }, config: StepConfig::default() });
+    wf.steps.push(WorkflowStep {
+        name: "step".to_string(),
+        step_type: StepType::Network { network_id: nid },
+        config: StepConfig::default(),
+    });
     assert_eq!(wf.steps.len(), 1);
 }
 
@@ -678,7 +790,12 @@ async fn default_agent_executor_returns_stub_failure() {
 #[tokio::test]
 async fn engine_execute_workflow() {
     let (engine, le, ne) = create_test_engine();
-    let layer = Layer { id: Uuid::new_v4(), name: "l".into(), agents: vec!["a1".into()], config: LayerConfig::default() };
+    let layer = Layer {
+        id: Uuid::new_v4(),
+        name: "l".into(),
+        agents: vec!["a1".into()],
+        config: LayerConfig::default(),
+    };
     let lid = layer.id;
     le.register_layer(layer).await.unwrap();
 
@@ -687,8 +804,17 @@ async fn engine_execute_workflow() {
     let nid = net.id;
     ne.register_network(net).await.unwrap();
 
-    let mut wf = Workflow { id: Uuid::new_v4(), name: "exec_test".into(), steps: vec![], config: WorkflowConfig::default() };
-    wf.steps.push(WorkflowStep { name: "step".to_string(), step_type: StepType::Network { network_id: nid }, config: StepConfig::default() });
+    let mut wf = Workflow {
+        id: Uuid::new_v4(),
+        name: "exec_test".into(),
+        steps: vec![],
+        config: WorkflowConfig::default(),
+    };
+    wf.steps.push(WorkflowStep {
+        name: "step".to_string(),
+        step_type: StepType::Network { network_id: nid },
+        config: StepConfig::default(),
+    });
     let wfid = engine.register_workflow(wf).await.unwrap();
     let input = WorkflowInput {
         data: serde_json::json!({"input": "test"}),

@@ -1,0 +1,18 @@
+// Array Methods Demo
+
+var numbers = [1, 2, 3];
+
+// Length property
+var count = numbers.length;
+
+// Push - add to end
+var arr1 = numbers.push(4);
+
+// Pop - remove from end
+var arr2 = arr1.pop();
+
+// Shift - remove from start
+var arr3 = numbers.shift();
+
+// Unshift - add to start
+var arr4 = numbers.unshift(0);

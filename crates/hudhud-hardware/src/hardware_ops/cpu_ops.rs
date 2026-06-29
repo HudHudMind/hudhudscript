@@ -63,7 +63,7 @@ pub fn hw_cpu_info(_args: &[Value16]) -> HudHudResult<Value16> {
         }
     }
 
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     obj.insert("model".to_string(), Value16::string(model));
     obj.insert("cores".to_string(), Value16::number(cores as f64));
     obj.insert("threads".to_string(), Value16::number(threads as f64));

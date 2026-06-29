@@ -1,0 +1,31 @@
+// HudHudScript — Variables and Operators
+// Demonstrates basic variable declarations, arithmetic, and string ops
+
+let x = 10;
+let y = 3;
+
+// Arithmetic
+let sum = x + y;
+let diff = x - y;
+let prod = x * y;
+let quot = x / y;
+let rem = x % y;
+
+print(sum);
+print(diff);
+print(prod);
+print(quot);
+print(rem);
+
+// String concatenation
+let first = "Hello";
+let last = "World";
+let msg = first + ", " + last + "!";
+print(msg);
+
+// Boolean logic
+let a = true;
+let b = false;
+print(a && b);
+print(a || b);
+print(!a);

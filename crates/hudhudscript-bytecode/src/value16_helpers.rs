@@ -1,6 +1,6 @@
 use crate::{
     ClassData, DataData, DynamicData, DynamicKind, DynamicObject, FunctionData, GeneratorState16,
-    InstanceData, PromiseState16, ReprTag, ResourceRef, ToolRef, Value16,
+    InstanceData, ObjMap, PromiseState16, ReprTag, ResourceRef, ToolRef, Value16,
 };
 use parking_lot::Mutex;
 use std::sync::Arc;
@@ -72,6 +72,10 @@ impl Value16 {
         self.as_object().is_some()
     }
 
+    pub fn is_bigint(&self) -> bool {
+        self.as_bigint().is_some()
+    }
+
     #[inline(always)]
     pub fn is_truthy(&self) -> bool {
         match self.0.tag() {
@@ -85,7 +89,7 @@ impl Value16 {
             ReprTag::InlineString => {
                 // Length is in bits 4-7 of the 128-bit repr; check via payload vs tag
                 (self.0.payload_u64() & 0xF0) != 0 // has non-zero length
-            },
+            }
             ReprTag::Dynamic => {
                 if let Some(s) = self.as_str() {
                     !s.is_empty()
@@ -106,10 +110,12 @@ impl Value16 {
         if self.0.tag() != other.0.tag() {
             match (self.0.tag(), other.0.tag()) {
                 (ReprTag::Int, ReprTag::Number) => {
-                    return (self.0.payload_u64() as i64 as f64) == f64::from_bits(other.0.payload_u64());
+                    return (self.0.payload_u64() as i64 as f64)
+                        == f64::from_bits(other.0.payload_u64());
                 }
                 (ReprTag::Number, ReprTag::Int) => {
-                    return f64::from_bits(self.0.payload_u64()) == (other.0.payload_u64() as i64 as f64);
+                    return f64::from_bits(self.0.payload_u64())
+                        == (other.0.payload_u64() as i64 as f64);
                 }
                 _ => return false,
             }
@@ -117,7 +123,9 @@ impl Value16 {
         match self.0.tag() {
             ReprTag::Null => true,
             ReprTag::Bool => self.0.payload_u64() == other.0.payload_u64(),
-            ReprTag::Number => f64::from_bits(self.0.payload_u64()) == f64::from_bits(other.0.payload_u64()),
+            ReprTag::Number => {
+                f64::from_bits(self.0.payload_u64()) == f64::from_bits(other.0.payload_u64())
+            }
             ReprTag::Int => self.0.payload_u64() == other.0.payload_u64(),
             ReprTag::InlineString => unreachable!(), // handled by as_str fast path above
             ReprTag::Dynamic => {
@@ -148,7 +156,10 @@ impl Value16 {
                     }
                     return a
                         .iter()
-                        .all(|(k, v)| b.get(k).map(|bv| v.values_equal(bv)).unwrap_or(false));
+                        .all(|(k, v)| b.get(&k).map(|bv| v.values_equal(bv)).unwrap_or(false));
+                }
+                if let (Some(a), Some(b)) = (self.as_bigint(), other.as_bigint()) {
+                    return a == b;
                 }
                 false
             }
@@ -159,16 +170,16 @@ impl Value16 {
     pub fn as_function_params(&self) -> Option<Vec<String>> {
         None
     }
-    pub fn as_instance_fields(&self) -> Option<&std::collections::HashMap<String, Value16>> {
+    pub fn as_instance_fields(&self) -> Option<&ObjMap> {
         None
     }
     pub fn as_class_name(&self) -> Option<&str> {
         None
     }
-    pub fn as_class_methods(&self) -> Option<&std::collections::HashMap<String, Value16>> {
+    pub fn as_class_methods(&self) -> Option<&ObjMap> {
         None
     }
-    pub fn as_class_fields(&self) -> Option<&std::collections::HashMap<String, Value16>> {
+    pub fn as_class_fields(&self) -> Option<&ObjMap> {
         None
     }
     pub fn as_class_parent(&self) -> Option<&Value16> {

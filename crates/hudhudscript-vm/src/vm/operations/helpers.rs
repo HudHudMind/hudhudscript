@@ -242,6 +242,9 @@ pub fn create_array(values: Vec<Value16>) -> Value16 {
 }
 
 /// Create an object value from evaluated properties.
-pub fn create_object(properties: HashMap<String, Value16>) -> Value16 {
+pub fn create_object<I>(properties: I) -> Value16
+where
+    I: IntoIterator<Item = (String, Value16)>,
+{
     Value16::object(properties)
 }

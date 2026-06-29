@@ -56,7 +56,9 @@ impl crate::vm::VM {
                     let chunk_name = &func_data.chunk_name;
                     let params = &func_data.params;
                     let captures = &func_data.captures;
-                    if let Some(chunk) = bytecode.functions.borrow().get(chunk_name.as_str()).cloned() {
+                    if let Some(chunk) = bytecode
+                        .get_function(chunk_name.as_str())
+                    {
                         let params = params.clone();
                         let captures = captures.clone();
 
@@ -160,7 +162,7 @@ impl crate::vm::VM {
                 let actor_id = actor_ref.id.clone();
                 self.actor_mailboxes.insert(actor_id.clone(), mailbox);
 
-                let mut actor = HashMap::new();
+                let mut actor = hudhudscript_bytecode::ObjMap::default();
                 actor.insert("__type".to_string(), Value16::string("actor".to_string()));
                 actor.insert(
                     "__kind__".to_string(),
@@ -251,28 +253,37 @@ impl crate::vm::VM {
             // stdin functions (INPUT0001: delegate to hudhud_term stdin_ops)
             "input" | "oku" | "gir" | "eingabe" | "leer" | "lire" => {
                 let mut args = Vec::new();
-                for _i in 0..arg_count { args.push(self.registers[first_arg as usize + _i as usize]); }
+                for _i in 0..arg_count {
+                    args.push(self.registers[first_arg as usize + _i as usize]);
+                }
                 args.reverse();
                 self.registers[255] = hudhud_term::stdin_ops::dispatch(
-                    hudhud_term::stdin_ops::StdinMethodId::Read, &args,
+                    hudhud_term::stdin_ops::StdinMethodId::Read,
+                    &args,
                 )?;
                 Ok(true)
             }
             "input_hidden" => {
                 let mut args = Vec::new();
-                for _i in 0..arg_count { args.push(self.registers[first_arg as usize + _i as usize]); }
+                for _i in 0..arg_count {
+                    args.push(self.registers[first_arg as usize + _i as usize]);
+                }
                 args.reverse();
                 self.registers[255] = hudhud_term::stdin_ops::dispatch(
-                    hudhud_term::stdin_ops::StdinMethodId::Password, &args,
+                    hudhud_term::stdin_ops::StdinMethodId::Password,
+                    &args,
                 )?;
                 Ok(true)
             }
             "confirm" => {
                 let mut args = Vec::new();
-                for _i in 0..arg_count { args.push(self.registers[first_arg as usize + _i as usize]); }
+                for _i in 0..arg_count {
+                    args.push(self.registers[first_arg as usize + _i as usize]);
+                }
                 args.reverse();
                 self.registers[255] = hudhud_term::stdin_ops::dispatch(
-                    hudhud_term::stdin_ops::StdinMethodId::Confirm, &args,
+                    hudhud_term::stdin_ops::StdinMethodId::Confirm,
+                    &args,
                 )?;
                 Ok(true)
             }

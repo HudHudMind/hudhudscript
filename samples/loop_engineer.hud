@@ -1,0 +1,23 @@
+// L7 — Full Loop Engineer Benchmark (dry-run)
+let test_file = "/tmp/hudhud_loop_test.txt";
+
+// 1. Dosyaya yaz
+file.write(test_file, "line1\nline2\nline3\n");
+
+// 2. fs.read ile dosya oku
+let content1 = fs.read(test_file);
+print(content1);
+
+// 3. fs.patch_apply ile SEARCH/REPLACE uygula
+let result = fs.patch_apply(test_file, "line2", "LINE_TWO");
+
+// 4. fs.read ile sonucu dogrula
+let content2 = fs.read(test_file);
+print(content2);
+
+// 5. tokenomics
+let cost = tokenomics.session_cost();
+print(cost);
+
+// 6. temizlik
+file.delete(test_file);

@@ -16,9 +16,8 @@ impl Compiler {
             let parent_prefix = format!("{}::", parent_name);
             let inherited: Vec<(String, String)> = self
                 .bytecode
-                .functions
-                .borrow()
-                .keys()
+                .function_keys()
+                .into_iter()
                 .filter(|k| k.starts_with(&parent_prefix))
                 .map(|k| {
                     let method = k[parent_prefix.len()..].to_string();
@@ -33,9 +32,9 @@ impl Compiler {
                     _ => false,
                 });
                 if !child_overrides {
-                    let chunk = self.bytecode.functions.borrow().get(&parent_chunk_name).cloned();
+                    let chunk = self.bytecode.get_function(&parent_chunk_name);
                     if let Some(chunk) = chunk {
-                        self.bytecode.functions.borrow_mut().insert(child_chunk_name, chunk);
+                        self.bytecode.add_function(child_chunk_name, chunk);
                         if method != "constructor" {
                             method_names.push(method);
                         }
@@ -57,7 +56,7 @@ impl Compiler {
                     let param_names: Vec<String> = params.iter().map(|p| p.name.clone()).collect();
                     let chunk_name = format!("{}::{}", class_decl.name, name);
                     let chunk = self.compile_function_body(param_names, body)?;
-                    self.bytecode.functions.borrow_mut().insert(chunk_name, Arc::new(chunk));
+                    self.bytecode.add_function(chunk_name, Arc::new(chunk));
                     let access_byte: u8 = match access {
                         hudhudscript_ast::AccessModifier::Public => 0,
                         hudhudscript_ast::AccessModifier::Private => 1,
@@ -75,7 +74,7 @@ impl Compiler {
                     let param_names: Vec<String> = params.iter().map(|p| p.name.clone()).collect();
                     let chunk_name = format!("{}::constructor", class_decl.name);
                     let chunk = self.compile_function_body(param_names, body)?;
-                    self.bytecode.functions.borrow_mut().insert(chunk_name, Arc::new(chunk));
+                    self.bytecode.add_function(chunk_name, Arc::new(chunk));
                     method_names.push("constructor".to_string());
                 }
                 ClassMember::Field {

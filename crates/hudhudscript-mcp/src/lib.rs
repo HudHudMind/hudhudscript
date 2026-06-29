@@ -41,7 +41,7 @@ pub mod client;
 pub mod protocol;
 pub mod transport;
 
-pub use client::{make_transport_pair, ConnectionState, McpClient};
+pub use client::{ConnectionState, McpClient};
 pub use protocol::*;
 pub use transport::{
     Transport, TransportConfig, TransportRecv, TransportSend, TransportType,

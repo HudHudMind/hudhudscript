@@ -47,7 +47,9 @@ impl crate::vm::VM {
         _bytecode: &hudhudscript_bytecode::Bytecode,
     ) -> hudhudscript_bytecode::error::CompileResult<bool> {
         match name {
-            n if crate::vm::builtin_aliases::is_print_alias(n) | crate::vm::builtin_aliases::is_println_alias(n) => {
+            n if crate::vm::builtin_aliases::is_print_alias(n)
+                | crate::vm::builtin_aliases::is_println_alias(n) =>
+            {
                 let mut args: Vec<Value16> = Vec::new();
                 for _i in 0..arg_count {
                     args.push(self.registers[first_arg as usize + _i as usize]);
@@ -92,7 +94,11 @@ impl crate::vm::VM {
 
             n if crate::vm::builtin_aliases::is_put_alias(n) => {
                 let mut parts = Vec::new();
-                for _i in 0..arg_count { parts.push(self.value_to_string(&self.registers[first_arg as usize + _i as usize])); }
+                for _i in 0..arg_count {
+                    parts.push(
+                        self.value_to_string(&self.registers[first_arg as usize + _i as usize]),
+                    );
+                }
                 hudhud_print::print_ops::print_str(&parts.join(" "));
                 self.registers[255] = Value16::null();
                 Ok(true)
@@ -100,14 +106,22 @@ impl crate::vm::VM {
 
             n if crate::vm::builtin_aliases::is_putf_alias(n) => {
                 use hudhud_print::format::{sprintf, FmtArg};
-                if arg_count < 1 { return Err(compile_codes::runtime_error(format!("putf() requires at least 1 argument"))); }
+                if arg_count < 1 {
+                    return Err(compile_codes::runtime_error(format!(
+                        "putf() requires at least 1 argument"
+                    )));
+                }
                 let fmt = self.value_to_string(&self.registers[first_arg as usize]);
                 let mut args = Vec::new();
                 for _i in 1..arg_count {
                     let v = self.registers[first_arg as usize + _i as usize];
-                    if let Some(i) = v.as_int() { args.push(FmtArg::Int(i)); }
-                    else if let Some(n) = v.as_number() { args.push(FmtArg::Float(n)); }
-                    else { args.push(FmtArg::Str(self.value_to_string(&v))); }
+                    if let Some(i) = v.as_int() {
+                        args.push(FmtArg::Int(i));
+                    } else if let Some(n) = v.as_number() {
+                        args.push(FmtArg::Float(n));
+                    } else {
+                        args.push(FmtArg::Str(self.value_to_string(&v)));
+                    }
                 }
                 match sprintf(&fmt, &args) {
                     Ok(s) => hudhud_print::print_ops::print_str(&s),
@@ -237,14 +251,18 @@ impl crate::vm::VM {
             }
             "idiv" => {
                 self.check_arg_count("Math.idiv()", 2, arg_count)?;
-                let a = self.registers[first_arg as usize].as_number_fast()
+                let a = self.registers[first_arg as usize]
+                    .as_number_fast()
                     .map(|n| n as i64)
                     .ok_or_else(|| compile_codes::runtime_error("Math.idiv(): arg1 not numeric"))?;
-                let b = self.registers[(first_arg + 1) as usize].as_number_fast()
+                let b = self.registers[(first_arg + 1) as usize]
+                    .as_number_fast()
                     .map(|n| n as i64)
                     .ok_or_else(|| compile_codes::runtime_error("Math.idiv(): arg2 not numeric"))?;
                 if b == 0 {
-                    return Err(compile_codes::runtime_error("Math.idiv(): division by zero"));
+                    return Err(compile_codes::runtime_error(
+                        "Math.idiv(): division by zero",
+                    ));
                 }
                 self.registers[255] = Value16::int(a / b);
                 Ok(true)
@@ -288,7 +306,6 @@ impl crate::vm::VM {
                     let mut new_arr = arr.clone();
                     let popped = new_arr.pop().unwrap_or(Value16::null());
                     self.registers[255] = popped;
-
                 } else {
                     return Err(compile_codes::runtime_error(
                         "pop() requires an array".to_string(),
@@ -344,12 +361,10 @@ impl crate::vm::VM {
                     let end = end.unwrap_or(s.len());
                     let sliced: String = s.chars().skip(start).take(end - start).collect();
                     self.registers[255] = Value16::string(sliced);
-
                 } else if let Some(arr) = val_v.as_array() {
                     let end = end.unwrap_or(arr.len());
                     let sliced = arr[start..end.min(arr.len())].iter().cloned().collect();
                     self.registers[255] = Value16::array(sliced);
-
                 } else {
                     return Err(compile_codes::runtime_error(
                         "slice() requires string or array".to_string(),

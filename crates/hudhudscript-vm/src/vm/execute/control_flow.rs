@@ -19,7 +19,7 @@ impl VM {
                 // CROSS-2a: payload lives in `bytecode.enum_decl_payloads`.
                 let payload = &bytecode.enum_decl_payloads[*payload_idx as usize];
                 let name = bytecode.resolve_symbol(payload.name.0);
-                let mut obj = HashMap::new();
+                let mut obj = hudhudscript_bytecode::ObjMap::default();
                 for variant_sym in &payload.variants {
                     let variant = bytecode.resolve_symbol(variant_sym.0);
                     obj.insert(
@@ -37,7 +37,11 @@ impl VM {
                 let enum_name_sym = hudhudscript_bytecode::SymId(payload.first);
                 let variant_sym = hudhudscript_bytecode::SymId(payload.second);
                 let top = self.registers[255];
-                let expected = format!("{}::{}", bytecode.resolve_symbol(enum_name_sym.0), bytecode.resolve_symbol(variant_sym.0));
+                let expected = format!(
+                    "{}::{}",
+                    bytecode.resolve_symbol(enum_name_sym.0),
+                    bytecode.resolve_symbol(variant_sym.0)
+                );
                 let matches = top.as_string().map(|s| s == expected).unwrap_or(false);
                 self.registers[255] = Value16::bool_(matches);
             }
@@ -104,7 +108,11 @@ impl VM {
                 self.loop_headers.pop();
             }
 
-            Instruction::ForIn { iter_reg, var_sym_idx: var_name_sym, .. } => {
+            Instruction::ForIn {
+                iter_reg,
+                var_sym_idx: var_name_sym,
+                ..
+            } => {
                 let var_name = bytecode.resolve_symbol(*var_name_sym as u32);
                 let iterable = self.registers[*iter_reg as usize];
                 // Fast path: iterables that fit an eager Vec.
@@ -120,7 +128,7 @@ impl VM {
                     let elems = if has_next {
                         self.collect_custom_iterator(iterable, bytecode)?
                     } else {
-                        obj.keys().map(|k| Value16::string(k.clone())).collect()
+                        obj.keys().map(|k| Value16::string(k.to_string())).collect()
                     };
                     (elems, None)
                 } else if let Some(s) = iterable.as_string() {
@@ -149,7 +157,10 @@ impl VM {
                 self.loop_headers.push((usize::MAX, usize::MAX));
             }
 
-            Instruction::IterNext { end_offset: exit_offset, .. } => {
+            Instruction::IterNext {
+                end_offset: exit_offset,
+                ..
+            } => {
                 // Relative offset → absolute exit IP (Audit v3 F4.2).
                 let exit_abs = (ip as i64).wrapping_add(*exit_offset as i64);
                 if exit_abs < 0 || exit_abs > instructions.len() as i64 {
@@ -208,7 +219,9 @@ impl VM {
                         let mut slot_for_var = None;
                         if let Some(local_syms_ptr) = self.call_stack_local_syms.last() {
                             let local_syms = unsafe { &**local_syms_ptr };
-                            if let Ok(idx) = local_syms.binary_search_by_key(&sym_id, |(s, _, _)| *s) {
+                            if let Ok(idx) =
+                                local_syms.binary_search_by_key(&sym_id, |(s, _, _)| *s)
+                            {
                                 let slot = local_syms[idx].1 as i32;
                                 if slot >= 0 {
                                     slot_for_var = Some(slot);
@@ -223,7 +236,18 @@ impl VM {
                         } else {
                             // No slot (top-level for-loop):
                             // globals are authoritative.
-                            self.globals.insert(var_name.clone(), elem);
+                            let sym = hudhudscript_bytecode::interner::intern(&var_name);
+                            self.globals.insert(sym, elem);
+                            // Mirror to shared_globals_vec if this is a shared top-level symbol.
+                            if let Some(encoded) = self.main_slot_encoded(sym.0) {
+                                let (_slot, is_shared) = crate::vm::VM::main_slot_decode(encoded);
+                                if is_shared {
+                                    let idx = crate::vm::VM::main_slot_shared_index(encoded);
+                                    if idx < self.shared_globals_vec.len() {
+                                        self.shared_globals_vec[idx] = elem;
+                                    }
+                                }
+                            }
                         }
                     }
                 } else {
@@ -258,23 +282,26 @@ impl VM {
             // extracted helper to keep this dispatch function's
             // frame unchanged (mutual-recursion tests are tight on
             // the 2 MB test-thread stack).
-            Instruction::FinallyBegin(_) | Instruction::FinallyEnd | Instruction::FinallyExit(_) => {
-                match self.exec_finally_instr(instr, ip)? {
-                    FinallyStep::Advance => {}
-                    FinallyStep::Jump(t) => {
-                        *ip_ref = t;
-                        return Ok(StepAction::Jumped);
-                    }
-                    FinallyStep::Return => return Ok(StepAction::Return),
+            Instruction::FinallyBegin(_)
+            | Instruction::FinallyEnd
+            | Instruction::FinallyExit(_) => match self.exec_finally_instr(instr, ip)? {
+                FinallyStep::Advance => {}
+                FinallyStep::Jump(t) => {
+                    *ip_ref = t;
+                    return Ok(StepAction::Jumped);
                 }
-            }
+                FinallyStep::Return => return Ok(StepAction::Return { src: 255 }),
+            },
             Instruction::Throw { src } => {
-                let thrown = self.registers[*src as usize];
+                let thrown = crate::vm::exception_value::normalize_throw_value(
+                    self.registers[*src as usize],
+                );
                 // Issue #661 — explicit `throw` statement fires the
                 // debugger's `on_exception` hook BEFORE unwinding so
                 // the paused frame still reflects the throwing scope.
                 if self.debugger.is_some() {
-                    let msg = self.value_to_string(&thrown);
+                    let msg =
+                        crate::vm::exception_value::exception_field_str(&thrown, "description");
                     let should_pause = if let Some(ref mut dbg) = self.debugger {
                         dbg.on_exception("Throw", &msg)
                     } else {
@@ -291,8 +318,20 @@ impl VM {
                         }
                     }
                 }
-                if let Some((catch_ip, iter_depth, loop_depth)) = self.try_frames.pop()
-                {
+                // If finally frames exist AND try frames exist, compare positions.
+                // Inner finally (lower ip) should run before outer catch (higher ip).
+                let has_fin = !self.finally_frames.is_empty();
+                let has_try = !self.try_frames.is_empty();
+                if has_fin && has_try {
+                    let (fin_ip, _, _) = *self.finally_frames.last().unwrap();
+                    let (catch_ip, _, _) = *self.try_frames.last().unwrap();
+                    if fin_ip < catch_ip {
+                        self.pending_flow = Some(crate::vm::PendingFlow::Throw(Box::new(thrown)));
+                        *ip_ref = fin_ip;
+                        return Ok(StepAction::Jumped);
+                    }
+                }
+                if let Some((catch_ip, iter_depth, loop_depth)) = self.try_frames.pop() {
                     // Restore iterator depth and loop header depth.
                     // Stack depth no longer needed (register-based VM).
                     // Unwind iterators and loop headers
@@ -313,7 +352,7 @@ impl VM {
                 } else {
                     return Err(compile_codes::runtime_error(format!(
                         "Uncaught exception: {}",
-                        self.value_to_string(&thrown)
+                        crate::vm::exception_value::exception_field_str(&thrown, "description")
                     )));
                 }
             }

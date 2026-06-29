@@ -17,14 +17,18 @@ pub fn call_string_method(s: &str, method: &str, args: &[Value16]) -> SharedResu
             let delimiter = args.first().and_then(|v| v.as_str()).unwrap_or(" ");
             let parts: Vec<Value16> = s
                 .split(delimiter)
-                .map(|p| Value16::string(p.to_string()))
+                .map(|p| Value16::string_from_str(p))
                 .collect();
             Ok(Value16::array(parts))
         }
 
-        "trim" | "kırp" => Ok(Value16::string(s.trim().to_string())),
-        "toUpperCase" | "toUpper" | "to_upper" | "büyükHarfeÇevir" | "büyült" => Ok(Value16::string(s.to_uppercase())),
-        "toLowerCase" | "toLower" | "to_lower" | "küçükHarfeÇevir" | "küçült" => Ok(Value16::string(s.to_lowercase())),
+        "trim" | "kırp" => Ok(Value16::string_from_str(s.trim())),
+        "toUpperCase" | "toUpper" | "to_upper" | "büyükHarfeÇevir" | "büyült" => {
+            Ok(Value16::string(s.to_uppercase()))
+        }
+        "toLowerCase" | "toLower" | "to_lower" | "küçükHarfeÇevir" | "küçült" => {
+            Ok(Value16::string(s.to_lowercase()))
+        }
 
         "indexOf" => {
             let needle = args.first().and_then(|v| v.as_str()).unwrap_or("");
@@ -55,7 +59,7 @@ pub fn call_string_method(s: &str, method: &str, args: &[Value16]) -> SharedResu
                 .skip(start)
                 .take(end.saturating_sub(start))
                 .collect();
-            Ok(Value16::string(result))
+            Ok(Value16::string_from_str(&result))
         }
 
         "concat" => {
@@ -63,7 +67,7 @@ pub fn call_string_method(s: &str, method: &str, args: &[Value16]) -> SharedResu
             for arg in args {
                 result.push_str(&arg.display_string());
             }
-            Ok(Value16::string(result))
+            Ok(Value16::string_from_str(&result))
         }
 
         "startsWith" | "starts_with" => {
@@ -76,20 +80,13 @@ pub fn call_string_method(s: &str, method: &str, args: &[Value16]) -> SharedResu
             Ok(Value16::boolean(s.ends_with(suffix)))
         }
 
-        "trimStart" | "trim_start" => Ok(Value16::string(s.trim_start().to_string())),
-        "trimEnd" | "trim_end" => Ok(Value16::string(s.trim_end().to_string())),
+        "trimStart" | "trim_start" => Ok(Value16::string_from_str(s.trim_start())),
+        "trimEnd" | "trim_end" => Ok(Value16::string_from_str(s.trim_end())),
 
         // Bottleneck #2 fix: O(n) string reverse without per-char allocation.
         "reverse" => {
-            let bytes = s.as_bytes();
-            if bytes.is_ascii() {
-                let rev: Vec<u8> = bytes.iter().rev().cloned().collect();
-                // SAFETY: ASCII bytes are valid UTF-8.
-                Ok(Value16::string(unsafe { String::from_utf8_unchecked(rev) }))
-            } else {
-                let rev: String = s.chars().rev().collect();
-                Ok(Value16::string(rev))
-            }
+            let rev: String = s.chars().rev().collect();
+            Ok(Value16::string_from_str(&rev))
         }
 
         // ISSUE-5: two-pointer palindrome check — zero allocation.
@@ -200,7 +197,7 @@ pub fn call_string_method(s: &str, method: &str, args: &[Value16]) -> SharedResu
                 "match" => match re.captures(s) {
                     Some(caps) => {
                         let m = caps.get(0).unwrap();
-                        let mut result = HashMap::new();
+                        let mut result = hudhudscript_bytecode::ObjMap::default();
                         result.insert("matched".to_string(), Value16::boolean(true));
                         result.insert("index".to_string(), Value16::number(m.start() as f64));
                         result.insert("value".to_string(), Value16::string(m.as_str().to_string()));

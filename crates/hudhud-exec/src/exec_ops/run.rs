@@ -19,7 +19,7 @@ pub fn exec_run(args: &[Value16]) -> HudHudResult<Value16> {
         .output()
         .map_err(|e| runtime_error(format!("exec.run error: {}", e)))?;
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert(
         "code".to_string(),
         Value16::number(output.status.code().unwrap_or(-1) as f64),

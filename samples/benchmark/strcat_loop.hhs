@@ -1,0 +1,5 @@
+let s = "";
+for (let i = 0; i < 10000; i = i + 1) {
+    s = s + "x";
+}
+print(s.length);

@@ -43,7 +43,7 @@ pub fn hw_disk_info(_args: &[Value16]) -> HudHudResult<Value16> {
                             String::from("unknown")
                         };
 
-                        let mut disk = HashMap::new();
+                        let mut disk = hudhudscript_bytecode::ObjMap::default();
                         disk.insert("device".to_string(), Value16::string(device));
                         disk.insert("size_gb".to_string(), Value16::number(size_gb));
                         disk.insert("model".to_string(), Value16::string(model));

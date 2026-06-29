@@ -22,7 +22,7 @@ pub fn hw_gpu_info(_args: &[Value16]) -> HudHudResult<Value16> {
                 for line in text.lines() {
                     if !line.starts_with('\t') && !line.starts_with(' ') {
                         if in_vga && !current_name.is_empty() {
-                            let mut gpu = HashMap::new();
+                            let mut gpu = hudhudscript_bytecode::ObjMap::default();
                             gpu.insert("name".to_string(), Value16::string(current_name.clone()));
                             gpu.insert(
                                 "driver".to_string(),
@@ -74,7 +74,7 @@ pub fn hw_gpu_info(_args: &[Value16]) -> HudHudResult<Value16> {
                     }
                 }
                 if in_vga && !current_name.is_empty() {
-                    let mut gpu = HashMap::new();
+                    let mut gpu = hudhudscript_bytecode::ObjMap::default();
                     gpu.insert("name".to_string(), Value16::string(current_name));
                     gpu.insert("driver".to_string(), Value16::string(current_driver));
                     gpu.insert("memory_mb".to_string(), Value16::number(current_memory_mb));

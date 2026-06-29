@@ -4,7 +4,9 @@ use crate::attribution::{CostAttributor, CostEvent};
 use crate::config::TokenomicsConfig;
 use crate::enforcement::{AlertAction, BudgetEnforcer, EnforcementDecision};
 use crate::pricing::{CostBreakdown, PricingRegistry};
+use crate::storage::{FileStorageBackend, StorageBackend};
 use crate::streaming::StreamingTokenCounter;
+use crate::types::TokenUsageRecord;
 use chrono::Utc;
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
@@ -13,6 +15,8 @@ use uuid::Uuid;
 pub struct TokenomicsManager {
     config: TokenomicsConfig,
     pricing: PricingRegistry,
+    storage: Option<FileStorageBackend>,
+    user_id: String,
     enforcer: Mutex<BudgetEnforcer>,
     attributor: Mutex<CostAttributor>,
     enabled: bool,
@@ -31,10 +35,18 @@ impl TokenomicsManager {
             AlertAction::from_str(&config.alerts.on_depleted),
         );
 
+        let storage = if config.enabled {
+            FileStorageBackend::default_path().ok()
+        } else {
+            None
+        };
+
         Self {
             enabled: config.enabled,
             config,
             pricing: PricingRegistry::new(),
+            storage,
+            user_id: "default".to_string(),
             enforcer: Mutex::new(enforcer),
             attributor: Mutex::new(CostAttributor::new()),
         }
@@ -115,6 +127,34 @@ impl TokenomicsManager {
             }
         }
 
+        // Persist usage to file storage (fire-and-forget)
+        if let Some(ref storage) = self.storage {
+            let record = TokenUsageRecord {
+                id: uuid::Uuid::new_v4(),
+                user_id: user_id.unwrap_or("default").to_string(),
+                session_id: session_id.map(String::from),
+                operation: "call".to_string(),
+                tokens_used: (input_tokens + output_tokens) as u64,
+                timestamp: Utc::now(),
+                metadata: serde_json::json!({
+                    "model": model,
+                    "provider": provider,
+                    "prompt_tokens": input_tokens,
+                    "completion_tokens": output_tokens,
+                    "cached_tokens": cached_tokens,
+                    "thinking_tokens": thinking_tokens,
+                    "cost_usd": cost.as_ref().map(|c| c.total_cost),
+                }),
+            };
+            let storage = storage.clone();
+            // Fire-and-forget only if a Tokio runtime is active.
+            if let Ok(handle) = tokio::runtime::Handle::try_current() {
+                handle.spawn(async move {
+                    let _ = storage.save_usage(&record).await;
+                });
+            }
+        }
+
         cost
     }
 
@@ -132,6 +172,12 @@ impl TokenomicsManager {
     pub fn usage_summary(&self) -> crate::enforcement::UsageSummary {
         let enforcer = self.enforcer.lock().unwrap();
         enforcer.usage_summary()
+    }
+
+    /// Get pending alerts (drains the alert queue).
+    pub fn drain_alerts(&self) -> Vec<crate::enforcement::Alert> {
+        let mut enforcer = self.enforcer.lock().unwrap();
+        enforcer.drain_alerts()
     }
 
     /// Get cost breakdown by feature

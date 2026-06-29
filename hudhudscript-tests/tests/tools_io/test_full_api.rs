@@ -43,7 +43,10 @@ fn database_error_code_is_valid() {
 #[test]
 fn database_backend_variants() {
     assert!(matches!(DatabaseBackend::Sqlite, DatabaseBackend::Sqlite));
-    assert!(matches!(DatabaseBackend::Postgres, DatabaseBackend::Postgres));
+    assert!(matches!(
+        DatabaseBackend::Postgres,
+        DatabaseBackend::Postgres
+    ));
 }
 
 #[test]

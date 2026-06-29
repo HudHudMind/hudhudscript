@@ -17,7 +17,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
     // Agent system
     map.insert("ajani".to_string(), Keyword::Agent);
     map.insert("ajan".to_string(), Keyword::Agent);
-    map.insert("görev".to_string(), Keyword::Task);
     map.insert("araç".to_string(), Keyword::Tool);
     map.insert("kaynak".to_string(), Keyword::Resource);
     map.insert("mcp".to_string(), Keyword::Mcp);
@@ -88,9 +87,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
     map.insert("anayasa".to_string(), Keyword::Constitution);
     map.insert("yasa".to_string(), Keyword::Law);
     map.insert("kural".to_string(), Keyword::Rule);
-    map.insert("ajan_kuralı".to_string(), Keyword::AgentRule);
-    map.insert("kural_seti".to_string(), Keyword::RuleSet);
-    map.insert("kural_zinciri".to_string(), Keyword::RuleChain);
     map.insert("konsey".to_string(), Keyword::Council);
     map.insert("sürü".to_string(), Keyword::Swarm);
     map.insert("topluluk".to_string(), Keyword::Community);

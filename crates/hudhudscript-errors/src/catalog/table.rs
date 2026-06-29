@@ -24,7 +24,7 @@ mod type_errors;
 mod ui;
 mod validation;
 
-pub static ERROR_TABLE: [ErrorEntry; 324] = [
+pub static ERROR_TABLE: [ErrorEntry; 326] = [
     tool::APPROVAL_INVALID_TRANSITION,
     tool::APPROVAL_NOT_FOUND,
     cli::ARG_INVALID_VALUE,
@@ -334,6 +334,8 @@ pub static ERROR_TABLE: [ErrorEntry; 324] = [
     type_errors::TYPE_UNDEFINED_FUNCTION,
     type_errors::TYPE_UNDEFINED_VARIABLE,
     type_errors::TYPE_WRONG_ARGUMENT_COUNT,
+    type_errors::TYPE_BIGINT_NUMBER_MIX,
+    type_errors::TYPE_THREAD_TRANSFER_UNSUPPORTED,
     validation::VALIDATION_CUSTOM,
     validation::VALIDATION_INVALID_FORMAT,
     validation::VALIDATION_INVALID_LENGTH,

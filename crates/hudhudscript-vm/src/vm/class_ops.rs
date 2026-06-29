@@ -6,7 +6,7 @@ impl VM {
     pub(crate) fn copy_parent_methods(
         &self,
         class_name: &str,
-        instance: &mut HashMap<String, Value16>,
+        instance: &mut hudhudscript_bytecode::ObjMap,
     ) {
         if let Some((Some(parent_name), _methods)) = self.classes.get(class_name) {
             // Recurse for grandparent first
@@ -40,8 +40,8 @@ impl VM {
     /// After constructor runs, collect this.field assignments back into the instance.
     pub(crate) fn collect_this_fields(
         &self,
-        mut instance: HashMap<String, Value16>,
-    ) -> HashMap<String, Value16> {
+        mut instance: hudhudscript_bytecode::ObjMap,
+    ) -> hudhudscript_bytecode::ObjMap {
         if let Some(this_val) = self.get_var_cloned("this") {
             if let Some(updated) = this_val.as_object() {
                 instance = updated.iter().map(|(k, v)| (k.clone(), *v)).collect();
@@ -51,7 +51,8 @@ impl VM {
         }
         // Also collect any "this.field" composite-key variables from globals
         for (k, v) in self.globals.iter() {
-            if let Some(field) = k.strip_prefix("this.") {
+            let k_name = hudhudscript_bytecode::interner::resolve(*k);
+            if let Some(field) = k_name.strip_prefix("this.") {
                 instance.insert(field.to_string(), v.clone());
             }
         }

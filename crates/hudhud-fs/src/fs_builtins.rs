@@ -3,6 +3,7 @@
 //! Provides: fs.chmod, fs.chown, fs.symlink, fs.readlink, fs.stat, fs.mkdir_p,
 //!           fs.copy, fs.rename, fs.realpath, fs.watch
 
+use crate::patch;
 use hudhudscript_bytecode::Value16;
 use hudhudscript_errors::{Error, ErrorCode, HudHudResult};
 
@@ -112,7 +113,7 @@ pub fn dispatch(method: &str, args: &[Value16]) -> HudHudResult<Value16> {
             let path = require_str(args, 0, "fs.stat")?;
             let meta = std::fs::metadata(&path)
                 .map_err(|e| runtime_error(format!("fs.stat error: {}", e)))?;
-            let mut result = HashMap::new();
+            let mut result = hudhudscript_bytecode::ObjMap::default();
             result.insert("size".to_string(), Value16::number(meta.len() as f64));
             result.insert("is_file".to_string(), Value16::bool_(meta.is_file()));
             result.insert("is_dir".to_string(), Value16::bool_(meta.is_dir()));
@@ -173,7 +174,7 @@ pub fn dispatch(method: &str, args: &[Value16]) -> HudHudResult<Value16> {
         }
         "watch" => {
             let path = require_str(args, 0, "fs.watch")?;
-            let mut result = HashMap::new();
+            let mut result = hudhudscript_bytecode::ObjMap::default();
             result.insert("path".to_string(), Value16::string(path.clone()));
             result.insert(
                 "exists".to_string(),
@@ -188,6 +189,20 @@ pub fn dispatch(method: &str, args: &[Value16]) -> HudHudResult<Value16> {
                 }
             }
             Ok(Value16::object(result))
+        }
+        "patch.apply" | "patch_apply" => {
+            let file_path = require_str(args, 0, "patch.apply")?;
+            let search = require_str(args, 1, "patch.apply")?;
+            let replace = require_str(args, 2, "patch.apply")?;
+            let r = patch::patch_apply(&file_path, &search, &replace)
+                .map_err(|e| runtime_error(e))?;
+            let mut obj = hudhudscript_bytecode::ObjMap::default();
+            obj.insert("replacements".to_string(), Value16::int(r.replacements as i64));
+            obj.insert("modified".to_string(), Value16::bool_(r.modified));
+            Ok(Value16::object(obj))
+        }
+        "read" | "write" | "remove" | "exists" | "copy" | "list" => {
+            crate::file_ops::dispatch(method, args)
         }
         _ => Err(runtime_error(format!("Unknown fs method: {}", method))),
     }

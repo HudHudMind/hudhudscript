@@ -7,6 +7,7 @@ description = "External test suite for HudHudScript — tests live here, code li
 
 # Tüm crate'leri path dependency olarak al
 [dependencies]
+hudhud-datetime = { path = "../crates/hudhud-datetime" }
 hudhudscript-tokenomics = { path = "../crates/hudhudscript-tokenomics" }
 hudhudscript-runtime = { path = "../crates/hudhudscript-runtime" }
 hudhudscript-parser = { path = "../crates/hudhudscript-parser" }
@@ -58,6 +59,19 @@ hudhudscript-exception = { path = "../crates/hudhudscript-exception" }
 hudhudscript-shared-builtins = { path = "../crates/hudhudscript-shared-builtins" }
 hudhud-sop = { path = "../crates/hudhud-sop" }
 hudhud-print = { path = "../crates/hudhud-print" }
+hudhud-crypto = { path = "../crates/hudhud-crypto" }
+hudhud-http = { path = "../crates/hudhud-http" }
+hudhud-net = { path = "../crates/hudhud-net" }
+hudhud-fs = { path = "../crates/hudhud-fs" }
+hudhud-exec = { path = "../crates/hudhud-exec" }
+hudhud-plugin = { path = "../crates/hudhud-plugin" }
+hudhud-unix = { path = "../crates/hudhud-unix" }
+hudhud-os = { path = "../crates/hudhud-os" }
+hudhud-web-markdown = { path = "../crates/hudhud-web-markdown" }
+hudhud-web-request = { path = "../crates/hudhud-web-request" }
+hudhud-web-response = { path = "../crates/hudhud-web-response" }
+hudhud-web-session = { path = "../crates/hudhud-web-session" }
+hudhud-web-template = { path = "../crates/hudhud-web-template" }
 hudhud-apt = { path = "../crates/hudhud-apt" }
 hudhud-docker = { path = "../crates/hudhud-docker" }
 hudhud-firewall = { path = "../crates/hudhud-firewall" }
@@ -75,13 +89,13 @@ hudhud-gpu = { path = "../crates/hudhud-gpu" }
 hudhud-security = { path = "../crates/hudhud-security" }
 hudhud-project = { path = "../crates/hudhud-project" }
 hudhudscript-stm = { path = "../crates/hudhudscript-stm" }
+serde_json = "1"
+serde = { version = "1", features = ["derive"] }
 
 # Test dependencies
 [dev-dependencies]
 mimalloc = { version = "0.1", default-features = false }
 tokio = { version = "1", features = ["full"] }
-serde_json = "1"
-serde = { version = "1", features = ["derive"] }
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 toml = "0.8"
@@ -94,9 +108,14 @@ flate2 = "1"
 tar = "0.4"
 semver = "1"
 anyhow = "1"
-reqwest = { version = "0.12", features = ["json"] }
+reqwest = { version = "0.12", features = ["json", "blocking"] }
 hex = "0.4"
 parking_lot = "0.12"
+
+# MCP fixture server binary for real integration tests
+[[bin]]
+name = "mcp_fixture_server"
+path = "src/bin/mcp_fixture_server.rs"
 
 [[test]]
 name = "unit"
@@ -157,6 +176,10 @@ path = "tests/governance/mod.rs"
 [[test]]
 name = "hudconv"
 path = "tests/hudconv/mod.rs"
+
+[[test]]
+name = "host_access"
+path = "tests/host_access/mod.rs"
 
 [[test]]
 name = "ids"
@@ -317,4 +340,8 @@ path = "tests/exception/mod.rs"
 [[test]]
 name = "resources"
 path = "tests/resources/mod.rs"
+
+[[test]]
+name = "loop_engineering"
+path = "tests/loop_engineering/mod.rs"
 

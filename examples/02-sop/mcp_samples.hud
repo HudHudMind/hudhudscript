@@ -1,0 +1,110 @@
+// ═══════════════════════════════════════════════════════════
+// MCP KULLANIM ORNEKLERI
+// v0.5.73
+//
+// mcp.call() ve mcp.Server.tool() — iki cagri yontemi
+// NOT: mcp.call() syntax'i su anki parser'da desteklenmiyor.
+//      Rust MCP client API'si calisiyor, parser destegi bekleniyor.
+//      Bu dosya referans icindir.
+// ═══════════════════════════════════════════════════════════
+
+// ═══════════════ 1. mcp.call() — Genel cagri ═══════════════
+// Syntax: mcp.call("server_adi", "tool_adi", {...args})
+
+print("=== MCP KULLANIM ORNEKLERI ===")
+
+print("1. mcp.call():")
+print("   mcp.call(\"server\", \"tool\", {args}) seklinde cagrilir")
+
+// // SQLite sorgusu
+// let users = mcp.call("sqlite", "query", {
+//     sql: "SELECT * FROM users WHERE age > 18"
+// })
+// print("   Kullanicilar: " + users)
+
+// // Dosya listeleme
+// let files = mcp.call("filesystem", "list_directory", {
+//     path: "/home/user/documents"
+// })
+// print("   Dosyalar: " + files)
+
+// // SQLite insert
+// let insert = mcp.call("sqlite", "execute", {
+//     sql: "INSERT INTO logs VALUES ($1, $2)",
+//     params: ["app_start", "2026-05-31"]
+// })
+// print("   Insert: " + insert)
+
+// // GitHub API
+// let repos = mcp.call("github", "list_repos", {
+//     org: "HudHudMind"
+// })
+// print("   Repolar: " + repos)
+
+// ═══════════════ 2. mcp.Server.tool() — Nokta notasyonu ═══════════════
+// Syntax: mcp.SunucuAdi.tool_adi({...args})
+
+print("2. mcp.Server.tool():")
+print("   mcp.ServerAdi.tool_adi({args}) seklinde cagrilir")
+
+// mcp ServerFilesystem {
+//     transport: "stdio",
+//     command: "npx",
+//     args: ["-y", "@modelcontextprotocol/server-filesystem"]
+// }
+
+// let files = mcp.ServerFilesystem.list_directory({
+//     path: "/home/user/documents"
+// })
+// print("   Dosyalar: " + files)
+
+// // Birden fazla server
+// mcp ServerGithub {
+//     transport: "stdio",
+//     command: "npx",
+//     args: ["-y", "@modelcontextprotocol/server-github"],
+//     env: { GITHUB_PERSONAL_ACCESS_TOKEN: env("GITHUB_TOKEN") }
+// }
+
+// let repos = mcp.ServerGithub.list_repositories({
+//     type: "public"
+// })
+// print("   Public repos: " + repos)
+
+// ═══════════════ HATA YONETIMI ═══════════════
+
+print("3. Hata yonetimi:")
+
+// try {
+//     let bad = mcp.call("hayali_server", "test", {})
+// } catch (err) {
+//     print("   Hata yakalandi: " + err)
+// }
+
+print("   try/catch ile MCP hatalari yakalanabilir")
+
+// ═══════════════ AGENT ILE MCP ═══════════════
+
+print("4. Agent ile MCP:")
+
+// agent DataAgent {
+//     role: "data_processor",
+//     intent: "Process data via MCP tools"
+// }
+
+// fn process() {
+//     let raw = mcp.ServerFilesystem.read_file({
+//         path: "/tmp/input.txt"
+//     })
+//     let result = mcp.call("sqlite", "execute", {
+//         sql: "INSERT INTO processed VALUES ($1)",
+//         params: [raw]
+//     })
+//     mcp.ServerFilesystem.write_file({
+//         path: "/tmp/processed.txt",
+//         content: "Done: " + result
+//     })
+//     return "OK"
+// }
+
+print("   Agent + MCP pipeline ornegi yukarida")

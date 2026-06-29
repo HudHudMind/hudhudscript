@@ -1,0 +1,57 @@
+// HudHudScript — Recursion Patterns
+// Common recursive algorithms beyond factorial
+
+// Sum of numbers from 1 to n
+fn sum_recursive(n) {
+    if (n <= 0) {
+        return 0;
+    }
+    return n + sum_recursive(n - 1);
+}
+
+print(sum_recursive(10));
+print(sum_recursive(100));
+
+// Power using recursion
+fn power_rec(base, exp) {
+    if (exp <= 0) {
+        return 1;
+    }
+    return base * power_rec(base, exp - 1);
+}
+
+print(power_rec(2, 10));
+print(power_rec(5, 3));
+
+// Count digits
+fn count_digits(n) {
+    if (n < 10) {
+        return 1;
+    }
+    return 1 + count_digits(n / 10);
+}
+
+print(count_digits(12345));
+print(count_digits(7));
+
+// Sum of digits
+fn sum_digits(n) {
+    if (n < 10) {
+        return n;
+    }
+    return (n % 10) + sum_digits(n / 10);
+}
+
+print(sum_digits(12345));
+
+// Reverse number
+fn reverse_num(n) {
+    if (n < 10) {
+        return n;
+    }
+    let digits = count_digits(n);
+    let place = power_rec(10, digits - 1);
+    return (n % 10) * place + reverse_num(n / 10);
+}
+
+print(reverse_num(12345));

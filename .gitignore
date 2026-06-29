@@ -2,6 +2,7 @@
 /target/
 **/*.rs.bk
 *.pdb
+Cargo.lock
 
 # IDE
 .vscode/
@@ -9,21 +10,69 @@
 *.swp
 *.swo
 *~
-.DS_Store
 
-# Python
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.o
+*.so
+*.dylib
+*.dll
+*.exe
+*.hudb
+*.hudc
+
+# Python (if any scripts remain)
 __pycache__/
 *.py[cod]
+*$py.class
 *.so
+.Python
+env/
 venv/
-.venv/
 ENV/
+.venv/
+*/venv/
+*/ENV/
+*/.venv/
+website/venv/
+pyvenv.cfg
 
-# Node
+# Node (for website)
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+package-lock.json
+yarn.lock
+.npm/
+.yarn/
+
+# Logs
 *.log
 
-# Build
-/dist/
-/build/
-*.wasm
+# Temporary files
+*.tmp
+*.temp
+*.txt
+.cache/
+
+# Test coverage
+coverage/
+*.profraw
+*.profdata
+
+# Documentation build
+/target/doc/
+
+# Local configuration
+.env
+.env.local
+*.local
+
+# Backup files
+*.bak
+*.backup

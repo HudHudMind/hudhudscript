@@ -1,6 +1,7 @@
 use super::*;
 
 mod basic;
+mod function_context;
 mod governance;
 mod helpers;
 mod protocol;
@@ -8,6 +9,10 @@ mod sop;
 mod store_domain;
 mod swarm;
 mod ui_deploy;
+pub mod loop_engine;
+pub mod loop_symbols;
+pub mod loop_compile;
+pub(crate) mod helpers_loop;
 
 impl Compiler {
     pub(super) fn compile_decl(&mut self, decl: &Decl) -> CompileResult<()> {
@@ -49,9 +54,7 @@ impl Compiler {
                 };
                 let fn_chunk = self.compile_function_body(params.clone(), body)?;
                 self.bytecode
-                    .functions
-                    .borrow_mut()
-                    .insert(chunk_name.clone(), Arc::new(fn_chunk));
+                    .add_function(chunk_name.clone(), Arc::new(fn_chunk));
             }
             Decl::Action { name, fields, .. } => {
                 self.compile_decl_action(name, fields)?;
@@ -257,6 +260,66 @@ impl Compiler {
             Decl::Deploy { name, fields, .. } => {
                 self.compile_decl_deploy(name, fields)?;
             }
+            // ── Loop engineering (FAZ D) ──
+            Decl::Loop { name, items, mode, goal, .. } => {
+                // A3: inject attached steps before compiling
+                let mut augmented_items: Vec<LoopItemAst> = items.clone();
+                if let Some(extra) = self.attach_step_queue.remove(name) {
+                    augmented_items.extend(extra);
+                }
+                self.compile_decl_loop(name, &augmented_items, mode, goal.as_ref())?;
+            }
+            Decl::Chain { name, links, mode, .. } => {
+                // A3: inject attached loops before compiling
+                let mut augmented_links: Vec<ChainLinkAst> = links.clone();
+                if let Some(extra) = self.attach_loop_queue.remove(name) {
+                    for (loop_name, on_done, on_fail) in extra {
+                        augmented_links.push(ChainLinkAst { loop_name, inline_loop: None,
+                            on_done: on_done.unwrap_or(ChainTargetAst::Next),
+                            on_fail: on_fail.unwrap_or(ChainTargetAst::ChainFail) });
+                    }
+                }
+                self.compile_decl_chain(name, &augmented_links, mode)?;
+            }
+            Decl::RunLoop { name, .. } => {
+                self.compile_run_loop(name)?;
+            }
+            Decl::RunChain { name, .. } => {
+                self.compile_run_chain(name)?;
+            }
+            Decl::Step { name, params, body, gate, .. } => {
+                // A2: register standalone step for use_step / attach resolution
+                if self.step_registry.contains_key(name) {
+                    return Err(compile_codes::generic(format!("duplicate step: '{}'", name)));
+                }
+                self.step_registry.insert(name.clone(), (params.clone(), body.clone(), gate.clone()));
+            }
+            Decl::Gate { name, branches, else_target, .. } => {
+                // FAZ G: register gate for later AttachGate resolution
+                self.gate_registry.insert(name.clone(), (branches.clone(), else_target.clone()));
+            }
+            Decl::AttachStep { targets, loop_name, .. } => {
+                // A3: collect attached steps for later injection during loop compilation
+                for t in targets {
+                    if let Some((params, body, gate)) = self.step_registry.get(&t.step).cloned() {
+                        let item = LoopItemAst::InlineStep(Box::new(Decl::Step {
+                            name: t.step.clone(), params, body,
+                            gate: if let Some(ref gname) = t.gate {
+                                self.gate_registry.get(gname).map(|(b, e)| StepGateAst { name: gname.clone(), branches: b.clone(), else_target: e.clone() })
+                            } else { gate },
+                            span: hudhudscript_ast::Span::default()
+                        }));
+                        self.attach_step_queue.entry(loop_name.clone()).or_default().push(item);
+                    } else {
+                        return Err(compile_codes::generic(format!("attach step: unknown step '{}'", t.step)));
+                    }
+                }
+            }
+            Decl::AttachLoop { loop_name, chain_name, on_done, on_fail, .. } => {
+                self.attach_loop_queue.entry(chain_name.clone()).or_default()
+                    .push((loop_name.clone(), on_done.clone(), on_fail.clone()));
+            }
+            _ => {}
         }
         Ok(())
     }

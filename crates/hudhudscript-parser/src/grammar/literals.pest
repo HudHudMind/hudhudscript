@@ -44,7 +44,7 @@ digit = _{ ASCII_DIGIT | arabic_digit | bengali_digit | fullwidth_digit }
 
 // Number literal: Supports integers and decimals (no negative sign - use unary operator)
 // Japanese Kanji numerals must be tried FIRST before digit-by-digit parsing
-number = @{ japanese_numeral | (digit+ ~ ("." ~ digit+)?) }
+number = @{ japanese_numeral | (digit+ ~ ("." ~ digit+)? ~ (^"e" ~ ("+" | "-")? ~ ASCII_DIGIT+)?) }
 
 // ----------------------------------------------------------------------------
 // STRING LITERALS

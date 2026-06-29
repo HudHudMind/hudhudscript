@@ -49,7 +49,7 @@ fn firefox_history(count: usize) -> HudHudResult<Value16> {
                 .filter_map(|line| {
                     let parts: Vec<&str> = line.splitn(3, '|').collect();
                     if parts.len() >= 2 {
-                        let mut entry = HashMap::new();
+                        let mut entry = hudhudscript_bytecode::ObjMap::default();
                         entry.insert("title".to_string(), Value16::string(parts[0].to_string()));
                         entry.insert("url".to_string(), Value16::string(parts[1].to_string()));
                         let visit_time = parts
@@ -102,7 +102,7 @@ fn chromium_history(browser_name: &str, count: usize) -> HudHudResult<Value16> {
                 .filter_map(|line| {
                     let parts: Vec<&str> = line.splitn(3, '|').collect();
                     if parts.len() >= 2 {
-                        let mut entry = HashMap::new();
+                        let mut entry = hudhudscript_bytecode::ObjMap::default();
                         entry.insert("title".to_string(), Value16::string(parts[0].to_string()));
                         entry.insert("url".to_string(), Value16::string(parts[1].to_string()));
                         let visit_time = parts

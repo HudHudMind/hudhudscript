@@ -20,14 +20,17 @@ fn native_config_default() {
 #[test]
 fn native_config_with_dependency() {
     let mut deps = HashMap::new();
-    deps.insert("openssl".to_string(), NativeDependency {
-        name: "openssl".to_string(),
-        path: Some("/usr/lib".to_string()),
-        conan: None,
-        components: vec!["ssl".to_string(), "crypto".to_string()],
-        lib_name: Some("libssl".to_string()),
-        build_type: Default::default(),
-    });
+    deps.insert(
+        "openssl".to_string(),
+        NativeDependency {
+            name: "openssl".to_string(),
+            path: Some("/usr/lib".to_string()),
+            conan: None,
+            components: vec!["ssl".to_string(), "crypto".to_string()],
+            lib_name: Some("libssl".to_string()),
+            build_type: Default::default(),
+        },
+    );
     let config = NativeConfig {
         native_dependencies: deps,
     };
@@ -37,23 +40,31 @@ fn native_config_with_dependency() {
 #[test]
 fn native_config_multiple_deps() {
     let mut deps = HashMap::new();
-    deps.insert("zlib".to_string(), NativeDependency {
-        name: "zlib".to_string(),
-        path: None,
-        conan: Some("zlib/1.3.1".to_string()),
-        components: vec![],
-        lib_name: None,
-        build_type: Default::default(),
-    });
-    deps.insert("libcurl".to_string(), NativeDependency {
-        name: "libcurl".to_string(),
-        path: None,
-        conan: None,
-        components: vec![],
-        lib_name: Some("libcurl".to_string()),
-        build_type: Default::default(),
-    });
-    let config = NativeConfig { native_dependencies: deps };
+    deps.insert(
+        "zlib".to_string(),
+        NativeDependency {
+            name: "zlib".to_string(),
+            path: None,
+            conan: Some("zlib/1.3.1".to_string()),
+            components: vec![],
+            lib_name: None,
+            build_type: Default::default(),
+        },
+    );
+    deps.insert(
+        "libcurl".to_string(),
+        NativeDependency {
+            name: "libcurl".to_string(),
+            path: None,
+            conan: None,
+            components: vec![],
+            lib_name: Some("libcurl".to_string()),
+            build_type: Default::default(),
+        },
+    );
+    let config = NativeConfig {
+        native_dependencies: deps,
+    };
     assert_eq!(config.native_dependencies.len(), 2);
 }
 
@@ -74,7 +85,10 @@ fn native_dependency_default_name() {
 fn build_type_variants() {
     assert!(matches!(BuildType::Debug, BuildType::Debug));
     assert!(matches!(BuildType::Release, BuildType::Release));
-    assert!(matches!(BuildType::RelWithDebInfo, BuildType::RelWithDebInfo));
+    assert!(matches!(
+        BuildType::RelWithDebInfo,
+        BuildType::RelWithDebInfo
+    ));
 }
 
 #[test]
@@ -96,28 +110,40 @@ fn build_type_default_is_release() {
 
 #[test]
 fn native_error_library_load() {
-    let err = NativeError::LibraryLoad { path: "/tmp/lib.so".to_string(), reason: "not found".to_string() };
+    let err = NativeError::LibraryLoad {
+        path: "/tmp/lib.so".to_string(),
+        reason: "not found".to_string(),
+    };
     let msg = format!("{}", err);
     assert!(!msg.is_empty());
 }
 
 #[test]
 fn native_error_library_not_found() {
-    let err = NativeError::LibraryNotFound { name: "mylib".to_string(), search_paths: vec!["/usr/lib".to_string()] };
+    let err = NativeError::LibraryNotFound {
+        name: "mylib".to_string(),
+        search_paths: vec!["/usr/lib".to_string()],
+    };
     let msg = format!("{}", err);
     assert!(!msg.is_empty());
 }
 
 #[test]
 fn native_error_library_not_loaded() {
-    let err = NativeError::LibraryNotLoaded { name: "mylib".to_string() };
+    let err = NativeError::LibraryNotLoaded {
+        name: "mylib".to_string(),
+    };
     let msg = format!("{}", err);
     assert!(!msg.is_empty());
 }
 
 #[test]
 fn native_error_symbol_not_found() {
-    let err = NativeError::SymbolNotFound { symbol: "my_func".to_string(), library: "mylib.so".to_string(), reason: "undefined".to_string() };
+    let err = NativeError::SymbolNotFound {
+        symbol: "my_func".to_string(),
+        library: "mylib.so".to_string(),
+        reason: "undefined".to_string(),
+    };
     let msg = format!("{}", err);
     assert!(msg.contains("my_func"));
 }

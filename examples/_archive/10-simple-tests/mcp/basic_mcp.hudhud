@@ -1,0 +1,28 @@
+// Basic MCP Test - Simple tool call without actual MCP server
+// This tests the syntax and basic structure
+
+// Test 1: Simple variable and print
+var message = "Testing MCP integration";
+print(message);
+
+// Test 2: Object creation (simulating MCP response)
+var mockResponse = {
+    status: "success",
+    data: "Hello from mock MCP",
+    timestamp: 1234567890
+};
+
+print("Mock Response Status: " + mockResponse.status);
+print("Mock Response Data: " + mockResponse.data);
+
+// Test 3: Array operations
+var tools = ["tool1", "tool2", "tool3"];
+print("Available tools: " + tools.length);
+
+// Test 4: Simple calculation
+var x = 10;
+var y = 20;
+var sum = x + y;
+print("Sum: " + sum);
+
+print("✅ Basic MCP syntax test completed");

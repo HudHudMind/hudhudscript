@@ -1,0 +1,57 @@
+// ── HudHud Web Framework DSL ──────────────────────────────────────────
+// Flask-grade routing layer for HudHudScript.
+// NOTE: HudHudScript `var`-assigned arrow functions cannot reference
+// other `var` functions (forward reference limitation). This file parses
+// cleanly but will fail at runtime with "Unknown action or function".
+// The working version uses `function` declarations inlined in app.hud.
+
+var routes = [];
+
+var route = (method, pattern, handler) => {
+    routes.push({ method: method, pattern: pattern, handler: handler });
+};
+
+var get  = (p, h) => { route("GET", p, h); };
+var post = (p, h) => { route("POST", p, h); };
+var put  = (p, h) => { route("PUT", p, h); };
+var del  = (p, h) => { route("DELETE", p, h); };
+
+var dispatch = (req) => {
+    var i = 0;
+    while (i < routes.length) {
+        var r = routes[i];
+        if (r.method == req.method && Web.route_match(r.pattern, req.path)) {
+            req.params = Web.route_params(r.pattern, req.path);
+            return r.handler(req);
+        }
+        i = i + 1;
+    }
+    return Web.html("Not Found", 404);
+};
+
+var App = {};
+
+App.run = (opts) => {
+    var role = Web.run(opts);
+    if (role.role == "master") {
+        return role;
+    }
+
+    var app = Web.serve({
+        host: opts.host,
+        port: opts.port,
+        reuse_port: true
+    });
+
+    while (true) {
+        var req = Web.accept(app);
+        var resp = dispatch(req);
+        Web.respond(req, resp);
+    }
+};
+
+var static_handler = (dir) => {
+    return (req) => {
+        return Web.static(req, dir);
+    };
+};

@@ -169,7 +169,7 @@ pub fn translate_detect(args: &[Value16]) -> HudHudResult<Value16> {
     }
     if let Some(arr) = json.as_array() {
         if let Some(first) = arr.first() {
-            let mut result: HashMap<String, Value16> = HashMap::new();
+            let mut result: hudhudscript_bytecode::ObjMap = hudhudscript_bytecode::ObjMap::default();
             if let Some(lang) = first.get("language").and_then(|v| v.as_str()) {
                 result.insert("language".to_string(), Value16::string(lang.to_string()));
             }
@@ -206,7 +206,7 @@ pub fn translate_languages(args: &[Value16]) -> HudHudResult<Value16> {
         let langs: Vec<Value16> = arr
             .iter()
             .map(|entry| {
-                let mut obj: HashMap<String, Value16> = HashMap::new();
+                let mut obj: hudhudscript_bytecode::ObjMap = hudhudscript_bytecode::ObjMap::default();
                 if let Some(code) = entry.get("code").and_then(|v| v.as_str()) {
                     obj.insert("code".to_string(), Value16::string(code.to_string()));
                 }

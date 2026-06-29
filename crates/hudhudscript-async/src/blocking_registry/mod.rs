@@ -174,6 +174,17 @@ impl<V> PromiseRegistry<V> {
     }
 }
 
+impl<V: Clone> PromiseRegistry<V> {
+    /// Snapshot resolved cached values for conservative external traversals such
+    /// as GC root marking.
+    pub fn cached_values(&self) -> Vec<V> {
+        self.cached
+            .values()
+            .filter_map(|result| result.as_ref().ok().cloned())
+            .collect()
+    }
+}
+
 impl<V: Send + 'static> PromiseRegistry<V> {
     /// Spawn `task` on a fresh OS thread, returning the id for the
     /// resulting promise.

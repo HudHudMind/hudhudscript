@@ -4,61 +4,47 @@
 // This file contains the core grammar rules that are independent of language.
 // Language-specific keywords are defined in separate files.
 // ============================================================================
-
 // ============================================================================
 // WHITESPACE AND COMMENTS
 // ============================================================================
-
 WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
 COMMENT = _{ "//" ~ (!"\n" ~ ANY)* | "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
-
 // Inline (non-newline) whitespace — used in postfix_expr to prevent ASI false positives.
 // Only space, tab, and carriage return; never newline.
 no_newline_ws = _{ " " | "\t" | "\r" }
-
 // ============================================================================
 // PUNCTUATION (Multi-Script Support)
 // ============================================================================
-
 // Semicolon: Latin (;) or Arabic (؛)
 semicolon = _{ ";" | "؛" }
-
 // Comma: Latin (,) or Arabic (،) or Japanese (、)
 comma = _{ "," | "،" | "、" }
-
 // Question mark: Latin (?) or Arabic (؟) or Japanese (？)
 question = _{ "?" | "؟" | "？" }
-
 // ============================================================================
 // TYPE ANNOTATIONS — Issue #1008
 // ============================================================================
 // Supports: number, string?, number | null, Array<string>, Map<string, number?>
-
 // A single type: identifier, optionally parameterized, optionally nullable with ?
 type_single = {
     identifier ~ ("<" ~ type_annotation ~ (comma ~ type_annotation)* ~ ">")? ~ question?
 }
-
 // Full type annotation: single type or union of types (T | U | V)
 type_annotation = {
     type_single ~ ("|" ~ type_single)*
 }
-
 // ============================================================================
 // EXPRESSIONS
 // ============================================================================
-
 // Spawn expression: spawn actorName or spawn actorName(args)
 // Allows spawn in expression context: let a = spawn myActor
 spawn_expr = {
     spawn_kw ~ identifier ~ ("(" ~ (expression ~ (comma ~ expression)*)? ~ ")")?
 }
-
 // SOP0008: view expr as ViewType
 view_expr = {
     view_kw ~ expression ~ as_kw ~ identifier
 }
-
 primary = {
     this_kw_en
     | self_kw_en
@@ -77,21 +63,17 @@ primary = {
     | array
     | object
 }
-
 // New expression: new ClassName(args)
 new_expr = {
     new_kw ~ identifier ~ "(" ~ (expression ~ (comma ~ expression)*)? ~ ")"
 }
-
 // Function parameter: regular (with optional type annotation), rest, or destructuring pattern
 // e.g. name, name: string, name: number?, ...rest, {a, b}, [x, y]
 func_param = { rest_param | destruct_object_pattern | destruct_array_pattern | ((let_kw | var_kw)? ~ identifier ~ (":" ~ type_annotation)?) }
-
 // Anonymous function expression: fn(params) { body } or async fn(params) { body }
 anon_function = {
     async_kw? ~ function_kw ~ "(" ~ (func_param ~ (comma ~ func_param)*)? ~ ")" ~ block
 }
-
 // Template string with interpolation
 template_string = ${ "`" ~ template_content* ~ "`" }
 // Silent wrapper — template_text and template_interpolation appear directly as children of template_string
@@ -102,230 +84,180 @@ template_interpolation = ${ "${" ~ template_interp_body* ~ "}" }
 template_interp_body = { template_interp_nested | template_interp_char }
 template_interp_nested = ${ "{" ~ template_interp_body* ~ "}" }
 template_interp_char = @{ !("`" | "{" | "}") ~ ANY }
-
 // Non-silent async marker for arrow/anon function detection
 async_marker = { "async" }
-
 // Arrow function (supports async arrow: async (x) => { ... })
 arrow_function = {
     async_marker? ~ arrow_params ~ "=>" ~ (block | expression)
 }
-
 // Rest parameter: ...name
 rest_param = { "..." ~ identifier }
-
 arrow_params = {
     identifier
     | "(" ~ (rest_param | destruct_object_pattern | destruct_array_pattern | identifier) ~ (comma ~ (rest_param | destruct_object_pattern | destruct_array_pattern | identifier))* ~ ")"
     | "(" ~ ")"
 }
-
 // Spread expression: ...expr
 spread_expr = { "..." ~ expression }
-
 // Array element: either spread or normal expression
 array_element = { spread_expr | expression }
 array = { "[" ~ (array_element ~ (comma ~ array_element)*)? ~ "]" }
-
 // Object pair or spread
 object_spread = { "..." ~ expression }
 object_pair = { (identifier | string) ~ ":" ~ expression }
 object_entry = { object_spread | object_pair }
 object = { "{" ~ (object_entry ~ (comma ~ object_entry)*)? ~ "}" }
-
 // Postfix expressions (call, member, index)
 // Atomic (@) ensures the call_op won't consume a newline before the opening
 // paren, preventing ASI false positives (e.g. `5\n(x > 0)` stays two statements).
 postfix_expr = {
     primary ~ (postfix_op)*
 }
-
 postfix_op = {
     (!"\n" ~ call_op) | optional_member_op | member_op | index_op | increment_op | decrement_op
 }
 increment_op = { "++" }
 decrement_op = { "--" }
-
 // Call argument: either spread or normal expression
 call_arg = { spread_expr | expression }
 call_op = {
     "(" ~ (call_arg ~ (comma ~ call_arg)*)? ~ ")"
 }
-
 optional_member_op = {
     "?." ~ identifier
 }
-
 member_op = {
     "." ~ identifier
 }
-
 index_op = {
     "[" ~ expression ~ "]"
 }
-
 unary_op = { "!" | "-" | "+" }
-
 unary_expr = {
     unary_op ~ unary_expr
     | await_kw ~ unary_expr
     | perform_kw ~ unary_expr
     | postfix_expr
 }
-
 multiplicative_op = @{ "*" | "/" | "%" }
 additive_op = @{ !("+" ~ "+") ~ "+" | !("-" ~ "-") ~ "-" }
 comparison_op = @{ ">=" | "<=" | ">" | "<" }
 equality_op = @{ "==" | "!=" }
-
 // Logical operators (symbols have priority over keywords)
 logical_and_op = { "&&" | and_kw }
 logical_or_op = { "||" | or_kw }
-
 multiplicative_expr = {
     unary_expr ~ (multiplicative_op ~ unary_expr)*
 }
-
 additive_expr = {
     multiplicative_expr ~ (additive_op ~ multiplicative_expr)*
 }
-
 instanceof_op = { instanceof_kw }
-
 comparison_expr = {
     additive_expr ~ ((comparison_op ~ additive_expr) | (instanceof_op ~ identifier))*
 }
-
 equality_expr = {
     comparison_expr ~ (equality_op ~ comparison_expr)*
 }
-
 logical_and_expr = {
     equality_expr ~ (logical_and_op ~ equality_expr)*
 }
-
 logical_or_expr = {
     logical_and_expr ~ (logical_or_op ~ logical_and_expr)*
 }
-
 ternary_expr = {
     logical_or_expr ~ (ternary_q ~ expression ~ ternary_colon ~ expression)?
 }
-
 ternary_q = _{ "?" }
 ternary_colon = _{ ":" }
-
 expression = { ternary_expr }
-
 // ============================================================================
 // STATEMENTS
 // ============================================================================
-
 // Variable declaration (with optional type annotation — Issue #1008)
 // e.g. var x = 1; var x: number = 1; var x: number? = null;
 var_stmt = {
     var_kw ~ identifier ~ (":" ~ type_annotation)? ~ "=" ~ expression ~ semicolon?
 }
-
 let_stmt = {
     let_kw ~ identifier ~ (":" ~ type_annotation)? ~ "=" ~ expression ~ semicolon?
 }
-
 const_stmt = {
     const_kw ~ identifier ~ (":" ~ type_annotation)? ~ "=" ~ expression ~ semicolon?
 }
-
 // Destructuring declarations — Issue #668
 // let { name, version } = config; or let [first, ...rest] = items;
 destructure_let_stmt = {
     let_kw ~ (destruct_array_pattern | destruct_object_pattern) ~ "=" ~ expression ~ semicolon?
 }
-
 destructure_const_stmt = {
     const_kw ~ (destruct_array_pattern | destruct_object_pattern) ~ "=" ~ expression ~ semicolon?
 }
-
 destructure_var_stmt = {
     var_kw ~ (destruct_array_pattern | destruct_object_pattern) ~ "=" ~ expression ~ semicolon?
 }
-
 // Array destructuring pattern: [a, b, ...rest]
 destruct_array_pattern = {
     "[" ~ (destruct_element ~ (comma ~ destruct_element)*)? ~ (comma ~ rest_param)? ~ "]"
 }
-
 // Object destructuring pattern: { name, age, port = 8080 }
 destruct_object_pattern = {
     "{" ~ (destruct_prop ~ (comma ~ destruct_prop)*)? ~ (comma ~ rest_param)? ~ "}"
 }
-
 // Single destructuring element (can be nested)
 destruct_element = {
     destruct_array_pattern | destruct_object_pattern | identifier
 }
-
 // Object destructuring property: name or name: pattern or name = default
 destruct_prop = {
     identifier ~ ":" ~ (destruct_array_pattern | destruct_object_pattern | identifier)
     | identifier ~ "=" ~ expression
     | identifier
 }
-
 // Return statement
 return_stmt = {
     return_kw ~ expression? ~ semicolon?
 }
-
 // Break statement
 break_stmt = {
     break_kw ~ semicolon?
 }
-
 // Continue statement
 continue_stmt = {
     continue_kw ~ semicolon?
 }
-
 // Switch statement
 switch_stmt = {
     switch_kw ~ "(" ~ expression ~ ")" ~ "{" ~ case_clause* ~ default_clause? ~ "}"
 }
-
 case_clause = {
     case_kw ~ expression ~ ":" ~ case_body_stmt*
 }
-
 default_clause = {
     default_kw ~ ":" ~ case_body_stmt*
 }
-
 // Statement inside a case/default body — stops before next case/default/}
 case_body_stmt = {
     !( case_kw | default_kw | "}" ) ~ statement
 }
-
 // Match expression (ADT pattern matching)
 // match x { Pattern(val) => { ... }, _ => { ... } }
 match_stmt = {
     match_kw ~ expression ~ "{" ~ match_arm* ~ "}"
 }
-
 match_arm = {
     match_pattern_or ~ (if_kw ~ expression)? ~ "=>" ~ (block | (expression ~ semicolon?))
 }
-
 // OR pattern: pattern1 | pattern2 | ...
 match_pattern_or = {
     match_pattern ~ ("|" ~ match_pattern)*
 }
-
 match_pattern = {
     wildcard_pattern
     | enum_variant_pattern
     | literal_pattern
     | identifier_pattern
 }
-
 wildcard_pattern = { "_" }
 literal_pattern  = { number | string | boolean | null }
 // EnumName::Variant(binding) or EnumName::Variant
@@ -333,34 +265,27 @@ enum_variant_pattern = {
     identifier ~ "::" ~ identifier ~ ("(" ~ identifier ~ ")")?
 }
 identifier_pattern = { identifier }
-
 // Enum declaration: enum Shape { Circle(radius), Rectangle(w, h), Point }
 enum_decl = {
     enum_kw ~ identifier ~ "{" ~ enum_variant_decl ~ ("," ~ enum_variant_decl)* ~ ","? ~ "}"
 }
-
 enum_variant_decl = {
     identifier ~ ("(" ~ identifier ~ ("," ~ identifier)* ~ ")")?
 }
-
 // Try-catch-finally statement
 try_stmt = {
     try_kw ~ block ~ catch_clause? ~ finally_clause?
 }
-
 catch_clause = {
     catch_kw ~ "(" ~ identifier ~ ")" ~ block
 }
-
 finally_clause = {
     finally_kw ~ block
 }
-
 // Throw statement
 throw_stmt = {
     throw_kw ~ expression ~ semicolon?
 }
-
 // If statement with else if support
 // Supports both English style: if (cond) { }
 // And Turkish style: (cond) ise { }
@@ -371,64 +296,52 @@ if_stmt = {
     (else_if_kw ~ ("(" ~ expression ~ ")" ~ (ise_kw)? | if_kw ~ "(" ~ expression ~ ")") ~ block_statement)* ~
     (else_kw ~ block_statement)?
 }
-
 // While loop — prefix: while/döngü (cond) { }  or Turkish postfix: (cond) iken { }
 // Normalizer converts "iken"→"while" before parsing, so postfix uses while_kw.
 while_stmt = {
     (while_kw ~ "(" ~ expression ~ ")" | "(" ~ expression ~ ")" ~ while_kw) ~ block
 }
-
 // For loop (for-in: for(i in list) or for(let i in list))
 for_stmt = {
     for_kw ~ "(" ~ (let_kw | var_kw | const_kw)? ~ identifier ~ in_kw ~ expression ~ ")" ~ block
 }
-
 // Turkish herbir loop: herbir (container içinde item) { }
 // Reversed order: container comes first, then item — natural Turkish word order
 herbir_stmt = {
     herbir_kw ~ "(" ~ expression ~ in_kw ~ identifier ~ ")" ~ block
 }
-
 // C-style for loop: for (init; cond; update) { ... }
 // All three clauses are optional: for (; cond; ) { ... } or for (;;) { ... }
 for_c_style_stmt = {
     for_kw ~ "(" ~ for_c_init? ~ ";" ~ expression? ~ ";" ~ for_c_update? ~ ")" ~ block
 }
-
 for_c_init = {
     (let_kw | var_kw) ~ identifier ~ "=" ~ expression
     | postfix_expr ~ "=" ~ expression
 }
-
 for_c_update = {
     identifier ~ (increment_op | decrement_op)
     | postfix_expr ~ compound_assign_op ~ expression
 }
-
 // Range-based for loop: for(0, 100) or for(0, 100, 1) or for(100, 0, -1)
 for_range_stmt = {
     for_kw ~ "(" ~ expression ~ "," ~ expression ~ ("," ~ expression)? ~ ")" ~ block
 }
-
 // Assignment statement (including compound: +=, -=, *=, /=, %=)
 assignment_stmt = {
     postfix_expr ~ compound_assign_op ~ expression ~ semicolon?
 }
 compound_assign_op = { "+=" | "-=" | "*=" | "/=" | "%=" | "=" }
-
 // Expression statement
 expr_stmt = {
     expression ~ semicolon?
 }
-
 // Expression statement inside a block (semicolon optional)
 block_expr_stmt = {
     expression ~ semicolon?
 }
-
 // Block
 block = { "{" ~ block_statement* ~ "}" }
-
 block_statement = {
     destructure_var_stmt
     | destructure_let_stmt
@@ -463,54 +376,42 @@ block_statement = {
     | block
     | block_expr_stmt
 }
-
 // ============================================================================
 // ENTITY SYSTEM
 // ============================================================================
-
 // Entity declaration
 entity_decl = {
     entity_kw ~ identifier ~ "{" ~ entity_field* ~ "}"
 }
-
 entity_field = {
     (data_kw | agentstate_kw) ~ identifier ~ ":" ~ identifier ~ ("=" ~ expression)? ~ (comma | semicolon)?
 }
-
 // ============================================================================
 // STATE MACHINE SYSTEM
 // ============================================================================
-
 // State machine declaration
 statemachine_decl = {
     statemachine_kw ~ identifier ~ "{" ~ state_def* ~ "}"
 }
-
 state_def = {
     state_kw ~ identifier ~ "{" ~ state_transition* ~ "}"
 }
-
 state_transition = {
     on_kw ~ event_kw ~ "(" ~ identifier ~ ")" ~ "->" ~ identifier ~ (comma | semicolon)?
 }
-
 // ============================================================================
 // EVENT SYSTEM
 // ============================================================================
-
 // Event declaration
 event_decl = {
     event_kw ~ identifier ~ "{" ~ event_field* ~ "}"
 }
-
 event_field = {
     identifier ~ ":" ~ identifier ~ (comma | semicolon)?
 }
-
 // ============================================================================
 // CLASS-BASED OOP
 // ============================================================================
-
 // Access modifier keywords
 access_modifier = { public_kw | private_kw | protected_kw }
 public_kw = _{ public_kw_en }
@@ -519,7 +420,6 @@ protected_kw = _{ protected_kw_en }
 static_kw = _{ static_kw_en }
 // Non-silent static marker for class method detection
 static_marker = { "static" }
-
 // Class declaration: class Car extends Vehicle { ... }
 // Generic params: class Stack<T> { ... } — Issue #658
 // Implements: class Dog extends Animal implements Pet, Serializable { ... } — Issue #659
@@ -527,56 +427,46 @@ static_marker = { "static" }
 class_decl = {
     abstract_kw? ~ class_kw ~ identifier ~ generic_params? ~ (extends_kw ~ identifier)? ~ implements_clause? ~ "{" ~ class_member* ~ "}"
 }
-
 // Implements clause (non-silent wrapper so parser can detect it) — Issue #659
 implements_clause = {
     implements_kw ~ identifier ~ (comma ~ identifier)*
 }
-
 // Generic type parameters — Issue #658
 // <T>, <T: Comparable>, <K, V>, <T: Serializable, U: Comparable>
 generic_params = {
     "<" ~ generic_param ~ (comma ~ generic_param)* ~ ">"
 }
-
 generic_param = {
     identifier ~ (":" ~ identifier)?
 }
-
 // Class member: field, method, or constructor
 class_member = {
     class_constructor | class_method | class_field
 }
-
 // Constructor: constructor(params) { body }
 class_constructor = {
     constructor_kw ~ "(" ~ (func_param ~ (comma ~ func_param)*)? ~ ")" ~ block
 }
-
 // Class method: [access] [static] [function] name(params) { body }
 // Supports both: function speak() {} AND shorthand speak() {}
 class_method = {
     access_modifier? ~ static_marker? ~ function_kw ~ identifier ~ "(" ~ (func_param ~ (comma ~ func_param)*)? ~ ")" ~ block
     | access_modifier? ~ static_marker? ~ !constructor_kw ~ !var_kw ~ !let_kw ~ !const_kw ~ identifier ~ "(" ~ (func_param ~ (comma ~ func_param)*)? ~ ")" ~ block
 }
-
 // Class field: [access] [static] var/let/const name = value;
 class_field = {
     access_modifier? ~ static_kw? ~ (var_kw | let_kw | const_kw)? ~ identifier ~ ("=" ~ expression)? ~ (semicolon | comma)?
 }
-
 // Trait/Interface declaration — Issue #659
 // trait Serializable { function serialize(): String; }
 // interface Comparable<T> { function compareTo(other: T): Number; }
 trait_decl = {
     trait_kw ~ identifier ~ generic_params? ~ "{" ~ trait_method_sig* ~ "}"
 }
-
 // Trait method signature (no body): function name(params): ReturnType;
 trait_method_sig = {
     function_kw ~ identifier ~ "(" ~ (func_param ~ (comma ~ func_param)*)? ~ ")" ~ (":" ~ type_annotation)? ~ semicolon?
 }
-
 // OOP keywords
 class_kw = _{ class_kw_en }
 extends_kw = _{ extends_kw_en }
@@ -586,52 +476,40 @@ instanceof_kw = _{ instanceof_kw_en }
 super_kw = _{ super_kw_en }
 constructor_kw = _{ constructor_kw_en }
 trait_kw = _{ trait_kw_en }
-
 // ============================================================================
 // MUSIC DSL
 // ============================================================================
-
 // Music declarations: note/chord/melody/harmony/rhythm/tempo/scale Name { key: value, ... }
 music_decl = {
     music_kind ~ identifier ~ "{" ~ music_field* ~ "}"
 }
-
 music_kind = { note_kw | chord_kw | melody_kw | harmony_kw | rhythm_kw | tempo_kw | scale_kw }
-
 music_field = {
     identifier ~ ":" ~ expression ~ (comma | semicolon)?
 }
-
 // ============================================================================
 // DECORATORS / ANNOTATIONS
 // ============================================================================
-
 // Decorator: @ai, @payment(provider: "stripe"), @cloud(region: "us-east-1")
 decorator = { "@" ~ identifier ~ ("(" ~ decorator_params? ~ ")")? }
 decorator_params = { decorator_param ~ (comma ~ decorator_param)* }
 decorator_param = { identifier ~ ":" ~ expression }
-
 // Decorated subject: @ai @payment subject Player { ... }
 decorated_subject_decl = {
     decorator+ ~ subject_kw ~ identifier ~ of_clause? ~ has_clause? ~ "{" ~ subject_body ~ "}"
 }
-
 // ============================================================================
 // SUBJECT-ORIENTED PROGRAMMING (SOP) DECLARATIONS
 // ============================================================================
-
 // Subject declaration: subject Player { state health: 100, can attack, ... }
 subject_decl = {
     subject_kw ~ identifier ~ of_clause? ~ has_clause? ~ "{" ~ subject_body ~ "}"
 }
-
 of_clause = { of_kw ~ identifier }
 has_clause = { has_kw ~ identifier ~ (comma ~ identifier)* }
-
 subject_body = {
     (subject_member | ability_decl)*
 }
-
 subject_member = {
     // state health: 100
     (state_kw ~ identifier ~ ":" ~ expression ~ (comma | semicolon)?)
@@ -648,22 +526,44 @@ subject_member = {
     // regular field: key: value
     | (identifier ~ ":" ~ expression ~ (comma | semicolon)?)
 }
-
 // Relation declaration: relation Player <-> Merchant { trust: 50 }
 relation_decl = {
     relation_kw ~ identifier ~ "<->" ~ identifier ~ "{" ~ relation_field* ~ "}"
 }
-
 relation_field = {
     identifier ~ ":" ~ expression ~ (comma | semicolon)?
 }
-
 // Effect handler: effect on Damage { target.health -= amount }
 effect_decl = {
     effect_kw ~ on_kw ~ identifier ~ "(" ~ (func_param ~ (comma ~ func_param)*)? ~ ")" ~ block
 }
+// ── Loop engineering grammar ──
+run_mode = { once_kw | cyclic_kw | times_mode | until_mode | until_converged_kw }
+times_int = @{ ASCII_DIGIT+ }
+times_mode = { times_kw ~ "(" ~ times_int ~ ")" }
+until_mode = { until_kw ~ "(" ~ expression ~ ")" }
+gate_target = { done_kw | fail_kw | (loop_kw ~ identifier) | (identifier ~ "." ~ identifier) | identifier }
+when_branch = { when_kw ~ expression ~ "->" ~ gate_target }
+gate_decl = { gate_kw ~ identifier ~ "{" ~ when_branch* ~ (else_kw ~ "->" ~ gate_target) ~ "}" }
+step_decl = { step_kw ~ identifier ~ ("(" ~ (identifier ~ ("," ~ identifier)*)? ~ ")")? ~ "{" ~ statement* ~ gate_decl? ~ "}" }
+use_step = { use_kw ~ step_kw ~ identifier ~ (as_kw ~ identifier)? ~ ("(" ~ (expression ~ (comma ~ expression)*)? ~ ")")? }
+attach_gate = { attach_kw ~ gate_kw ~ identifier ~ to_kw ~ identifier }
+loop_item = { step_decl | use_step | attach_gate }
+loop_decl = { loop_kw ~ identifier ~ ("mode" ~ ":" ~ run_mode)? ~ goal_spec? ~ "{" ~ loop_item* ~ "}" }
+goal_pair = { identifier ~ ":" ~ expression }
+goal_spec = { goal_kw ~ "(" ~ goal_pair ~ ("," ~ goal_pair)* ~ ")" }
 
-// SOP ability declaration: on attack(self, target) { ... }
+run_stmt = { run_kw ~ loop_kw ~ identifier }
+run_chain_stmt = { run_kw ~ chain_kw ~ identifier }
+chain_decl = { chain_kw ~ identifier ~ ("mode" ~ ":" ~ run_mode)? ~ "{" ~ chain_link* ~ "}" }
+on_done_kw = _{ "on_done" }
+on_fail_kw = _{ "on_fail" }
+chain_on_done = { on_done_kw ~ ":" ~ gate_target }
+chain_on_fail = { on_fail_kw ~ ":" ~ gate_target }
+chain_link = { loop_decl ~ chain_on_done? ~ chain_on_fail? }
+step_with_gate = { step_kw ~ identifier ~ ("with" ~ gate_kw ~ identifier)? }
+attach_step_decl = { attach_kw ~ step_with_gate ~ ("," ~ step_with_gate)* ~ to_kw ~ identifier }
+attach_loop_decl = { attach_kw ~ loop_kw ~ identifier ~ to_kw ~ chain_kw ~ identifier ~ (on_done_kw ~ ":" ~ gate_target)? ~ (on_fail_kw ~ ":" ~ gate_target)? }
 // or subject-scoped: on Knight.attack(self, target) { ... }
 ability_name = {
     identifier ~ ("." ~ identifier)?
@@ -671,7 +571,6 @@ ability_name = {
 ability_decl = {
     on_kw ~ ability_name ~ "(" ~ (func_param ~ (comma ~ func_param)*)? ~ ")" ~ block
 }
-
 // SOP0007: Composition rules for Harrison & Ossher SOP
 compose_kw = _{ compose_kw_en }
 compose_decl = {
@@ -695,445 +594,348 @@ before_kw = _{ "before" }
 after_kw = _{ "after" }
 correspond_kw = _{ "correspond" }
 separate_kw = _{ "separate" }
-
 // SOP statements: spawn, send, receive, require, perform
 spawn_stmt = {
     spawn_kw ~ identifier ~ ("(" ~ (expression ~ (comma ~ expression)*)? ~ ")")? ~ semicolon?
 }
-
 despawn_stmt = {
     despawn_kw ~ identifier ~ semicolon?
 }
-
 send_stmt = {
     send_kw ~ expression ~ "to" ~ expression ~ semicolon?
 }
-
 receive_stmt = {
     receive_kw ~ identifier ~ "from" ~ expression ~ semicolon?
 }
-
 require_stmt = {
     require_kw ~ expression ~ semicolon?
 }
-
 perform_stmt = {
     perform_kw ~ expression ~ semicolon?
 }
-
 // ============================================================================
 // RAG (RETRIEVAL-AUGMENTED GENERATION) DECLARATIONS
 // ============================================================================
-
 // Store declaration: store my_store { backend: "hnsw", dimensions: 1536 }
 store_decl = {
     store_kw ~ identifier ~ "{" ~ store_field* ~ "}"
 }
-
 store_field = {
     identifier ~ ":" ~ expression ~ (comma | semicolon)?
 }
-
 // Remember statement: remember "text" in my_store;
 remember_stmt = {
     remember_kw ~ expression ~ ("in" ~ identifier)? ~ semicolon?
 }
-
 // Recall statement: recall "query" from my_store;
 recall_stmt = {
     recall_kw ~ expression ~ ("from" ~ identifier)? ~ semicolon?
 }
-
 // Forget statement: forget "id" from my_store;
 forget_stmt = {
     forget_kw ~ expression ~ ("from" ~ identifier)? ~ semicolon?
 }
-
 // ============================================================================
 // AGENT SYSTEM DECLARATIONS
 // ============================================================================
-
 // Agent declaration — Fix #408: removed optional colon
 // Fix #435: tools removed from agent — agents no longer own tools directly
 // Fix #439: permission block support added to agent body
 agent_decl = {
     agent_kw ~ identifier ~ agent_body
 }
-
 agent_body = {
     "{" ~ agent_member* ~ "}"
 }
-
 agent_member = {
     permission_block
     | agent_field
     | agent_action_decl
 }
-
 agent_field = {
     (identifier ~ ":" ~ expression ~ (comma | semicolon)?)
 }
-
 // Agent action declaration: action name(params) { ... } or action name(params) async { ... }
 agent_action_decl = {
     action_kw ~ identifier ~ "(" ~ (func_param ~ (comma ~ func_param)*)? ~ ")" ~ (async_kw)? ~ block
 }
-
 // Permission block — Issue #439
 // permission { allow: [mcp.Postgres.query], deny: [mcp.Docker.remove], dangerous: [...] }
 permission_block = {
     permission_kw ~ "{" ~ permission_field* ~ "}"
 }
-
 permission_field = {
     identifier ~ ":" ~ expression ~ (comma | semicolon)?
 }
-
 // MCP server declaration — Issue #437
 // mcp ServerName { transport: "stdio", command: "...", tool toolName(param: type) { body } }
 mcp_decl = {
     mcp_kw ~ identifier ~ "{" ~ mcp_member* ~ "}"
 }
-
 mcp_member = {
     mcp_tool_decl
     | mcp_field
 }
-
 mcp_field = {
     identifier ~ ":" ~ expression ~ (comma | semicolon)?
 }
-
 // Tool definition inside an MCP server block
 // tool toolName(param: type, ...) { body }
 mcp_tool_decl = {
     tool_kw ~ identifier ~ "(" ~ (mcp_tool_param ~ (comma ~ mcp_tool_param)*)? ~ ")" ~ block
 }
-
 mcp_tool_param = {
     identifier ~ ":" ~ identifier
 }
-
 // Action declaration — Fix #497: task keyword removed, only action remains
 action_decl = {
     action_kw ~ identifier ~ action_body
 }
-
 action_body = {
     "{" ~ action_field* ~ "}"
 }
-
 action_field = {
     (identifier ~ ":" ~ expression ~ (comma | semicolon)?)
 }
-
 // Async function declaration — Issue #658: optional generic_params
 async_function_decl = {
     async_kw ~ function_kw ~ identifier ~ generic_params? ~ "(" ~ (func_param ~ (comma ~ func_param)*)? ~ ")" ~ block
 }
-
 // Regular function declaration — Issue #658: optional generic_params
 function_decl = {
     function_kw ~ identifier ~ generic_params? ~ "(" ~ (func_param ~ (comma ~ func_param)*)? ~ ")" ~ block
 }
-
 // Generator function declaration — Issue #667
 generator_decl = {
     function_kw ~ "*" ~ identifier ~ "(" ~ (func_param ~ (comma ~ func_param)*)? ~ ")" ~ block
 }
-
 // Yield statement — Issue #667
 yield_stmt = {
     "yield" ~ expression? ~ semicolon?
 }
-
 // Fix #489: tool_decl removed — tools removed from agent per design decision
-
 // Resource declaration — Fix #408: removed optional colon
 resource_decl = {
     resource_kw ~ identifier ~ resource_body
 }
-
 resource_body = {
     "{" ~ resource_field* ~ "}"
 }
-
 resource_field = {
     (identifier ~ ":" ~ expression ~ (comma | semicolon)?)
 }
-
 // Constitution declaration — Fix #408: removed optional colon
 constitution_decl = {
     constitution_kw ~ identifier ~ constitution_body
 }
-
 constitution_body = {
     "{" ~ constitution_field* ~ "}"
 }
-
 constitution_field = {
     (identifier ~ ":" ~ expression ~ (comma | semicolon)?)
 }
-
 // Law declaration — Fix #408: removed optional colon
 law_decl = {
     law_kw ~ identifier ~ law_body
 }
-
 law_body = {
     "{" ~ law_field* ~ "}"
 }
-
 law_field = {
     (identifier ~ ":" ~ expression ~ (comma | semicolon)?)
 }
-
 // Council declaration — reuses agent_body for simplicity — Fix #408: removed optional colon
 council_decl = {
     council_kw ~ identifier ~ agent_body
 }
-
 // Role declaration — Fix #408: removed optional colon
 role_decl = {
     role_kw ~ identifier ~ "{" ~ role_member* ~ "}"
 }
-
 role_member = {
     // can attack
     (can_kw ~ identifier ~ (comma | semicolon)?)
     // regular field: key: value
     | (identifier ~ ":" ~ expression ~ (comma | semicolon)?)
 }
-
 // Protocol declaration (formerly strategy) — Fix #500: removed mandatory colon
 protocol_decl = {
     strategy_kw ~ identifier ~ ":"? ~ strategy_body
 }
-
 strategy_body = {
     "{" ~ strategy_field* ~ "}"
 }
-
 strategy_field = {
     strategy_session_field
     | (identifier ~ ":" ~ expression ~ (comma | semicolon)?)
 }
-
 // session/oturum block inside strategy
 strategy_session_field = {
     session_kw ~ ":" ~ "{" ~ session_hook* ~ "}"
 }
-
 session_hook = {
     session_hook_kw ~ ":" ~ expression ~ (comma | semicolon)?
 }
-
 // session keyword: "session" | "oturum"
 session_kw = _{ "session" | "oturum" }
-
 // session hook keywords
 session_hook_kw = _{
     "onStart" | "onMemberStart" | "onMemberComplete" | "onVote" | "onComplete" | "onError"
     | "başlangıçta" | "üyeKonuşmadan" | "üyeTamamladığında" | "oylamada" | "tamamlandığında" | "hatada"
 }
-
 // Rule declaration — Fix #500: removed mandatory colon
 rule_decl = {
     rule_kw ~ identifier ~ ":"? ~ rule_body
 }
-
 rule_body = {
     "{" ~ rule_field* ~ "}"
 }
-
 rule_field = {
     (identifier ~ ":" ~ expression ~ (comma | semicolon)?)
 }
-
 // Swarm declaration — Fix #408: removed optional colon
 swarm_decl = {
     swarm_kw ~ identifier ~ swarm_body
 }
-
 swarm_body = {
     "{" ~ swarm_field* ~ "}"
 }
-
 swarm_field = {
     (identifier ~ ":" ~ expression ~ (comma | semicolon)?)
 }
-
 // Community declaration — Fix #500: removed mandatory colon
 community_decl = {
     community_kw ~ identifier ~ ":"? ~ community_body
 }
-
 community_body = {
     "{" ~ community_field* ~ "}"
 }
-
 community_field = {
     (identifier ~ ":" ~ expression ~ (comma | semicolon)?)
 }
-
 // Contract declaration
 // Two parties mutually agree — binds only the listed parties, independent of constitution
 // Fix #500: removed mandatory colon
 contract_decl = {
     contract_kw ~ identifier ~ ":"? ~ contract_body
 }
-
 contract_body = {
     "{" ~ contract_field* ~ "}"
 }
-
 contract_field = {
     (identifier ~ ":" ~ expression ~ (comma | semicolon)?)
 }
-
 // Treaty declaration
 // Formal agreement between governments/federations — higher-level than contract
 // Fix #500: removed mandatory colon
 treaty_decl = {
     treaty_kw ~ identifier ~ ":"? ~ treaty_body
 }
-
 treaty_body = {
     "{" ~ treaty_field* ~ "}"
 }
-
 treaty_field = {
     (identifier ~ ":" ~ expression ~ (comma | semicolon)?)
 }
-
 // Provider declaration
 provider_decl = {
     provider_kw ~ identifier ~ "{" ~ provider_field* ~ "}"
 }
-
 provider_field = {
     (identifier ~ ":" ~ expression ~ (comma | semicolon)?)
 }
-
 // Governance declaration: governance MyGov democracy { ... } — Fix #500: removed mandatory colon
 // Base type is optional: governance VotingSystem { ... } or governance MyGov democracy { ... }
 governance_decl = {
     governance_kw ~ identifier ~ (":"? ~ identifier)? ~ ("{" ~ governance_field* ~ "}")?
 }
-
 governance_field = {
     identifier ~ ":" ~ expression ~ (comma | semicolon)?
 }
-
 // governance keyword: "governance" | "yönetişim" | "idare"
 governance_kw = _{ "governance" | "yönetişim" | "idare" }
-
 // ============================================================================
 // DATA DECLARATION (Fix #498)
 // ============================================================================
-
 // Data declaration: data { key = value; ... } or data MyData { key = value; ... }
 data_decl = {
     data_kw ~ identifier? ~ "{" ~ data_field* ~ "}"
 }
-
 data_field = {
     identifier ~ "=" ~ expression ~ semicolon?
 }
-
 // ── UI declarations (experimental) ──────────────────────────────────
-
 // ui App { screen Login { ... } }
 ui_decl = {
     ui_kw ~ identifier ~ "{" ~ ui_member* ~ "}"
 }
-
 ui_member = {
     ui_entry
     | screen_decl
     | component_decl
     | ui_field
 }
-
 ui_field = {
     identifier ~ ":" ~ expression ~ (comma | semicolon)?
 }
-
 ui_entry = {
     "entry" ~ ":" ~ identifier ~ semicolon?
 }
-
 // screen Login { column { text "Hello" } }
 screen_decl = {
     screen_kw ~ identifier ~ ("(" ~ (identifier ~ ("," ~ identifier)*)? ~ ")")? ~ "{" ~ ui_body* ~ "}"
 }
-
 // component Card { props { ... } children }
 component_decl = {
     component_kw ~ identifier ~ "{" ~ ui_body* ~ "}"
 }
-
 // Widget tree body — recursive
 ui_body = {
     ui_widget | ui_var | ui_platform | ui_event | expression ~ semicolon?
 }
-
 // platform:desktop { ... }
 ui_platform = {
     platform_kw ~ ":" ~ identifier ~ "{" ~ ui_body* ~ "}"
 }
-
 // var counter = 0
 ui_var = {
     var_kw ~ identifier ~ "=" ~ expression ~ semicolon?
 }
-
 // Widget: text "Hello" { size: 32 } { children... }
 ui_widget = {
     identifier ~ (string | expression)? ~ ("{" ~ ui_widget_prop* ~ "}")? ~ ("{" ~ ui_body* ~ "}")?
 }
-
 ui_widget_prop = {
     identifier ~ ":" ~ expression ~ semicolon?
 }
-
 ui_event = {
     "on_" ~ identifier ~ ":" ~ expression ~ semicolon?
 }
-
 // ── Deploy declarations (experimental) ───────────────────────────────
-
 // deploy App { github { ... } target { web { ... } } }
 deploy_decl = {
     deploy_kw ~ identifier ~ "{" ~ deploy_member* ~ "}"
 }
-
 deploy_member = {
     deploy_field | deploy_target | deploy_provider
 }
-
 // target { web { ... } desktop { ... } }
 deploy_target = {
     target_kw ~ "{" ~ deploy_target_entry* ~ "}"
 }
-
 deploy_target_entry = {
     identifier ~ "{" ~ deploy_field* ~ "}"
 }
-
 // github { repo: "..." on: "push" }
 deploy_provider = {
     identifier ~ "{" ~ deploy_field* ~ "}"
 }
-
 deploy_field = {
     identifier ~ ":" ~ expression ~ (comma | semicolon)?
 }
-
 // ============================================================================
 // MODULE SYSTEM (Multi-Language Support)
 // ============================================================================
-
 // Import/Use statement - supports module imports with or without quotes
 // Module path can be: "path.hudhud" or path.hudhud (identifier with dots)
 // Plain module name: identifier for use/import statements.
@@ -1147,13 +949,11 @@ module_name = @{
     (ASCII_ALPHA | "_" | '\u{0080}'..'\u{FFFF}') ~
     (ASCII_ALPHANUMERIC | "_" | '\u{0080}'..'\u{FFFF}')*
 }
-
 module_path = {
     string
     | module_identifier
     | module_name
 }
-
 // Module identifier: any identifier followed by .hudhud or .هدهد
 // Examples: cebir.hudhud, math.hudhud, رياضيات.هدهد
 module_identifier = @{
@@ -1162,7 +962,6 @@ module_identifier = @{
     ~ "."
     ~ ("hudhud" | "هدهد")
 }
-
 import_stmt = {
     // ES6: import { func1, func2 } from "path";
     (import_kw ~ "{" ~ identifier ~ (comma ~ identifier)* ~ "}" ~ from_kw ~ module_path)
@@ -1196,7 +995,6 @@ import_stmt = {
     |
     (use_kw ~ identifier ~ as_kw ~ identifier)
 }
-
 // Fix #417: Export statement
 export_stmt = {
     // Re-export: export { func1, func2 } from "module";
@@ -1214,16 +1012,22 @@ export_stmt = {
     // export identifier;
     (export_kw ~ identifier ~ semicolon?)
 }
-
 // ============================================================================
 // TOP-LEVEL STATEMENT
 // ============================================================================
-
 statement = {
     decorated_subject_decl
     | subject_decl
     | relation_decl
     | effect_decl
+    | loop_decl
+    | run_stmt
+    | run_chain_stmt
+    | step_decl
+    | chain_decl
+    | gate_decl
+    | attach_step_decl
+    | attach_loop_decl
     | compose_decl
     | ability_decl
     | trait_decl
@@ -1290,28 +1094,22 @@ statement = {
     | block
     | expr_stmt
 }
-
 // ============================================================================
 // PROGRAM ENTRY POINT
 // ============================================================================
-
 program = { SOI ~ (statement | semicolon)* ~ EOI }
-
-
 // ============================================================================
 // KEYWORD AGGREGATION
 // ============================================================================
 // normalize_keywords() runs before parsing and converts all language keywords
 // to their English equivalents. Therefore only _en variants are needed here.
 // ============================================================================
-
 // Module system keywords
 use_kw = _{ use_kw_en }
 as_kw = _{ as_kw_en }
 import_kw = _{ import_kw_en }
 export_kw = _{ export_kw_en }
 from_kw = _{ from_kw_en }
-
 // Agent system keywords
 agent_kw = _{ agent_kw_en }
 tool_kw = _{ tool_kw_en }
@@ -1322,7 +1120,6 @@ config_kw = _{ config_kw_en }
 provider_kw = _{ provider_kw_en }
 model_kw = _{ model_kw_en }
 call_kw = _{ call_kw_en }
-
 // Control flow keywords
 if_kw = _{ if_kw_en }
 else_if_kw = _{ else_if_kw_en }
@@ -1332,15 +1129,12 @@ for_kw = _{ for_kw_en }
 herbir_kw = _{ "herbir" }  // Turkish foreach — kept as-is (not normalized), enables reversed container-item order
 in_kw = _{ "in" | in_kw_tr | "icinde" }  // English "in" + Turkish "içinde" / "icinde" (SOV syntax)
 return_kw = _{ return_kw_en }
-
 // OOP keywords
 this_kw = _{ this_kw_en }
 self_kw = _{ self_kw_en }
-
 // Logical operators — Fix #411: Unicode-aware boundaries; Fix #419: removed single-letter "a"
 and_kw = _{ "ve" ~ !(LETTER | NUMBER | "_") | "و" | "এবং" | "и" ~ !(LETTER | NUMBER | "_") | ("y" ~ !(LETTER | NUMBER | "_")) | "und" ~ !(LETTER | NUMBER | "_") | "et" ~ !(LETTER | NUMBER | "_") | ("e" ~ !(LETTER | NUMBER | "_")) | "和" | "और" | "dan" ~ !(LETTER | NUMBER | "_") | "và" ~ !(LETTER | NUMBER | "_") | "και" | ("i" ~ !(LETTER | NUMBER | "_")) | "และ" }
 or_kw = _{ "veya" ~ !(LETTER | NUMBER | "_") | "أو" | "বা" | "или" ~ !(LETTER | NUMBER | "_") | ("o" ~ !(LETTER | NUMBER | "_")) | "oder" ~ !(LETTER | NUMBER | "_") | "ou" ~ !(LETTER | NUMBER | "_") | "或" | "या" | "atau" ~ !(LETTER | NUMBER | "_") | "hoặc" ~ !(LETTER | NUMBER | "_") | "ή" | "lub" ~ !(LETTER | NUMBER | "_") | "หรือ" | "ili" ~ !(LETTER | NUMBER | "_") | "یا" }
-
 break_kw = _{ break_kw_en }
 continue_kw = _{ continue_kw_en }
 switch_kw = _{ switch_kw_en }
@@ -1348,48 +1142,38 @@ case_kw = _{ case_kw_en }
 default_kw = _{ default_kw_en }
 match_kw = _{ match_kw_en }
 enum_kw = _{ enum_kw_en }
-
 // Function keywords
 function_kw = _{ function_kw_en }
-
 // Async keywords
 async_kw = _{ async_kw_en }
 await_kw = _{ await_kw_en }
 promise_kw = _{ promise_kw_en }
 future_kw = _{ future_kw_en }
-
 // Error handling keywords
 try_kw = _{ try_kw_en }
 catch_kw = _{ catch_kw_en }
 finally_kw = _{ finally_kw_en }
 throw_kw = _{ throw_kw_en }
-
 // Variable keywords
 var_kw = _{ var_kw_en }
 let_kw = _{ let_kw_en }
 const_kw = _{ const_kw_en }
 set_kw = _{ set_kw_en }
-
 // Null keyword — Fix #420: language-specific keyword pattern instead of inline literal
 null_kw = _{ null_en }
-
 // Data keywords
 data_kw = _{ data_kw_en }
-
 // UI keywords (experimental)
 ui_kw = _{ "ui" }
 screen_kw = _{ "screen" }
 component_kw = _{ "component" }
 platform_kw = _{ "platform" }
-
 // Deploy keywords (experimental)
 deploy_kw = _{ "deploy" }
 target_kw = _{ "target" ~ !(LETTER | NUMBER | "_") }
-
 // State keywords
 state_kw = _{ state_kw_en }
 statemachine_kw = _{ statemachine_kw_en }
-
 // Entity keywords
 entity_kw = _{ entity_kw_en }
 agentstate_kw = _{ agentstate_kw_en }
@@ -1399,18 +1183,15 @@ priority_kw = _{ priority_kw_en }
 // Fix #487: action_kw aggregated from all language files
 action_kw = _{ action_kw_en | action_kw_tr | action_kw_ja | action_kw_ar | action_kw_bn | action_kw_ru | action_kw_es | action_kw_de | action_kw_fr | action_kw_it | action_kw_pt | action_kw_zh | action_kw_hi | action_kw_id | action_kw_vi | action_kw_el | action_kw_pl | action_kw_th | action_kw_bs | action_kw_hr | action_kw_sr | action_kw_fa | action_kw_ku }
 transform_kw = _{ transform_kw_en }
-
 // Event keywords
 event_kw = _{ event_kw_en }
 on_kw = _{ on_kw_en }
 trigger_kw = _{ trigger_kw_en }
 when_kw = _{ when_kw_en }
-
 // Permission keywords
 permission_kw = _{ permission_kw_en }
 allow_kw = _{ allow_kw_en }
 deny_kw = _{ deny_kw_en }
-
 // Governance keywords
 constitution_kw = _{ constitution_kw_en }
 law_kw = _{ law_kw_en }
@@ -1424,12 +1205,10 @@ enforcement_kw = _{ enforcement_kw_en }
 mandatory_kw = _{ mandatory_kw_en }
 advisory_kw = _{ advisory_kw_en }
 optional_kw = _{ optional_kw_en }
-
 // Role & Strategy keywords
 role_kw = _{ role_kw_en }
 member_kw = _{ member_kw_en }
 strategy_kw = _{ protocol_kw_en }
-
 // Governance model keywords
 democracy_kw = _{ democracy_kw_en }
 monarchy_kw = _{ monarchy_kw_en }
@@ -1441,10 +1220,8 @@ anarchy_kw = _{ anarchy_kw_en }
 oligarchy_kw = _{ oligarchy_kw_en }
 consensus_kw = _{ consensus_kw_en }
 autocracy_kw = _{ autocracy_kw_en }
-
 // Execution type keywords
 roundRobin_kw = _{ roundRobin_kw_en }
-
 // Voting type keywords
 majority_kw = _{ majority_kw_en }
 unanimous_kw = _{ unanimous_kw_en }
@@ -1455,7 +1232,6 @@ collaborative_kw = _{ collaborative_kw_en }
 prosecutor_kw = _{ prosecutor_kw_en }
 judge_kw = _{ judge_kw_en }
 executor_kw = _{ executor_kw_en }
-
 // Culture keywords
 culture_kw = _{ culture_kw_en }
 values_kw = _{ values_kw_en }
@@ -1464,7 +1240,6 @@ communication_style_kw = _{ communication_style_kw_en }
 formal_kw = _{ formal_kw_en }
 informal_kw = _{ informal_kw_en }
 technical_kw = _{ technical_kw_en }
-
 // Flow & Orchestration keywords
 flow_kw = _{ flow_kw_en }
 dataflow_kw = _{ dataflow_kw_en }
@@ -1476,7 +1251,6 @@ merge_kw = _{ merge_kw_en }
 parallel_kw = _{ parallel_kw_en }
 sequential_kw = _{ sequential_kw_en }
 execute_kw = _{ execute_kw_en }
-
 // Music Data Structure keywords
 note_kw = _{ note_kw_en }
 chord_kw = _{ chord_kw_en }
@@ -1485,13 +1259,27 @@ harmony_kw = _{ harmony_kw_en }
 rhythm_kw = _{ rhythm_kw_en }
 tempo_kw = _{ tempo_kw_en }
 scale_kw = _{ scale_kw_en }
-
 // Subject-Oriented Programming (SOP) keywords
 subject_kw = _{ subject_kw_en }
 uses_kw = _{ uses_kw_en }
 via_kw = _{ via_kw_en }
 relation_kw = _{ relation_kw_en }
 effect_kw = _{ effect_kw_en }
+loop_kw = _{ loop_kw_en }
+step_kw = _{ step_kw_en }
+gate_kw = _{ gate_kw_en }
+attach_kw = _{ attach_kw_en }
+chain_kw = _{ chain_kw_en }
+times_kw = _{ "times" }
+until_kw = _{ "until" }
+once_kw = _{ "once" }
+cyclic_kw = _{ "cyclic" }
+until_converged_kw = _{ "until_converged" }
+goal_kw = _{ "goal" }
+run_kw = _{ "run" }
+done_kw = _{ "done" }
+fail_kw = _{ "fail" }
+to_kw = _{ "to" }
 memory_kw = _{ memory_kw_en }
 perception_kw = _{ perception_kw_en }
 context_kw = _{ context_kw_en }
@@ -1507,13 +1295,11 @@ send_kw = _{ send_kw_en }
 receive_kw = _{ receive_kw_en }
 require_kw = _{ require_kw_en }
 perform_kw = _{ perform_kw_en }
-
 // RAG keywords
 store_kw = _{ store_kw_en }
 remember_kw = _{ remember_kw_en }
 recall_kw = _{ recall_kw_en }
 forget_kw = _{ forget_kw_en }
 embed_kw = _{ embed_kw_en }
-
 // Grammatical particles (for SOV languages like Turkish and Japanese)
 obj_marker = _{ obj_marker_tr | obj_marker_ja }

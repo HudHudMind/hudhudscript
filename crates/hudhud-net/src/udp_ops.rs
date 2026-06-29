@@ -123,7 +123,7 @@ fn udp_bind(args: &[Value16]) -> HudHudResult<Value16> {
         .unwrap_or_else(|_| addr);
     std::mem::forget(socket);
 
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     obj.insert(
         "__type".to_string(),
         Value16::string("UdpSocket".to_string()),
@@ -167,7 +167,7 @@ fn udp_recv(args: &[Value16]) -> HudHudResult<Value16> {
     std::mem::forget(socket);
     let (n, from) = result.map_err(|e| runtime_error(format!("udp.recv error: {}", e)))?;
 
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     obj.insert(
         "data".to_string(),
         Value16::string(String::from_utf8_lossy(&buf[..n]).to_string()),

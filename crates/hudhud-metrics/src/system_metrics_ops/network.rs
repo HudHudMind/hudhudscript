@@ -21,7 +21,7 @@ pub fn sys_network_interfaces(_args: &[Value16]) -> HudHudResult<Value16> {
                     let rx_bytes = fields.first().copied().unwrap_or(0);
                     let tx_bytes = fields.get(8).copied().unwrap_or(0);
 
-                    let mut iface = HashMap::new();
+                    let mut iface = hudhudscript_bytecode::ObjMap::default();
                     iface.insert("name".to_string(), Value16::string(name.trim().to_string()));
                     iface.insert("rx_bytes".to_string(), Value16::number(rx_bytes as f64));
                     iface.insert("tx_bytes".to_string(), Value16::number(tx_bytes as f64));

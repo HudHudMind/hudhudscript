@@ -16,7 +16,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
 
     // Agent system
     map.insert("агент".to_string(), Keyword::Agent);
-    map.insert("задача".to_string(), Keyword::Task);
     map.insert("инструмент".to_string(), Keyword::Tool);
     map.insert("ресурс".to_string(), Keyword::Resource);
     map.insert("mcp".to_string(), Keyword::Mcp);
@@ -100,9 +99,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
     map.insert("обязательный".to_string(), Keyword::Mandatory);
     map.insert("рекомендательный".to_string(), Keyword::Advisory);
     map.insert("необязательный".to_string(), Keyword::Optional);
-    map.insert("правило_агента".to_string(), Keyword::AgentRule);
-    map.insert("набор_правил".to_string(), Keyword::RuleSet);
-    map.insert("цепочка_правил".to_string(), Keyword::RuleChain);
     map.insert("роль".to_string(), Keyword::Role);
     map.insert("член".to_string(), Keyword::Member);
     map.insert("стратегия".to_string(), Keyword::Strategy);

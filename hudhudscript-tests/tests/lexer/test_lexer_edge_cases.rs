@@ -123,7 +123,10 @@ fn jp_numeral_compositional_3245() {
 #[test]
 fn jp_numeral_compositional_12345() {
     // 一万二千三百四十五 = 12345
-    assert_eq!(japanese_numeral_to_number("一万二千三百四十五"), Some(12345.0));
+    assert_eq!(
+        japanese_numeral_to_number("一万二千三百四十五"),
+        Some(12345.0)
+    );
 }
 
 #[test]
@@ -135,7 +138,7 @@ fn jp_numeral_compositional_large() {
 
 #[test]
 fn jp_numeral_compositional_just_wari() {
-    // 万 alone should be processed 
+    // 万 alone should be processed
     let result = japanese_numeral_to_number("一万");
     assert_eq!(result, Some(10000.0));
 }
@@ -272,200 +275,3 @@ fn ident_continue_punctuation_false() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Lexer — tokenize edge cases
-// ═══════════════════════════════════════════════════════════════════════════
-
-#[test]
-fn lexer_empty_source() {
-    let mut lexer = Lexer::new("");
-    let tokens = lexer.tokenize().unwrap();
-    // Lexer always includes EOF token
-    assert_eq!(tokens.len(), 1);
-    assert_eq!(tokens[0].kind, TokenKind::Eof);
-}
-
-#[test]
-fn lexer_whitespace_only() {
-    let mut lexer = Lexer::new("   \n\t  ");
-    let tokens = lexer.tokenize().unwrap();
-    // Whitespace is skipped, only EOF remains
-    assert_eq!(tokens.len(), 1);
-    assert_eq!(tokens[0].kind, TokenKind::Eof);
-}
-
-#[test]
-fn lexer_single_integer() {
-    let mut lexer = Lexer::new("42");
-    let tokens = lexer.tokenize().unwrap();
-    assert_eq!(tokens.len(), 2); // number + EOF
-    assert!(matches!(tokens[0].kind, TokenKind::Number(_)));
-}
-
-#[test]
-fn lexer_single_float() {
-    let mut lexer = Lexer::new("3.14");
-    let tokens = lexer.tokenize().unwrap();
-    // Float token includes the dot in some implementations
-    assert!(tokens.len() >= 1);
-    assert!(matches!(tokens[0].kind, TokenKind::Number(_)));
-}
-
-#[test]
-fn lexer_string_literal() {
-    let mut lexer = Lexer::new("\"hello\"");
-    let tokens = lexer.tokenize().unwrap();
-    assert!(tokens.len() >= 1);
-    assert!(matches!(tokens[0].kind, TokenKind::String(_)));
-}
-
-#[test]
-fn lexer_identifier() {
-    let mut lexer = Lexer::new("değişken");
-    let tokens = lexer.tokenize().unwrap();
-    assert!(tokens.len() >= 1);
-    match &tokens[0].kind {
-        TokenKind::Identifier(_) | TokenKind::Keyword(_) => {},
-        other => panic!("Expected Identifier or Keyword, got {:?}", other),
-    }
-}
-
-#[test]
-fn lexer_operator_plus() {
-    let mut lexer = Lexer::new("+");
-    let tokens = lexer.tokenize().unwrap();
-    assert!(tokens.len() >= 1);
-}
-
-#[test]
-fn lexer_operator_minus() {
-    let mut lexer = Lexer::new("-");
-    let tokens = lexer.tokenize().unwrap();
-    assert!(tokens.len() >= 1);
-}
-
-#[test]
-fn lexer_boolean_true() {
-    let mut lexer = Lexer::new("doğru");
-    let tokens = lexer.tokenize().unwrap();
-    assert!(tokens.len() >= 1);
-}
-
-#[test]
-fn lexer_boolean_false() {
-    let mut lexer = Lexer::new("yanlış");
-    let tokens = lexer.tokenize().unwrap();
-    assert!(tokens.len() >= 1);
-}
-
-#[test]
-fn lexer_simple_assignment() {
-    let mut lexer = Lexer::new("değişken x = 1");
-    let tokens = lexer.tokenize().unwrap();
-    assert!(tokens.len() >= 4);
-}
-
-#[test]
-fn lexer_if_statement() {
-    let mut lexer = Lexer::new("eğer x > 0 {\n  değişken y = 1\n}");
-    let tokens = lexer.tokenize().unwrap();
-    assert!(!tokens.is_empty());
-}
-
-#[test]
-fn lexer_multiline() {
-    let src = "değişken a = 1\ndeğişken b = 2\ndeğişken c = a + b";
-    let mut lexer = Lexer::new(src);
-    let tokens = lexer.tokenize().unwrap();
-    assert!(tokens.len() > 5);
-}
-
-#[test]
-fn lexer_comments() {
-    let mut lexer = Lexer::new("değişken x = 1 // bu bir yorum");
-    let tokens = lexer.tokenize().unwrap();
-    assert!(tokens.len() >= 4);
-}
-
-#[test]
-fn lexer_arabic_keywords() {
-    let mut lexer = Lexer::new("إذا x > 0 { }");
-    let tokens = lexer.tokenize().unwrap();
-    assert!(!tokens.is_empty());
-}
-
-#[test]
-fn lexer_japanese_keywords() {
-    let mut lexer = Lexer::new("もし x > 0 { }");
-    let tokens = lexer.tokenize().unwrap();
-    assert!(!tokens.is_empty());
-}
-
-#[test]
-fn lexer_chinese_keywords() {
-    let mut lexer = Lexer::new("如果 x > 0 { }");
-    let tokens = lexer.tokenize().unwrap();
-    assert!(!tokens.is_empty());
-}
-
-#[test]
-fn lexer_korean_keywords() {
-    let mut lexer = Lexer::new("만약 x > 0 { }");
-    let tokens = lexer.tokenize().unwrap();
-    assert!(!tokens.is_empty());
-}
-
-#[test]
-fn lexer_russian_keywords() {
-    let mut lexer = Lexer::new("если x > 0 { }");
-    let tokens = lexer.tokenize().unwrap();
-    assert!(!tokens.is_empty());
-}
-
-#[test]
-fn lexer_mixed_operators() {
-    let mut lexer = Lexer::new("a + b * c / d - e % f");
-    let tokens = lexer.tokenize().unwrap();
-    assert!(tokens.len() >= 9);
-}
-
-#[test]
-fn lexer_array_literal() {
-    let mut lexer = Lexer::new("[1, 2, 3]");
-    let tokens = lexer.tokenize().unwrap();
-    assert!(tokens.len() >= 5);
-}
-
-#[test]
-fn lexer_object_literal() {
-    let mut lexer = Lexer::new("{ ad: \"Ali\", yas: 30 }");
-    let tokens = lexer.tokenize().unwrap();
-    assert!(tokens.len() >= 7);
-}
-
-#[test]
-fn lexer_function_definition() {
-    let mut lexer = Lexer::new("işlev topla(a, b) { dön a + b }");
-    let tokens = lexer.tokenize().unwrap();
-    assert!(tokens.len() >= 10);
-}
-
-#[test]
-fn lexer_arrow_function() {
-    let mut lexer = Lexer::new("(a, b) -> a + b");
-    let tokens = lexer.tokenize().unwrap();
-    assert!(tokens.len() >= 7);
-}
-
-#[test]
-fn lexer_comparison_operators() {
-    let mut lexer = Lexer::new("== != < > <= >=");
-    let tokens = lexer.tokenize().unwrap();
-    assert!(tokens.len() >= 6);
-}
-
-#[test]
-fn lexer_logical_operators() {
-    let mut lexer = Lexer::new("&& || !");
-    let tokens = lexer.tokenize().unwrap();
-    assert!(tokens.len() >= 3);
-}

@@ -6,6 +6,8 @@
 // P7.2 — swap the system allocator for mimalloc.  Callgrind profiling of the
 // interpreter hot path (`fib(30)`) showed ~24% of instructions in malloc/free;
 // mimalloc reduces that to ~11% and is safe (same API, thread-safe).
+// ISSUE-10a: allow sysalloc-profile feature for heaptrack/valgrind.
+#[cfg(not(feature = "sysalloc-profile"))]
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
@@ -13,9 +15,7 @@ use std::path::PathBuf;
 use std::process;
 
 use clap::{Parser, Subcommand};
-
-mod common;
-use common::*;
+use hudhudscript_cli::common::*;
 
 #[derive(Parser)]
 #[command(name = "hudi")]
@@ -132,25 +132,25 @@ fn main() {
         }) => {
             let dbg = debug || cli.debug;
             if let Err(e) = run_file_vm(&file, dbg) {
-                eprintln!("Error: {}", e);
+                eprint_error(&format!("{}", e));
                 process::exit(e.exit_code());
             }
         }
         Some(Commands::Repl { debug, load }) => {
             if let Err(e) = run_repl(debug || cli.debug, load) {
-                eprintln!("Error: {}", e);
+                eprint_error(&format!("{}", e));
                 process::exit(e.exit_code());
             }
         }
         Some(Commands::Check { file, ast }) => {
             if let Err(e) = check_file(&file, ast, false, &Default::default()) {
-                eprintln!("Error: {}", e);
+                eprint_error(&format!("{}", e));
                 process::exit(e.exit_code());
             }
         }
         Some(Commands::Format { path, write, check }) => {
             if let Err(e) = format_path(&path, write, check) {
-                eprintln!("Error: {}", e);
+                eprint_error(&format!("{}", e));
                 process::exit(e.exit_code());
             }
         }
@@ -162,7 +162,7 @@ fn main() {
         }
         Some(Commands::Dap { file }) => {
             if let Err(e) = run_dap_server(&file) {
-                eprintln!("Error: {}", e);
+                eprint_error(&format!("{}", e));
                 process::exit(e.exit_code());
             }
         }
@@ -172,7 +172,7 @@ fn main() {
             stop_on_entry,
         }) => {
             if let Err(e) = run_debug(&file, &breakpoint, stop_on_entry) {
-                eprintln!("Error: {}", e);
+                eprint_error(&format!("{}", e));
                 process::exit(e.exit_code());
             }
         }
@@ -180,7 +180,7 @@ fn main() {
             // Compile + VM is the sole runtime after Faz 5.
             if let Some(file) = cli.file {
                 if let Err(e) = run_file_vm(&file, cli.debug) {
-                    eprintln!("Error: {}", e);
+                    eprint_error(&format!("{}", e));
                     process::exit(e.exit_code());
                 }
             } else {

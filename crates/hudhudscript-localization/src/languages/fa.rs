@@ -36,7 +36,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
 
     // Agent system
     map.insert("عامل".to_string(), Keyword::Agent);
-    map.insert("وظیفه".to_string(), Keyword::Task);
     map.insert("ابزار".to_string(), Keyword::Tool);
     map.insert("منبع".to_string(), Keyword::Resource);
     map.insert("ام_سی_پی".to_string(), Keyword::Mcp);
@@ -107,7 +106,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
     map.insert("ماشه".to_string(), Keyword::Trigger);
     // Native Persian/Farsi translations
     map.insert("عمل".to_string(), Keyword::Action);
-    map.insert("قانون_عامل".to_string(), Keyword::AgentRule);
     map.insert("وضعیت_عامل".to_string(), Keyword::AgentState);
     map.insert("اجازه_بده".to_string(), Keyword::Allow);
     map.insert("سبک_ارتباطی".to_string(), Keyword::CommunicationStyle);
@@ -120,8 +118,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
     map.insert("غیررسمی".to_string(), Keyword::Informal);
     map.insert("هدف".to_string(), Keyword::Intent);
     map.insert("اولویت".to_string(), Keyword::Priority);
-    map.insert("زنجیره_قوانین".to_string(), Keyword::RuleChain);
-    map.insert("مجموعه_قوانین".to_string(), Keyword::RuleSet);
     map.insert("ماشین_حالت".to_string(), Keyword::StateMachine);
     map.insert("فنی".to_string(), Keyword::Technical);
     map.insert("تبدیل_کن".to_string(), Keyword::Transform);

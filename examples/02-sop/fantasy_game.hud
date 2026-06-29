@@ -1,0 +1,332 @@
+// ═══════════════════════════════════════════════════════════
+// Fantasy Game — SOP Stage 3: Advanced
+// of (view), compose, get_relation, inventory, dağ/mağara
+// ═══════════════════════════════════════════════════════════
+
+// --- ROLLER ---
+role Fighter   { can attack, can defend }
+role Trader    { can buy, can sell   }
+role Monster   { can roar, can smash }
+role Mount     { can ride, can gallop }
+role Gate      { can open, can close  }
+role Landmark  { can discover, can enter }
+role Lootable  { can loot }
+
+// --- EFFECT'LER ---
+effect on CombatHit(attacker_name, target_name, damage, bonus_text) {
+    print("  ⚔️ " + attacker_name + " → " + target_name + ": " + damage + " hasar!" + bonus_text)
+}
+effect on RelationBonus(attacker, target, rel_name, pct, bonus_dmg) {
+    print("  🔗 " + attacker + " vs " + target + " [" + rel_name + " %" + pct + "] → +" + bonus_dmg + " bonus hasar!")
+}
+effect on TradeDeal(buyer_name, seller_name, item, cost) {
+    print("  💰 " + buyer_name + " satın aldı: " + item + " (" + cost + " altın)")
+}
+effect on MonsterRoar(name) {
+    print("  👹 " + name + " KÜKREDİ: ROOOAAARRR!")
+}
+effect on DoorAction(door_name, action) {
+    print("  🚪 " + door_name + " " + action)
+}
+effect on MountGallop(name, stamina) {
+    print("  💨 " + name + " dörtnala! Kalan stamina: " + stamina)
+}
+effect on Discovery(name, description) {
+    print("  🔍 Keşif: " + name + " — " + description)
+}
+effect on LootDrop(item, amount) {
+    print("  ✨ " + item + " x" + amount + " düştü!")
+}
+
+// --- SUBJECT'LER ---
+subject Knight has Fighter {
+    state name: "Sir Lancelot",
+    state health: 100,
+    state armor: 50,
+    state gold: 30,
+    state power: 28
+
+    on attack(self, target) {
+        let dmg = self.power
+        target.health = target.health - dmg
+        self.mark_hit(dmg)
+        CombatHit(self.name, target.name, dmg, "")
+    }
+    on defend(self) {
+        self.armor = self.armor + 10
+        print("  🛡️ " + self.name + " savunmaya geçti! Zırh: " + self.armor)
+    }
+}
+
+subject Hero has Fighter {
+    state name: "Aragorn",
+    state health: 120,
+    state power: 35,
+    state gold: 15,
+    state armor: 20,
+    state inventory: 0
+
+    on attack(self, target) {
+        let dmg = self.power
+        target.health = target.health - dmg
+        self.mark_hit(dmg)
+        CombatHit(self.name, target.name, dmg, "")
+    }
+    on defend(self) {
+        self.armor = self.armor + 15
+        print("  🛡️ " + self.name + " kalkan kaldırdı! Zırh: " + self.armor)
+    }
+}
+
+subject NPC has Trader {
+    state name: "Old Tom",
+    state gold: 500,
+    state potions: 10,
+    state greeting: "Hoş geldin gezgin!"
+
+    on buy(self, customer, item, cost) {
+        customer.gold = customer.gold - cost
+        self.gold = self.gold + cost
+        self.potions = self.potions - 1
+        TradeDeal(customer.name, self.name, item, cost)
+    }
+    on sell(self, customer) {
+        print("  🧙 " + self.name + ": \"Şimdilik satılık bir şeyim yok.\"")
+    }
+}
+
+subject Troll has Monster, Lootable {
+    state name: "Groth",
+    state health: 200,
+    state power: 30,
+    state loot_gold: 80
+
+    on roar(self) {
+        MonsterRoar(self.name)
+    }
+    on smash(self, target) {
+        let dmg = self.power + 10
+        target.health = target.health - dmg
+        print("  💥 " + self.name + " ezici darbe! " + target.name + " -" + dmg + " HP")
+    }
+    on loot(self, looter) {
+        looter.gold = looter.gold + self.loot_gold
+        LootDrop("Altın", self.loot_gold)
+        self.loot_gold = 0
+    }
+}
+
+subject Horse has Mount {
+    state name: "Shadowfax",
+    state speed: 60,
+    state stamina: 100,
+    state rider: "none"
+
+    on ride(self, rider) {
+        self.rider = rider.name
+        print("  🐴 " + rider.name + " " + self.name + "'a bindi! Hız: " + self.speed)
+    }
+    on gallop(self) {
+        self.stamina = self.stamina - 20
+        MountGallop(self.name, self.stamina)
+    }
+}
+
+subject Door has Gate {
+    state name: "Kale Kapısı",
+    state closed: 1,
+    state hp: 100
+
+    on open(self) {
+        self.closed = 0
+        DoorAction(self.name, "AÇILDI")
+    }
+    on close(self) {
+        self.closed = 1
+        DoorAction(self.name, "KAPANDI")
+    }
+}
+
+subject Mountain has Landmark {
+    state name: "Kara Doruk",
+    state height: 3000,
+    state danger: 80,
+    state explored: 0
+
+    on discover(self, explorer) {
+        self.explored = 1
+        Discovery(self.name, "Yükseklik " + self.height + "m, Tehlike seviyesi " + self.danger)
+    }
+    on enter(self, explorer) {
+        print("  ⛰️ " + explorer.name + " dağa tırmanıyor...")
+        explorer.health = explorer.health - self.danger
+        print("  ⚠️ Zorlu tırmanış! -" + self.danger + " HP")
+    }
+}
+
+subject Cave has Landmark {
+    state name: "Ejderha İni",
+    state depth: 500,
+    state dark: 1,
+    state explored: 0
+
+    on discover(self, explorer) {
+        self.explored = 1
+        Discovery(self.name, "Derinlik " + self.depth + "m, Zifiri karanlık!")
+    }
+    on enter(self, explorer) {
+        print("  🕳️ " + explorer.name + " mağaraya giriyor...")
+        print("  🌑 Çok karanlık! Meşale yakılıyor...")
+    }
+}
+
+// --- VIEW SUBJECT'LERİ (of keyword) ---
+subject KnightLog of Knight {
+    state hits: 0, state damage_dealt: 0
+    on mark_hit(self, dmg) {
+        self.hits = self.hits + 1
+        self.damage_dealt = self.damage_dealt + dmg
+    }
+}
+subject HeroLog of Hero {
+    state hits: 0, state damage_dealt: 0
+    on mark_hit(self, dmg) {
+        self.hits = self.hits + 1
+        self.damage_dealt = self.damage_dealt + dmg
+    }
+}
+
+// View: Keşif günlüğü — keşifleri takip eder (manuel)
+
+// --- COMPOSE (view bağlama) ---
+compose Knight {
+    on attack: combine [KnightLog]
+}
+compose Hero {
+    on attack:  combine [HeroLog]
+}
+
+// --- RELATION'LAR ---
+relation Knight <-> Hero   { friendship: 80 }
+relation Knight <-> NPC    { trust: 70 }
+relation Hero   <-> Troll  { hostility: 100 }
+relation Troll  <-> Cave   { guards: 1 }
+
+// --- SPAWN ---
+let knight = spawn Knight
+let hero   = spawn Hero
+let npc    = spawn NPC
+let troll  = spawn Troll
+let horse  = spawn Horse
+let door   = spawn Door
+let mountain = spawn Mountain
+let cave   = spawn Cave
+
+// ═══════════════ OYUN ═══════════════
+print("")
+print("╔══════════════════════════════════════════════╗")
+print("║   FANTASY REALM — Stage 3: Advanced         ║")
+print("║   of + compose + relation + inventory        ║")
+print("╚══════════════════════════════════════════════╝")
+print("")
+
+// --- BÖLÜM 1: Kapı ve Dostluk ---
+print(">>> BÖLÜM 1: KALEDE TOPLANMA <<<")
+door.open()
+print(knight.name + " ve " + hero.name + " kalede buluştu.")
+
+// get_relation ile DİNAMİK dostluk okuma
+let k_h_rel = get_relation(knight, hero)
+let friendship = k_h_rel.friendship
+print("📊 Dostluk seviyesi (get_relation): " + friendship + "/100")
+
+let h_t_rel = get_relation(hero, troll)
+let hostility = h_t_rel.hostility
+print("📊 Düşmanlık seviyesi (get_relation): " + hostility + "/100")
+
+let k_n_rel = get_relation(knight, npc)
+let trust = k_n_rel.trust
+print("📊 NPC güveni (get_relation): " + trust + "/100")
+print("")
+
+// --- BÖLÜM 2: Keşif — Dağ ve Mağara ---
+print(">>> BÖLÜM 2: KEŞİF YOLCULUĞU <<<")
+horse.ride(knight)
+horse.gallop()
+print("")
+
+mountain.discover(hero)
+mountain.enter(hero)
+cave.discover(hero)
+cave.enter(hero)
+print("")
+
+// --- BÖLÜM 3: NPC Ticaret ---
+print(">>> BÖLÜM 3: SAVAŞ HAZIRLIĞI <<<")
+print(npc.name + " diyor ki: \"" + npc.greeting + "\"")
+npc.buy(knight, "İksir", 15)
+npc.buy(hero, "İksir", 15)
+print("")
+
+// --- BÖLÜM 4: get_relation ile DİNAMİK bonuslu savaş ---
+print(">>> BÖLÜM 4: TROLL SAVAŞI <<<")
+print("Mağara önünde " + troll.name + " belirdi!")
+troll.roar()
+print("")
+
+// Savaş anında relation'ları taze oku
+let rel_ht = get_relation(hero, troll)
+let rel_kh = get_relation(knight, hero)
+let hos = rel_ht.hostility
+let frd = rel_kh.friendship
+
+// Hero vs Troll: hostility bazlı dinamik bonus (tam sayı)
+let h_dmg = hero.power
+let h_bonus = hos * h_dmg / 100
+let h_total = h_dmg + h_bonus
+RelationBonus(hero.name, troll.name, "düşmanlık", hos, h_bonus)
+troll.health = troll.health - h_total
+CombatHit(hero.name, troll.name, h_total, "")
+
+// Knight da saldırıyor — Hero ile dostluk bonusu
+let k_dmg = knight.power
+let k_bonus = frd * k_dmg / 100
+let k_total = k_dmg + k_bonus
+RelationBonus(knight.name, troll.name, "dostluk", frd, k_bonus)
+troll.health = troll.health - k_total
+CombatHit(knight.name, troll.name, k_total, "")
+
+// Troll karşı saldırı
+troll.smash(knight)
+knight.defend()
+
+// Hero son vuruş
+hero.attack(troll)
+print("")
+
+// Troll öldü mü kontrol
+print(">>> TROLL YENİLDİ! <<<")
+troll.loot(hero)
+print("")
+
+// --- BÖLÜM 5: Mağara Keşfi ---
+print(">>> BÖLÜM 5: ZAFER VE DÖNÜŞ <<<")
+print(hero.name + " mağarayı temizledi ve kaleye dönüyor...")
+print(hero.name + " zafer altınlarını sayıyor: " + hero.gold + " altın!")
+print("")
+
+// --- FİNAL: View State Raporu ---
+let discoveries = 2
+print("╔══════════════════════════════════════════════╗")
+print("║            SAVAŞ RAPORU                     ║")
+print("╚══════════════════════════════════════════════╝")
+print(knight.name + ": HP=" + knight.health + " Zırh=" + knight.armor)
+print("  -> " + knight.hits + " vuruş, " + knight.damage_dealt + " toplam hasar")
+print(hero.name + ": HP=" + hero.health + " Altın=" + hero.gold)
+print("  -> " + hero.hits + " vuruş, " + hero.damage_dealt + " toplam hasar")
+print("  -> " + discoveries + " keşif yapıldı")
+print(troll.name + ": HP=" + troll.health + " (Loot kaldı: " + troll.loot_gold + ")")
+print(npc.name + ": Altın=" + npc.gold + " İksir=" + npc.potions)
+print("")
+print("[Stage 3 tamamlandı — Tüm SOP kavramları kullanıldı!]")
+print("[of, compose, view, relation bonusu, inventory, landmark]")

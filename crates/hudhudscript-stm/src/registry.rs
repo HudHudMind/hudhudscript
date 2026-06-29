@@ -78,4 +78,14 @@ impl<V: Clone> TVarRegistry<V> {
     pub fn is_empty(&self) -> bool {
         self.vars.lock().is_empty()
     }
+
+    /// Snapshot all committed values for conservative external traversals such
+    /// as GC root marking.
+    pub fn snapshot_values(&self) -> Vec<V> {
+        self.vars
+            .lock()
+            .values()
+            .map(|tvar| tvar.read_committed().0)
+            .collect()
+    }
 }

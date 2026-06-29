@@ -61,7 +61,9 @@ impl RegisterArena {
     /// Zero the current frame's registers.
     pub fn zero_frame(&mut self, frame_size: usize) {
         for i in 0..frame_size {
-            unsafe { *self.base_ptr.add(i) = Value16::null(); }
+            unsafe {
+                *self.base_ptr.add(i) = Value16::null();
+            }
         }
     }
 
@@ -72,12 +74,41 @@ impl RegisterArena {
         &mut self.arena
     }
 
+    /// Immutable access to the whole arena for conservative root scans.
+    pub fn arena(&self) -> &[Value16] {
+        &self.arena
+    }
+
     pub fn base(&self) -> usize {
         self.base
     }
 
     pub fn len(&self) -> usize {
         self.arena.len()
+    }
+
+    pub fn set_absolute(&mut self, idx: usize, value: Value16) {
+        if idx >= self.arena.len() {
+            self.arena.resize(idx + 1, Value16::null());
+            self.base_ptr = unsafe { self.arena.as_mut_ptr().add(self.base) };
+        }
+        debug_assert!(idx < self.arena.len(), "set_absolute OOB");
+        unsafe { *self.arena.get_unchecked_mut(idx) = value; }
+    }
+
+    /// Read an absolute arena index, bypassing the current frame base.
+    /// P0-C: get_unchecked — slot compiler-allocated, idx < arena.len().
+    #[inline(always)]
+    pub fn get_absolute(&self, idx: usize) -> Value16 {
+        debug_assert!(idx < self.arena.len(), "get_absolute OOB");
+        unsafe { *self.arena.get_unchecked(idx) }
+    }
+
+    /// Borrowed version of `get_absolute`.
+    #[inline(always)]
+    pub fn get_absolute_ref(&self, idx: usize) -> &Value16 {
+        debug_assert!(idx < self.arena.len(), "get_absolute_ref OOB");
+        unsafe { self.arena.get_unchecked(idx) }
     }
 }
 
@@ -91,7 +122,13 @@ impl Index<usize> for RegisterArena {
     type Output = Value16;
     #[inline(always)]
     fn index(&self, idx: usize) -> &Value16 {
-        debug_assert!(self.base + idx < self.arena.len(), "RegisterArena index OOB: base={} idx={} len={}", self.base, idx, self.arena.len());
+        debug_assert!(
+            self.base + idx < self.arena.len(),
+            "RegisterArena index OOB: base={} idx={} len={}",
+            self.base,
+            idx,
+            self.arena.len()
+        );
         unsafe { &*self.base_ptr.add(idx) }
     }
 }
@@ -99,7 +136,13 @@ impl Index<usize> for RegisterArena {
 impl IndexMut<usize> for RegisterArena {
     #[inline(always)]
     fn index_mut(&mut self, idx: usize) -> &mut Value16 {
-        debug_assert!(self.base + idx < self.arena.len(), "RegisterArena index_mut OOB: base={} idx={} len={}", self.base, idx, self.arena.len());
+        debug_assert!(
+            self.base + idx < self.arena.len(),
+            "RegisterArena index_mut OOB: base={} idx={} len={}",
+            self.base,
+            idx,
+            self.arena.len()
+        );
         unsafe { &mut *self.base_ptr.add(idx) }
     }
 }

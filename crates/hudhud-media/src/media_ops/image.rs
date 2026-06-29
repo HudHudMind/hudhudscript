@@ -30,7 +30,7 @@ pub fn image_info(args: &[Value16]) -> HudHudResult<Value16> {
     let format = parts[2].to_string();
     let size_bytes = util::file_size(&path);
 
-    let mut m = HashMap::new();
+    let mut m = hudhudscript_bytecode::ObjMap::default();
     m.insert("width".to_string(), Value16::number(width));
     m.insert("height".to_string(), Value16::number(height));
     m.insert("format".to_string(), Value16::string(format));
@@ -65,7 +65,7 @@ fn parse_image_header(path: &str) -> Option<Value16> {
     };
 
     let size_bytes = util::file_size(path);
-    let mut m = HashMap::new();
+    let mut m = hudhudscript_bytecode::ObjMap::default();
     m.insert("width".to_string(), Value16::number(width as f64));
     m.insert("height".to_string(), Value16::number(height as f64));
     m.insert("format".to_string(), Value16::string(format.to_string()));
@@ -123,7 +123,7 @@ fn parse_jpeg_dimensions(path: &str) -> Option<Value16> {
         return None;
     }
     let size_bytes = util::file_size(path);
-    let mut m = HashMap::new();
+    let mut m = hudhudscript_bytecode::ObjMap::default();
     m.insert("width".to_string(), Value16::number(w as f64));
     m.insert("height".to_string(), Value16::number(h as f64));
     m.insert("format".to_string(), Value16::string("JPEG".to_string()));
@@ -153,7 +153,7 @@ fn parse_webp_dimensions(path: &str) -> Option<Value16> {
         return None;
     };
     let size_bytes = util::file_size(path);
-    let mut m = HashMap::new();
+    let mut m = hudhudscript_bytecode::ObjMap::default();
     m.insert("width".to_string(), Value16::number(w as f64));
     m.insert("height".to_string(), Value16::number(h as f64));
     m.insert("format".to_string(), Value16::string("WEBP".to_string()));

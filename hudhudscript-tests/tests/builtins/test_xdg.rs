@@ -3,9 +3,13 @@ use hudhudscript_shared_builtins::xdg_ops::{
     xdg_cache_home, xdg_config_home, xdg_data_home, xdg_desktop_files, xdg_mime_type,
     xdg_parse_desktop, xdg_runtime_dir,
 };
+use std::sync::Mutex;
+
+static ENV_LOCK: Mutex<()> = Mutex::new(());
 
 #[test]
 fn test_data_home_default() {
+    let _guard = ENV_LOCK.lock().unwrap();
     std::env::remove_var("XDG_DATA_HOME");
     let result = xdg_data_home(&[]).unwrap();
     if let Some(s) = result.as_str() {
@@ -17,6 +21,7 @@ fn test_data_home_default() {
 
 #[test]
 fn test_data_home_env() {
+    let _guard = ENV_LOCK.lock().unwrap();
     std::env::set_var("XDG_DATA_HOME", "/tmp/test_data");
     let result = xdg_data_home(&[]).unwrap();
     assert_eq!(result, Value16::string("/tmp/test_data".to_string()));
@@ -25,6 +30,7 @@ fn test_data_home_env() {
 
 #[test]
 fn test_config_home_default() {
+    let _guard = ENV_LOCK.lock().unwrap();
     std::env::remove_var("XDG_CONFIG_HOME");
     let result = xdg_config_home(&[]).unwrap();
     if let Some(s) = result.as_str() {
@@ -36,6 +42,7 @@ fn test_config_home_default() {
 
 #[test]
 fn test_cache_home_default() {
+    let _guard = ENV_LOCK.lock().unwrap();
     std::env::remove_var("XDG_CACHE_HOME");
     let result = xdg_cache_home(&[]).unwrap();
     if let Some(s) = result.as_str() {
@@ -47,6 +54,7 @@ fn test_cache_home_default() {
 
 #[test]
 fn test_runtime_dir_unset() {
+    let _guard = ENV_LOCK.lock().unwrap();
     std::env::remove_var("XDG_RUNTIME_DIR");
     let result = xdg_runtime_dir(&[]).unwrap();
     assert_eq!(result, Value16::null());
@@ -54,6 +62,7 @@ fn test_runtime_dir_unset() {
 
 #[test]
 fn test_runtime_dir_set() {
+    let _guard = ENV_LOCK.lock().unwrap();
     std::env::set_var("XDG_RUNTIME_DIR", "/run/user/1000");
     let result = xdg_runtime_dir(&[]).unwrap();
     assert_eq!(result, Value16::string("/run/user/1000".to_string()));

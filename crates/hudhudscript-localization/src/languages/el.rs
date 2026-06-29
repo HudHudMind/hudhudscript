@@ -36,7 +36,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
 
     // Agent system
     map.insert("πράκτορας".to_string(), Keyword::Agent);
-    map.insert("εργασία".to_string(), Keyword::Task);
     map.insert("εργαλείο".to_string(), Keyword::Tool);
     map.insert("πόρος".to_string(), Keyword::Resource);
     map.insert("mcp".to_string(), Keyword::Mcp);
@@ -107,7 +106,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
     map.insert("σκανδάλη".to_string(), Keyword::Trigger);
     // Native Greek translations
     map.insert("ενέργεια".to_string(), Keyword::Action);
-    map.insert("κανόνας_πράκτορα".to_string(), Keyword::AgentRule);
     map.insert("κατάσταση_πράκτορα".to_string(), Keyword::AgentState);
     map.insert("επίτρεψε".to_string(), Keyword::Allow);
     map.insert("στυλ_επικοινωνίας".to_string(), Keyword::CommunicationStyle);
@@ -120,8 +118,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
     map.insert("ανεπίσημο".to_string(), Keyword::Informal);
     map.insert("πρόθεση".to_string(), Keyword::Intent);
     map.insert("προτεραιότητα".to_string(), Keyword::Priority);
-    map.insert("αλυσίδα_κανόνων".to_string(), Keyword::RuleChain);
-    map.insert("σύνολο_κανόνων".to_string(), Keyword::RuleSet);
     map.insert("μηχανή_καταστάσεων".to_string(), Keyword::StateMachine);
     map.insert("τεχνικό".to_string(), Keyword::Technical);
     map.insert("μετασχηματίζω".to_string(), Keyword::Transform);

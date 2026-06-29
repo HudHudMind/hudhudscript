@@ -64,3 +64,5 @@ mod template_arrow_test;
 mod test_for_loop;
 mod test_test_inline;
 mod test_unary;
+mod web_framework_socket_test;
+mod web_framework_vm_test;

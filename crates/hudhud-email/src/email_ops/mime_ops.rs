@@ -28,7 +28,7 @@ pub fn email_parse_mime(args: &[Value16]) -> HudHudResult<Value16> {
     let mut to = String::new();
     let mut subject = String::new();
     let mut date = String::new();
-    let mut headers: HashMap<String, Value16> = HashMap::new();
+    let mut headers: hudhudscript_bytecode::ObjMap = hudhudscript_bytecode::ObjMap::default();
 
     let mut unfolded = String::new();
     for line in header_section.lines() {
@@ -59,7 +59,7 @@ pub fn email_parse_mime(args: &[Value16]) -> HudHudResult<Value16> {
         }
     }
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("from".to_string(), Value16::string(from));
     result.insert("to".to_string(), Value16::string(to));
     result.insert("subject".to_string(), Value16::string(subject));
@@ -135,7 +135,7 @@ pub fn email_list_maildir(args: &[Value16]) -> HudHudResult<Value16> {
             }
         }
 
-        let mut item = HashMap::new();
+        let mut item = hudhudscript_bytecode::ObjMap::default();
         item.insert("filename".to_string(), Value16::string(filename));
         item.insert("from".to_string(), Value16::string(from));
         item.insert("subject".to_string(), Value16::string(subject));

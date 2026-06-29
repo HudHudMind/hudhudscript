@@ -37,7 +37,7 @@ pub(crate) fn require_str(args: &[Value16], idx: usize, name: &str) -> HudHudRes
 }
 
 pub(crate) fn build_route_obj(method: &str, path: &str, handler: &str) -> Value16 {
-    let mut route = HashMap::new();
+    let mut route = hudhudscript_bytecode::ObjMap::default();
     route.insert("method".to_string(), Value16::string(method.to_string()));
     route.insert("path".to_string(), Value16::string(path.to_string()));
     route.insert("handler".to_string(), Value16::string(handler.to_string()));
@@ -65,7 +65,7 @@ pub(crate) fn extract_server_fd(args: &[Value16], callee: &str) -> HudHudResult<
 
 // ── Public (generic) entry points ───────────────────────────────────────
 
-pub(crate) fn guess_content_type(ext: &str) -> &'static str {
+pub fn guess_content_type(ext: &str) -> &'static str {
     match ext {
         "html" | "htm" => "text/html; charset=utf-8",
         "css" => "text/css",
@@ -104,7 +104,7 @@ pub(crate) fn find_matching_route<'a>(
     None
 }
 
-pub(crate) fn route_matches(pattern: &str, path: &str) -> bool {
+pub fn route_matches(pattern: &str, path: &str) -> bool {
     let pattern_segments: Vec<&str> = pattern.trim_matches('/').split('/').collect();
     let path_segments: Vec<&str> = path.trim_matches('/').split('/').collect();
 
@@ -131,7 +131,7 @@ pub(crate) fn route_matches(pattern: &str, path: &str) -> bool {
         .all(|(p, s)| p.starts_with(':') || *p == *s)
 }
 
-pub(crate) fn extract_path_params(pattern: &str, path: &str) -> HashMap<String, String> {
+pub fn extract_path_params(pattern: &str, path: &str) -> HashMap<String, String> {
     let mut params = HashMap::new();
     let pattern_segments: Vec<&str> = pattern.trim_matches('/').split('/').collect();
     let path_segments: Vec<&str> = path.trim_matches('/').split('/').collect();

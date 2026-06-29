@@ -34,6 +34,7 @@ impl VM {
         let mut vm = Self {
             last_return: Value16::null(),
             globals: rustc_hash::FxHashMap::with_capacity_and_hasher(100, Default::default()),
+            shared_globals_vec: Vec::new(),
             scope_cells: Vec::new(),
             scope_cells_pool: Vec::new(),
             locale: OutputLocale::Default,
@@ -47,11 +48,23 @@ impl VM {
             declarations: rustc_hash::FxHashMap::with_capacity_and_hasher(8, Default::default()),
             effects: rustc_hash::FxHashMap::with_capacity_and_hasher(8, Default::default()),
             relations: rustc_hash::FxHashMap::with_capacity_and_hasher(8, Default::default()),
-            subject_templates: rustc_hash::FxHashMap::with_capacity_and_hasher(4, Default::default()),
+            subject_templates: rustc_hash::FxHashMap::with_capacity_and_hasher(
+                4,
+                Default::default(),
+            ),
             event_schemas: rustc_hash::FxHashMap::with_capacity_and_hasher(4, Default::default()),
-            subject_instances: rustc_hash::FxHashMap::with_capacity_and_hasher(4, Default::default()),
-            composition_rules: rustc_hash::FxHashMap::with_capacity_and_hasher(4, Default::default()),
-            field_correspondences: rustc_hash::FxHashMap::with_capacity_and_hasher(4, Default::default()),
+            subject_instances: rustc_hash::FxHashMap::with_capacity_and_hasher(
+                4,
+                Default::default(),
+            ),
+            composition_rules: rustc_hash::FxHashMap::with_capacity_and_hasher(
+                4,
+                Default::default(),
+            ),
+            field_correspondences: rustc_hash::FxHashMap::with_capacity_and_hasher(
+                4,
+                Default::default(),
+            ),
             toml_providers: rustc_hash::FxHashMap::with_capacity_and_hasher(4, Default::default()),
             toml_config: Value16::null(),
             dispatch_provider_receiver: None,
@@ -59,7 +72,10 @@ impl VM {
             swarm_names: rustc_hash::FxHashMap::with_capacity_and_hasher(4, Default::default()),
             council_names: rustc_hash::FxHashMap::with_capacity_and_hasher(4, Default::default()),
             community_names: rustc_hash::FxHashMap::with_capacity_and_hasher(4, Default::default()),
-            ability_handlers: rustc_hash::FxHashMap::with_capacity_and_hasher(4, Default::default()),
+            ability_handlers: rustc_hash::FxHashMap::with_capacity_and_hasher(
+                4,
+                Default::default(),
+            ),
             constitutions: rustc_hash::FxHashMap::with_capacity_and_hasher(4, Default::default()),
             active_constitution: None,
             provider: None,
@@ -70,7 +86,10 @@ impl VM {
             call_depth: 0,
             max_call_depth: hudhudscript_errors::constants::MAX_CALL_DEPTH,
             max_call_depth_hard_ceiling: 4000,
-            registers: crate::vm::register_arena::RegisterArena::with_capacity(64 * 1024),
+            // FIX-1: keep arena tiny at startup; it grows on demand.
+            // A 256K-slot pre-grow caused a 4MB memset + page-fault tax on
+            // every short script run, dwarfing actual VM execution time.
+            registers: crate::vm::register_arena::RegisterArena::with_capacity(256),
             call_stack_local_syms: Vec::with_capacity(64),
             owned_local_sym_refs: Vec::with_capacity(16),
             pending_call: None,
@@ -90,16 +109,29 @@ impl VM {
                 allow_file_read: true,
                 allow_file_write: false,
                 allow_network: false,
+                allow_process: false,
+                allowed_commands: vec![],
+                denied_commands: vec![
+                    "rm".into(),
+                    "dd".into(),
+                    "mkfs".into(),
+                    "shutdown".into(),
+                    "reboot".into(),
+                ],
             })),
+            host_access_policy: crate::vm::host_access::HostAccessPolicy::permissive(),
             tvars: hudhudscript_stm::TVarRegistry::new(),
             class_context_stack: Vec::new(),
             last_instance_mutation: None,
             immutables: HashSet::new(),
             sym_cache: rustc_hash::FxHashMap::with_capacity_and_hasher(128, Default::default()),
-            name_sym_cache: std::cell::RefCell::new(rustc_hash::FxHashMap::with_capacity_and_hasher(128, Default::default())),
+            name_sym_cache: std::cell::RefCell::new(
+                rustc_hash::FxHashMap::with_capacity_and_hasher(128, Default::default()),
+            ),
             length_sym_id: hudhudscript_bytecode::interner::intern("length").0,
             push_sym_id: hudhudscript_bytecode::interner::intern("push").0,
-
+            math_obj: None,
+            json_obj: None,
             in_stm_context: false,
             current_tx: None,
 
@@ -121,10 +153,19 @@ impl VM {
             tco_args: None,
             args_scratch: Vec::with_capacity(32),
             yield_sender: None,
+            yield_receivers: rustc_hash::FxHashMap::default(),
+            detached_promises: rustc_hash::FxHashMap::default(),
+            next_yield_id: 0,
             chunk_cache: rustc_hash::FxHashMap::with_capacity_and_hasher(64, Default::default()),
             chunk_cache_last_key: 0,
             chunk_cache_last_val: None,
+            current_chunk_ptr: std::ptr::null(),
+            str_chars_cache: rustc_hash::FxHashMap::with_capacity_and_hasher(8, Default::default()),
+            main_local_slots: Vec::new(),
+            gc_constant_roots: Vec::new(),
+            constant_root_chunks: rustc_hash::FxHashSet::default(),
             call_cache: Vec::with_capacity(64),
+            ability_cache: [(None, 0), (None, 0)],
         };
         vm.register_globals();
         vm
@@ -146,102 +187,8 @@ impl VM {
 
     /// Create VM with specific locale
     pub fn with_locale(locale: OutputLocale) -> Self {
-        let mut vm = Self {
-            last_return: Value16::null(),
-            globals: rustc_hash::FxHashMap::with_capacity_and_hasher(100, Default::default()),
-            scope_cells: Vec::new(),
-            scope_cells_pool: Vec::new(),
-            loop_headers: Vec::new(),
-            locale,
-            try_frames: Vec::new(),
-            finally_frames: Vec::new(),
-            pending_flow: None,
-            iterators: Vec::new(),
-            iterator_generators: Vec::new(),
-            classes: rustc_hash::FxHashMap::with_capacity_and_hasher(16, Default::default()),
-            declarations: rustc_hash::FxHashMap::with_capacity_and_hasher(8, Default::default()),
-            effects: rustc_hash::FxHashMap::with_capacity_and_hasher(8, Default::default()),
-            relations: rustc_hash::FxHashMap::with_capacity_and_hasher(8, Default::default()),
-            subject_templates: rustc_hash::FxHashMap::with_capacity_and_hasher(4, Default::default()),
-            event_schemas: rustc_hash::FxHashMap::with_capacity_and_hasher(4, Default::default()),
-            subject_instances: rustc_hash::FxHashMap::with_capacity_and_hasher(4, Default::default()),
-            composition_rules: rustc_hash::FxHashMap::with_capacity_and_hasher(4, Default::default()),
-            field_correspondences: rustc_hash::FxHashMap::with_capacity_and_hasher(4, Default::default()),
-            toml_providers: rustc_hash::FxHashMap::with_capacity_and_hasher(4, Default::default()),
-            toml_config: Value16::null(),
-            dispatch_provider_receiver: None,
-            agent_names: rustc_hash::FxHashMap::with_capacity_and_hasher(4, Default::default()),
-            swarm_names: rustc_hash::FxHashMap::with_capacity_and_hasher(4, Default::default()),
-            council_names: rustc_hash::FxHashMap::with_capacity_and_hasher(4, Default::default()),
-            community_names: rustc_hash::FxHashMap::with_capacity_and_hasher(4, Default::default()),
-            ability_handlers: rustc_hash::FxHashMap::with_capacity_and_hasher(4, Default::default()),
-            constitutions: rustc_hash::FxHashMap::with_capacity_and_hasher(4, Default::default()),
-            active_constitution: None,
-            provider: None,
-            provider_registry: None,
-            tool_registry: None,
-            mcp_tool_definitions: Arc::new(Mutex::new(HashMap::new())),
-            mcp_clients: Arc::new(Mutex::new(HashMap::new())),
-            call_depth: 0,
-            max_call_depth: hudhudscript_errors::constants::MAX_CALL_DEPTH,
-            max_call_depth_hard_ceiling: 4000,
-            registers: crate::vm::register_arena::RegisterArena::with_capacity(64 * 1024),
-            call_stack_local_syms: Vec::with_capacity(64),
-            owned_local_sym_refs: Vec::with_capacity(16),
-            pending_call: None,
-            pending_super_call: false,
-            frame_stack: Vec::with_capacity(64),
-            stack_frame_base: 0,
-            fuel_limit: None,
-            register_arena_size: 64 * 1024,
-            mailbox_capacity: hudhudscript_errors::constants::MAILBOX_CAPACITY,
-            max_mcp_servers: 128,
-            max_builtin_iter: 10_000,
-            default_stack_bytes: 8 * 1024 * 1024,
-            fuel_remaining: 0,
-            sandbox: Some(Box::new(SandboxConfig {
-                allowed_paths: vec![],
-                allowed_hosts: vec![],
-                allow_file_read: true,
-                allow_file_write: false,
-                allow_network: false,
-            })),
-            tvars: hudhudscript_stm::TVarRegistry::new(),
-            class_context_stack: Vec::new(),
-            last_instance_mutation: None,
-            immutables: HashSet::new(),
-            sym_cache: rustc_hash::FxHashMap::with_capacity_and_hasher(128, Default::default()),
-            name_sym_cache: std::cell::RefCell::new(rustc_hash::FxHashMap::with_capacity_and_hasher(128, Default::default())),
-            length_sym_id: hudhudscript_bytecode::interner::intern("length").0,
-            push_sym_id: hudhudscript_bytecode::interner::intern("push").0,
-
-            in_stm_context: false,
-            current_tx: None,
-
-            debugger: None,
-            current_file: None,
-            actors: Arc::new(hudhudscript_bytecode::actor_registry::SharedActorRegistry::new()),
-            actor_mailboxes: HashMap::new(),
-            promise_registry: hudhudscript_async::PromiseRegistry::new(),
-            rag_embedder: SimpleEmbedding::new(128)
-                .unwrap_or_else(|_| SimpleEmbedding::new(64).unwrap()),
-            rag_stores: rustc_hash::FxHashMap::with_capacity_and_hasher(8, Default::default()),
-            rag_text_to_ids: HashMap::new(),
-            call_stack_names: Vec::with_capacity(64),
-            module_registry: ModuleRegistry::new(),
-            module_resolver: None,
-            execution_deadline: None,
-            cancellation_token: Arc::new(std::sync::atomic::AtomicBool::new(false)),
-            suspended_ip: None,
-            tco_args: None,
-            args_scratch: Vec::with_capacity(32),
-            yield_sender: None,
-            chunk_cache: rustc_hash::FxHashMap::with_capacity_and_hasher(64, Default::default()),
-            chunk_cache_last_key: 0,
-            chunk_cache_last_val: None,
-            call_cache: Vec::with_capacity(64),
-        };
-        vm.register_globals();
+        let mut vm = Self::new();
+        vm.locale = locale;
         vm
     }
 
@@ -300,6 +247,15 @@ impl VM {
             allow_file_read,
             allow_file_write,
             allow_network,
+            allow_process: allow_network, // process == network access for MCP
+            allowed_commands: vec![],
+            denied_commands: vec![
+                "rm".into(),
+                "dd".into(),
+                "mkfs".into(),
+                "shutdown".into(),
+                "reboot".into(),
+            ],
         }));
         vm
     }
@@ -313,6 +269,9 @@ impl VM {
             allow_file_read: true,
             allow_file_write: true,
             allow_network: true,
+            allow_process: true,
+            allowed_commands: vec![],
+            denied_commands: vec![],
         }));
         vm
     }

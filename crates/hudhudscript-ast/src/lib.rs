@@ -9,7 +9,7 @@ pub mod annotated;
 mod decl;
 mod expr;
 mod span;
-mod stmt;
+pub mod stmt;
 pub mod visitor;
 
 pub use decl::{
@@ -24,4 +24,6 @@ pub use stmt::{
     ActionDecl, AgentActionDecl, CatchClause, ConditionDecl, CouncilMemberDecl, CultureDecl, Decl, Decorator,
     DeployProviderDecl, DeployTargetDecl, EnumVariant, LawDecl, MatchArm, MatchPattern, Stmt,
     SubjectAbilityDef, ComposeMode, ComposeRule, FieldCorrespondence, SwitchCase, UiComponentDecl, UiNode, UiScreenDecl,
+    RunModeAst, LoopItemAst, StepGateAst, GateBranchAst, GateTargetAst,
+    ChainLinkAst, ChainTargetAst, AttachStepTarget, GoalSpecAst,
 };

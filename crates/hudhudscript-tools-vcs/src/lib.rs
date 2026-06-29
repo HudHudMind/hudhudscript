@@ -12,3 +12,4 @@ pub use git::{
 };
 pub use git_config::GitConfig;
 pub mod github;
+pub use github::GithubTool;

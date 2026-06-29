@@ -1,0 +1,21 @@
+function isPalindrome(s) {
+    let n = s.length;
+    for (let i = 0; i < n / 2; i = i + 1) {
+        if (s[i] != s[n - 1 - i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+let chars = [];
+for (let i = 0; i < 50000; i = i + 1) {
+    chars.push("a");
+}
+let s = chars.join("");
+let ok = isPalindrome(s);
+if (ok) {
+    print("Palindrome: true");
+} else {
+    print("Palindrome: false");
+}

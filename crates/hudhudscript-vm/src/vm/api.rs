@@ -14,11 +14,20 @@ use std::sync::Arc;
 
 impl VM {
     /// Register a live MCP client under the given server name. Existing
-    /// registrations for the same name are replaced.
+    /// registrations for the same name are replaced. Enforces
+    /// `max_mcp_servers` limit by evicting the oldest entry when at capacity.
     pub fn register_mcp_client(&mut self, name: String, client: Arc<McpClient>) {
         let mut clients = self.mcp_clients.lock();
-        // Issue #979: evict if cache exceeds limit
-        enforce_cache_limit(&mut clients, MAX_MCP_CACHE);
+        // If we're at the limit and this is a new name, evict one entry.
+        if !clients.contains_key(&name)
+            && clients.len() >= self.max_mcp_servers
+            && self.max_mcp_servers > 0
+        {
+            // Evict an arbitrary entry (HashMap iteration order).
+            if let Some(evict_key) = clients.keys().next().cloned() {
+                clients.remove(&evict_key);
+            }
+        }
         clients.insert(name, client);
     }
 
@@ -30,6 +39,33 @@ impl VM {
     /// Remove a registered MCP client. Returns `true` if one was present.
     pub fn unregister_mcp_client(&mut self, name: &str) -> bool {
         self.mcp_clients.lock().remove(name).is_some()
+    }
+
+    /// Set the maximum number of MCP servers allowed. When the limit is
+    /// exceeded, the oldest entries are evicted (arbitrary eviction).
+    /// Default is 128.
+    pub fn with_max_mcp_servers(&mut self, max: usize) {
+        self.max_mcp_servers = max;
+    }
+
+    /// MCP-51: Gracefully shut down all registered MCP clients.
+    /// Disconnects each client, aborts response handlers, and clears the registry.
+    /// Must be called from an async context (tokio runtime).
+    pub async fn shutdown_mcp_clients(&self) {
+        let clients: Vec<Arc<McpClient>> = self.mcp_clients.lock().values().cloned().collect();
+        for c in clients {
+            c.shutdown().await;
+        }
+        self.mcp_clients.lock().clear();
+    }
+
+    /// Read a global variable by name (set after `execute()` from main locals).
+    /// Returns `None` if the variable doesn't exist.
+    pub fn get_global(&self, name: &str) -> Option<Value16> {
+        let sym = hudhudscript_bytecode::interner::try_resolve_id(name)?;
+        self.globals
+            .get(&hudhudscript_bytecode::interner::SymbolId(sym))
+            .cloned()
     }
 
     // ── Provider / LLM registry ─────────────────────────────────────────
@@ -52,21 +88,40 @@ impl VM {
     }
 
     /// ENV0004: set provider defaults from hudhud.toml [providers.*]
-    pub fn set_toml_providers(&mut self, providers: std::collections::HashMap<String, std::collections::HashMap<String, String>>) {
-        self.toml_providers = providers.into_iter().map(|(k, v)| (k, v.into_iter().collect())).collect();
+    pub fn set_toml_providers(
+        &mut self,
+        providers: std::collections::HashMap<String, std::collections::HashMap<String, String>>,
+    ) {
+        self.toml_providers = providers
+            .into_iter()
+            .map(|(k, v)| (k, v.into_iter().collect()))
+            .collect();
     }
 
     /// PYTHON0004: Call a top-level function by name after execute().
     pub fn call_public(
-        &mut self, func_name: &str, args: &[Value16],
+        &mut self,
+        func_name: &str,
+        args: &[Value16],
         bytecode: &hudhudscript_bytecode::Bytecode,
     ) -> hudhudscript_bytecode::error::CompileResult<Value16> {
-        let chunk = bytecode.functions.borrow().get(func_name).cloned()
-            .ok_or_else(|| hudhudscript_bytecode::error::compile_codes::runtime_error(
-                format!("Function '{}' not found", func_name)))?;
+        let chunk = bytecode
+            .get_function(func_name)
+            .ok_or_else(|| {
+                hudhudscript_bytecode::error::compile_codes::runtime_error(format!(
+                    "Function '{}' not found",
+                    func_name
+                ))
+            })?;
         if chunk.params.len() != args.len() {
             return Err(hudhudscript_bytecode::error::compile_codes::runtime_error(
-                format!("{} expects {} args, got {}", func_name, chunk.params.len(), args.len())));
+                format!(
+                    "{} expects {} args, got {}",
+                    func_name,
+                    chunk.params.len(),
+                    args.len()
+                ),
+            ));
         }
         self.call_chunk(&chunk, &chunk.params, args, bytecode, func_name)?;
         Ok(self.registers[255])
@@ -77,6 +132,11 @@ impl VM {
         if let Some(ref mut s) = self.sandbox {
             s.allow_network = true;
         }
+    }
+
+    /// Set the runtime host-access policy (HOST-3).
+    pub fn set_host_access_policy(&mut self, policy: crate::vm::host_access::HostAccessPolicy) {
+        self.host_access_policy = policy;
     }
 
     /// Execute swarm/council task sequentially through each agent's provider.
@@ -96,11 +156,21 @@ impl VM {
                     if let Some(prov_obj) = self.get_var_cloned(&prov_name) {
                         let prev = self.dispatch_provider_receiver.take();
                         self.dispatch_provider_receiver = Some(prov_obj);
-                        let mut config = std::collections::HashMap::new();
-                        config.insert("prompt".to_string(), Value16::string(format!("Task: {}", task_str)));
-                        let result = crate::vm::provider_dispatch::dispatch_provider_call(self, &Value16::object(config));
+                        let mut config = hudhudscript_bytecode::ObjMap::default();
+                        config.insert(
+                            "prompt".to_string(),
+                            Value16::string(format!("Task: {}", task_str)),
+                        );
+                        let result = crate::vm::provider_dispatch::dispatch_provider_call(
+                            self,
+                            &Value16::object(config),
+                        );
                         self.dispatch_provider_receiver = prev;
-                        results.push(Value16::string(format!("{}: {}", agent_name, self.value_to_string(&result.unwrap_or_default()))));
+                        results.push(Value16::string(format!(
+                            "{}: {}",
+                            agent_name,
+                            self.value_to_string(&result.unwrap_or_default())
+                        )));
                     }
                 }
             }
@@ -109,14 +179,22 @@ impl VM {
     }
 
     pub fn dispatch_swarm_add_agent(
-        &mut self, swarm_name: &str, agent_val: &Value16, _bytecode: &hudhudscript_bytecode::Bytecode,
+        &mut self,
+        swarm_name: &str,
+        agent_val: &Value16,
+        _bytecode: &hudhudscript_bytecode::Bytecode,
     ) -> hudhudscript_bytecode::error::CompileResult<Value16> {
         let swarm = self.get_var_cloned(swarm_name);
         if let Some(obj) = swarm.and_then(|v| v.as_object().cloned()) {
-            let agent_name = agent_val.as_string().map(|s| s.to_string())
+            let agent_name = agent_val
+                .as_string()
+                .map(|s| s.to_string())
                 .unwrap_or_else(|| self.value_to_string(agent_val));
-            let mut agents: Vec<Value16> = obj.get("agents")
-                .and_then(|v| v.as_array()).cloned().unwrap_or_default();
+            let mut agents: Vec<Value16> = obj
+                .get("agents")
+                .and_then(|v| v.as_array())
+                .cloned()
+                .unwrap_or_default();
             agents.push(Value16::string(agent_name.clone()));
             let mut new_obj = obj;
             new_obj.insert("agents".to_string(), Value16::array(agents));
@@ -127,13 +205,20 @@ impl VM {
     }
 
     pub fn dispatch_swarm_remove_agent(
-        &mut self, swarm_name: &str, agent_name: &str, _bytecode: &hudhudscript_bytecode::Bytecode,
+        &mut self,
+        swarm_name: &str,
+        agent_name: &str,
+        _bytecode: &hudhudscript_bytecode::Bytecode,
     ) -> hudhudscript_bytecode::error::CompileResult<Value16> {
         let swarm = self.get_var_cloned(swarm_name);
         if let Some(obj) = swarm.and_then(|v| v.as_object().cloned()) {
-            let agents: Vec<Value16> = obj.get("agents")
-                .and_then(|v| v.as_array()).cloned().unwrap_or_default();
-            let filtered: Vec<Value16> = agents.into_iter()
+            let agents: Vec<Value16> = obj
+                .get("agents")
+                .and_then(|v| v.as_array())
+                .cloned()
+                .unwrap_or_default();
+            let filtered: Vec<Value16> = agents
+                .into_iter()
                 .filter(|a| a.as_string().map(|s| s != agent_name).unwrap_or(true))
                 .collect();
             let mut new_obj = obj;
@@ -145,15 +230,23 @@ impl VM {
     }
 
     pub fn dispatch_council_add_member(
-        &mut self, council_name: &str, member_val: &Value16, _bytecode: &hudhudscript_bytecode::Bytecode,
+        &mut self,
+        council_name: &str,
+        member_val: &Value16,
+        _bytecode: &hudhudscript_bytecode::Bytecode,
     ) -> hudhudscript_bytecode::error::CompileResult<Value16> {
         let council = self.get_var_cloned(council_name);
         if let Some(obj) = council.and_then(|v| v.as_object().cloned()) {
-            let agent_id = member_val.as_string().map(|s| s.to_string())
+            let agent_id = member_val
+                .as_string()
+                .map(|s| s.to_string())
                 .unwrap_or_else(|| self.value_to_string(member_val));
-            let mut members: Vec<Value16> = obj.get("members")
-                .and_then(|v| v.as_array()).cloned().unwrap_or_default();
-            let mut m = std::collections::HashMap::new();
+            let mut members: Vec<Value16> = obj
+                .get("members")
+                .and_then(|v| v.as_array())
+                .cloned()
+                .unwrap_or_default();
+            let mut m = hudhudscript_bytecode::ObjMap::default();
             m.insert("agent_id".to_string(), Value16::string(agent_id));
             members.push(Value16::object(m));
             let mut new_obj = obj;
@@ -353,7 +446,8 @@ impl VM {
 
         // Scan globals for agent-shaped objects.
         let all_bindings = self.globals.iter();
-        for (agent_name, val) in all_bindings {
+        for (agent_sym, val) in all_bindings {
+            let agent_name = hudhudscript_bytecode::interner::resolve(*agent_sym);
             let obj = match val.as_object() {
                 Some(o) => o,
                 _ => continue,

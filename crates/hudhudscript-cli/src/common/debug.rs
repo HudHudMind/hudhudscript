@@ -89,7 +89,7 @@ pub fn run_debug_with_config(
     // The debugger's on_statement / on_exception hooks busy-wait when
     // paused; the REPL below flips `resume` / `step` state via the
     // debugger handle shared through the Arc<Mutex<VM>>.
-    let rt = tokio::runtime::Runtime::new()
+    let rt = tokio::runtime::Builder::new_current_thread().enable_all().build()
         .map_err(|e| CliError::Runtime(format!("Failed to create runtime: {}", e)))?;
 
     let vm_arc = std::sync::Arc::new(std::sync::Mutex::new(vm));

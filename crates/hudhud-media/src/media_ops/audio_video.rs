@@ -23,7 +23,7 @@ pub fn audio_info(args: &[Value16]) -> HudHudResult<Value16> {
 }
 
 fn parse_audio_json(json_str: &str) -> HudHudResult<Value16> {
-    let mut m = HashMap::new();
+    let mut m = hudhudscript_bytecode::ObjMap::default();
     if let Some(v) = util::extract_json_string(json_str, "format_name") {
         m.insert("format".to_string(), Value16::string(v));
     }
@@ -59,7 +59,7 @@ pub fn video_info(args: &[Value16]) -> HudHudResult<Value16> {
 }
 
 fn parse_video_json(json_str: &str) -> HudHudResult<Value16> {
-    let mut m = HashMap::new();
+    let mut m = hudhudscript_bytecode::ObjMap::default();
     if let Some(v) = util::extract_json_string(json_str, "format_name") {
         m.insert("format".to_string(), Value16::string(v));
     }

@@ -12,13 +12,19 @@ impl VM {
         let bytecode = ctx.bytecode;
 
         match instr {
-            Instruction::Remember { store_idx: payload_idx, src, .. } => {
+            Instruction::Remember {
+                store_idx: payload_idx,
+                src,
+                ..
+            } => {
                 // #892: Delegate to hudhudscript_rag::VectorStore
                 // CROSS-2d: opt-sym payload carries the optional store name.
                 let payload = bytecode.get_opt_sym_payload(*payload_idx as u32);
                 let store_name_sym = payload.sym;
                 let content = self.registers[*src as usize];
-                let store_resolved = store_name_sym.as_ref().map(|s| bytecode.resolve_symbol(s.0));
+                let store_resolved = store_name_sym
+                    .as_ref()
+                    .map(|s| bytecode.resolve_symbol(s.0));
                 let store_key = store_resolved.as_deref().unwrap_or("default");
                 let text = self.value_to_string(&content);
 
@@ -70,7 +76,11 @@ impl VM {
                     self.set_global(&var_key, Value16::array(new_arr));
                 }
             }
-            Instruction::Recall { store_idx: payload_idx, src, dst } => {
+            Instruction::Recall {
+                store_idx: payload_idx,
+                src,
+                dst,
+            } => {
                 // CROSS-2d: opt-sym payload carries the optional store name.
                 let payload = bytecode.get_opt_sym_payload(*payload_idx as u32);
                 let store_name_sym = payload.sym;
@@ -93,7 +103,9 @@ impl VM {
                 // (matches the interpreter's "return all" shortcut).
                 let query = self.registers[*src as usize];
                 let query_str = self.value_to_string(&query);
-                let store_resolved = store_name_sym.as_ref().map(|s| bytecode.resolve_symbol(s.0));
+                let store_resolved = store_name_sym
+                    .as_ref()
+                    .map(|s| bytecode.resolve_symbol(s.0));
                 let store_key = store_resolved.as_deref().unwrap_or("default");
 
                 let results = if query_str.trim().is_empty() {
@@ -120,7 +132,7 @@ impl VM {
                             Ok(search_results) => search_results
                                 .into_iter()
                                 .map(|r| {
-                                    let mut obj = HashMap::new();
+                                    let mut obj = hudhudscript_bytecode::ObjMap::default();
                                     obj.insert("id".to_string(), Value16::string(r.id));
                                     obj.insert("text".to_string(), Value16::string(r.text));
                                     obj.insert(
@@ -138,16 +150,21 @@ impl VM {
                 };
 
                 self.registers[*dst as usize] = Value16::array(results);
-
             }
-            Instruction::Forget { store_idx: payload_idx, src, .. } => {
+            Instruction::Forget {
+                store_idx: payload_idx,
+                src,
+                ..
+            } => {
                 // #892: Real targeted forget — delegated to VectorStore
                 // CROSS-2d: opt-sym payload carries the optional store name.
                 let payload = bytecode.get_opt_sym_payload(*payload_idx as u32);
                 let store_name_sym = payload.sym;
                 let target = self.registers[*src as usize];
                 let target_str = self.value_to_string(&target);
-                let store_resolved = store_name_sym.as_ref().map(|s| bytecode.resolve_symbol(s.0));
+                let store_resolved = store_name_sym
+                    .as_ref()
+                    .map(|s| bytecode.resolve_symbol(s.0));
                 let store_key = store_resolved.as_deref().unwrap_or("default");
                 let var_key = format!("__rag_store:{}", store_key);
 

@@ -224,7 +224,7 @@ impl Provider for OpenAIProvider {
         self.token_tracker
             .write()
             .await
-            .record(tokens_used.total_tokens);
+            .record(tokens_used.prompt_tokens, tokens_used.completion_tokens);
 
         // Extract finish reason
         let finish_reason = api_response["choices"][0]["finish_reason"]

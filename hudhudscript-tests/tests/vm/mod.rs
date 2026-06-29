@@ -1,5 +1,19 @@
+mod b5_semantic_test;
 mod continue_test;
 mod governance_unit;
+mod large_float_print_test;
+mod large_float_scientific_test;
 mod object_literal_test;
+mod p2_string_index_test;
+mod p3_fastcall_frame_test;
+mod p5_bigint_conversion_test;
+mod p6_nummod_int_test;
+mod p7_intmodcmpi_test;
+mod provider_declaration_test;
+mod recursion_regression_test;
+mod regression_callee_window_clobber;
+mod sci_notation_e2e_test;
 mod test_coverage_boost;
+mod test_recursion;
 mod type_system_tests;
+

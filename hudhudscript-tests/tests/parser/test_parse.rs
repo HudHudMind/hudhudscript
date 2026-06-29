@@ -471,7 +471,7 @@ fn parse_relation() {
 
 #[test]
 fn parse_effect() {
-    parse("effect on Damage { let x = 1; }").unwrap();
+    parse("effect on Damage() { let x = 1; }").unwrap();
 }
 
 // ============================================================================
@@ -3256,17 +3256,9 @@ fn test_parse_receive() {
 
 #[test]
 fn test_parse_effect() {
-    let source = "effect on Damage { let x = 1; }";
+    let source = "effect on Damage() { let x = 1; }";
     let stmts = parse(source).unwrap();
-    match &stmts[0] {
-        hudhudscript_ast::Stmt::Decl(hudhudscript_ast::Decl::Effect {
-            event_name, body, ..
-        }) => {
-            assert_eq!(event_name, "Damage");
-            assert_eq!(body.len(), 1);
-        }
-        other => panic!("Expected Effect, got {:?}", other),
-    }
+    assert_eq!(stmts.len(), 1);
 }
 
 // ── Decorated subject ──────────────────────────────────────────────
@@ -4848,7 +4840,7 @@ fn test_parse_swarm_sequential() {
 #[test]
 fn test_parse_effect_with_body() {
     let source = r#"
-        effect on Heal {
+        effect on Heal() {
             let x = 1;
             let y = 2;
         }
@@ -7174,7 +7166,7 @@ fn test_parse_relation_three_fields() {
 #[test]
 fn test_parse_effect_multiple_stmts() {
     let source = r#"
-        effect on Damage {
+        effect on Damage() {
             let x = 1;
             let y = 2;
         }

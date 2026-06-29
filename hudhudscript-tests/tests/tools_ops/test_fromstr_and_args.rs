@@ -70,55 +70,37 @@ fn apt_fromstr_unknown_returns_error() {
 
 #[test]
 fn apt_search_missing_arg_returns_error() {
-    let result = hudhud_apt::apt_ops::dispatch(
-        hudhud_apt::apt_ops::ScriptMethodId::Search,
-        &[],
-    );
+    let result = hudhud_apt::apt_ops::dispatch(hudhud_apt::apt_ops::ScriptMethodId::Search, &[]);
     assert!(result.is_err());
 }
 
 #[test]
 fn apt_info_missing_arg_returns_error() {
-    let result = hudhud_apt::apt_ops::dispatch(
-        hudhud_apt::apt_ops::ScriptMethodId::Info,
-        &[],
-    );
+    let result = hudhud_apt::apt_ops::dispatch(hudhud_apt::apt_ops::ScriptMethodId::Info, &[]);
     assert!(result.is_err());
 }
 
 #[test]
 fn apt_install_missing_arg_returns_error() {
-    let result = hudhud_apt::apt_ops::dispatch(
-        hudhud_apt::apt_ops::ScriptMethodId::Install,
-        &[],
-    );
+    let result = hudhud_apt::apt_ops::dispatch(hudhud_apt::apt_ops::ScriptMethodId::Install, &[]);
     assert!(result.is_err());
 }
 
 #[test]
 fn apt_remove_missing_arg_returns_error() {
-    let result = hudhud_apt::apt_ops::dispatch(
-        hudhud_apt::apt_ops::ScriptMethodId::Remove,
-        &[],
-    );
+    let result = hudhud_apt::apt_ops::dispatch(hudhud_apt::apt_ops::ScriptMethodId::Remove, &[]);
     assert!(result.is_err());
 }
 
 #[test]
 fn apt_add_repo_missing_arg_returns_error() {
-    let result = hudhud_apt::apt_ops::dispatch(
-        hudhud_apt::apt_ops::ScriptMethodId::AddRepo,
-        &[],
-    );
+    let result = hudhud_apt::apt_ops::dispatch(hudhud_apt::apt_ops::ScriptMethodId::AddRepo, &[]);
     assert!(result.is_err());
 }
 
 #[test]
 fn apt_add_key_missing_arg_returns_error() {
-    let result = hudhud_apt::apt_ops::dispatch(
-        hudhud_apt::apt_ops::ScriptMethodId::AddKey,
-        &[],
-    );
+    let result = hudhud_apt::apt_ops::dispatch(hudhud_apt::apt_ops::ScriptMethodId::AddKey, &[]);
     assert!(result.is_err());
 }
 
@@ -189,19 +171,15 @@ fn docker_fromstr_unknown_returns_error() {
 
 #[test]
 fn docker_run_missing_image_arg() {
-    let result = hudhud_docker::docker_ops::dispatch(
-        hudhud_docker::docker_ops::ScriptMethodId::Run,
-        &[],
-    );
+    let result =
+        hudhud_docker::docker_ops::dispatch(hudhud_docker::docker_ops::ScriptMethodId::Run, &[]);
     assert!(result.is_err());
 }
 
 #[test]
 fn docker_stop_missing_arg() {
-    let result = hudhud_docker::docker_ops::dispatch(
-        hudhud_docker::docker_ops::ScriptMethodId::Stop,
-        &[],
-    );
+    let result =
+        hudhud_docker::docker_ops::dispatch(hudhud_docker::docker_ops::ScriptMethodId::Stop, &[]);
     assert!(result.is_err());
 }
 
@@ -243,7 +221,10 @@ fn firewall_fromstr_deny() {
 #[test]
 fn firewall_fromstr_delete_rule() {
     let id = hudhud_firewall::firewall_ops::ScriptMethodId::from_str("delete_rule").unwrap();
-    assert_eq!(id, hudhud_firewall::firewall_ops::ScriptMethodId::DeleteRule);
+    assert_eq!(
+        id,
+        hudhud_firewall::firewall_ops::ScriptMethodId::DeleteRule
+    );
 }
 
 #[test]
@@ -290,7 +271,10 @@ fn download_fromstr_file() {
 #[test]
 fn download_fromstr_file_with_progress() {
     let id = hudhud_download::download_ops::ScriptMethodId::from_str("file_with_progress").unwrap();
-    assert_eq!(id, hudhud_download::download_ops::ScriptMethodId::FileWithProgress);
+    assert_eq!(
+        id,
+        hudhud_download::download_ops::ScriptMethodId::FileWithProgress
+    );
 }
 
 #[test]
@@ -369,10 +353,8 @@ fn email_fromstr_unknown() {
 
 #[test]
 fn email_send_missing_arg() {
-    let result = hudhud_email::email_ops::dispatch(
-        hudhud_email::email_ops::ScriptMethodId::Send,
-        &[],
-    );
+    let result =
+        hudhud_email::email_ops::dispatch(hudhud_email::email_ops::ScriptMethodId::Send, &[]);
     assert!(result.is_err());
 }
 
@@ -399,13 +381,19 @@ fn browser_fromstr_history() {
 #[test]
 fn browser_fromstr_default_browser() {
     let id = hudhud_browser::browser_ops::ScriptMethodId::from_str("default_browser").unwrap();
-    assert_eq!(id, hudhud_browser::browser_ops::ScriptMethodId::DefaultBrowser);
+    assert_eq!(
+        id,
+        hudhud_browser::browser_ops::ScriptMethodId::DefaultBrowser
+    );
 }
 
 #[test]
 fn browser_fromstr_installed_browsers() {
     let id = hudhud_browser::browser_ops::ScriptMethodId::from_str("installed_browsers").unwrap();
-    assert_eq!(id, hudhud_browser::browser_ops::ScriptMethodId::InstalledBrowsers);
+    assert_eq!(
+        id,
+        hudhud_browser::browser_ops::ScriptMethodId::InstalledBrowsers
+    );
 }
 
 #[test]
@@ -455,7 +443,10 @@ fn notify_fromstr_journal() {
 #[test]
 fn notify_fromstr_journal_structured() {
     let id = hudhud_notify::notify_ops::ScriptMethodId::from_str("journal_structured").unwrap();
-    assert_eq!(id, hudhud_notify::notify_ops::ScriptMethodId::JournalStructured);
+    assert_eq!(
+        id,
+        hudhud_notify::notify_ops::ScriptMethodId::JournalStructured
+    );
 }
 
 #[test]
@@ -475,7 +466,10 @@ fn hardware_fromstr_cpu_info() {
 #[test]
 fn hardware_fromstr_memory_info() {
     let id = hudhud_hardware::hardware_ops::ScriptMethodId::from_str("memory_info").unwrap();
-    assert_eq!(id, hudhud_hardware::hardware_ops::ScriptMethodId::MemoryInfo);
+    assert_eq!(
+        id,
+        hudhud_hardware::hardware_ops::ScriptMethodId::MemoryInfo
+    );
 }
 
 #[test]
@@ -493,25 +487,37 @@ fn hardware_fromstr_disk_info() {
 #[test]
 fn hardware_fromstr_network_adapters() {
     let id = hudhud_hardware::hardware_ops::ScriptMethodId::from_str("network_adapters").unwrap();
-    assert_eq!(id, hudhud_hardware::hardware_ops::ScriptMethodId::NetworkAdapters);
+    assert_eq!(
+        id,
+        hudhud_hardware::hardware_ops::ScriptMethodId::NetworkAdapters
+    );
 }
 
 #[test]
 fn hardware_fromstr_usb_devices() {
     let id = hudhud_hardware::hardware_ops::ScriptMethodId::from_str("usb_devices").unwrap();
-    assert_eq!(id, hudhud_hardware::hardware_ops::ScriptMethodId::UsbDevices);
+    assert_eq!(
+        id,
+        hudhud_hardware::hardware_ops::ScriptMethodId::UsbDevices
+    );
 }
 
 #[test]
 fn hardware_fromstr_audio_devices() {
     let id = hudhud_hardware::hardware_ops::ScriptMethodId::from_str("audio_devices").unwrap();
-    assert_eq!(id, hudhud_hardware::hardware_ops::ScriptMethodId::AudioDevices);
+    assert_eq!(
+        id,
+        hudhud_hardware::hardware_ops::ScriptMethodId::AudioDevices
+    );
 }
 
 #[test]
 fn hardware_fromstr_display_info() {
     let id = hudhud_hardware::hardware_ops::ScriptMethodId::from_str("display_info").unwrap();
-    assert_eq!(id, hudhud_hardware::hardware_ops::ScriptMethodId::DisplayInfo);
+    assert_eq!(
+        id,
+        hudhud_hardware::hardware_ops::ScriptMethodId::DisplayInfo
+    );
 }
 
 #[test]
@@ -655,19 +661,28 @@ fn security_fromstr_open_ports() {
 #[test]
 fn security_fromstr_world_writable() {
     let id = hudhud_security::security_ops::ScriptMethodId::from_str("world_writable").unwrap();
-    assert_eq!(id, hudhud_security::security_ops::ScriptMethodId::WorldWritable);
+    assert_eq!(
+        id,
+        hudhud_security::security_ops::ScriptMethodId::WorldWritable
+    );
 }
 
 #[test]
 fn security_fromstr_failed_logins() {
     let id = hudhud_security::security_ops::ScriptMethodId::from_str("failed_logins").unwrap();
-    assert_eq!(id, hudhud_security::security_ops::ScriptMethodId::FailedLogins);
+    assert_eq!(
+        id,
+        hudhud_security::security_ops::ScriptMethodId::FailedLogins
+    );
 }
 
 #[test]
 fn security_fromstr_check_permissions() {
     let id = hudhud_security::security_ops::ScriptMethodId::from_str("check_permissions").unwrap();
-    assert_eq!(id, hudhud_security::security_ops::ScriptMethodId::CheckPermissions);
+    assert_eq!(
+        id,
+        hudhud_security::security_ops::ScriptMethodId::CheckPermissions
+    );
 }
 
 #[test]
@@ -687,25 +702,38 @@ fn project_fromstr_detect() {
 #[test]
 fn project_fromstr_detect_venv() {
     let id = hudhud_project::project_env_ops::ScriptMethodId::from_str("detect_venv").unwrap();
-    assert_eq!(id, hudhud_project::project_env_ops::ScriptMethodId::DetectVenv);
+    assert_eq!(
+        id,
+        hudhud_project::project_env_ops::ScriptMethodId::DetectVenv
+    );
 }
 
 #[test]
 fn project_fromstr_parse_env_file() {
     let id = hudhud_project::project_env_ops::ScriptMethodId::from_str("parse_env_file").unwrap();
-    assert_eq!(id, hudhud_project::project_env_ops::ScriptMethodId::ParseEnvFile);
+    assert_eq!(
+        id,
+        hudhud_project::project_env_ops::ScriptMethodId::ParseEnvFile
+    );
 }
 
 #[test]
 fn project_fromstr_toolchain_version() {
-    let id = hudhud_project::project_env_ops::ScriptMethodId::from_str("toolchain_version").unwrap();
-    assert_eq!(id, hudhud_project::project_env_ops::ScriptMethodId::ToolchainVersion);
+    let id =
+        hudhud_project::project_env_ops::ScriptMethodId::from_str("toolchain_version").unwrap();
+    assert_eq!(
+        id,
+        hudhud_project::project_env_ops::ScriptMethodId::ToolchainVersion
+    );
 }
 
 #[test]
 fn project_fromstr_dependencies() {
     let id = hudhud_project::project_env_ops::ScriptMethodId::from_str("dependencies").unwrap();
-    assert_eq!(id, hudhud_project::project_env_ops::ScriptMethodId::Dependencies);
+    assert_eq!(
+        id,
+        hudhud_project::project_env_ops::ScriptMethodId::Dependencies
+    );
 }
 
 #[test]
@@ -737,7 +765,10 @@ fn ocr_fromstr_is_available() {
 #[test]
 fn ocr_fromstr_extract_with_confidence() {
     let id = hudhud_ocr::ocr_ops::ScriptMethodId::from_str("extract_with_confidence").unwrap();
-    assert_eq!(id, hudhud_ocr::ocr_ops::ScriptMethodId::ExtractWithConfidence);
+    assert_eq!(
+        id,
+        hudhud_ocr::ocr_ops::ScriptMethodId::ExtractWithConfidence
+    );
 }
 
 #[test]
@@ -807,7 +838,10 @@ fn translate_fromstr_text() {
 #[test]
 fn translate_fromstr_languages() {
     let id = hudhud_translate::translate_ops::ScriptMethodId::from_str("languages").unwrap();
-    assert_eq!(id, hudhud_translate::translate_ops::ScriptMethodId::Languages);
+    assert_eq!(
+        id,
+        hudhud_translate::translate_ops::ScriptMethodId::Languages
+    );
 }
 
 #[test]
@@ -857,7 +891,10 @@ fn workflow_fromstr_status() {
 #[test]
 fn workflow_fromstr_create_webhook() {
     let id = hudhud_workflow::workflow_ops::ScriptMethodId::from_str("create_webhook").unwrap();
-    assert_eq!(id, hudhud_workflow::workflow_ops::ScriptMethodId::CreateWebhook);
+    assert_eq!(
+        id,
+        hudhud_workflow::workflow_ops::ScriptMethodId::CreateWebhook
+    );
 }
 
 #[test]
@@ -914,7 +951,10 @@ fn tools_ai_rate_limiter_with_limits() {
     let mut limits = HashMap::new();
     limits.insert(
         Provider::OpenAI,
-        ProviderRateLimit { rpm: 60, tpm: 10000 },
+        ProviderRateLimit {
+            rpm: 60,
+            tpm: 10000,
+        },
     );
     let limiter = RateLimiter::with_limits(limits);
     assert!(std::mem::size_of_val(&limiter) > 0);

@@ -8,7 +8,13 @@ use hudhudscript_tools_vcs::*;
 fn git_error_display_all_variants() {
     // Exercise Display for each variant — should not panic
     let _ = format!("{}", GitError::GitNotFound);
-    let _ = format!("{}", GitError::CommandFailed { code: 128, stderr: "err".into() });
+    let _ = format!(
+        "{}",
+        GitError::CommandFailed {
+            code: 128,
+            stderr: "err".into()
+        }
+    );
     let _ = format!("{}", GitError::SpawnFailed("oops".into()));
     let _ = format!("{}", GitError::InvalidArguments("bad".into()));
     let _ = format!("{}", GitError::RepositoryNotFound("/x".into()));
@@ -65,7 +71,10 @@ fn git_config_global_does_not_panic() {
 #[test]
 fn git_config_for_repo_construction() {
     let config = GitConfig::for_repo("/tmp/test-repo");
-    assert_eq!(config.repo_path(), Some(std::path::Path::new("/tmp/test-repo")));
+    assert_eq!(
+        config.repo_path(),
+        Some(std::path::Path::new("/tmp/test-repo"))
+    );
 }
 
 #[test]

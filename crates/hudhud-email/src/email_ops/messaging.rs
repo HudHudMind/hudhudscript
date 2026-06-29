@@ -65,7 +65,7 @@ pub fn email_telegram_send(args: &[Value16]) -> HudHudResult<Value16> {
         .text()
         .unwrap_or_else(|e| format!("<failed to read response body: {}>", e));
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("status".to_string(), Value16::number(status as f64));
     result.insert(
         "ok".to_string(),
@@ -108,7 +108,7 @@ pub fn email_webhook(args: &[Value16]) -> HudHudResult<Value16> {
         .text()
         .unwrap_or_else(|e| format!("<failed to read response body: {}>", e));
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("status".to_string(), Value16::number(status as f64));
     result.insert(
         "ok".to_string(),

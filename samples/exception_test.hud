@@ -1,0 +1,11 @@
+// Test: throw + try/catch/finally calisiyor
+try {
+    print("try_start");
+    throw "x";
+    print("try_end");
+} catch (err) {
+    print("catch: " + err.description);
+} finally {
+    print("finally");
+}
+print("done");

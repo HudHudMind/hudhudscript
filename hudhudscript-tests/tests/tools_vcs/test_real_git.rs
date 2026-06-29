@@ -10,10 +10,22 @@ use tempfile::TempDir;
 fn init_temp_repo() -> (TempDir, GitRepo) {
     let dir = TempDir::new().unwrap();
     let path = dir.path();
-    Command::new("git").args(["init"]).current_dir(path).output().unwrap();
+    Command::new("git")
+        .args(["init"])
+        .current_dir(path)
+        .output()
+        .unwrap();
     // Configure git user for commits
-    Command::new("git").args(["config", "user.email", "test@test.com"]).current_dir(path).output().ok();
-    Command::new("git").args(["config", "user.name", "Test User"]).current_dir(path).output().ok();
+    Command::new("git")
+        .args(["config", "user.email", "test@test.com"])
+        .current_dir(path)
+        .output()
+        .ok();
+    Command::new("git")
+        .args(["config", "user.name", "Test User"])
+        .current_dir(path)
+        .output()
+        .ok();
     let repo = GitRepo::open(path);
     (dir, repo)
 }
@@ -71,7 +83,11 @@ fn git_status_staged_file() {
     let (_dir, repo) = init_temp_repo();
     let file_path = repo.path().join("staged.txt");
     fs::write(&file_path, "content").unwrap();
-    Command::new("git").args(["add", "staged.txt"]).current_dir(repo.path()).output().unwrap();
+    Command::new("git")
+        .args(["add", "staged.txt"])
+        .current_dir(repo.path())
+        .output()
+        .unwrap();
     let entries = repo.status().unwrap();
     assert!(!entries.is_empty());
 }
@@ -93,8 +109,16 @@ fn git_log_with_commit() {
     let (_dir, repo) = init_temp_repo();
     let file_path = repo.path().join("committed.txt");
     fs::write(&file_path, "test commit").unwrap();
-    Command::new("git").args(["add", "committed.txt"]).current_dir(repo.path()).output().unwrap();
-    Command::new("git").args(["commit", "-m", "test: initial commit"]).current_dir(repo.path()).output().unwrap();
+    Command::new("git")
+        .args(["add", "committed.txt"])
+        .current_dir(repo.path())
+        .output()
+        .unwrap();
+    Command::new("git")
+        .args(["commit", "-m", "test: initial commit"])
+        .current_dir(repo.path())
+        .output()
+        .unwrap();
     let entries = repo.log(5).unwrap();
     assert!(!entries.is_empty());
     assert!(entries[0].message.contains("initial commit"));
@@ -120,7 +144,10 @@ fn git_error_repo_not_found_display() {
 
 #[test]
 fn git_error_command_failed_display() {
-    let err = GitError::CommandFailed { code: 128, stderr: "fatal: not a git repository".to_string() };
+    let err = GitError::CommandFailed {
+        code: 128,
+        stderr: "fatal: not a git repository".to_string(),
+    };
     let msg = format!("{}", err);
     assert!(!msg.is_empty());
 }
@@ -148,12 +175,34 @@ fn git_error_parse_error_display() {
 
 #[test]
 fn git_error_code_mapping() {
-    assert_eq!(GitError::GitNotFound.code(), hudhudscript_errors::ErrorCode::GitGitNotFound);
-    assert_eq!(GitError::SpawnFailed("x".into()).code(), hudhudscript_errors::ErrorCode::GitSpawnFailed);
-    assert_eq!(GitError::CommandFailed { code: 1, stderr: "e".into() }.code(), hudhudscript_errors::ErrorCode::GitCommandFailed);
-    assert_eq!(GitError::InvalidArguments("x".into()).code(), hudhudscript_errors::ErrorCode::GitInvalidArguments);
-    assert_eq!(GitError::ParseError("x".into()).code(), hudhudscript_errors::ErrorCode::GitParseError);
-    assert_eq!(GitError::RepositoryNotFound("x".into()).code(), hudhudscript_errors::ErrorCode::GitRepositoryNotFound);
+    assert_eq!(
+        GitError::GitNotFound.code(),
+        hudhudscript_errors::ErrorCode::GitGitNotFound
+    );
+    assert_eq!(
+        GitError::SpawnFailed("x".into()).code(),
+        hudhudscript_errors::ErrorCode::GitSpawnFailed
+    );
+    assert_eq!(
+        GitError::CommandFailed {
+            code: 1,
+            stderr: "e".into()
+        }
+        .code(),
+        hudhudscript_errors::ErrorCode::GitCommandFailed
+    );
+    assert_eq!(
+        GitError::InvalidArguments("x".into()).code(),
+        hudhudscript_errors::ErrorCode::GitInvalidArguments
+    );
+    assert_eq!(
+        GitError::ParseError("x".into()).code(),
+        hudhudscript_errors::ErrorCode::GitParseError
+    );
+    assert_eq!(
+        GitError::RepositoryNotFound("x".into()).code(),
+        hudhudscript_errors::ErrorCode::GitRepositoryNotFound
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

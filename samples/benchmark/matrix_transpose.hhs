@@ -1,0 +1,19 @@
+let size = 300;
+let m = []; let t = [];
+for (let i = 0; i < size; i = i + 1) {
+    let row_m = []; let row_t = [];
+    for (let j = 0; j < size; j = j + 1) {
+        row_m.push(i + j);
+        row_t.push(0);
+    }
+    m.push(row_m);
+    t.push(row_t);
+}
+
+for (let i = 0; i < size; i = i + 1) {
+    for (let j = 0; j < size; j = j + 1) {
+        t[j][i] = m[i][j];
+    }
+}
+print(t[0][0]);
+print(t[size - 1][size - 1]);

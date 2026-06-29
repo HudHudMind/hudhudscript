@@ -19,7 +19,7 @@ pub fn e2e_generate_keypair(args: &[Value16]) -> SharedResult<Value16> {
 
     let public_bytes = derive_public_key(&clamped);
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert(
         "public_key".to_string(),
         Value16::string(hex::encode(&public_bytes)),

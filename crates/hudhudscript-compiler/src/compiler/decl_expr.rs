@@ -209,8 +209,8 @@ impl Compiler {
                         sym: temp_sym,
                     });
                     self.bytecode.push_instr(Instruction::Move { dst: 255, src: tr });
-                    let idx = self.bytecode.add_numeric_constant(i as f64);
-                    { let tr_i = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadNumConst { dst: tr_i, const_idx: idx as u16 }); let tr_dst = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::Index { dst: tr_dst, obj: tr, idx: tr_i }); self.bytecode.push_instr(Instruction::Move { dst: 255, src: tr_dst }); }
+                    let idx = self.bytecode.add_int_constant(i as i64);
+                    { let tr_i = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadIntConst { dst: tr_i, const_idx: idx as u16 }); let tr_dst = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::Index { dst: tr_dst, obj: tr, idx: tr_i }); self.bytecode.push_instr(Instruction::Move { dst: 255, src: tr_dst }); }
                     self.compile_destructure_pattern(elem_pattern, is_const)?;
                 }
                 // Handle rest element

@@ -33,7 +33,7 @@ fn parse_audio_json(json_str: &str) -> HudHudResult<Value16> {
         .and_then(|s| s.parse::<f64>().ok())
         .unwrap_or(0.0);
 
-    let mut m = HashMap::new();
+    let mut m = hudhudscript_bytecode::ObjMap::default();
     m.insert("duration".to_string(), Value16::number(duration));
     m.insert("format".to_string(), Value16::string(format));
     m.insert("bitrate".to_string(), Value16::number(bit_rate));
@@ -88,7 +88,7 @@ fn parse_video_json(json_str: &str) -> HudHudResult<Value16> {
         })
         .unwrap_or(0.0);
 
-    let mut m = HashMap::new();
+    let mut m = hudhudscript_bytecode::ObjMap::default();
     m.insert("duration".to_string(), Value16::number(duration));
     m.insert("width".to_string(), Value16::number(width));
     m.insert("height".to_string(), Value16::number(height));

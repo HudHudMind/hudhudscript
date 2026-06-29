@@ -20,11 +20,24 @@ impl VM {
             } else {
                 formatted
             }
+        } else if let Some(b) = value.as_bigint() {
+            b.to_string()
         } else if let Some(n) = value.as_number() {
-            let formatted = if n.fract() == 0.0 && n.is_finite() {
+            let abs_n = n.abs();
+            let formatted = if !n.is_finite() {
+                n.to_string() // "inf" / "-inf" / "NaN"
+            } else if n.fract() == 0.0
+                && n >= i64::MIN as f64
+                && n <= i64::MAX as f64
+                && abs_n < 1e16
+            {
+                // Whole number that fits in i64 AND is < 1e16 → integer string
                 format!("{}", n as i64)
+            } else if abs_n >= 1e16 || (n != 0.0 && abs_n < 1e-4) {
+                // Scientific notation: large or very small magnitudes
+                scientific_format(n)
             } else {
-                n.to_string()
+                n.to_string() // normal decimal: 1.5, 0.001, 3.14, 1501.5
             };
             if self.locale == OutputLocale::Arabic {
                 self.to_arabic_numerals(&formatted)
@@ -142,4 +155,25 @@ impl VM {
     // -----------------------------------------------------------------------
     // Built-in functions
     // -----------------------------------------------------------------------
+}
+
+/// Format a float in Python-style scientific notation: `9.999999999999999e+129`
+/// Uses Rust `{:e}` and adjusts: adds explicit sign, pads exponent to ≥2 digits.
+fn scientific_format(n: f64) -> String {
+    let raw = format!("{:e}", n); // e.g., "1.34e93", "9.999999999999999e129", "1.5e-7"
+                                  // Find the 'e' separator
+    if let Some(e_pos) = raw.find('e') {
+        let mantissa = &raw[..e_pos];
+        let exponent = &raw[e_pos + 1..];
+        // Parse exponent to add explicit sign
+        let exp_val: i32 = exponent.parse().unwrap_or(0);
+        let signed_exp = if exp_val >= 0 {
+            format!("e+{:02}", exp_val.abs())
+        } else {
+            format!("e-{:02}", exp_val.abs())
+        };
+        format!("{}{}", mantissa, signed_exp)
+    } else {
+        raw
+    }
 }

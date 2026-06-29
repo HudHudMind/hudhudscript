@@ -204,7 +204,7 @@ impl crate::vm::VM {
                 } else if let Some(obj) = args[0].as_object() {
                     let pairs: Vec<(Value16, Value16)> = obj
                         .iter()
-                        .map(|(k, v)| (Value16::string(k.clone()), v.clone()))
+                        .map(|(k, v)| (Value16::string(k.to_string()), v.clone()))
                         .collect();
                     Ok(Value16::map(pairs))
                 } else {

@@ -43,7 +43,7 @@ pub fn tui_poll_event(args: &[Value16]) -> CompileResult<Value16> {
     }
 
     let event = read().map_err(|e| compile_codes::runtime_error(format!("read: {}", e)))?;
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
 
     match event {
         Event::Key(KeyEvent { code, modifiers, .. }) => {

@@ -28,7 +28,8 @@ fn value_to_json(value: &Value16) -> HudHudResult<serde_json::Value> {
     } else if let Some(map) = value.as_object() {
         let mut obj = serde_json::Map::new();
         for (k, v) in map {
-            obj.insert(k.clone(), value_to_json(v)?);
+            let key_str = hudhudscript_bytecode::interner::resolve(hudhudscript_bytecode::interner::SymbolId(k.0)).to_string();
+            obj.insert(key_str, value_to_json(v)?);
         }
         Ok(serde_json::Value::Object(obj))
     } else if let Some(opt) = value.as_option() {
@@ -252,7 +253,7 @@ fn member_access_object_property() {
 
 #[test]
 fn member_access_object_not_found() {
-    let obj = HashMap::new();
+    let obj: HashMap<hudhudscript_bytecode::sym::SymId, Value16> = HashMap::new();
     let result = eval_member_access(Value16::object(obj), "missing");
     assert!(result.is_err());
 }

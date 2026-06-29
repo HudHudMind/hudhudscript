@@ -1,0 +1,46 @@
+// HudHudScript — SOP: E-Ticaret Sistemi
+
+role Buyer { can browse, can order }
+role Seller { can list, can ship }
+role Payment { can charge, can refund }
+
+subject Customer has Buyer {
+    state balance: 500,
+    state orders: 0
+}
+subject Store has Seller {
+    state stock: 100,
+    state revenue: 0
+}
+subject PaymentProcessor has Payment {
+    state transactions: 0,
+    state fee_pct: 3
+}
+
+relation Customer <-> Store { trust: 50, purchases: 0 }
+relation Customer <-> PaymentProcessor { trust: 70 }
+
+event OrderPlaced { customer: Subject, amount: Int }
+effect on OrderPlaced { print("  📦 Sipariş!"); }
+
+spawn Customer; spawn Store; spawn PaymentProcessor;
+
+print("=== 3 Sipariş İşleniyor ===");
+let balance = 500; let revenue = 0; let tx = 0;
+
+let orders = [[89, "Kulaklık"], [45, "Mouse"], [120, "Klavye"]];
+for (let i = 0; i < 3; i = i + 1) {
+    let amount = orders[i][0];
+    let item = orders[i][1];
+    let fee = amount * 3 / 100;
+    
+    if (balance >= amount + fee) {
+        balance = balance - amount - fee;
+        revenue = revenue + amount;
+        tx = tx + 1;
+        print("#" + (i+1) + " " + item + ": $" + amount + " ✓");
+    }
+}
+
+print("");
+print("Bakiye: $" + balance + " | Gelir: $" + revenue + " | İşlem: " + tx);

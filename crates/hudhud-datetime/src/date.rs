@@ -55,7 +55,7 @@ pub fn dispatch(method: DateMethodId, args: &[Value16]) -> HudHudResult<Value16>
     match method {
         DateMethodId::Now => Ok(Value16::number(Utc::now().timestamp() as f64)),
 
-        DateMethodId::ToMillis => Ok(Value16::number(Utc::now().timestamp_millis() as f64)),
+        DateMethodId::ToMillis => Ok(Value16::int(Utc::now().timestamp_millis())),
 
         DateMethodId::Parse => {
             let input = args
@@ -200,7 +200,7 @@ fn build_parts_object(ts: i64) -> HudHudResult<Value16> {
         .timestamp_opt(ts, 0)
         .single()
         .ok_or_else(|| runtime_error(format!("Date: invalid timestamp {}", ts)))?;
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     obj.insert("year".to_string(), Value16::number(dt.year() as f64));
     obj.insert("month".to_string(), Value16::number(dt.month() as f64));
     obj.insert("day".to_string(), Value16::number(dt.day() as f64));
@@ -231,12 +231,14 @@ fn build_parts_object(ts: i64) -> HudHudResult<Value16> {
 /// `Date.now` / `Date.from_timestamp`, and `iso` is RFC 3339.
 pub fn from_millis(args: &[Value16]) -> HudHudResult<Value16> {
     let first = args.first();
-    let ms = first.and_then(|v| v.as_number()).ok_or_else(|| {
-        runtime_error(format!(
-            "Date.from_millis: expected number (got {})",
-            first.map(|v| v.type_name_str()).unwrap_or("missing")
-        ))
-    })? as i64;
+    let ms = first
+        .and_then(|v| v.as_number().or_else(|| v.as_int().map(|i| i as f64)))
+        .ok_or_else(|| {
+            runtime_error(format!(
+                "Date.from_millis: expected number (got {})",
+                first.map(|v| v.type_name_str()).unwrap_or("missing")
+            ))
+        })? as i64;
 
     let secs = ms / 1000;
     let nsecs = ((ms % 1000) * 1_000_000) as u32;
@@ -245,7 +247,7 @@ pub fn from_millis(args: &[Value16]) -> HudHudResult<Value16> {
         .single()
         .ok_or_else(|| runtime_error(format!("Date.from_millis: invalid millis {}", ms)))?;
 
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     obj.insert("year".to_string(), Value16::number(dt.year() as f64));
     obj.insert("month".to_string(), Value16::number(dt.month() as f64));
     obj.insert("day".to_string(), Value16::number(dt.day() as f64));
@@ -263,3 +265,4 @@ pub fn from_millis(args: &[Value16]) -> HudHudResult<Value16> {
     obj.insert("iso".to_string(), Value16::string(dt.to_rfc3339()));
     Ok(Value16::object(obj))
 }
+

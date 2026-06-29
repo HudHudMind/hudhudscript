@@ -7,12 +7,17 @@ use serde::{Deserialize, Serialize};
 ///
 /// Implements `PartialEq<&str>` so existing pattern-match guards such as
 /// `name == "Color"` continue to work without modification.
-#[derive(Clone, Copy, Hash, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Hash, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct SymId(pub u32);
 
 impl std::fmt::Debug for SymId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "SymId({}={})", self.0, crate::interner::resolve(crate::interner::SymbolId(self.0)))
+        write!(
+            f,
+            "SymId({}={})",
+            self.0,
+            crate::interner::resolve(crate::interner::SymbolId(self.0))
+        )
     }
 }
 

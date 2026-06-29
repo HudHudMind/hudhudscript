@@ -1,13 +1,17 @@
 //! Full orchestration flow test — adapted to current API
 
-use uuid::Uuid;
 use hudhudscript_orchestration::*;
+use uuid::Uuid;
 
+use hudhudscript_orchestration::orchestration::types::{StepConfig, StepType, WorkflowStep};
 use std::collections::HashMap;
 use std::sync::Arc;
-use hudhudscript_orchestration::orchestration::types::{StepConfig, StepType, WorkflowStep};
 
-fn create_test_engine() -> (OrchestrationEngine, Arc<LayerExecutor>, Arc<NetworkExecutor>) {
+fn create_test_engine() -> (
+    OrchestrationEngine,
+    Arc<LayerExecutor>,
+    Arc<NetworkExecutor>,
+) {
     let event_bus = std::sync::Arc::new(EventBus::new());
     let layer_executor = std::sync::Arc::new(LayerExecutor::new());
     let network_executor = std::sync::Arc::new(NetworkExecutor::new(layer_executor.clone()));
@@ -21,15 +25,29 @@ fn create_test_engine() -> (OrchestrationEngine, Arc<LayerExecutor>, Arc<Network
     (engine, layer_executor, network_executor)
 }
 
-
 #[tokio::test]
 async fn test_full_orchestration_flow() {
     let (engine, le, ne) = create_test_engine();
 
     // Create and register layers
-    let layer1 = Layer { id: Uuid::new_v4(), name: "input_layer".to_string(), agents: vec!["agent1".to_string()], config: LayerConfig::default() };
-    let layer2 = Layer { id: Uuid::new_v4(), name: "processing_layer".to_string(), agents: vec!["agent2".to_string()], config: LayerConfig::default() };
-    let layer3 = Layer { id: Uuid::new_v4(), name: "output_layer".to_string(), agents: vec!["agent3".to_string()], config: LayerConfig::default() };
+    let layer1 = Layer {
+        id: Uuid::new_v4(),
+        name: "input_layer".to_string(),
+        agents: vec!["agent1".to_string()],
+        config: LayerConfig::default(),
+    };
+    let layer2 = Layer {
+        id: Uuid::new_v4(),
+        name: "processing_layer".to_string(),
+        agents: vec!["agent2".to_string()],
+        config: LayerConfig::default(),
+    };
+    let layer3 = Layer {
+        id: Uuid::new_v4(),
+        name: "output_layer".to_string(),
+        agents: vec!["agent3".to_string()],
+        config: LayerConfig::default(),
+    };
 
     let layer1_id = layer1.id;
     let layer2_id = layer2.id;
@@ -50,8 +68,17 @@ async fn test_full_orchestration_flow() {
     ne.register_network(network).await.unwrap();
 
     // Create and register workflow
-    let mut workflow = Workflow { id: Uuid::new_v4(), name: "main_workflow".to_string(), steps: vec![], config: WorkflowConfig::default() };
-    workflow.steps.push(WorkflowStep { name: "step".to_string(), step_type: StepType::Network { network_id }, config: StepConfig::default() });
+    let mut workflow = Workflow {
+        id: Uuid::new_v4(),
+        name: "main_workflow".to_string(),
+        steps: vec![],
+        config: WorkflowConfig::default(),
+    };
+    workflow.steps.push(WorkflowStep {
+        name: "step".to_string(),
+        step_type: StepType::Network { network_id },
+        config: StepConfig::default(),
+    });
     let workflow_id = engine.register_workflow(workflow).await.unwrap();
 
     // Execute workflow

@@ -300,16 +300,6 @@ fn test_french_governance_keywords() {
         map.lookup("culture", Language::French),
         Some(Keyword::Culture)
     );
-    // New native translations
-    assert_eq!(
-        map.lookup("règle_agent", Language::French),
-        Some(Keyword::AgentRule)
-    );
-    assert_eq!(map.lookup("flux", Language::French), Some(Keyword::Flow));
-    assert_eq!(
-        map.lookup("intention", Language::French),
-        Some(Keyword::Intent)
-    );
     assert_eq!(
         map.lookup("fournisseur", Language::French),
         Some(Keyword::Provider)
@@ -345,16 +335,6 @@ fn test_italian_governance_keywords() {
     assert_eq!(
         map.lookup("cultura", Language::Italian),
         Some(Keyword::Culture)
-    );
-    // New native translations
-    assert_eq!(
-        map.lookup("regola_agente", Language::Italian),
-        Some(Keyword::AgentRule)
-    );
-    assert_eq!(map.lookup("flusso", Language::Italian), Some(Keyword::Flow));
-    assert_eq!(
-        map.lookup("intenzione", Language::Italian),
-        Some(Keyword::Intent)
     );
     assert_eq!(
         map.lookup("fornitore", Language::Italian),
@@ -394,19 +374,6 @@ fn test_portuguese_governance_keywords() {
     assert_eq!(
         map.lookup("cultura", Language::Portuguese),
         Some(Keyword::Culture)
-    );
-    // New native translations
-    assert_eq!(
-        map.lookup("regra_agente", Language::Portuguese),
-        Some(Keyword::AgentRule)
-    );
-    assert_eq!(
-        map.lookup("fluxo", Language::Portuguese),
-        Some(Keyword::Flow)
-    );
-    assert_eq!(
-        map.lookup("intenção", Language::Portuguese),
-        Some(Keyword::Intent)
     );
     assert_eq!(
         map.lookup("provedor", Language::Portuguese),

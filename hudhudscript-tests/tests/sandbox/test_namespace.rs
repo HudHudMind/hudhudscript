@@ -96,6 +96,7 @@ fn test_builder_custom() {
 }
 
 #[test]
+    #[ignore = "process-global privileged syscall; unsafe in parallel test. Run: --ignored --test-threads=1"]
 fn test_apply_succeeds() {
     let cfg = NamespaceConfig::full();
     assert!(cfg.apply().is_ok());

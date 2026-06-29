@@ -1,0 +1,43 @@
+// HudHudScript — Conditions
+// Demonstrates if/else and comparison operators
+
+let score = 75;
+
+// Simple if/else
+if (score >= 90) {
+    print("Grade: A");
+} else if (score >= 80) {
+    print("Grade: B");
+} else if (score >= 70) {
+    print("Grade: C");
+} else if (score >= 60) {
+    print("Grade: D");
+} else {
+    print("Grade: F");
+}
+
+// Nested conditions
+let age = 25;
+let has_license = true;
+
+if (age >= 18) {
+    if (has_license) {
+        print("Can drive");
+    } else {
+        print("Needs license");
+    }
+} else {
+    print("Too young");
+}
+
+// Boolean combinations
+let is_weekend = true;
+let is_sunny = false;
+
+if (is_weekend && is_sunny) {
+    print("Go to park");
+} else if (is_weekend && !is_sunny) {
+    print("Watch movies");
+} else {
+    print("Go to work");
+}

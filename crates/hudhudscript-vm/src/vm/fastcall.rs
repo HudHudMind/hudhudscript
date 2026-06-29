@@ -38,12 +38,9 @@ impl VM {
             ));
         }
 
-        let callee_reg_count = if chunk.max_register > 0 {
-            (chunk.max_register as usize + 1).min(256)
-        } else {
-            (chunk.local_count as usize + 64).min(256)
-        };
-        let reg_size = first_arg as usize;
+        // FIX: allocate full 256-entry frames so callee's register window never
+        // overlaps caller's live low registers (class receiver / recursion bug).
+        let reg_size = 256usize;
         self.registers.advance(reg_size);
 
         // Param bind (same as exec_call_push_frame but without rest-fn check)
@@ -55,8 +52,11 @@ impl VM {
         };
         for (pi, _) in chunk.param_slots.iter().enumerate() {
             if pi == rest_idx && has_rest_fn {
-                let rest_values: Vec<Value16> =
-                    if args.len() > pi { args[pi..].to_vec() } else { Vec::new() };
+                let rest_values: Vec<Value16> = if args.len() > pi {
+                    args[pi..].to_vec()
+                } else {
+                    Vec::new()
+                };
                 self.registers[pi] = Value16::array(rest_values);
             } else if let Some(val) = args.get(pi) {
                 self.registers[pi] = *val;
@@ -64,13 +64,22 @@ impl VM {
         }
 
         // Chunk cache: single unified lookup (local_syms + packed).
+        // P3-A1: cache-hit path avoids Arc::clone — takes pointers
+        // directly from chunk_cache_last_val (still held alive).
         let cache_key = chunk.instructions.as_ptr() as usize;
-        let cc = if self.chunk_cache_last_key == cache_key {
-            Arc::clone(self.chunk_cache_last_val.as_ref().unwrap())
+        let (packed_ptr, local_syms_ptr) = if self.chunk_cache_last_key == cache_key {
+            let cc = self
+                .chunk_cache_last_val
+                .as_ref()
+                .expect("chunk cache last val missing");
+            (Arc::as_ptr(&cc.packed), Arc::as_ptr(&cc.local_syms))
         } else if let Some(cc) = self.chunk_cache.get(&cache_key) {
             self.chunk_cache_last_key = cache_key;
-            self.chunk_cache_last_val = Some(Arc::clone(cc));
-            Arc::clone(self.chunk_cache_last_val.as_ref().unwrap())
+            let cc = Arc::clone(cc);
+            let pp = Arc::as_ptr(&cc.packed);
+            let sp = Arc::as_ptr(&cc.local_syms);
+            self.chunk_cache_last_val = Some(cc);
+            (pp, sp)
         } else {
             // Build on miss (first call to this function).
             let mut built: Vec<(u32, usize, Option<usize>)> =
@@ -81,28 +90,34 @@ impl VM {
                 if sym_id > max_sym {
                     max_sym = sym_id;
                 }
-                let param_idx = params.iter().position(|p| {
-                    p == name || p.strip_prefix("...").map_or(false, |s| s == name)
-                });
+                let param_idx = params
+                    .iter()
+                    .position(|p| p == name || p.strip_prefix("...").map_or(false, |s| s == name));
                 built.push((sym_id, i, param_idx));
             }
             built.sort_by_key(|(sym_id, _, _)| *sym_id);
             let cc = Arc::new(crate::vm::machine::ChunkCache {
-                packed: Arc::new(crate::vm::prepack::prepack_instructions(&chunk.instructions)),
+                packed: Arc::new(crate::vm::prepack::prepack_instructions(
+                    &chunk.instructions,
+                )),
                 local_syms: Arc::new(built),
                 max_sym,
             });
             self.chunk_cache.insert(cache_key, Arc::clone(&cc));
+            // P5.1: Sonradan yüklenen chunk sabitleri GC root.
+            self.gc_constant_roots.extend_from_slice(&chunk.constants);
             self.chunk_cache_last_key = cache_key;
-            self.chunk_cache_last_val = Some(Arc::clone(&cc));
-            cc
+            let pp = Arc::as_ptr(&cc.packed);
+            let sp = Arc::as_ptr(&cc.local_syms);
+            self.chunk_cache_last_val = Some(cc);
+            (pp, sp)
         };
 
-        self.call_stack_local_syms.push(Arc::as_ptr(&cc.local_syms));
+        self.call_stack_local_syms.push(local_syms_ptr);
 
         self.frame_stack.push(CallFrame {
             chunk_ptr: chunk as *const FunctionChunk,
-            packed: Arc::as_ptr(&cc.packed),
+            packed: packed_ptr,
             func_sym,
             ip: 0,
             dst,

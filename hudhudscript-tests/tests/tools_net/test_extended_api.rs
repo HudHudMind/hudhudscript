@@ -1,8 +1,8 @@
 //! Extended unit tests for hudhudscript-tools-net
 //! Covers: OpenApiDocument edge cases, OpenApiInfo, sanitize_name, discover_tools
 
-use hudhudscript_tools_net::*;
 use hudhudscript_tools_net::openapi::*;
+use hudhudscript_tools_net::*;
 use hudhudscript_tools_schema::registry::RegistryError;
 use hudhudscript_tools_schema::schema::JsonSchema;
 use std::collections::HashMap;
@@ -34,7 +34,10 @@ fn openapi_document_with_info() {
         info: Some(info),
         paths: HashMap::new(),
     };
-    assert_eq!(doc.info.as_ref().unwrap().title.as_deref(), Some("Test API"));
+    assert_eq!(
+        doc.info.as_ref().unwrap().title.as_deref(),
+        Some("Test API")
+    );
     assert_eq!(doc.info.as_ref().unwrap().version.as_deref(), Some("1.0.0"));
 }
 
@@ -106,7 +109,10 @@ fn openapi_path_item_with_get_operation() {
         ..Default::default()
     };
     assert!(path.get.is_some());
-    assert_eq!(path.get.as_ref().unwrap().operation_id.as_deref(), Some("listUsers"));
+    assert_eq!(
+        path.get.as_ref().unwrap().operation_id.as_deref(),
+        Some("listUsers")
+    );
     assert!(path.post.is_none());
 }
 
@@ -114,15 +120,13 @@ fn openapi_path_item_with_get_operation() {
 
 #[test]
 fn openapi_operation_with_parameters() {
-    let params = vec![
-        OpenApiParameter {
-            name: "limit".to_string(),
-            location: "query".to_string(),
-            description: None,
-            required: false,
-            schema: None,
-        },
-    ];
+    let params = vec![OpenApiParameter {
+        name: "limit".to_string(),
+        location: "query".to_string(),
+        description: None,
+        required: false,
+        schema: None,
+    }];
     let operation = OpenApiOperation {
         operation_id: Some("search".to_string()),
         parameters: params,
@@ -198,9 +202,10 @@ fn openapi_parameter_header_optional() {
 #[test]
 fn openapi_request_body_json() {
     let mut content = HashMap::new();
-    content.insert("application/json".to_string(), OpenApiMediaType {
-        schema: None,
-    });
+    content.insert(
+        "application/json".to_string(),
+        OpenApiMediaType { schema: None },
+    );
     let body = OpenApiRequestBody {
         required: true,
         description: Some("Payload".to_string()),
@@ -217,7 +222,13 @@ fn discovered_tool_fields() {
     let tool = DiscoveredTool {
         name: "listUsers".to_string(),
         description: Some("List all users".to_string()),
-        parameters: JsonSchema { schema_type: "object".to_string(), properties: None, required: None, items: None, description: None },
+        parameters: JsonSchema {
+            schema_type: "object".to_string(),
+            properties: None,
+            required: None,
+            items: None,
+            description: None,
+        },
         method: "GET".to_string(),
         path: "/users".to_string(),
         tags: vec!["users".to_string()],

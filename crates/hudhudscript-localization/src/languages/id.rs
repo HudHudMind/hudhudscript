@@ -37,7 +37,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
 
     // Agent system
     map.insert("agen".to_string(), Keyword::Agent);
-    map.insert("tugas".to_string(), Keyword::Task);
     map.insert("alat".to_string(), Keyword::Tool);
     map.insert("sumber_daya".to_string(), Keyword::Resource);
     map.insert("mcp".to_string(), Keyword::Mcp);
@@ -109,7 +108,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
 
     // Additional keywords (Indonesian translations)
     map.insert("aksi".to_string(), Keyword::Action);
-    map.insert("aturan_agen".to_string(), Keyword::AgentRule);
     map.insert("keadaan_agen".to_string(), Keyword::AgentState);
     map.insert("izinkan".to_string(), Keyword::Allow);
     map.insert("gaya_komunikasi".to_string(), Keyword::CommunicationStyle);
@@ -122,8 +120,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
     map.insert("tidak_resmi".to_string(), Keyword::Informal);
     map.insert("niat".to_string(), Keyword::Intent);
     map.insert("prioritas".to_string(), Keyword::Priority);
-    map.insert("rantai_aturan".to_string(), Keyword::RuleChain);
-    map.insert("set_aturan".to_string(), Keyword::RuleSet);
     map.insert("mesin_keadaan".to_string(), Keyword::StateMachine);
     map.insert("teknis".to_string(), Keyword::Technical);
     map.insert("transformasi".to_string(), Keyword::Transform);

@@ -1,0 +1,161 @@
+// HudHudScript — Governance: Constitution, Law, and Council
+// Issue #36: Comprehensive sample library
+//
+// Demonstrates governance declarations using the supported grammar.
+// Note: Nested law-inside-constitution and member blocks with role
+// assignments are aspirational syntax — tracked in the v0.4.x roadmap.
+
+// ============================================================
+// 1. Constitution — top-level governance document
+//    The grammar supports: constitution Name: { key: value, ... }
+// ============================================================
+
+constitution DataGovernance {
+    id: "cons.data.v1",
+    description: "Rules governing data access, retention, and privacy"
+}
+
+constitution AgentEthics {
+    id: "cons.ethics.v1",
+    description: "Ethical constraints for autonomous agents"
+}
+
+// ============================================================
+// 2. Laws — standalone declarations
+//    Each law is a separate top-level declaration.
+// ============================================================
+
+law DataClassification {
+    id: "law.data.1",
+    description: "Every data asset must carry a classification label",
+    enforcement: "mandatory",
+    constitution: "cons.data.v1"
+}
+
+law PIIEncryption {
+    id: "law.data.2",
+    description: "Personally Identifiable Information must be encrypted",
+    enforcement: "mandatory",
+    constitution: "cons.data.v1"
+}
+
+law DataMinimisation {
+    id: "law.data.3",
+    description: "Store only the data strictly required for the task",
+    enforcement: "advisory",
+    constitution: "cons.data.v1"
+}
+
+law AuditTrail {
+    id: "law.data.4",
+    description: "Optionally attach an audit log to each operation",
+    enforcement: "optional",
+    constitution: "cons.data.v1"
+}
+
+law NoHarm {
+    id: "law.ethics.1",
+    description: "Agents must not produce harmful output",
+    enforcement: "mandatory",
+    constitution: "cons.ethics.v1"
+}
+
+law Transparency {
+    id: "law.ethics.2",
+    description: "Agents should disclose when they are AI",
+    enforcement: "advisory",
+    constitution: "cons.ethics.v1"
+}
+
+law AccessControl {
+    id: "law.access.1",
+    description: "Users must hold a valid access token",
+    enforcement: "mandatory"
+}
+
+law RateLimit {
+    id: "law.access.2",
+    description: "Requests per minute must not exceed 1000",
+    enforcement: "mandatory"
+}
+
+// ============================================================
+// 3. Council — group of agents
+//    The grammar supports agent_body: { key: value, ... }
+// ============================================================
+
+council DataGovernanceCouncil {
+    id: "council.data.1",
+    name: "Data Governance Council",
+    constitution: "cons.data.v1",
+    members: ["compliance_officer", "data_steward", "security_auditor", "legal_advisor"],
+    rules: ["law.data.1", "law.data.2", "law.data.3"]
+}
+
+council EthicsBoard {
+    id: "council.ethics.1",
+    name: "Ethics Board",
+    constitution: "cons.ethics.v1",
+    members: ["ethics_lead", "community_rep"],
+    rules: ["law.ethics.1", "law.ethics.2"]
+}
+
+// ============================================================
+// 4. Action declarations — compliance validation targets
+// ============================================================
+
+action ProcessUserData {
+    has_classification: true,
+    pii_encrypted: true,
+    retention_days: 30,
+    audit_enabled: true
+}
+
+action UnencryptedUpload {
+    has_classification: true,
+    pii_encrypted: false,
+    retention_days: 365,
+    audit_enabled: false
+}
+
+// ============================================================
+// 5. Print governance structure
+// ============================================================
+
+print("=== Governance Demo ===");
+print("DataGovernance constitution created.");
+print("AgentEthics constitution created.");
+print("DataGovernanceCouncil council created.");
+print("EthicsBoard council created.");
+print("8 laws defined.");
+print("2 actions defined.");
+
+// ============================================================
+// 6. Turkish syntax variant — same governance, different keywords
+// ============================================================
+
+print("=== Türkçe Yönetişim ===");
+
+// Turkish keywords (anayasa, yasa, konsey) are normalized to
+// their English equivalents by the keyword normalizer.
+constitution VeriYonetimi {
+    id: "anayasa.veri.v1",
+    description: "Türkçe veri yönetim kuralları"
+}
+
+law SifrelemeZorunlu {
+    id: "yasa.veri.1",
+    description: "Kişisel veriler şifrelenmelidir",
+    enforcement: "mandatory",
+    constitution: "anayasa.veri.v1"
+}
+
+council VeriKonseyi {
+    id: "konsey.veri.1",
+    constitution: "anayasa.veri.v1",
+    members: ["yonetici"]
+}
+
+print("VeriYonetimi constitution created.");
+print("VeriKonseyi council created.");
+print("Governance demo complete.");

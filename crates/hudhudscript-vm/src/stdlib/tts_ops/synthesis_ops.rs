@@ -105,7 +105,7 @@ pub(crate) fn run_command(bin: &str, args: &[String]) -> SharedResult<Value16> {
     let result = Command::new(bin).args(args).output();
     match result {
         Ok(output) => {
-            let mut obj = HashMap::new();
+            let mut obj = hudhudscript_bytecode::ObjMap::default();
             let success = output.status.success();
             obj.insert("ok".to_string(), Value16::boolean(success));
             obj.insert(
@@ -119,7 +119,7 @@ pub(crate) fn run_command(bin: &str, args: &[String]) -> SharedResult<Value16> {
             Ok(Value16::object(obj))
         }
         Err(e) => {
-            let mut obj = HashMap::new();
+            let mut obj = hudhudscript_bytecode::ObjMap::default();
             obj.insert("ok".to_string(), Value16::boolean(false));
             obj.insert("code".to_string(), Value16::number(-1.0));
             obj.insert(
@@ -132,7 +132,7 @@ pub(crate) fn run_command(bin: &str, args: &[String]) -> SharedResult<Value16> {
 }
 
 pub(crate) fn error_obj(msg: String) -> Value16 {
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     obj.insert("ok".to_string(), Value16::boolean(false));
     obj.insert("code".to_string(), Value16::number(-1.0));
     obj.insert("error".to_string(), Value16::string(msg));

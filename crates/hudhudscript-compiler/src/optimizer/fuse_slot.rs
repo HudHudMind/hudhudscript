@@ -1,65 +1,180 @@
 //! Slot+immediate fusion pass — re-enabled with jump offset correction (v0.4.468).
 
-use hudhudscript_bytecode::{Instruction, LoopPayload, CallPayload};
+use hudhudscript_bytecode::{CallPayload, Instruction, LoopPayload};
 
 /// Jump offset'lerini ve loop payload'larını bir instruction silindikten sonra düzeltir.
-/// `removed_at`: silinen instruction'ın index'i.
-/// dead_code.rs'deki `dead_code_eliminate_with_positions` pattern'ı referans alınmıştır.
-fn adjust_jumps_after_remove(
-    instructions: &mut [Instruction],
+/// Moved to utils.rs — single source (Kural 7).
+use crate::optimizer::utils::adjust_jumps_after_remove;
+
+/// Fuse IntModI + IntCmpI → IntModCmpI in a separate pass.
+/// This must run AFTER `fuse_slot_immediate_with_positions` which creates
+/// IntModI and IntCmpI from LoadIntConst+IntMod/IntCmp patterns.
+pub fn fuse_intmodcmpi_chain(
+    instructions: &mut Vec<Instruction>,
     loop_payloads: &mut [LoopPayload],
-    removed_at: usize,
+    source_positions: &mut Vec<Option<(usize, usize)>>,
 ) {
-    // 1. Adjust instruction-embedded jump offsets
-    let len = instructions.len();
-    for ip in 0..len {
-        let adjust = |off: &mut i32, ip: usize| {
-            let target = (ip as i64 + *off as i64) as usize;
-            let new_ip = if ip > removed_at { ip - 1 } else { ip };
-            let new_target = if target > removed_at { target - 1 } else { target };
-            *off = (new_target as i64 - new_ip as i64) as i32;
-        };
-        match &mut instructions[ip] {
-            Instruction::Jump(o)
-            | Instruction::TryBegin(o)
-            | Instruction::FinallyBegin(o)
-            | Instruction::FinallyExit(o) => adjust(o, ip),
-            Instruction::JumpIfFalse { offset, .. }
-            | Instruction::JumpIfTrue { offset, .. } => {
-                let mut o32 = *offset as i32;
-                adjust(&mut o32, ip);
-                *offset = o32 as i16;
+    let mut i = 0;
+    while i + 1 < instructions.len() {
+        if let Instruction::IntModI {
+            dst: mod_dst,
+            src: mod_src,
+            imm: mod_imm,
+        } = &instructions[i]
+        {
+            if let Instruction::IntCmpI {
+                dst: cmp_dst,
+                src: cmp_src,
+                imm: cmp_imm,
+                op,
+            } = &instructions[i + 1]
+            {
+                if *cmp_src == *mod_dst {
+                    // Single-use: only block if mod_dst is READ (not written) after i+2.
+                    // If it's written first, the old IntModI value is dead.
+                    let mut reused = false;
+                    for instr_after in &instructions[i + 2..] {
+                        if writes_reg(instr_after, *mod_dst) {
+                            break; // write kills the old value
+                        }
+                        if instruction_reads_reg(instr_after, *mod_dst) {
+                            reused = true;
+                            break;
+                        }
+                    }
+                    if !reused {
+                        instructions[i] = Instruction::IntModCmpI {
+                            dst: *cmp_dst,
+                            src: *mod_src,
+                            mod_imm: *mod_imm,
+                            cmp_imm: *cmp_imm,
+                            op: *op,
+                        };
+                        adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
+                        instructions.remove(i + 1);
+                        if i + 1 < source_positions.len() {
+                            source_positions.remove(i + 1);
+                        }
+                        continue;
+                    }
+                }
             }
-            Instruction::ForIn { end_offset, .. }
-            | Instruction::IterNext { end_offset, .. } => {
-                let mut o32 = *end_offset as i32;
-                adjust(&mut o32, ip);
-                *end_offset = o32 as i16;
-            }
-            Instruction::IntLeRRJumpIfFalse { offset, .. }
-            | Instruction::IntLtRRJumpIfFalse { offset, .. }
-            | Instruction::IntLeRIJumpIfFalse { offset, .. }
-            | Instruction::IntLtRIJumpIfFalse { offset, .. } => {
-                let mut o32 = *offset as i32;
-                adjust(&mut o32, ip);
-                *offset = o32 as i16;
-            }
-            _ => {}
         }
-    }
-    // 2. Adjust loop payload absolute IPs (Break/Continue use these)
-    for lp in loop_payloads.iter_mut() {
-        if lp.start as usize > removed_at {
-            lp.start -= 1;
-        }
-        if lp.end as usize > removed_at {
-            lp.end -= 1;
-        }
+        i += 1;
     }
 }
 
 pub fn fuse_slot_immediate(instructions: &mut Vec<Instruction>, loop_payloads: &mut [LoopPayload]) {
     // No-op
+}
+
+#[inline(always)]
+fn fuse_intmod_cmpi(
+    instructions: &mut Vec<Instruction>,
+    loop_payloads: &mut [LoopPayload],
+    source_positions: &mut Vec<Option<(usize, usize)>>,
+    i: usize,
+    mod_dst: u8,
+    mod_src: u8,
+    mod_imm: i16,
+    cmp_dst: u8,
+    cmp_imm: i16,
+    op: u8,
+) {
+    // Single-use check: mod_dst must not appear as operand in any later instruction
+    let mut reused = false;
+    for instr_after in &instructions[i + 2..] {
+        if instruction_reads_reg(instr_after, mod_dst) {
+            reused = true;
+            break;
+        }
+    }
+    if !reused {
+        instructions[i] = Instruction::IntModCmpI {
+            dst: cmp_dst,
+            src: mod_src,
+            mod_imm,
+            cmp_imm,
+            op,
+        };
+        adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
+        instructions.remove(i + 1);
+        if i + 1 < source_positions.len() {
+            source_positions.remove(i + 1);
+        }
+    }
+}
+
+/// Returns true if `instr` writes to register `reg`.
+fn writes_reg(instr: &Instruction, reg: u8) -> bool {
+    use Instruction::*;
+    match instr {
+        Move { dst, .. } => *dst == reg,
+        LoadGlobal { dst, .. }
+        | LoadIntConst { dst, .. }
+        | LoadConst { dst, .. }
+        | LoadNumConst { dst, .. } => *dst == reg,
+        IntAdd { dst, .. }
+        | IntSub { dst, .. }
+        | IntMul { dst, .. }
+        | IntDiv { dst, .. }
+        | IntMod { dst, .. } => *dst == reg,
+        IntCmp { dst, .. } | IntCmpI { dst, .. } | IntModI { dst, .. } | IntModCmpI { dst, .. } => {
+            *dst == reg
+        }
+        IntAddI { dst, .. } | IntSubI { dst, .. } | IntMulI { dst, .. } | IntDivI { dst, .. } => {
+            *dst == reg
+        }
+        NumAdd { dst, .. } | NumSub { dst, .. } | NumMul { dst, .. } | NumDiv { dst, .. } => {
+            *dst == reg
+        }
+        NumAddI { dst, .. } | NumSubI { dst, .. } | NumMulI { dst, .. } | NumDivI { dst, .. } => {
+            *dst == reg
+        }
+        StrCat { dst, .. } => *dst == reg,
+        Index { dst, .. } => *dst == reg,
+        MethodCall { dst, .. } => *dst == reg,
+        Call { dst, .. } => *dst == reg,
+        _ => false,
+    }
+}
+
+/// Returns true if `instr` reads register `reg` (source operand).
+fn instruction_reads_reg(instr: &Instruction, reg: u8) -> bool {
+    use Instruction::*;
+    match instr {
+        Move { src, .. } => *src == reg,
+        IntAdd { src1, src2, .. } | IntSub { src1, src2, .. } | IntMul { src1, src2, .. } => {
+            *src1 == reg || *src2 == reg
+        }
+        IntDiv { src1, src2, .. } | IntMod { src1, src2, .. } => *src1 == reg || *src2 == reg,
+        IntCmp { src1, src2, .. } => *src1 == reg || *src2 == reg,
+        IntAddI { src, .. } | IntSubI { src, .. } | IntMulI { src, .. } => *src == reg,
+        IntDivI { src, .. } | IntModI { src, .. } => *src == reg,
+        IntCmpI { src, .. } | IntModCmpI { src, .. } => *src == reg,
+        NumAdd { src1, src2, .. }
+        | NumSub { src1, src2, .. }
+        | NumMul { src1, src2, .. }
+        | NumDiv { src1, src2, .. } => *src1 == reg || *src2 == reg,
+        NumAddI { src, .. } | NumSubI { src, .. } | NumMulI { src, .. } | NumDivI { src, .. } => {
+            *src == reg
+        }
+        StoreGlobal { src, .. } => *src == reg,
+        DeclGlobal { src, .. } => *src == reg,
+        MethodCall {
+            obj,
+            first_arg,
+            arg_count,
+            ..
+        } => *obj == reg || (*first_arg..*first_arg + *arg_count).any(|i| i == reg),
+        Call {
+            first_arg,
+            arg_count,
+            ..
+        } => (*first_arg..*first_arg + *arg_count).any(|i| i == reg),
+        StrCat { src1, src2, .. } => *src1 == reg || *src2 == reg,
+        _ => false,
+    }
 }
 
 pub fn fuse_slot_immediate_with_positions(
@@ -72,31 +187,54 @@ pub fn fuse_slot_immediate_with_positions(
     let mut i = 0;
     while i + 1 < instructions.len() {
         // Fold: LoadIntConst(1) + IntDiv/IntMul → skip
-        if let Instruction::LoadIntConst { dst: const_dst, const_idx } = &instructions[i] {
+        if let Instruction::LoadIntConst {
+            dst: const_dst,
+            const_idx,
+        } = &instructions[i]
+        {
             let const_val = int_constants.get(*const_idx as usize).copied();
             match &instructions[i + 1] {
-                Instruction::IntDiv { dst, src1, src2 } if *src2 == *const_dst && const_val == Some(1) => {
-                    instructions[i] = Instruction::Move { dst: *dst, src: *src1 };
+                Instruction::IntDiv { dst, src1, src2 }
+                    if *src2 == *const_dst && const_val == Some(1) =>
+                {
+                    instructions[i] = Instruction::Move {
+                        dst: *dst,
+                        src: *src1,
+                    };
                     adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
                     instructions.remove(i + 1);
-                    if i + 1 < source_positions.len() { source_positions.remove(i + 1); }
+                    if i + 1 < source_positions.len() {
+                        source_positions.remove(i + 1);
+                    }
                     continue;
                 }
-                Instruction::IntMul { dst, src1, src2 } if *src2 == *const_dst && const_val == Some(1) => {
-                    instructions[i] = Instruction::Move { dst: *dst, src: *src1 };
+                Instruction::IntMul { dst, src1, src2 }
+                    if *src2 == *const_dst && const_val == Some(1) =>
+                {
+                    instructions[i] = Instruction::Move {
+                        dst: *dst,
+                        src: *src1,
+                    };
                     adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
                     instructions.remove(i + 1);
-                    if i + 1 < source_positions.len() { source_positions.remove(i + 1); }
+                    if i + 1 < source_positions.len() {
+                        source_positions.remove(i + 1);
+                    }
                     continue;
                 }
                 Instruction::NumDiv { dst, src1, src2 } if *src2 == *const_dst => {
                     if let Some(&bits) = numeric_constants.get(*const_idx as usize) {
                         let val = f64::from_bits(bits);
                         if (val - 1.0).abs() < f64::EPSILON {
-                            instructions[i] = Instruction::Move { dst: *dst, src: *src1 };
+                            instructions[i] = Instruction::Move {
+                                dst: *dst,
+                                src: *src1,
+                            };
                             adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
                             instructions.remove(i + 1);
-                            if i + 1 < source_positions.len() { source_positions.remove(i + 1); }
+                            if i + 1 < source_positions.len() {
+                                source_positions.remove(i + 1);
+                            }
                             continue;
                         }
                     }
@@ -105,10 +243,15 @@ pub fn fuse_slot_immediate_with_positions(
                     if let Some(&bits) = numeric_constants.get(*const_idx as usize) {
                         let val = f64::from_bits(bits);
                         if (val - 1.0).abs() < f64::EPSILON {
-                            instructions[i] = Instruction::Move { dst: *dst, src: *src1 };
+                            instructions[i] = Instruction::Move {
+                                dst: *dst,
+                                src: *src1,
+                            };
                             adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
                             instructions.remove(i + 1);
-                            if i + 1 < source_positions.len() { source_positions.remove(i + 1); }
+                            if i + 1 < source_positions.len() {
+                                source_positions.remove(i + 1);
+                            }
                             continue;
                         }
                     }
@@ -117,58 +260,102 @@ pub fn fuse_slot_immediate_with_positions(
             }
             // Fold: LoadIntConst(0) + IntMul → constant 0
             match &instructions[i + 1] {
-                Instruction::IntMul { dst, src1: _, src2 } if *src2 == *const_dst && const_val == Some(0) => {
-                    instructions[i] = Instruction::LoadIntConst { dst: *dst, const_idx: *const_idx };
+                Instruction::IntMul { dst, src1: _, src2 }
+                    if *src2 == *const_dst && const_val == Some(0) =>
+                {
+                    instructions[i] = Instruction::LoadIntConst {
+                        dst: *dst,
+                        const_idx: *const_idx,
+                    };
                     adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
                     instructions.remove(i + 1);
-                    if i + 1 < source_positions.len() { source_positions.remove(i + 1); }
+                    if i + 1 < source_positions.len() {
+                        source_positions.remove(i + 1);
+                    }
                     continue;
                 }
-                Instruction::IntAdd { dst, src1, src2 } if *src2 == *const_dst && const_val == Some(0) => {
-                    instructions[i] = Instruction::Move { dst: *dst, src: *src1 };
+                Instruction::IntAdd { dst, src1, src2 }
+                    if *src2 == *const_dst && const_val == Some(0) =>
+                {
+                    instructions[i] = Instruction::Move {
+                        dst: *dst,
+                        src: *src1,
+                    };
                     adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
                     instructions.remove(i + 1);
-                    if i + 1 < source_positions.len() { source_positions.remove(i + 1); }
+                    if i + 1 < source_positions.len() {
+                        source_positions.remove(i + 1);
+                    }
                     continue;
                 }
-                Instruction::IntSub { dst, src1, src2 } if *src2 == *const_dst && const_val == Some(0) => {
-                    instructions[i] = Instruction::Move { dst: *dst, src: *src1 };
+                Instruction::IntSub { dst, src1, src2 }
+                    if *src2 == *const_dst && const_val == Some(0) =>
+                {
+                    instructions[i] = Instruction::Move {
+                        dst: *dst,
+                        src: *src1,
+                    };
                     adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
                     instructions.remove(i + 1);
-                    if i + 1 < source_positions.len() { source_positions.remove(i + 1); }
+                    if i + 1 < source_positions.len() {
+                        source_positions.remove(i + 1);
+                    }
                     continue;
                 }
                 // Fold: LoadIntConst(-1) + IntMul → Neg
-                Instruction::IntMul { dst, src1, src2 } if *src2 == *const_dst && const_val == Some(-1) => {
-                    instructions[i] = Instruction::Neg { dst: *dst, src: *src1 };
+                Instruction::IntMul { dst, src1, src2 }
+                    if *src2 == *const_dst && const_val == Some(-1) =>
+                {
+                    instructions[i] = Instruction::Neg {
+                        dst: *dst,
+                        src: *src1,
+                    };
                     adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
                     instructions.remove(i + 1);
-                    if i + 1 < source_positions.len() { source_positions.remove(i + 1); }
+                    if i + 1 < source_positions.len() {
+                        source_positions.remove(i + 1);
+                    }
                     continue;
                 }
                 // Fold: LoadIntConst(-1) + IntDiv → Neg  (x / -1 == -x)
-                Instruction::IntDiv { dst, src1, src2 } if *src2 == *const_dst && const_val == Some(-1) => {
-                    instructions[i] = Instruction::Neg { dst: *dst, src: *src1 };
+                Instruction::IntDiv { dst, src1, src2 }
+                    if *src2 == *const_dst && const_val == Some(-1) =>
+                {
+                    instructions[i] = Instruction::Neg {
+                        dst: *dst,
+                        src: *src1,
+                    };
                     adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
                     instructions.remove(i + 1);
-                    if i + 1 < source_positions.len() { source_positions.remove(i + 1); }
+                    if i + 1 < source_positions.len() {
+                        source_positions.remove(i + 1);
+                    }
                     continue;
                 }
                 _ => {}
             }
         }
         // Also fold LoadNumConst patterns
-        if let Instruction::LoadNumConst { dst: const_dst, const_idx } = &instructions[i] {
+        if let Instruction::LoadNumConst {
+            dst: const_dst,
+            const_idx,
+        } = &instructions[i]
+        {
             if let Some(&bits) = numeric_constants.get(*const_idx as usize) {
                 let val = f64::from_bits(bits);
                 // *0.0 → 0.0
                 if (val - 0.0).abs() < f64::EPSILON {
                     if let Instruction::NumMul { dst, src1: _, src2 } = &instructions[i + 1] {
                         if *src2 == *const_dst {
-                            instructions[i] = Instruction::Move { dst: *dst, src: *const_dst };
+                            instructions[i] = Instruction::Move {
+                                dst: *dst,
+                                src: *const_dst,
+                            };
                             adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
                             instructions.remove(i + 1);
-                            if i + 1 < source_positions.len() { source_positions.remove(i + 1); }
+                            if i + 1 < source_positions.len() {
+                                source_positions.remove(i + 1);
+                            }
                             continue;
                         }
                     }
@@ -177,18 +364,28 @@ pub fn fuse_slot_immediate_with_positions(
                 if (val - 0.0).abs() < f64::EPSILON {
                     if let Instruction::NumAdd { dst, src1, src2 } = &instructions[i + 1] {
                         if *src2 == *const_dst {
-                            instructions[i] = Instruction::Move { dst: *dst, src: *src1 };
+                            instructions[i] = Instruction::Move {
+                                dst: *dst,
+                                src: *src1,
+                            };
                             adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
                             instructions.remove(i + 1);
-                            if i + 1 < source_positions.len() { source_positions.remove(i + 1); }
+                            if i + 1 < source_positions.len() {
+                                source_positions.remove(i + 1);
+                            }
                             continue;
                         }
                     } else if let Instruction::NumSub { dst, src1, src2 } = &instructions[i + 1] {
                         if *src2 == *const_dst {
-                            instructions[i] = Instruction::Move { dst: *dst, src: *src1 };
+                            instructions[i] = Instruction::Move {
+                                dst: *dst,
+                                src: *src1,
+                            };
                             adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
                             instructions.remove(i + 1);
-                            if i + 1 < source_positions.len() { source_positions.remove(i + 1); }
+                            if i + 1 < source_positions.len() {
+                                source_positions.remove(i + 1);
+                            }
                             continue;
                         }
                     }
@@ -198,31 +395,57 @@ pub fn fuse_slot_immediate_with_positions(
                 if (val - int_val as f64).abs() < f64::EPSILON && int_val as f64 == val {
                     match &instructions[i + 1] {
                         Instruction::NumAdd { dst, src1, src2 } if *src2 == *const_dst => {
-                            instructions[i] = Instruction::NumAddI { dst: *dst, src: *src1, imm: int_val };
+                            instructions[i] = Instruction::NumAddI {
+                                dst: *dst,
+                                src: *src1,
+                                imm: int_val,
+                            };
                             adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
                             instructions.remove(i + 1);
-                            if i + 1 < source_positions.len() { source_positions.remove(i + 1); }
+                            if i + 1 < source_positions.len() {
+                                source_positions.remove(i + 1);
+                            }
                             continue;
                         }
                         Instruction::NumSub { dst, src1, src2 } if *src2 == *const_dst => {
-                            instructions[i] = Instruction::NumSubI { dst: *dst, src: *src1, imm: int_val };
+                            instructions[i] = Instruction::NumSubI {
+                                dst: *dst,
+                                src: *src1,
+                                imm: int_val,
+                            };
                             adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
                             instructions.remove(i + 1);
-                            if i + 1 < source_positions.len() { source_positions.remove(i + 1); }
+                            if i + 1 < source_positions.len() {
+                                source_positions.remove(i + 1);
+                            }
                             continue;
                         }
                         Instruction::NumMul { dst, src1, src2 } if *src2 == *const_dst => {
-                            instructions[i] = Instruction::NumMulI { dst: *dst, src: *src1, imm: int_val };
+                            instructions[i] = Instruction::NumMulI {
+                                dst: *dst,
+                                src: *src1,
+                                imm: int_val,
+                            };
                             adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
                             instructions.remove(i + 1);
-                            if i + 1 < source_positions.len() { source_positions.remove(i + 1); }
+                            if i + 1 < source_positions.len() {
+                                source_positions.remove(i + 1);
+                            }
                             continue;
                         }
-                        Instruction::NumDiv { dst, src1, src2 } if *src2 == *const_dst && int_val != 0 => {
-                            instructions[i] = Instruction::NumDivI { dst: *dst, src: *src1, imm: int_val };
+                        Instruction::NumDiv { dst, src1, src2 }
+                            if *src2 == *const_dst && int_val != 0 =>
+                        {
+                            instructions[i] = Instruction::NumDivI {
+                                dst: *dst,
+                                src: *src1,
+                                imm: int_val,
+                            };
                             adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
                             instructions.remove(i + 1);
-                            if i + 1 < source_positions.len() { source_positions.remove(i + 1); }
+                            if i + 1 < source_positions.len() {
+                                source_positions.remove(i + 1);
+                            }
                             continue;
                         }
                         _ => {}
@@ -232,17 +455,34 @@ pub fn fuse_slot_immediate_with_positions(
         }
         // Fuse: LoadIntConst + IntCmp → IntCmpI
         if i + 1 < instructions.len() {
-            if let Instruction::LoadIntConst { dst: const_dst, const_idx } = &instructions[i] {
+            if let Instruction::LoadIntConst {
+                dst: const_dst,
+                const_idx,
+            } = &instructions[i]
+            {
                 let const_val = int_constants.get(*const_idx as usize).copied();
-                if let Instruction::IntCmp { dst: cmp_dst, src1, src2, op } = &instructions[i + 1] {
+                if let Instruction::IntCmp {
+                    dst: cmp_dst,
+                    src1,
+                    src2,
+                    op,
+                } = &instructions[i + 1]
+                {
                     if *src2 == *const_dst {
                         if let Some(val) = const_val {
                             let imm = val as i16;
                             if imm as i64 == val {
-                                instructions[i] = Instruction::IntCmpI { dst: *cmp_dst, src: *src1, imm, op: *op };
+                                instructions[i] = Instruction::IntCmpI {
+                                    dst: *cmp_dst,
+                                    src: *src1,
+                                    imm,
+                                    op: *op,
+                                };
                                 adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
                                 instructions.remove(i + 1);
-                                if i + 1 < source_positions.len() { source_positions.remove(i + 1); }
+                                if i + 1 < source_positions.len() {
+                                    source_positions.remove(i + 1);
+                                }
                                 continue;
                             }
                         }
@@ -250,24 +490,40 @@ pub fn fuse_slot_immediate_with_positions(
                 }
             }
             // Fuse: LoadIntConst + IntDiv/IntMod → IntDivI/IntModI
-            if let Instruction::LoadIntConst { dst: const_dst, const_idx } = &instructions[i] {
+            if let Instruction::LoadIntConst {
+                dst: const_dst,
+                const_idx,
+            } = &instructions[i]
+            {
                 let c = int_constants.get(*const_idx as usize).copied();
                 if let Some(val) = c {
                     let imm = val as i16;
                     if imm as i64 == val && imm != 0 {
                         match &instructions[i + 1] {
                             Instruction::IntDiv { dst, src1, src2 } if *src2 == *const_dst => {
-                                instructions[i] = Instruction::IntDivI { dst: *dst, src: *src1, imm };
+                                instructions[i] = Instruction::IntDivI {
+                                    dst: *dst,
+                                    src: *src1,
+                                    imm,
+                                };
                                 adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
                                 instructions.remove(i + 1);
-                                if i + 1 < source_positions.len() { source_positions.remove(i + 1); }
+                                if i + 1 < source_positions.len() {
+                                    source_positions.remove(i + 1);
+                                }
                                 continue;
                             }
                             Instruction::IntMod { dst, src1, src2 } if *src2 == *const_dst => {
-                                instructions[i] = Instruction::IntModI { dst: *dst, src: *src1, imm };
+                                instructions[i] = Instruction::IntModI {
+                                    dst: *dst,
+                                    src: *src1,
+                                    imm,
+                                };
                                 adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
                                 instructions.remove(i + 1);
-                                if i + 1 < source_positions.len() { source_positions.remove(i + 1); }
+                                if i + 1 < source_positions.len() {
+                                    source_positions.remove(i + 1);
+                                }
                                 continue;
                             }
                             _ => {}
@@ -277,8 +533,67 @@ pub fn fuse_slot_immediate_with_positions(
             }
         }
         // Fold: IntAddI/IntSubI with imm=0 → Move (x+0, x-0 no-ops)
-        if let Instruction::IntAddI { dst, src, imm: 0 } | Instruction::IntSubI { dst, src, imm: 0 } = &instructions[i] {
-            if *dst != *src { instructions[i] = Instruction::Move { dst: *dst, src: *src }; }
+        if let Instruction::IntAddI { dst, src, imm: 0 }
+        | Instruction::IntSubI { dst, src, imm: 0 } = &instructions[i]
+        {
+            if *dst != *src {
+                instructions[i] = Instruction::Move {
+                    dst: *dst,
+                    src: *src,
+                };
+            }
+        }
+        // B4: Re-fuse IntSubI { dst: A, src: B, imm } + Move { dst: B, src: A }
+        //     → IntSubI { dst: B, src: B, imm } (self-update, no temp)
+        if i + 1 < instructions.len() {
+            if let (
+                Instruction::IntSubI { dst, src, imm },
+                Instruction::Move {
+                    dst: m_dst,
+                    src: m_src,
+                },
+            ) = (&instructions[i], &instructions[i + 1])
+            {
+                if *imm != 0 && *dst == *m_src && *src == *m_dst && *dst != *src {
+                    instructions[i] = Instruction::IntSubI {
+                        dst: *src,
+                        src: *src,
+                        imm: *imm,
+                    };
+                    adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
+                    instructions.remove(i + 1);
+                    if i + 1 < source_positions.len() {
+                        source_positions.remove(i + 1);
+                    }
+                    continue;
+                }
+            }
+        }
+        // P2-B1: Re-fuse IntAddI { dst: A, src: B, imm } + Move { dst: B, src: A }
+        //         → IntAddI { dst: B, src: B, imm } (self-update, no temp)
+        if i + 1 < instructions.len() {
+            if let (
+                Instruction::IntAddI { dst, src, imm },
+                Instruction::Move {
+                    dst: m_dst,
+                    src: m_src,
+                },
+            ) = (&instructions[i], &instructions[i + 1])
+            {
+                if *imm != 0 && *dst == *m_src && *src == *m_dst && *dst != *src {
+                    instructions[i] = Instruction::IntAddI {
+                        dst: *src,
+                        src: *src,
+                        imm: *imm,
+                    };
+                    adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
+                    instructions.remove(i + 1);
+                    if i + 1 < source_positions.len() {
+                        source_positions.remove(i + 1);
+                    }
+                    continue;
+                }
+            }
         }
         i += 1;
     }

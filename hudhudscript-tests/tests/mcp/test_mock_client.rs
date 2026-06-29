@@ -24,6 +24,7 @@ use tokio::sync::mpsc;
 /// to the executor, allowing `send()` to interleave on the shared mutex.
 struct ChannelMockTransport {
     rx: mpsc::UnboundedReceiver<JsonRpcResponse>,
+    tx: mpsc::UnboundedSender<JsonRpcResponse>,
 }
 
 impl ChannelMockTransport {
@@ -31,7 +32,7 @@ impl ChannelMockTransport {
     /// Push responses into the sender to feed them to the client.
     fn new() -> (Self, mpsc::UnboundedSender<JsonRpcResponse>) {
         let (tx, rx) = mpsc::unbounded_channel();
-        (Self { rx }, tx)
+        (Self { rx, tx: tx.clone() }, tx)
     }
 }
 
@@ -54,9 +55,42 @@ impl TransportRecv for ChannelMockTransport {
 
 #[async_trait::async_trait]
 impl Transport for ChannelMockTransport {
+    fn split(
+        self: Box<Self>,
+    ) -> (
+        hudhudscript_mcp::transport::TransportSendHalf,
+        hudhudscript_mcp::transport::TransportRecvHalf,
+    ) {
+        // Channel-based mock: create paired send/recv halves via mpsc.
+        let send_half = ChannelMockSendHalf { tx: self.tx };
+        let recv_half = ChannelMockRecvHalf { rx: self.rx };
+        (Box::new(send_half), Box::new(recv_half))
+    }
     async fn close(&mut self) -> Result<()> {
         self.rx.close();
         Ok(())
+    }
+}
+
+struct ChannelMockSendHalf {
+    tx: mpsc::UnboundedSender<JsonRpcResponse>,
+}
+#[async_trait::async_trait]
+impl hudhudscript_mcp::transport::TransportSend for ChannelMockSendHalf {
+    async fn send(&mut self, _req: JsonRpcRequest) -> Result<()> {
+        Ok(())
+    }
+}
+struct ChannelMockRecvHalf {
+    rx: mpsc::UnboundedReceiver<JsonRpcResponse>,
+}
+#[async_trait::async_trait]
+impl hudhudscript_mcp::transport::TransportRecv for ChannelMockRecvHalf {
+    async fn receive(&mut self) -> Result<JsonRpcResponse> {
+        self.rx
+            .recv()
+            .await
+            .ok_or_else(|| anyhow::anyhow!("channel closed"))
     }
 }
 
@@ -96,7 +130,7 @@ fn init_ok() -> serde_json::Value {
 async fn setup_connected_client() -> (McpClient, mpsc::UnboundedSender<JsonRpcResponse>) {
     let (transport, tx) = ChannelMockTransport::new();
     let client = McpClient::from_transport(Box::new(transport));
-    client.start_response_handler().await;
+    client.start_response_handler_compat().await;
 
     // Feed the init response before calling initialize
     tx.send(ok_response(RequestId::new_number(1), init_ok()))
@@ -114,7 +148,7 @@ async fn setup_connected_client() -> (McpClient, mpsc::UnboundedSender<JsonRpcRe
 async fn test_initialize_success_via_mock() {
     let (transport, tx) = ChannelMockTransport::new();
     let client = McpClient::from_transport(Box::new(transport));
-    client.start_response_handler().await;
+    client.start_response_handler_compat().await;
 
     let init_result = json!({
         "protocolVersion": "2024-11-05",
@@ -250,7 +284,7 @@ async fn test_read_resource_via_mock() {
 async fn test_rpc_error_propagation() {
     let (transport, tx) = ChannelMockTransport::new();
     let client = McpClient::from_transport(Box::new(transport));
-    client.start_response_handler().await;
+    client.start_response_handler_compat().await;
 
     tx.send(err_response(
         RequestId::new_number(1),
@@ -274,7 +308,7 @@ async fn test_rpc_error_propagation() {
 async fn test_response_with_no_result_no_error() {
     let (transport, tx) = ChannelMockTransport::new();
     let client = McpClient::from_transport(Box::new(transport));
-    client.start_response_handler().await;
+    client.start_response_handler_compat().await;
 
     tx.send(JsonRpcResponse {
         jsonrpc: "2.0".to_string(),
@@ -309,7 +343,7 @@ async fn test_request_id_increments_across_requests() {
     let _ = client.list_tools(None).await.unwrap();
     let _ = client.list_resources(None).await.unwrap();
 
-    let counter = client.request_id.load(std::sync::atomic::Ordering::SeqCst);
+    let counter = client.request_id_counter();
     assert_eq!(
         counter, 4,
         "After 3 requests (init + 2), counter should be 4"
@@ -375,9 +409,8 @@ async fn test_from_transport_initial_state() {
     let client = McpClient::from_transport(Box::new(transport));
 
     assert_eq!(client.state().await, ConnectionState::Disconnected);
-    assert!(client.sandbox.is_none());
     assert!(client.server_info().await.is_none());
     assert!(client.server_capabilities().await.is_none());
-    let id = client.request_id.load(std::sync::atomic::Ordering::SeqCst);
+    let id = client.request_id_counter();
     assert_eq!(id, 1);
 }

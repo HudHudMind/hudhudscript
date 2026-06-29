@@ -271,7 +271,7 @@ fn build_follow_up_request(
 /// Public so both the shared dispatcher AND any runtime-specific wrapper
 /// can use the same conversion — Kural 7.
 pub fn llm_response_to_value(response: &LLMResponse) -> Value16 {
-    let mut obj: HashMap<String, Value16> = HashMap::new();
+    let mut obj: hudhudscript_bytecode::ObjMap = hudhudscript_bytecode::ObjMap::default();
     obj.insert(
         "content".to_string(),
         Value16::string(response.content.clone()),
@@ -282,7 +282,7 @@ pub fn llm_response_to_value(response: &LLMResponse) -> Value16 {
         Value16::string(response.finish_reason.clone()),
     );
 
-    let mut tokens = HashMap::new();
+    let mut tokens = hudhudscript_bytecode::ObjMap::default();
     tokens.insert(
         "prompt_tokens".to_string(),
         Value16::number(response.tokens_used.prompt_tokens as f64),
@@ -301,7 +301,7 @@ pub fn llm_response_to_value(response: &LLMResponse) -> Value16 {
         let calls: Vec<Value16> = tool_calls
             .iter()
             .map(|tc| {
-                let mut call_obj: HashMap<String, Value16> = HashMap::new();
+                let mut call_obj: hudhudscript_bytecode::ObjMap = hudhudscript_bytecode::ObjMap::default();
                 call_obj.insert("id".to_string(), Value16::string(tc.id.clone()));
                 call_obj.insert("name".to_string(), Value16::string(tc.name.clone()));
                 call_obj.insert(

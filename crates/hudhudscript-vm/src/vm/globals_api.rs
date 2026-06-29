@@ -1,4 +1,5 @@
 use crate::vm::VM;
+use hudhudscript_bytecode::interner::SymbolId;
 use hudhudscript_bytecode::Value16;
 
 impl VM {
@@ -25,17 +26,21 @@ impl VM {
     /// thread stack limit for recursion-heavy scripts).
     #[inline(never)]
     pub(crate) fn set_global<V: Into<Value16>>(&mut self, name: &str, value: V) {
-        self.globals.insert(name.to_string(), value.into());
+        let sym = hudhudscript_bytecode::interner::intern(name);
+        self.globals.insert(sym, value.into());
     }
 
     /// now only globals remain.)
     pub(crate) fn remove_var(&mut self, name: &str) {
-        self.globals.remove(name);
+        if let Some(sym) = hudhudscript_bytecode::interner::try_resolve_id(name) {
+            self.globals.remove(&SymbolId(sym));
+        }
     }
 
-    /// Define a variable in the global namespace (for external injection).
+    /// Define a global variable by name (for external injection).
     pub fn define_global(&mut self, name: String, value: Value16) {
-        self.globals.insert(name, value);
+        let sym = hudhudscript_bytecode::interner::intern(&name);
+        self.globals.insert(sym, value);
     }
 
     /// Read a global variable by name (for testing / introspection).
@@ -53,7 +58,7 @@ impl VM {
     /// Iterate over all globals. Used by REPL's `:vars` command after the
     /// AST interpreter was retired. Excludes nothing — callers can filter
     /// out native-function markers themselves.
-    pub fn all_globals(&self) -> impl Iterator<Item = (&String, &Value16)> {
+    pub fn all_globals(&self) -> impl Iterator<Item = (&SymbolId, &Value16)> {
         self.globals.iter()
     }
 }

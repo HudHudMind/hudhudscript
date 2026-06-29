@@ -82,11 +82,8 @@ pub mod compile_codes {
 
     pub fn type_error(s: impl Into<String>) -> Error {
         let s = s.into();
-        Error::new(
-            ErrorCode::CompileGeneric,
-            format!("Type error: {}", s),
-        )
-        .with_context("message", s)
+        Error::new(ErrorCode::CompileGeneric, format!("Type error: {}", s))
+            .with_context("message", s)
     }
 
     pub fn unsupported_feature_at(msg: impl Into<String>, pos: LocalPos) -> Error {

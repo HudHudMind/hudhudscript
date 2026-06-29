@@ -1,0 +1,25 @@
+let size = 150;
+let a = []; let b = []; let c = [];
+for (let i = 0; i < size; i = i + 1) {
+    let row_a = []; let row_b = []; let row_c = [];
+    for (let j = 0; j < size; j = j + 1) {
+        row_a.push(i + j);
+        row_b.push(i - j);
+        row_c.push(0);
+    }
+    a.push(row_a);
+    b.push(row_b);
+    c.push(row_c);
+}
+
+for (let i = 0; i < size; i = i + 1) {
+    for (let j = 0; j < size; j = j + 1) {
+        let sum = 0;
+        for (let k = 0; k < size; k = k + 1) {
+            sum = sum + a[i][k] * b[k][j];
+        }
+        c[i][j] = sum;
+    }
+}
+print(c[0][0]);
+print(c[size - 1][size - 1]);

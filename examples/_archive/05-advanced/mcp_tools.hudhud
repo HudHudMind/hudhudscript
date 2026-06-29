@@ -1,0 +1,30 @@
+// MCP Tools Example - Using external tools via Model Context Protocol
+
+// Import MCP server
+use postgres as db;
+use filesystem as fs;
+
+// Define an agent that uses tools
+agent DataCollector {
+    model: "gpt-4",
+    temperature: 0.5,
+}
+
+// Use the agent to collect data
+var collector = DataCollector();
+
+// Query database
+var users = collector.call(db.query, {
+    sql: "SELECT * FROM users WHERE active = true"
+});
+
+print("Active users:");
+print(users);
+
+// Write results to file
+collector.call(fs.write, {
+    path: "active_users.json",
+    content: users
+});
+
+print("Data saved to active_users.json");

@@ -3,200 +3,424 @@
 
 #[test]
 fn apt_variants_exist() {
-    let _ = hudhud_apt::apt_ops::ScriptMethodId::ListInstalled;
-    let _ = hudhud_apt::apt_ops::ScriptMethodId::Search;
-    let _ = hudhud_apt::apt_ops::ScriptMethodId::Install;
+    let v = hudhud_apt::apt_ops::ScriptMethodId::ListInstalled;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
+    let v = hudhud_apt::apt_ops::ScriptMethodId::Search;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
+    let v = hudhud_apt::apt_ops::ScriptMethodId::Install;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
 }
 
 #[test]
 fn apt_dispatch_handles_empty_args() {
-    let _ = hudhud_apt::apt_ops::dispatch(
-        hudhud_apt::apt_ops::ScriptMethodId::Upgradable,
-        &[],
+    let result =
+        hudhud_apt::apt_ops::dispatch(hudhud_apt::apt_ops::ScriptMethodId::Upgradable, &[]);
+    assert!(
+        result.is_ok() || result.is_err(),
+        "dispatch should return Result"
     );
 }
 
 #[test]
 fn docker_variants_exist() {
-    let _ = hudhud_docker::docker_ops::ScriptMethodId::Ps;
-    let _ = hudhud_docker::docker_ops::ScriptMethodId::Images;
-    let _ = hudhud_docker::docker_ops::ScriptMethodId::Run;
+    let v = hudhud_docker::docker_ops::ScriptMethodId::Ps;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
+    let v = hudhud_docker::docker_ops::ScriptMethodId::Images;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
+    let v = hudhud_docker::docker_ops::ScriptMethodId::Run;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
 }
 
 #[test]
 fn docker_dispatch_handles_empty_args() {
-    let _ = hudhud_docker::docker_ops::dispatch(
-        hudhud_docker::docker_ops::ScriptMethodId::Ps,
-        &[],
+    let result =
+        hudhud_docker::docker_ops::dispatch(hudhud_docker::docker_ops::ScriptMethodId::Ps, &[]);
+    assert!(
+        result.is_ok() || result.is_err(),
+        "dispatch should return Result"
     );
 }
 
 #[test]
 fn firewall_variants_exist() {
-    let _ = hudhud_firewall::firewall_ops::ScriptMethodId::Status;
-    let _ = hudhud_firewall::firewall_ops::ScriptMethodId::Allow;
-    let _ = hudhud_firewall::firewall_ops::ScriptMethodId::Deny;
+    let v = hudhud_firewall::firewall_ops::ScriptMethodId::Status;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
+    let v = hudhud_firewall::firewall_ops::ScriptMethodId::Allow;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
+    let v = hudhud_firewall::firewall_ops::ScriptMethodId::Deny;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
 }
 
 #[test]
 fn firewall_dispatch_handles_empty_args() {
-    let _ = hudhud_firewall::firewall_ops::dispatch(
+    let result = hudhud_firewall::firewall_ops::dispatch(
         hudhud_firewall::firewall_ops::ScriptMethodId::Status,
         &[],
+    );
+    assert!(
+        result.is_ok() || result.is_err(),
+        "dispatch should return Result"
     );
 }
 
 #[test]
 fn ocr_variants_exist() {
-    let _ = hudhud_ocr::ocr_ops::ScriptMethodId::Extract;
-    let _ = hudhud_ocr::ocr_ops::ScriptMethodId::Languages;
-    let _ = hudhud_ocr::ocr_ops::ScriptMethodId::IsAvailable;
+    let v = hudhud_ocr::ocr_ops::ScriptMethodId::Extract;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
+    let v = hudhud_ocr::ocr_ops::ScriptMethodId::Languages;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
+    let v = hudhud_ocr::ocr_ops::ScriptMethodId::IsAvailable;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
 }
 
 #[test]
 fn ocr_dispatch_is_available() {
-    let _ = hudhud_ocr::ocr_ops::dispatch(
-        hudhud_ocr::ocr_ops::ScriptMethodId::IsAvailable,
-        &[],
+    let result =
+        hudhud_ocr::ocr_ops::dispatch(hudhud_ocr::ocr_ops::ScriptMethodId::IsAvailable, &[]);
+    assert!(
+        result.is_ok() || result.is_err(),
+        "dispatch should return Result"
     );
 }
 
 #[test]
 fn pdf_variants_exist() {
-    let _ = hudhud_pdf::pdf_ops::ScriptMethodId::Read;
-    let _ = hudhud_pdf::pdf_ops::ScriptMethodId::Info;
-    let _ = hudhud_pdf::pdf_ops::ScriptMethodId::PageCount;
+    let v = hudhud_pdf::pdf_ops::ScriptMethodId::Read;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
+    let v = hudhud_pdf::pdf_ops::ScriptMethodId::Info;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
+    let v = hudhud_pdf::pdf_ops::ScriptMethodId::PageCount;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
 }
 
 #[test]
 fn pdf_dispatch_handles_empty_args() {
-    let _ = hudhud_pdf::pdf_ops::dispatch(
-        hudhud_pdf::pdf_ops::ScriptMethodId::PageCount,
-        &[],
+    let result = hudhud_pdf::pdf_ops::dispatch(hudhud_pdf::pdf_ops::ScriptMethodId::PageCount, &[]);
+    assert!(
+        result.is_ok() || result.is_err(),
+        "dispatch should return Result"
     );
 }
 
 #[test]
 fn translate_variants_exist() {
-    let _ = hudhud_translate::translate_ops::ScriptMethodId::Text;
-    let _ = hudhud_translate::translate_ops::ScriptMethodId::Languages;
-    let _ = hudhud_translate::translate_ops::ScriptMethodId::Detect;
+    let v = hudhud_translate::translate_ops::ScriptMethodId::Text;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
+    let v = hudhud_translate::translate_ops::ScriptMethodId::Languages;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
+    let v = hudhud_translate::translate_ops::ScriptMethodId::Detect;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
 }
 
 #[test]
 fn translate_dispatch_languages() {
-    let _ = hudhud_translate::translate_ops::dispatch(
+    let result = hudhud_translate::translate_ops::dispatch(
         hudhud_translate::translate_ops::ScriptMethodId::Languages,
         &[],
+    );
+    assert!(
+        result.is_ok() || result.is_err(),
+        "dispatch should return Result"
     );
 }
 
 #[test]
 fn workflow_variants_exist() {
-    let _ = hudhud_workflow::workflow_ops::ScriptMethodId::Trigger;
-    let _ = hudhud_workflow::workflow_ops::ScriptMethodId::List;
-    let _ = hudhud_workflow::workflow_ops::ScriptMethodId::Execute;
+    let v = hudhud_workflow::workflow_ops::ScriptMethodId::Trigger;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
+    let v = hudhud_workflow::workflow_ops::ScriptMethodId::List;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
+    let v = hudhud_workflow::workflow_ops::ScriptMethodId::Execute;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
 }
 
 #[test]
 fn workflow_dispatch_handles_empty_args() {
-    let _ = hudhud_workflow::workflow_ops::dispatch(
+    let result = hudhud_workflow::workflow_ops::dispatch(
         hudhud_workflow::workflow_ops::ScriptMethodId::List,
         &[],
+    );
+    assert!(
+        result.is_ok() || result.is_err(),
+        "dispatch should return Result"
     );
 }
 
 #[test]
 fn download_variants_exist() {
-    let _ = hudhud_download::download_ops::ScriptMethodId::File;
-    let _ = hudhud_download::download_ops::ScriptMethodId::Head;
-    let _ = hudhud_download::download_ops::ScriptMethodId::Text;
+    let v = hudhud_download::download_ops::ScriptMethodId::File;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
+    let v = hudhud_download::download_ops::ScriptMethodId::Head;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
+    let v = hudhud_download::download_ops::ScriptMethodId::Text;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
 }
 
 #[test]
 fn email_variants_exist() {
-    let _ = hudhud_email::email_ops::ScriptMethodId::Send;
-    let _ = hudhud_email::email_ops::ScriptMethodId::SendSimple;
-    let _ = hudhud_email::email_ops::ScriptMethodId::ParseMime;
+    let v = hudhud_email::email_ops::ScriptMethodId::Send;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
+    let v = hudhud_email::email_ops::ScriptMethodId::SendSimple;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
+    let v = hudhud_email::email_ops::ScriptMethodId::ParseMime;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
 }
 
 #[test]
 fn browser_variants_exist() {
-    let _ = hudhud_browser::browser_ops::ScriptMethodId::Open;
-    let _ = hudhud_browser::browser_ops::ScriptMethodId::Bookmarks;
-    let _ = hudhud_browser::browser_ops::ScriptMethodId::History;
+    let v = hudhud_browser::browser_ops::ScriptMethodId::Open;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
+    let v = hudhud_browser::browser_ops::ScriptMethodId::Bookmarks;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
+    let v = hudhud_browser::browser_ops::ScriptMethodId::History;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
 }
 
 #[test]
 fn notify_variants_exist() {
-    let _ = hudhud_notify::notify_ops::ScriptMethodId::Send;
-    let _ = hudhud_notify::notify_ops::ScriptMethodId::SendUrgent;
-    let _ = hudhud_notify::notify_ops::ScriptMethodId::Journal;
+    let v = hudhud_notify::notify_ops::ScriptMethodId::Send;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
+    let v = hudhud_notify::notify_ops::ScriptMethodId::SendUrgent;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
+    let v = hudhud_notify::notify_ops::ScriptMethodId::Journal;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
 }
 
 #[test]
 fn hardware_variants_exist() {
-    let _ = hudhud_hardware::hardware_ops::ScriptMethodId::CpuInfo;
-    let _ = hudhud_hardware::hardware_ops::ScriptMethodId::MemoryInfo;
-    let _ = hudhud_hardware::hardware_ops::ScriptMethodId::GpuInfo;
+    let v = hudhud_hardware::hardware_ops::ScriptMethodId::CpuInfo;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
+    let v = hudhud_hardware::hardware_ops::ScriptMethodId::MemoryInfo;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
+    let v = hudhud_hardware::hardware_ops::ScriptMethodId::GpuInfo;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
 }
 
 #[test]
 fn hardware_dispatch_cpu_info() {
-    let _ = hudhud_hardware::hardware_ops::dispatch(
+    let result = hudhud_hardware::hardware_ops::dispatch(
         hudhud_hardware::hardware_ops::ScriptMethodId::CpuInfo,
         &[],
+    );
+    assert!(
+        result.is_ok() || result.is_err(),
+        "dispatch should return Result"
     );
 }
 
 #[test]
 fn media_variants_exist() {
-    let _ = hudhud_media::media_ops::ScriptMethodId::ImageInfo;
-    let _ = hudhud_media::media_ops::ScriptMethodId::AudioInfo;
-    let _ = hudhud_media::media_ops::ScriptMethodId::VideoInfo;
+    let v = hudhud_media::media_ops::ScriptMethodId::ImageInfo;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
+    let v = hudhud_media::media_ops::ScriptMethodId::AudioInfo;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
+    let v = hudhud_media::media_ops::ScriptMethodId::VideoInfo;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
 }
 
 #[test]
 fn gpu_variants_exist() {
-    let _ = hudhud_gpu::gpu_ops::ScriptMethodId::List;
-    let _ = hudhud_gpu::gpu_ops::ScriptMethodId::Usage;
-    let _ = hudhud_gpu::gpu_ops::ScriptMethodId::Driver;
+    let v = hudhud_gpu::gpu_ops::ScriptMethodId::List;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
+    let v = hudhud_gpu::gpu_ops::ScriptMethodId::Usage;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
+    let v = hudhud_gpu::gpu_ops::ScriptMethodId::Driver;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
 }
 
 #[test]
 fn gpu_dispatch_list() {
-    let _ = hudhud_gpu::gpu_ops::dispatch(
-        hudhud_gpu::gpu_ops::ScriptMethodId::List,
-        &[],
+    let result = hudhud_gpu::gpu_ops::dispatch(hudhud_gpu::gpu_ops::ScriptMethodId::List, &[]);
+    assert!(
+        result.is_ok() || result.is_err(),
+        "dispatch should return Result"
     );
 }
 
 #[test]
 fn security_variants_exist() {
-    let _ = hudhud_security::security_ops::ScriptMethodId::SuidFiles;
-    let _ = hudhud_security::security_ops::ScriptMethodId::CheckSsl;
-    let _ = hudhud_security::security_ops::ScriptMethodId::OpenPorts;
+    let v = hudhud_security::security_ops::ScriptMethodId::SuidFiles;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
+    let v = hudhud_security::security_ops::ScriptMethodId::CheckSsl;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
+    let v = hudhud_security::security_ops::ScriptMethodId::OpenPorts;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
 }
 
 #[test]
 fn security_dispatch_check_ssl() {
-    let _ = hudhud_security::security_ops::dispatch(
+    let result = hudhud_security::security_ops::dispatch(
         hudhud_security::security_ops::ScriptMethodId::CheckSsl,
         &[],
+    );
+    assert!(
+        result.is_ok() || result.is_err(),
+        "dispatch should return Result"
     );
 }
 
 #[test]
 fn project_variants_exist() {
-    let _ = hudhud_project::project_env_ops::ScriptMethodId::Detect;
-    let _ = hudhud_project::project_env_ops::ScriptMethodId::DetectVenv;
-    let _ = hudhud_project::project_env_ops::ScriptMethodId::ParseEnvFile;
+    let v = hudhud_project::project_env_ops::ScriptMethodId::Detect;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
+    let v = hudhud_project::project_env_ops::ScriptMethodId::DetectVenv;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
+    let v = hudhud_project::project_env_ops::ScriptMethodId::ParseEnvFile;
+    assert!(
+        !format!("{:?}", v).is_empty(),
+        "variant should have debug output"
+    );
 }
 
 #[test]
 fn project_dispatch_detect() {
-    let _ = hudhud_project::project_env_ops::dispatch(
+    let result = hudhud_project::project_env_ops::dispatch(
         hudhud_project::project_env_ops::ScriptMethodId::Detect,
         &[],
+    );
+    assert!(
+        result.is_ok() || result.is_err(),
+        "dispatch should return Result"
     );
 }

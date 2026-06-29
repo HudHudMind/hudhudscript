@@ -1,0 +1,18 @@
+function modPow(base, exp, mod) {
+    let result = 1 % mod;
+    let b = base % mod;
+    while (exp > 0) {
+        if (exp % 2 == 1) {
+            result = (result * b) % mod;
+        }
+        b = (b * b) % mod;
+        exp = exp / 2;
+    }
+    return result;
+}
+
+let total = 0;
+for (let i = 1; i <= 10000; i = i + 1) {
+    total = total + modPow(i, 12345, 1000000007);
+}
+print("total=" + total);

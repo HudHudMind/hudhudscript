@@ -1,0 +1,72 @@
+// Council Test — Sequential + Parallel + Competitive
+// Çalıştır: hudhud examples/council_test.hudhud
+
+provider DeepSeekChat {
+    apiKey: env("DEEPSEEK_API_KEY"),
+    type: "deepseek",
+    model: "deepseek-chat"
+}
+
+provider OllamaQwen {
+    baseUrl: "http://192.168.1.7:11434/v1",
+    apiKey: "",
+    type: "ollama",
+    model: "qwen2.5-coder:3b"
+}
+
+provider OllamaGranite {
+    baseUrl: "http://192.168.1.7:11434/v1",
+    apiKey: "",
+    type: "ollama",
+    model: "granite-code:3b"
+}
+
+agent Mimar {
+    provider: DeepSeekChat,
+    role: "architect"
+}
+
+agent Gelistirici {
+    provider: OllamaQwen,
+    role: "developer"
+}
+
+agent SyntaxKontrol {
+    provider: OllamaGranite,
+    role: "linter"
+}
+
+// ── Sequential Council ────────────────────────────────────────────────────────
+council KodKonseyi {
+    members: [Mimar, Gelistirici, SyntaxKontrol],
+    strategy: "sequential"
+}
+
+yaz("=== Sequential Council ===")
+let sonuc = KodKonseyi.call({
+    prompt: "Python'da basit bir HTTP server yaz, sadece kod ver"
+})
+
+herbir(sonuc.responses içinde cevap) {
+    yaz("\n[" + cevap.agent + " / " + cevap.role + "]")
+    yaz(cevap.response)
+}
+
+yaz("\n=== Final Karar ===")
+yaz(sonuc.decision)
+yaz("Toplam üye: " + sonuc.member_count)
+
+// ── Parallel Council ─────────────────────────────────────────────────────────
+council ParalelKonsey {
+    members: [Mimar, Gelistirici],
+    strategy: "parallel"
+}
+
+yaz("\n=== Parallel Council (hepsi aynı anda) ===")
+let paralel = ParalelKonsey.call({
+    prompt: "Rust'ta bir HashMap örneği yaz"
+})
+
+herbir(paralel.responses içinde cevap) {
+    yaz("[" + cevap.agent + "]: " + cevap.response)
+}

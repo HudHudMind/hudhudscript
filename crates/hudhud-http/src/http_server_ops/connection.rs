@@ -1,9 +1,97 @@
 use super::helpers::*;
 use super::ServerState;
+use hudhudscript_errors::HudHudResult;
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpListener;
 use std::sync::{Arc, Mutex};
+
+// ── ParsedRequest — reusable HTTP request parse result ──────────────────
+
+/// Parsed HTTP/1.1 request, reusable by `hudhud-web` (Kural 7).
+#[derive(Debug, Clone)]
+pub struct ParsedRequest {
+    pub method: String,
+    pub path: String,
+    pub query: String,
+    pub body: String,
+    pub headers: HashMap<String, String>,
+}
+
+/// Parse an HTTP/1.1 request from a buffered TCP stream.
+/// Consumes request line, headers, and Content-Length body.
+pub fn parse_http_request(
+    stream: &mut std::net::TcpStream,
+) -> HudHudResult<ParsedRequest> {
+    stream
+        .set_read_timeout(Some(std::time::Duration::from_secs(30)))
+        .ok();
+
+    let mut reader = BufReader::new(&*stream);
+
+    // ── request line ────────────────────────────────────────────────
+    let mut request_line = String::new();
+    reader
+        .read_line(&mut request_line)
+        .map_err(|e| runtime_error(format!("read request line: {}", e)))?;
+    let request_line = request_line.trim().to_string();
+    if request_line.is_empty() {
+        return Err(runtime_error("empty request line"));
+    }
+
+    let parts: Vec<&str> = request_line.split_whitespace().collect();
+    if parts.len() < 2 {
+        return Err(runtime_error("malformed request line"));
+    }
+
+    let method = parts[0].to_uppercase();
+    let raw_path = parts[1].to_string();
+    let (path, query_string) = match raw_path.find('?') {
+        Some(idx) => (&raw_path[..idx], &raw_path[idx + 1..]),
+        None => (raw_path.as_str(), ""),
+    };
+
+    // ── headers ─────────────────────────────────────────────────────
+    let mut headers: HashMap<String, String> = HashMap::new();
+    let mut content_length: usize = 0;
+    loop {
+        let mut line = String::new();
+        reader
+            .read_line(&mut line)
+            .map_err(|e| runtime_error(format!("read header: {}", e)))?;
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            break;
+        }
+        if let Some(idx) = trimmed.find(':') {
+            let key = trimmed[..idx].trim().to_lowercase();
+            let val = trimmed[idx + 1..].trim().to_string();
+            if key == "content-length" {
+                content_length = val.parse().unwrap_or(0);
+            }
+            headers.insert(key, val);
+        }
+    }
+
+    // ── body ────────────────────────────────────────────────────────
+    let body = if content_length > 0 {
+        let mut buf = vec![0u8; content_length];
+        match reader.read_exact(&mut buf) {
+            Ok(()) => String::from_utf8_lossy(&buf).to_string(),
+            Err(_) => String::new(),
+        }
+    } else {
+        String::new()
+    };
+
+    Ok(ParsedRequest {
+        method: method.to_string(),
+        path: path.to_string(),
+        query: query_string.to_string(),
+        body,
+        headers,
+    })
+}
 
 // Cross-platform raw handle
 #[cfg(unix)]
@@ -50,69 +138,24 @@ pub(crate) fn accept_loop(fd: RawHandle, state: Arc<Mutex<ServerState>>) {
 }
 
 fn handle_connection(mut stream: std::net::TcpStream, state: Arc<Mutex<ServerState>>) {
-    stream
-        .set_read_timeout(Some(std::time::Duration::from_secs(30)))
-        .ok();
-
     let peer_addr = stream
         .peer_addr()
         .map(|a| a.to_string())
         .unwrap_or_else(|_| "unknown".to_string());
 
-    let mut reader = BufReader::new(&stream);
-
-    let mut request_line = String::new();
-    if reader.read_line(&mut request_line).is_err() {
-        return;
-    }
-    let request_line = request_line.trim().to_string();
-    if request_line.is_empty() {
-        return;
-    }
-
-    let parts: Vec<&str> = request_line.split_whitespace().collect();
-    if parts.len() < 2 {
-        write_response(&mut stream, 400, "text/plain", "Bad Request");
-        return;
-    }
-
-    let method = parts[0].to_uppercase();
-    let raw_path = parts[1].to_string();
-    let (path, query_string) = match raw_path.find('?') {
-        Some(idx) => (&raw_path[..idx], &raw_path[idx + 1..]),
-        None => (raw_path.as_str(), ""),
+    let parsed = match parse_http_request(&mut stream) {
+        Ok(p) => p,
+        Err(_) => {
+            write_response(&mut stream, 400, "text/plain", "Bad Request");
+            return;
+        }
     };
 
-    let mut headers: HashMap<String, String> = HashMap::new();
-    let mut content_length: usize = 0;
-    loop {
-        let mut line = String::new();
-        if reader.read_line(&mut line).is_err() {
-            break;
-        }
-        let trimmed = line.trim();
-        if trimmed.is_empty() {
-            break;
-        }
-        if let Some(idx) = trimmed.find(':') {
-            let key = trimmed[..idx].trim().to_lowercase();
-            let val = trimmed[idx + 1..].trim().to_string();
-            if key == "content-length" {
-                content_length = val.parse().unwrap_or(0);
-            }
-            headers.insert(key, val);
-        }
-    }
-
-    let body = if content_length > 0 {
-        let mut buf = vec![0u8; content_length];
-        match reader.read_exact(&mut buf) {
-            Ok(()) => String::from_utf8_lossy(&buf).to_string(),
-            Err(_) => String::new(),
-        }
-    } else {
-        String::new()
-    };
+    let method = parsed.method;
+    let path = parsed.path;
+    let query_string = parsed.query;
+    let body = parsed.body;
+    let headers = parsed.headers;
 
     let st = state.lock().unwrap();
 
@@ -127,7 +170,7 @@ fn handle_connection(mut stream: std::net::TcpStream, state: Arc<Mutex<ServerSta
         }
     }
 
-    if let Some(route) = find_matching_route(&st.routes, &method, path) {
+    if let Some(route) = find_matching_route(&st.routes, &method, &path) {
         let status = route.response_status;
         let content_type = route.response_content_type.clone();
 
@@ -161,7 +204,7 @@ fn handle_connection(mut stream: std::net::TcpStream, state: Arc<Mutex<ServerSta
             let pattern = route.pattern.clone();
             drop(st);
 
-            let params = extract_path_params(&pattern, path);
+            let params = extract_path_params(&pattern, &path);
             let mut request_obj: HashMap<String, String> = HashMap::new();
             request_obj.insert("method".to_string(), method.clone());
             request_obj.insert("path".to_string(), path.to_string());
@@ -283,7 +326,7 @@ fn run_websocket_loop(mut stream: std::net::TcpStream, sec_ws_key: &str) {
     }
 }
 
-fn write_response(stream: &mut std::net::TcpStream, status: u16, content_type: &str, body: &str) {
+pub fn write_response(stream: &mut std::net::TcpStream, status: u16, content_type: &str, body: &str) {
     let reason = match status {
         200 => "OK",
         201 => "Created",

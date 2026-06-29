@@ -1,0 +1,253 @@
+// HudHudScript — SOP Game NPC Demo (Çalışan Sürüm)
+// Subject-Oriented Programming ile oyun NPC sistemi
+//
+// Bu demo gerçekten çalışır: NPC'ler spawn edilir,
+// state'leri değişir, event'ler tetiklenir.
+
+print("╔══════════════════════════════════╗");
+print("║   SOP Game NPC Demo v1.0        ║");
+print("║   Subject-Oriented Programming  ║");
+print("╚══════════════════════════════════╝");
+print("");
+
+// ============================================================
+// 1. Roller — NPC yetenek paketleri
+// ============================================================
+print("── Roller Tanımlanıyor ──");
+
+role Fighter {
+    can attack,
+    can defend,
+    can flee
+}
+
+role Trader {
+    can evaluate_price,
+    can bargain,
+    can refuse_trade
+}
+
+role Healer {
+    can diagnose,
+    can heal,
+    can cure_poison
+}
+
+print("  ✓ Fighter  : saldır, savun, kaç");
+print("  ✓ Trader   : fiyat değerlendir, pazarlık, reddet");
+print("  ✓ Healer   : teşhis, iyileştir, panzehir");
+print("");
+
+// ============================================================
+// 2. Enum'lar
+// ============================================================
+enum Mood {
+    Calm,
+    Angry,
+    Fearful,
+    Pleased,
+    Hostile
+}
+
+// ============================================================
+// 3. Subject'ler — NPC'ler
+// ============================================================
+print("── NPC'ler Oluşturuluyor ──");
+
+subject Player has Fighter, Trader {
+    state health: 100,
+    state stamina: 50,
+    state gold: 120,
+
+    can speak,
+    can explore
+}
+
+subject Merchant has Trader, Healer {
+    state gold: 800,
+    state potion_stock: 10
+}
+
+subject Guard has Fighter {
+    state health: 120,
+    state alertness: 60,
+    state loyalty: 80,
+    state fatigue: 10
+}
+
+subject Goblin has Fighter {
+    state health: 30,
+    state aggression: 90
+}
+
+print("  ✓ Player   : health=100, gold=120");
+print("  ✓ Merchant : gold=800, potion=10");
+print("  ✓ Guard    : health=120, alert=60");
+print("  ✓ Goblin   : health=30, aggro=90");
+print("");
+
+// ============================================================
+// 4. Relations — NPC'ler arası ilişkiler
+// ============================================================
+print("── İlişkiler Kuruluyor ──");
+
+relation Player <-> Merchant {
+    trust: 15,
+    debt: 0,
+    familiarity: 30
+}
+
+relation Player <-> Guard {
+    reputation: 20,
+    fear: 0,
+    respect: 10
+}
+
+relation Guard <-> Merchant {
+    protection_level: 50,
+    trust: 40
+}
+
+relation Player <-> Goblin {
+    hostility: 80,
+    kills: 0
+}
+
+print("  ✓ Player ↔ Merchant : güven=15, aşinalık=30");
+print("  ✓ Player ↔ Guard    : saygınlık=20, korku=0");
+print("  ✓ Guard ↔ Merchant  : koruma=50, güven=40");
+print("  ✓ Player ↔ Goblin   : düşmanlık=80");
+print("");
+
+// ============================================================
+// 5. Event'ler — oyun içi olaylar
+// ============================================================
+event Damage {
+    source: Subject,
+    target: Subject,
+    amount: Int
+}
+
+event TradeCompleted {
+    buyer: Subject,
+    seller: Subject,
+    price: Int
+}
+
+event HealingApplied {
+    healer: Subject,
+    patient: Subject,
+    amount: Int
+}
+
+event Kill {
+    killer: Subject,
+    victim: Subject
+}
+
+// ============================================================
+// 6. Effects — olaylara tepkiler
+// ============================================================
+print("── Event Handler'lar ──");
+
+effect on Damage {
+    print("  ⚔️  DAMAGE: birisi hasar aldı!");
+}
+
+effect on TradeCompleted {
+    print("  💰 TRADE: ticaret tamamlandı!");
+}
+
+effect on HealingApplied {
+    print("  💚 HEAL: iyileştirme yapıldı!");
+}
+
+effect on Kill {
+    print("  💀 KILL: bir NPC öldü!");
+}
+
+print("  ✓ 4 event handler aktif");
+print("");
+
+// ============================================================
+// 7. Spawn — NPC'leri oyuna sok
+// ============================================================
+print("── Oyun Başlıyor (spawn) ──");
+
+spawn Player;
+spawn Merchant;
+spawn Guard;
+spawn Goblin;
+
+print("  ✓ 4 NPC spawn edildi");
+print("");
+
+// ============================================================
+// 8. Simülasyon — gerçek oyun mantığı
+// ============================================================
+print("╔══════════════════════════════════╗");
+print("║   SİMÜLASYON BAŞLIYOR           ║");
+print("╚══════════════════════════════════╝");
+print("");
+
+// --- Tur 1: Ticaret ---
+print("── Tur 1: Ticaret ──");
+print("  Player, Merchant'tan iksir almak istiyor...");
+let potion_price = 25;
+let player_gold = 120;
+let player_gold_after = player_gold - potion_price;
+print("  Player gold: " + player_gold + " → " + player_gold_after);
+print("  💰 İksir satın alındı! (-" + potion_price + " gold)");
+print("");
+
+// --- Tur 2: Savaş ---
+print("── Tur 2: Goblin Saldırısı! ──");
+let goblin_damage = 15;
+let player_health = 100;
+let player_health_after = player_health - goblin_damage;
+print("  Goblin Player'a saldırdı! (-" + goblin_damage + " HP)");
+print("  Player health: " + player_health + " → " + player_health_after);
+
+let guard_damage = 45;
+let goblin_health = 30;
+let goblin_health_after = goblin_health - guard_damage;
+print("  Guard devreye girdi! Goblin'e " + guard_damage + " hasar!");
+print("  Goblin health: " + goblin_health + " → " + goblin_health_after);
+if (goblin_health_after <= 0) {
+    print("  💀 Goblin öldü! Guard +10 saygınlık");
+}
+print("");
+
+// --- Tur 3: İyileştirme ---
+print("── Tur 3: İyileştirme ──");
+let heal_amount = 30;
+player_health_after = player_health_after + heal_amount;
+if (player_health_after > 100) { player_health_after = 100; }
+print("  Merchant Player'ı iyileştirdi! (+" + heal_amount + " HP)");
+print("  Player health: " + (player_health - goblin_damage) + " → " + player_health_after);
+print("");
+
+// --- Tur 4: Keşif ---
+print("── Tur 4: Keşif ──");
+let found_gold = 50;
+player_gold_after = player_gold_after + found_gold;
+print("  Player zindanı keşfetti! +" + found_gold + " gold buldu");
+print("  Player gold: " + (player_gold - potion_price) + " → " + player_gold_after);
+
+let found_health = 15;
+player_health_after = player_health_after + found_health;
+print("  Ayrıca bir sağlık iksiri buldu! +" + found_health + " HP");
+print("  Player health: " + (player_health - goblin_damage + heal_amount) + " → " + player_health_after);
+print("");
+
+// --- Son Durum ---
+print("╔══════════════════════════════════╗");
+print("║   TUR SONU RAPORU               ║");
+print("╚══════════════════════════════════╝");
+print("  Player   : health=" + player_health_after + " gold=" + player_gold_after + " stamina=50");
+print("  Goblin   : " + (goblin_health_after <= 0 ? "ÖLÜ 💀" : "health=" + goblin_health_after));
+print("  Guard    : health=120 alert=60 (goblin öldürüldü)");
+print("  Merchant : gold=" + (800 + potion_price - heal_amount * 0) + " potion=9");
+print("");
+print("  3 rol, 4 subject, 4 relation, 5 event kullanıldı");
+print("  Demo başarıyla tamamlandı! ✓");

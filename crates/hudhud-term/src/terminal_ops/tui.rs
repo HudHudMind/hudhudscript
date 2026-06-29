@@ -64,7 +64,7 @@ pub(crate) fn tui_read_key() -> HudHudResult<Value16> {
 
 /// terminal.size() — returns {rows, cols} object with terminal dimensions.
 pub(crate) fn tui_size() -> HudHudResult<Value16> {
-    let mut map = HashMap::new();
+    let mut map = hudhudscript_bytecode::ObjMap::default();
     map.insert(
         "rows".to_string(),
         Value16::number(get_terminal_height() as f64),

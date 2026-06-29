@@ -3,15 +3,25 @@
 use hudhudscript_parser::parse;
 
 #[test]
-fn test_common_utilities() {
-    // Structure test
-    assert!(true);
+fn test_parse_empty_agent_declaration() {
+    let source = "agent EmptyAgent {}";
+    let result = parse(source);
+    assert!(
+        result.is_ok(),
+        "Empty agent should parse: {:?}",
+        result.err()
+    );
 }
 
 #[test]
-fn test_agent_parsing_structure() {
-    // Structure test - actual parsing would require full parser setup
-    assert!(true);
+fn test_parse_agent_with_single_field() {
+    let source = "agent MinAgent { model: \"test\" }";
+    let result = parse(source);
+    assert!(
+        result.is_ok(),
+        "Minimal agent should parse: {:?}",
+        result.err()
+    );
 }
 
 // ── Real parser tests for declarations ──────────────────────────────────

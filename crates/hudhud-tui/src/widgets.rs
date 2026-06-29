@@ -45,7 +45,7 @@ fn parse_color(s: &str) -> Color {
     }
 }
 
-fn parse_style(cfg: &HashMap<String, Value16>) -> Style {
+fn parse_style(cfg: &hudhudscript_bytecode::ObjMap) -> Style {
     let mut style = Style::default();
     if let Some(fg) = cfg.get("fg").and_then(|v| v.as_string()) { style = style.fg(parse_color(&fg)); }
     if let Some(bg) = cfg.get("bg").and_then(|v| v.as_string()) { style = style.bg(parse_color(&bg)); }
@@ -55,7 +55,7 @@ fn parse_style(cfg: &HashMap<String, Value16>) -> Style {
     style
 }
 
-fn parse_area(cfg: &HashMap<String, Value16>) -> Rect {
+fn parse_area(cfg: &hudhudscript_bytecode::ObjMap) -> Rect {
     Rect {
         x: cfg.get("x").and_then(|v| v.as_int()).unwrap_or(0) as u16,
         y: cfg.get("y").and_then(|v| v.as_int()).unwrap_or(0) as u16,
@@ -64,7 +64,7 @@ fn parse_area(cfg: &HashMap<String, Value16>) -> Rect {
     }
 }
 
-fn get_config(args: &[Value16]) -> CompileResult<HashMap<String, Value16>> {
+fn get_config(args: &[Value16]) -> CompileResult<hudhudscript_bytecode::ObjMap> {
     args.first()
         .and_then(|v| v.as_object())
         .cloned()

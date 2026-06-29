@@ -311,6 +311,8 @@ impl ErrorCode {
     pub const TypeUndefinedFunction: ErrorCode = ErrorCode(307);
     pub const TypeUndefinedVariable: ErrorCode = ErrorCode(308);
     pub const TypeWrongArgumentCount: ErrorCode = ErrorCode(309);
+    pub const TypeBigIntNumberMix: ErrorCode = ErrorCode(310);
+    pub const TypeThreadTransferUnsupported: ErrorCode = ErrorCode(311);
     pub const ValidationCustom: ErrorCode = ErrorCode(310);
     pub const ValidationInvalidFormat: ErrorCode = ErrorCode(311);
     pub const ValidationInvalidLength: ErrorCode = ErrorCode(312);

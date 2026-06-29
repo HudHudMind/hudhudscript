@@ -1,0 +1,20 @@
+// Arrow Function Example
+// Demonstrates lambda expressions
+
+// Simple arrow function
+var add = (x, y) => x + y;
+var result1 = add(5, 3);
+
+// Single parameter (no parentheses needed in grammar)
+var square = (x) => x * x;
+var result2 = square(4);
+
+// Arrow function with block body
+var greet = (name) => {
+  var message = `Hello, ${name}!`;
+  return message;
+};
+var result3 = greet("Ali");
+
+// Arrow function as callback (when we have array methods)
+var numbers = [1, 2, 3, 4, 5];

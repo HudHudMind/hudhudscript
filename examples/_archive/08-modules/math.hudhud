@@ -1,0 +1,20 @@
+// math.hudhud - Simple math utilities module
+
+var PI = 3.14159;
+var E = 2.71828;
+
+function add(a, b) {
+    return a + b;
+}
+
+function multiply(a, b) {
+    return a * b;
+}
+
+function square(x) {
+    return multiply(x, x);
+}
+
+function circle_area(radius) {
+    return PI * square(radius);
+}

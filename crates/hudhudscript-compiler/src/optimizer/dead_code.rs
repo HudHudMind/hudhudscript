@@ -20,8 +20,7 @@ pub fn dead_code_eliminate(instructions: &mut Vec<Instruction>) {
             | Instruction::FinallyExit(o) => {
                 jump_targets.insert(abs_target(ip, *o));
             }
-            Instruction::JumpIfFalse { offset, .. }
-            | Instruction::JumpIfTrue { offset, .. } => {
+            Instruction::JumpIfFalse { offset, .. } | Instruction::JumpIfTrue { offset, .. } => {
                 jump_targets.insert(abs_target(ip, *offset as i32));
             }
             Instruction::IterNext { end_offset, .. } => {
@@ -32,9 +31,7 @@ pub fn dead_code_eliminate(instructions: &mut Vec<Instruction>) {
             // reachable only via the fused branch (e.g., the outer LoopEnd
             // after a `while (left <= right) { ... break; }` body).
             Instruction::IntLeRRJumpIfFalse { offset, .. }
-            | Instruction::IntLtRRJumpIfFalse { offset, .. }
-            | Instruction::IntLeRIJumpIfFalse { offset, .. }
-            | Instruction::IntLtRIJumpIfFalse { offset, .. } => {
+            | Instruction::IntLtRRJumpIfFalse { offset, .. } => {
                 jump_targets.insert(abs_target(ip, *offset as i32));
             }
             _ => {}
@@ -45,7 +42,7 @@ pub fn dead_code_eliminate(instructions: &mut Vec<Instruction>) {
     while i < instructions.len() {
         let is_terminal = matches!(
             instructions[i],
-            Instruction::Jump(_) | Instruction::Return { .. } | Instruction::Throw { .. }
+            Instruction::Jump(_) | Instruction::Return { .. }
         );
         if !is_terminal {
             i += 1;
@@ -99,9 +96,7 @@ pub fn dead_code_eliminate(instructions: &mut Vec<Instruction>) {
                         *offset = o32 as i16;
                     }
                     Instruction::IntLeRRJumpIfFalse { offset, .. }
-                    | Instruction::IntLtRRJumpIfFalse { offset, .. }
-                    | Instruction::IntLeRIJumpIfFalse { offset, .. }
-                    | Instruction::IntLtRIJumpIfFalse { offset, .. } => {
+                    | Instruction::IntLtRRJumpIfFalse { offset, .. } => {
                         let mut o32 = *offset as i32;
                         adjust(&mut o32, ip);
                         *offset = o32 as i16;
@@ -132,8 +127,7 @@ pub fn dead_code_eliminate_with_positions(
             | Instruction::FinallyExit(o) => {
                 jump_targets.insert(abs_target(ip, *o));
             }
-            Instruction::JumpIfFalse { offset, .. }
-            | Instruction::JumpIfTrue { offset, .. } => {
+            Instruction::JumpIfFalse { offset, .. } | Instruction::JumpIfTrue { offset, .. } => {
                 jump_targets.insert(abs_target(ip, *offset as i32));
             }
             Instruction::IterNext { end_offset, .. } => {
@@ -141,9 +135,7 @@ pub fn dead_code_eliminate_with_positions(
             }
             // Fused compare+branch instructions also encode jump targets.
             Instruction::IntLeRRJumpIfFalse { offset, .. }
-            | Instruction::IntLtRRJumpIfFalse { offset, .. }
-            | Instruction::IntLeRIJumpIfFalse { offset, .. }
-            | Instruction::IntLtRIJumpIfFalse { offset, .. } => {
+            | Instruction::IntLtRRJumpIfFalse { offset, .. } => {
                 jump_targets.insert(abs_target(ip, *offset as i32));
             }
             _ => {}
@@ -154,7 +146,7 @@ pub fn dead_code_eliminate_with_positions(
     while i < instructions.len() {
         let is_terminal = matches!(
             instructions[i],
-            Instruction::Jump(_) | Instruction::Return { .. } | Instruction::Throw { .. }
+            Instruction::Jump(_) | Instruction::Return { .. }
         );
         if !is_terminal {
             i += 1;
@@ -198,8 +190,7 @@ pub fn dead_code_eliminate_with_positions(
                     }
                     Instruction::IntLeRRJumpIfFalse { offset, .. }
                     | Instruction::IntLtRRJumpIfFalse { offset, .. }
-                    | Instruction::IntLeRIJumpIfFalse { offset, .. }
-                    | Instruction::IntLtRIJumpIfFalse { offset, .. } => {
+                    | Instruction::IntCmpRRJumpIfFalse { offset, .. } => {
                         let mut o32 = *offset as i32;
                         adjust(&mut o32, ip);
                         *offset = o32 as i16;

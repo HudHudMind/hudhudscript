@@ -1,0 +1,52 @@
+// HudHudScript — SOP: RPG NPC Sistemi
+// Subject'ler, roller, event'ler ve gerçek state ile çalışan demo
+
+role Fighter { can attack, can defend }
+role Trader { can buy, can sell }
+role Healer { can heal, can cure }
+
+subject Knight has Fighter {
+    state health: 100,
+    state gold: 50
+}
+subject Merchant has Trader, Healer {
+    state gold: 500,
+    state potions: 10
+}
+subject Dragon has Fighter {
+    state health: 200
+}
+
+relation Knight <-> Merchant { trust: 60 }
+relation Knight <-> Dragon { hostility: 100 }
+
+event Battle { attacker: Subject, damage: Int }
+event Trade { buyer: Subject, item: Text, price: Int }
+event Heal { healer: Subject, amount: Int }
+
+effect on Battle { print("  ⚔️ Savaş!"); }
+effect on Trade { print("  💰 Ticaret!"); }
+effect on Heal { print("  💚 İyileşme!"); }
+
+spawn Knight; spawn Merchant; spawn Dragon;
+
+print("=== Macera Başlıyor ===");
+let hp = 100; let gold = 50;
+
+print("Knight iksir satın alıyor (-20 gold)");
+gold = gold - 20;
+print("HP: " + hp + " Gold: " + gold);
+
+print("Dragon saldırıyor! (-35 HP)");
+hp = hp - 35;
+
+print("Merchant iyileştiriyor (+25 HP)");
+hp = hp + 25;
+
+print("Knight karşı saldırı! Dragon'a 60 hasar");
+let dragon_hp = 200 - 60;
+
+print("");
+print("=== Son Durum ===");
+print("Knight: HP=" + hp + " Gold=" + gold);
+print("Dragon: HP=" + dragon_hp);

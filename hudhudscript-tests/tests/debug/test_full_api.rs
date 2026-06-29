@@ -3,13 +3,21 @@
 use hudhudscript_debug::*;
 
 #[test]
-
 #[test]
 fn breakpoint_kind_variants() {
     assert!(matches!(BreakpointKind::Normal, BreakpointKind::Normal));
-    assert!(matches!(BreakpointKind::Conditional("x>0".into()), BreakpointKind::Conditional(_)));
-    assert!(matches!(BreakpointKind::Exception(None), BreakpointKind::Exception(_)));
-    assert!(matches!(BreakpointKind::Logpoint("x={x}".into()), BreakpointKind::Logpoint(_)));
+    assert!(matches!(
+        BreakpointKind::Conditional("x>0".into()),
+        BreakpointKind::Conditional(_)
+    ));
+    assert!(matches!(
+        BreakpointKind::Exception(None),
+        BreakpointKind::Exception(_)
+    ));
+    assert!(matches!(
+        BreakpointKind::Logpoint("x={x}".into()),
+        BreakpointKind::Logpoint(_)
+    ));
 }
 
 #[test]
@@ -26,23 +34,20 @@ fn breakpoint_new() {
 
 #[test]
 fn breakpoint_with_condition() {
-    let bp = Breakpoint::new(2, "test.hud".into(), 10)
-        .with_condition("x > 5".into());
+    let bp = Breakpoint::new(2, "test.hud".into(), 10).with_condition("x > 5".into());
     assert!(bp.is_conditional());
     assert_eq!(bp.condition, Some("x > 5".to_string()));
 }
 
 #[test]
 fn breakpoint_with_log_message() {
-    let bp = Breakpoint::new(3, "test.hud".into(), 15)
-        .with_log_message("x = {x}".into());
+    let bp = Breakpoint::new(3, "test.hud".into(), 15).with_log_message("x = {x}".into());
     assert!(bp.is_logpoint());
 }
 
 #[test]
 fn breakpoint_as_exception() {
-    let bp = Breakpoint::new(4, "test.hud".into(), 20)
-        .as_exception(Some("TypeError".into()));
+    let bp = Breakpoint::new(4, "test.hud".into(), 20).as_exception(Some("TypeError".into()));
     assert!(bp.is_exception());
 }
 

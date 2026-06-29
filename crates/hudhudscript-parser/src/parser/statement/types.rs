@@ -235,7 +235,7 @@ pub(super) fn parse_class_member(pair: Pair<Rule>) -> ParseResult<ClassMember> {
 pub(super) fn parse_class_field(pair: Pair<Rule>) -> ParseResult<ClassMember> {
     let span = pair_to_span(&pair);
 
-    let mut access = AccessModifier::Private;
+    let mut access = AccessModifier::Public;
     let mut is_static = false;
     let mut name = String::new();
     let mut initializer = None;
@@ -273,7 +273,7 @@ pub(super) fn parse_class_field(pair: Pair<Rule>) -> ParseResult<ClassMember> {
 pub(super) fn parse_class_method(pair: Pair<Rule>) -> ParseResult<ClassMember> {
     let span = pair_to_span(&pair);
 
-    let mut access = AccessModifier::Private;
+    let mut access = AccessModifier::Public;
     let mut is_static = false;
     let mut name = String::new();
     let mut params = Vec::new();

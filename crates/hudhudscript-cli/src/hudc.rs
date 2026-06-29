@@ -140,7 +140,7 @@ fn run(cli: &Cli) -> Result<(), HudcError> {
             println!("     [{}] {:?}", i, instruction);
         }
         println!("   Functions:");
-        for (name, chunk) in bytecode.functions.borrow().iter() {
+        for (name, chunk) in bytecode.function_names.borrow().iter().map(|(n, &i)| (n.clone(), bytecode.functions.borrow()[i].clone())) {
             println!("     Function: {} (local_count={}, local_names={:?})", name, chunk.local_count, chunk.local_names);
             for (i, instruction) in chunk.instructions.iter().enumerate() {
                 println!("       [{}] {:?}", i, instruction);

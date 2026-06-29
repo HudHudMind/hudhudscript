@@ -56,7 +56,7 @@ pub fn evict_if_full(servers: &mut HashMap<String, ServerRecord>) {
 }
 
 pub fn tool_to_value(t: &ToolRecord) -> Value16 {
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     obj.insert("name".to_string(), Value16::string(t.name.clone()));
     obj.insert(
         "description".to_string(),
@@ -66,14 +66,14 @@ pub fn tool_to_value(t: &ToolRecord) -> Value16 {
             .unwrap_or_else(Value16::null),
     );
     let schema = if t.input_schema_json.is_empty() {
-        let mut m = HashMap::new();
+        let mut m = hudhudscript_bytecode::ObjMap::default();
         m.insert("type".to_string(), Value16::string("object".to_string()));
         Value16::object(m)
     } else {
         match serde_json::from_str::<serde_json::Value>(&t.input_schema_json) {
             Ok(j) => crate::json::serde_to_value(&j),
             Err(_) => {
-                let mut m = HashMap::new();
+                let mut m = hudhudscript_bytecode::ObjMap::default();
                 m.insert("type".to_string(), Value16::string("object".to_string()));
                 Value16::object(m)
             }
@@ -85,7 +85,7 @@ pub fn tool_to_value(t: &ToolRecord) -> Value16 {
 }
 
 pub fn resource_to_value(r: &ResourceRecord) -> Value16 {
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     obj.insert("uri".to_string(), Value16::string(r.uri.clone()));
     obj.insert("name".to_string(), Value16::string(r.name.clone()));
     obj.insert(
@@ -107,7 +107,7 @@ pub fn resource_to_value(r: &ResourceRecord) -> Value16 {
 }
 
 pub fn server_to_value(s: &ServerRecord) -> Value16 {
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     obj.insert("name".to_string(), Value16::string(s.name.clone()));
     obj.insert("version".to_string(), Value16::string(s.version.clone()));
     obj.insert(

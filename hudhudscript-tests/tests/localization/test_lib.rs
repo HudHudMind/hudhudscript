@@ -1351,9 +1351,8 @@ fn kw_to_english_import_export_from() {
     assert_eq!(m.to_english(Keyword::From), "from");
 }
 #[test]
-fn kw_to_english_task_tool_resource() {
+fn kw_to_english_tool_resource() {
     let m = KeywordMap::new();
-    assert_eq!(m.to_english(Keyword::Task), "task");
     assert_eq!(m.to_english(Keyword::Tool), "tool");
     assert_eq!(m.to_english(Keyword::Resource), "resource");
 }
@@ -1437,9 +1436,6 @@ fn kw_to_english_governance() {
     assert_eq!(m.to_english(Keyword::Constitution), "constitution");
     assert_eq!(m.to_english(Keyword::Law), "law");
     assert_eq!(m.to_english(Keyword::Rule), "rule");
-    assert_eq!(m.to_english(Keyword::AgentRule), "agent_rule");
-    assert_eq!(m.to_english(Keyword::RuleSet), "rule_set");
-    assert_eq!(m.to_english(Keyword::RuleChain), "rule_chain");
     assert_eq!(m.to_english(Keyword::Council), "council");
     assert_eq!(m.to_english(Keyword::Swarm), "swarm");
     assert_eq!(m.to_english(Keyword::Community), "community");

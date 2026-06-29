@@ -1,0 +1,19 @@
+function meanVariance(arr) {
+    let n = arr.length;
+    let sum = 0.0;
+    let sumsq = 0.0;
+    for (let i = 0; i < n; i = i + 1) {
+        sum = sum + arr[i];
+        sumsq = sumsq + arr[i] * arr[i];
+    }
+    let mean = sum / n;
+    let variance = sumsq / n - mean * mean;
+    return [mean, variance];
+}
+
+let values = [];
+for (let i = 0; i < 100000; i = i + 1) {
+    values.push(i * 0.001);
+}
+let result = meanVariance(values);
+print("mean=" + result[0] + " variance=" + result[1]);

@@ -104,6 +104,9 @@ pub fn optimize_with_positions(
                 loop_payloads,
                 source_positions,
             );
+            // P7: IntModI+IntCmpI chain fusion — must run AFTER
+            // fuse_slot_immediate which creates IntModI/IntCmpI
+            fuse_intmodcmpi_chain(instructions, loop_payloads, source_positions);
             // A2: super-instruction fusion (bigram collapse) runs AFTER
             // `fuse_slot_immediate_with_positions` so it can see the
             // post-I6 shape (`IntSubISlot + Call` etc).  Safe in Basic
@@ -125,10 +128,10 @@ pub fn optimize_with_positions(
                 source_positions,
             );
             dead_code_eliminate_with_positions(instructions, source_positions);
-            peephole_optimize_with_positions(instructions, source_positions);
+            peephole_optimize_with_positions(instructions, loop_payloads, source_positions);
             loop_invariant_motion(instructions, constants, loop_payloads, source_positions);
             // I6: fusion runs AFTER LICM (see brief): LICM relies on
-            // unfused `LoadLocal` shapes to reason about invariance; once
+            // unfused local-register load shapes to reason about invariance; once
             // LICM has finished, fusing the remaining hot triples is safe.
             fuse_slot_immediate_with_positions(
                 instructions,
@@ -137,6 +140,8 @@ pub fn optimize_with_positions(
                 loop_payloads,
                 source_positions,
             );
+            // P7: IntModI+IntCmpI chain fusion — after I6
+            fuse_intmodcmpi_chain(instructions, loop_payloads, source_positions);
             // A2: super-instruction fusion — must run AFTER I6 so it can
             // pick up the `IntSubISlot + Call` bigram that I6 produces.
             fuse_super_instructions_with_positions(
@@ -147,7 +152,8 @@ pub fn optimize_with_positions(
                 source_positions,
             );
             if let Some(funcs) = bytecode_functions {
-                inline_small_functions(instructions, funcs, call_payloads);
+                // P7 deferred: inline needs Arc-mutability for function bodies.
+                // inline_small_functions(instructions, funcs, call_payloads);
             }
         }
     }

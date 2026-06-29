@@ -16,7 +16,7 @@ pub(super) fn type_error(expected: &str, got: &str, context: &str) -> Error {
 }
 
 pub(super) fn obj_str(
-    obj: &HashMap<String, Value16>,
+    obj: &hudhudscript_bytecode::ObjMap,
     key: &str,
     ctx: &str,
 ) -> HudHudResult<String> {
@@ -32,7 +32,7 @@ pub(super) fn obj_str(
     }
 }
 
-pub(super) fn obj_str_opt(obj: &HashMap<String, Value16>, key: &str) -> Option<String> {
+pub(super) fn obj_str_opt(obj: &hudhudscript_bytecode::ObjMap, key: &str) -> Option<String> {
     obj.get(key).and_then(|v| v.as_str()).map(|s| s.to_string())
 }
 

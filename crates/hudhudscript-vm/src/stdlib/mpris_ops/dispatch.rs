@@ -57,7 +57,7 @@ pub fn mpris_previous(args: &[Value16]) -> SharedResult<Value16> {
 
 pub fn mpris_status(args: &[Value16]) -> SharedResult<Value16> {
     let dest = resolve_player(args, 0, "mpris.status")?;
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
 
     let status_raw = get_player_property(&dest, "PlaybackStatus").unwrap_or_default();
     obj.insert(

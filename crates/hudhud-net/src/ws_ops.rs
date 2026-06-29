@@ -76,7 +76,7 @@ fn shared_to_serde(val: &Value16) -> serde_json::Value {
         let map: serde_json::Map<String, serde_json::Value> = obj
             .iter()
             .map(|(k, v)| (k.clone(), shared_to_serde(v)))
-            .collect();
+            .map(|(k, v)| (k.to_string(), v)).collect();
         serde_json::Value::Object(map)
     } else {
         serde_json::Value::Null
@@ -111,7 +111,7 @@ fn ws_connect(args: &[Value16]) -> HudHudResult<Value16> {
         .unwrap()
         .insert(id, Arc::new(Mutex::new(WsConn::Client(socket))));
 
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     obj.insert(
         "__type".to_string(),
         Value16::string("WebSocket".to_string()),
@@ -163,7 +163,7 @@ fn ws_recv(args: &[Value16]) -> HudHudResult<Value16> {
     }
     .map_err(|e| runtime_error(format!("ws.recv error: {}", e)))?;
 
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     match msg {
         tungstenite::Message::Text(text) => {
             obj.insert("type".to_string(), Value16::string("text".to_string()));
@@ -235,7 +235,7 @@ fn ws_serve(args: &[Value16]) -> HudHudResult<Value16> {
     let id = NEXT_ID.fetch_add(1, Ordering::SeqCst);
     srv_store().lock().unwrap().insert(id, listener);
 
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     obj.insert(
         "__type".to_string(),
         Value16::string("WebSocketServer".to_string()),
@@ -262,7 +262,7 @@ fn ws_accept(args: &[Value16]) -> HudHudResult<Value16> {
     let cid = NEXT_ID.fetch_add(1, Ordering::SeqCst);
     conn_store().lock().unwrap().insert(cid, Arc::new(Mutex::new(WsConn::Server(ws))));
 
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     obj.insert(
         "__type".to_string(),
         Value16::string("WebSocket".to_string()),

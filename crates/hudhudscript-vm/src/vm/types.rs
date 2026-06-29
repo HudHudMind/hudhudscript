@@ -43,13 +43,15 @@ pub(crate) enum NumericSlot {
 }
 
 #[inline(always)]
-#[inline(always)]
 pub(crate) fn numeric_slot(v: Option<&Value16>) -> Option<NumericSlot> {
-    v.and_then(|val| {
-        val.as_int()
-            .map(NumericSlot::Int)
-            .or_else(|| val.as_number().map(NumericSlot::Num))
-    })
+    let val = v?;
+    if let Some(i) = val.as_int() {
+        return Some(NumericSlot::Int(i));
+    }
+    if let Some(n) = val.as_number() {
+        return Some(NumericSlot::Num(n));
+    }
+    None
 }
 
 /// Result of `exec_end_finally` — either jump to an IP or return from
@@ -105,8 +107,8 @@ pub(crate) enum PackedResult {
     Advance,
     /// Instruction handled; set ip to the given target.
     Jump(usize),
-    /// Hit a Return instruction.
-    Return,
+    /// Hit a Return instruction. `src` is the register holding the value.
+    Return { src: u8 },
     /// Opcode not handled by the fast path; fall through to the full match.
     Fallthrough,
 }
@@ -124,9 +126,20 @@ pub(crate) enum StepAction {
     /// The handler already set `ip` to a new target; caller must NOT advance.
     Jumped,
     /// A `Return` instruction fired — exit the loop with `hit_return = true`.
-    Return,
-    /// K10: Function call — trampoline pushes frame and continues with callee
-    Call { func_sym: SymId, arg_count: u8, first_arg: u8, dst: u8 },
+    /// `src` names the register holding the return value; the loop driver copies
+    /// it to `last_return` and, when there is no pending finally block, to the
+    /// caller's destination register.
+    Return { src: u8 },
+    /// K10: Function call — trampoline pushes frame and continues with callee.
+    /// `ip` is the instruction pointer of the Call site; used for IC cache lookup.
+    Call {
+        func_sym: SymId,
+        function_idx: u32,
+        arg_count: u8,
+        first_arg: u8,
+        dst: u8,
+        ip: usize,
+    },
     /// Fallback `Break` (no loop header available) — exit the loop with
     /// `hit_return` unchanged (false).
     Break,
@@ -191,7 +204,11 @@ pub(crate) fn remaining_stack_bytes() -> usize {
     STACK_BOTTOM.with(|bottom| {
         let b = bottom.get();
         if b != 0 {
-            return if current_sp > b { current_sp - b } else { usize::MAX };
+            return if current_sp > b {
+                current_sp - b
+            } else {
+                usize::MAX
+            };
         }
         // First call: resolve stack bottom via pthread (cached thereafter).
         unsafe {
@@ -208,7 +225,11 @@ pub(crate) fn remaining_stack_bytes() -> usize {
             libc::pthread_attr_destroy(&mut attr);
             let sb = stack_addr as usize;
             bottom.set(sb);
-            if current_sp > sb { current_sp - sb } else { usize::MAX }
+            if current_sp > sb {
+                current_sp - sb
+            } else {
+                usize::MAX
+            }
         }
     })
 }

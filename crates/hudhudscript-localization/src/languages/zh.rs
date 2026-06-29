@@ -16,7 +16,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
 
     // Agent system
     map.insert("代理".to_string(), Keyword::Agent);
-    map.insert("任务".to_string(), Keyword::Task);
     map.insert("工具".to_string(), Keyword::Tool);
     map.insert("资源".to_string(), Keyword::Resource);
     map.insert("mcp".to_string(), Keyword::Mcp);
@@ -70,7 +69,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
     map.insert("执行".to_string(), Keyword::Execute);
     // Native Chinese translations for governance/intent/flow keywords
     map.insert("动作".to_string(), Keyword::Action);
-    map.insert("代理规则".to_string(), Keyword::AgentRule);
     map.insert("代理状态".to_string(), Keyword::AgentState);
     map.insert("允许".to_string(), Keyword::Allow);
     map.insert("广播".to_string(), Keyword::Broadcast);
@@ -107,8 +105,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
     map.insert("检察官".to_string(), Keyword::Prosecutor);
     map.insert("提供者".to_string(), Keyword::Provider);
     map.insert("节奏".to_string(), Keyword::Rhythm);
-    map.insert("规则链".to_string(), Keyword::RuleChain);
-    map.insert("规则集".to_string(), Keyword::RuleSet);
     map.insert("音阶".to_string(), Keyword::Scale);
     map.insert("状态".to_string(), Keyword::State);
     map.insert("状态机".to_string(), Keyword::StateMachine);

@@ -94,6 +94,10 @@ impl Compiler {
     pub fn add_call_payload(&mut self, sym: SymId, arg_count: u8) -> u32 {
         self.bytecode.add_call_payload(sym, arg_count)
     }
+    /// P6: add a call payload with a known builtin method ID.
+    pub fn add_call_payload_with_builtin(&mut self, sym: SymId, arg_count: u8, builtin_idx: u32) -> u32 {
+        self.bytecode.add_call_payload_with_builtin(sym, arg_count, builtin_idx)
+    }
     pub fn add_two_sym_payload(&mut self, first: u32, second: u32) -> u32 {
         self.bytecode.add_two_sym_payload(first, second)
     }

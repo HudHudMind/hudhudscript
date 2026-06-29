@@ -101,7 +101,7 @@ fn test_stationary_series() {
 }
 
 #[test]
-fn test_cluster_users_stub() {
+fn test_cluster_users() {
     let data = vec![
         ("user1".into(), vec![100.0, 200.0]),
         ("user2".into(), vec![150.0, 250.0]),
@@ -115,7 +115,7 @@ fn test_cluster_users_stub() {
 }
 
 #[test]
-fn test_cost_regressor_stub() {
+fn test_cost_regressor() {
     let cost = CostRegressor::predict(&[10.0, 20.0, 30.0]);
     // OLS regression: slope=10, intercept=10, predict at x=3 → 40.0
     assert_eq!(cost, 40.0);

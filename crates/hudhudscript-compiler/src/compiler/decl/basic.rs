@@ -24,7 +24,7 @@ impl Compiler {
     ) -> CompileResult<()> {
         use std::collections::HashMap;
         use hudhudscript_ast::Expr;
-        let mut agent_obj = HashMap::new();
+        let mut agent_obj = hudhudscript_bytecode::ObjMap::default();
         agent_obj.insert("name".to_string(), Value16::string(name.to_string()));
         for (key, value_expr) in fields {
             let val = if key == "provider" {
@@ -41,7 +41,7 @@ impl Compiler {
         }
         let idx = self.bytecode.add_constant(Value16::object(agent_obj));
         { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_instr(Instruction::Move { dst: 255, src: tr }); }
-        self.emit_decl_store("agent", name);
+        self.emit_decl_store("agent", name, 255);
         Ok(())
     }
 
@@ -75,7 +75,7 @@ impl Compiler {
         fields: &[(String, Expr)],
     ) -> CompileResult<()> {
         use std::collections::HashMap;
-        let mut provider_obj = HashMap::new();
+        let mut provider_obj = hudhudscript_bytecode::ObjMap::default();
         provider_obj.insert("name".to_string(), Value16::string(name.to_string()));
         for (key, value_expr) in fields {
             let val = self.provider_field_value(value_expr);
@@ -91,7 +91,7 @@ impl Compiler {
         }
         let idx = self.bytecode.add_constant(Value16::object(provider_obj));
         { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_instr(Instruction::Move { dst: 255, src: tr }); }
-        self.emit_decl_store("provider", name);
+        self.emit_decl_store("provider", name, 255);
         Ok(())
     }
 
@@ -133,7 +133,7 @@ impl Compiler {
     ) -> CompileResult<()> {
         self.compile_decl_fields("event", name, fields)?;
         // SOP: also register event schema for validation
-        self.emit_decl_store("event_schema", name);
+        self.emit_decl_store("event_schema", name, 255);
         Ok(())
     }
 

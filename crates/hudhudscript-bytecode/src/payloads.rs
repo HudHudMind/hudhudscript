@@ -1,4 +1,4 @@
-use crate::{Bytecode, Instruction, Repr, SymId, Value16};
+use crate::{Bytecode, Instruction, ObjMap, Repr, SymId, Value16};
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -7,6 +7,7 @@ pub struct LoopPayload {
     pub start: u32,
     pub end: u32,
 }
+
 
 /// Payload for `Instruction::EnumDecl(u32)` (CROSS-2a).
 ///
@@ -101,7 +102,46 @@ pub struct DestructObjectPayload {
 pub struct CallPayload {
     pub sym: SymId,
     pub arg_count: u8,
+    /// P1: direct function index into `Bytecode::functions`.
+    /// `u32::MAX` means "not resolved yet" / slow path.
+    #[serde(default = "call_payload_sentinel")]
+    pub function_idx: u32,
+    /// P6: builtin method ID for fast dispatch (Math.floor, JSON.stringify, etc.).
+    /// `u32::MAX` means "not a known builtin" — use slow string-based path.
+    #[serde(default = "call_payload_sentinel")]
+    pub builtin_method_idx: u32,
 }
+
+/// P6: Builtin method IDs for fast dispatch without string parsing.
+/// Each ID uniquely identifies a (module, method) pair known at compile time.
+pub mod builtin_method {
+    /// Sentinel: not a known builtin method
+    pub const NONE: u32 = u32::MAX;
+    /// Math methods
+    pub const MATH_FLOOR: u32 = 0;
+    pub const MATH_SQRT: u32 = 1;
+    pub const MATH_ABS: u32 = 2;
+    pub const MATH_CEIL: u32 = 3;
+    pub const MATH_ROUND: u32 = 4;
+
+    /// Resolve a known (module, method) pair to a builtin method ID.
+    /// Returns `NONE` if not recognized.
+    pub fn resolve(module: &str, method: &str) -> u32 {
+        match module {
+            "Math" => match method {
+                "floor" => MATH_FLOOR,
+                "sqrt" => MATH_SQRT,
+                "abs" => MATH_ABS,
+                "ceil" => MATH_CEIL,
+                "round" => MATH_ROUND,
+                _ => NONE,
+            },
+            _ => NONE,
+        }
+    }
+}
+
+fn call_payload_sentinel() -> u32 { u32::MAX }
 
 /// Payload for the 4 two-symbol instructions (CROSS-2d).
 ///
@@ -136,6 +176,26 @@ pub struct SuperInstrPayload {
     /// Unused by `IntSubCall1` / `IntAddCall1` (set to 0).
     #[serde(default)]
     pub offset: i32,
+    /// P3-A2: Call dst register for `IntSubCall1`/`IntAddCall1`. Default 255 (legacy).
+    #[serde(default = "default_call_dst")]
+    pub call_dst: u32,
+    /// P3-A4: argument register (first_arg) for IntSubCall1/IntAddCall1.
+    /// Legacy payloads default to 1.
+    #[serde(default = "default_arg_reg")]
+    pub arg_reg: u8,
+}
+
+fn default_call_dst() -> u32 { 255 }
+fn default_arg_reg() -> u8 { 1 }
+
+/// GÖREV 5: compare+jump side-table payload for IntLtRRJumpIfFalse /
+/// IntLeRRJumpIfFalse packed dispatch.  Stores two register indices and
+/// a 32-bit target IP so the packed u32 format only needs a 16-bit index.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CmpJumpPayload {
+    pub src1: u8,
+    pub src2: u8,
+    pub target: u32,
 }
 
 /// Payload for the 3 optional-symbol instructions (CROSS-2d).
@@ -201,6 +261,10 @@ pub struct FunctionChunk {
     /// Eliminates per-call name lookup when binding arguments.
     #[serde(default)]
     pub param_slots: Box<[u16]>,
+    /// P1: true when this function has no captures, no async/gen, no finally,
+    /// no class context, and no debug-sensitive ops. Enables fast_call_push_frame.
+    #[serde(default)]
+    pub is_plain_function: bool,
     /// Per-instruction source positions (line, column) for this chunk.
     ///
     /// Parallel to `instructions` — entry `i` corresponds to
@@ -247,6 +311,7 @@ impl FunctionChunk {
 
     /// Push an instruction and keep `source_positions` parallel by
     /// appending `None`. Mirror of [`Bytecode::push_instr`].
+    /// Also pushes a default CallInlineCache entry to keep
     #[inline]
     pub fn push_instr(&mut self, instr: Instruction) {
         self.instructions.push(instr);
@@ -300,11 +365,11 @@ pub struct FunctionData {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClassData {
     pub name: String,
-    pub methods: std::collections::HashMap<String, Value16>,
-    pub fields: std::collections::HashMap<String, Value16>,
+    pub methods: ObjMap,
+    pub fields: ObjMap,
     pub parent: Option<Value16>,
     /// Precomputed method resolution table (flattened parent chain)
-    pub vtable: std::collections::HashMap<String, Value16>,
+    pub vtable: ObjMap,
     /// Per-method access flags: 0=Public, 1=Private, 2=Protected
     #[serde(default)]
     pub method_access: std::collections::HashMap<String, u8>,
@@ -317,7 +382,7 @@ pub struct ClassData {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InstanceData {
     pub class_name: String,
-    pub fields: std::collections::HashMap<String, Value16>,
+    pub fields: ObjMap,
     pub class: Value16,
 }
 
@@ -325,7 +390,7 @@ pub struct InstanceData {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DataData {
     pub type_name: String,
-    pub fields: std::collections::HashMap<String, Value16>,
+    pub fields: ObjMap,
 }
 
 /// Backing storage for `Value::Tool` (MCP tool reference — 2 Strings).

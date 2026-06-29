@@ -31,12 +31,15 @@ impl VM {
         let p = unsafe { *packed.get_unchecked(ip) };
         if p != PACK_SENTINEL {
             match self.dispatch_packed(p, instructions, constants, bytecode, ip)? {
-                PackedResult::Advance => return Ok(StepAction::Advance),
+                PackedResult::Advance => {
+                    *ip_ref = ip + 1;
+                    return Ok(StepAction::Jumped);
+                }
                 PackedResult::Jump(target) => {
                     *ip_ref = target;
                     return Ok(StepAction::Jumped);
                 }
-                PackedResult::Return => return Ok(StepAction::Return),
+                PackedResult::Return { src } => return Ok(StepAction::Return { src }),
                 PackedResult::Fallthrough => { /* fall through to full match */ }
             }
         }
@@ -53,104 +56,139 @@ impl VM {
         // These four instructions account for ~60% of all unpacked
         // dispatches in loop-heavy code (fib, prime, collatz).
         match instr {
-
             Instruction::Return { src } => {
-                self.registers[255] = self.registers[*src as usize];
-                return Ok(StepAction::Return);
+                return Ok(StepAction::Return { src: *src });
+            }
+            Instruction::ReturnConst { const_idx } => {
+                // Use bridge register 255 + function-chunk constants slice
+                self.registers[255] = constants[*const_idx as usize];
+                return Ok(StepAction::Return { src: 255 });
             }
             Instruction::Move { dst, src } => {
                 self.registers[*dst as usize] = self.registers[*src as usize];
-                return Ok(StepAction::Advance);
+                *ip_ref = ip + 1;
+                return Ok(StepAction::Jumped);
             }
-            Instruction::IntAdd { dst, src1, src2 } => {
-                let (t1, p1) = self.registers[*src1 as usize].split_tag();
-                let (t2, p2) = self.registers[*src2 as usize].split_tag();
-                self.registers[*dst as usize] = match (t1, t2) {
-                    (ReprTag::Int, ReprTag::Int) => Value16::int((p1 as i64).wrapping_add(p2 as i64)),
-                    (ReprTag::Number, ReprTag::Number) | (ReprTag::Number, ReprTag::Int) | (ReprTag::Int, ReprTag::Number) => {
-                        let a = if t1 == ReprTag::Int { p1 as i64 as f64 } else { f64::from_bits(p1) };
-                        let b = if t2 == ReprTag::Int { p2 as i64 as f64 } else { f64::from_bits(p2) };
-                        Value16::number(a + b)
-                    }
-                    _ => return Err(Self::runtime_error_with_pos("IntAdd: operands not numeric", bytecode, ip)),
-                };
-                return Ok(StepAction::Advance);
+
+            Instruction::LoadIntConst { dst, const_idx } => {
+                self.registers[*dst as usize] = Value16::int(bytecode.int_constants[*const_idx as usize]);
+                *ip_ref = ip + 1;
+                return Ok(StepAction::Jumped);
             }
+            Instruction::LoadConst { dst, const_idx } => {
+                self.registers[*dst as usize] = constants[*const_idx as usize];
+                *ip_ref = ip + 1;
+                return Ok(StepAction::Jumped);
+            }
+
             Instruction::JumpIfFalse { src, offset } => {
                 if !self.registers[*src as usize].is_truthy() {
                     let new_ip = (ip as i64).wrapping_add(*offset as i64);
                     if new_ip < 0 || new_ip > instructions.len() as i64 {
                         return Err(Self::runtime_error_with_pos(
                             format!("JumpIfFalse out of bounds: ip={} offset={}", ip, offset),
-                            bytecode, ip));
+                            bytecode,
+                            ip,
+                        ));
                     }
                     *ip_ref = new_ip as usize;
                     return Ok(StepAction::Jumped);
                 }
-                return Ok(StepAction::Advance);
+                *ip_ref = ip + 1;
+                return Ok(StepAction::Jumped);
             }
-            Instruction::IntLtRIJumpIfFalse { src, imm, offset } => {
-                let (tag, p) = self.registers[*src as usize].split_tag();
-                let cond = match tag {
-                    ReprTag::Int => (p as i64) < (*imm as i64),
-                    ReprTag::Number => f64::from_bits(p) < (*imm as f64),
-                    _ => return Err(Self::runtime_error_with_pos("IntLtRIJumpIfFalse: src not numeric", bytecode, ip)),
-                };
-                if !cond {
+
+            Instruction::JumpIfTrue { src, offset } => {
+                if self.registers[*src as usize].as_bool().unwrap_or(false) {
                     *ip_ref = (ip as i64).wrapping_add(*offset as i64) as usize;
                     return Ok(StepAction::Jumped);
                 }
-                return Ok(StepAction::Advance);
+                *ip_ref = ip + 1;
+                return Ok(StepAction::Jumped);
             }
-            Instruction::IntLeRIJumpIfFalse { src, imm, offset } => {
-                let (tag, p) = self.registers[*src as usize].split_tag();
-                let cond = match tag {
-                    ReprTag::Int => (p as i64) <= (*imm as i64),
-                    ReprTag::Number => f64::from_bits(p) <= (*imm as f64),
-                    _ => return Err(Self::runtime_error_with_pos("IntLeRIJumpIfFalse: src not numeric", bytecode, ip)),
-                };
-                if !cond {
-                    *ip_ref = (ip as i64).wrapping_add(*offset as i64) as usize;
-                    return Ok(StepAction::Jumped);
-                }
-                return Ok(StepAction::Advance);
+            Instruction::Jump(offset) => {
+                *ip_ref = (ip as i64).wrapping_add(*offset as i64) as usize;
+                return Ok(StepAction::Jumped);
             }
-            Instruction::IntLtRRJumpIfFalse { src1, src2, offset } => {
-                let (t1, p1) = self.registers[*src1 as usize].split_tag();
-                let (t2, p2) = self.registers[*src2 as usize].split_tag();
-                let cond = match (t1, t2) {
-                    (ReprTag::Int, ReprTag::Int) => (p1 as i64) < (p2 as i64),
-                    (ReprTag::Number, ReprTag::Number) | (ReprTag::Int, ReprTag::Number) | (ReprTag::Number, ReprTag::Int) => {
-                        let a = if t1 == ReprTag::Int { p1 as i64 as f64 } else { f64::from_bits(p1) };
-                        let b = if t2 == ReprTag::Int { p2 as i64 as f64 } else { f64::from_bits(p2) };
-                        a < b
+
+            // ── Integer arithmetic hot path (P0) — checked_add/checked_sub ──
+            // Overflow → fall through to slow path (BigInt promotion).
+            // Only handles pure Int+Int (no BigInt, no Float).
+            Instruction::IntAdd { dst, src1, src2 } => {
+                let a = self.registers[*src1 as usize];
+                let b = self.registers[*src2 as usize];
+                if let (Some(x), Some(y)) = (a.as_int(), b.as_int()) {
+                    if let Some(r) = x.checked_add(y) {
+                        self.registers[*dst as usize] = Value16::int(r);
+                        *ip_ref = ip + 1;
+                        return Ok(StepAction::Jumped);
                     }
-                    _ => return Err(Self::runtime_error_with_pos("IntLtRRJumpIfFalse: operands not numeric", bytecode, ip)),
-                };
-                if !cond {
-                    *ip_ref = (ip as i64).wrapping_add(*offset as i64) as usize;
-                    return Ok(StepAction::Jumped);
                 }
-                return Ok(StepAction::Advance);
             }
-            Instruction::IntLeRRJumpIfFalse { src1, src2, offset } => {
-                let (t1, p1) = self.registers[*src1 as usize].split_tag();
-                let (t2, p2) = self.registers[*src2 as usize].split_tag();
-                let cond = match (t1, t2) {
-                    (ReprTag::Int, ReprTag::Int) => (p1 as i64) <= (p2 as i64),
-                    (ReprTag::Number, ReprTag::Number) | (ReprTag::Int, ReprTag::Number) | (ReprTag::Number, ReprTag::Int) => {
-                        let a = if t1 == ReprTag::Int { p1 as i64 as f64 } else { f64::from_bits(p1) };
-                        let b = if t2 == ReprTag::Int { p2 as i64 as f64 } else { f64::from_bits(p2) };
-                        a <= b
+            Instruction::IntSub { dst, src1, src2 } => {
+                let a = self.registers[*src1 as usize];
+                let b = self.registers[*src2 as usize];
+                if let (Some(x), Some(y)) = (a.as_int(), b.as_int()) {
+                    if let Some(r) = x.checked_sub(y) {
+                        self.registers[*dst as usize] = Value16::int(r);
+                        *ip_ref = ip + 1;
+                        return Ok(StepAction::Jumped);
                     }
-                    _ => return Err(Self::runtime_error_with_pos("IntLeRRJumpIfFalse: operands not numeric", bytecode, ip)),
-                };
-                if !cond {
-                    *ip_ref = (ip as i64).wrapping_add(*offset as i64) as usize;
+                }
+            }
+            Instruction::IntAddI { dst, src, imm } => {
+                let a = self.registers[*src as usize];
+                if let Some(x) = a.as_int() {
+                    if let Some(r) = x.checked_add(*imm as i64) {
+                        self.registers[*dst as usize] = Value16::int(r);
+                        *ip_ref = ip + 1;
+                        return Ok(StepAction::Jumped);
+                    }
+                }
+            }
+            Instruction::IntSubI { dst, src, imm } => {
+                let a = self.registers[*src as usize];
+                if let Some(x) = a.as_int() {
+                    if let Some(r) = x.checked_sub(*imm as i64) {
+                        self.registers[*dst as usize] = Value16::int(r);
+                        *ip_ref = ip + 1;
+                        return Ok(StepAction::Jumped);
+                    }
+                }
+            }
+            Instruction::IntCmpIJumpIfFalse {
+                src,
+                imm,
+                op,
+                offset,
+            } => {
+                let a = self.registers[*src as usize];
+                if let Some(x) = a.as_int() {
+                    let cond = match *op {
+                        0 => x < *imm as i64,
+                        1 => x <= *imm as i64,
+                        2 => x > *imm as i64,
+                        3 => x >= *imm as i64,
+                        4 => x == *imm as i64,
+                        5 => x != *imm as i64,
+                        _ => false,
+                    };
+                    if !cond {
+                        let new_ip = (ip as i64).wrapping_add(*offset as i64);
+                        if new_ip < 0 || new_ip > instructions.len() as i64 {
+                            return Err(Self::runtime_error_with_pos(
+                                format!("IntCmpIJumpIfFalse out of bounds: ip={} offset={}", ip, offset),
+                                bytecode, ip,
+                            ));
+                        }
+                        *ip_ref = new_ip as usize;
+                        return Ok(StepAction::Jumped);
+                    }
+                    *ip_ref = ip + 1;
                     return Ok(StepAction::Jumped);
                 }
-                return Ok(StepAction::Advance);
             }
+
             _ => {}
         }
 
@@ -160,6 +198,7 @@ impl VM {
             bytecode,
             ip,
             ip_ref,
+            chunk_ptr: self.current_chunk_ptr,
         };
 
         self.dispatch_unpacked(instr, &mut ctx)
@@ -215,6 +254,7 @@ impl VM {
             | Instruction::NewInstance { .. }
             | Instruction::GetProperty { .. }
             | Instruction::SetProperty { .. }
+            | Instruction::PropertySubAssign { .. }
             | Instruction::LoadModule(_)
             | Instruction::DefineFunction(_) => self.step_classes_modules(instr, ctx),
 
@@ -223,9 +263,11 @@ impl VM {
             | Instruction::Await { .. }
             | Instruction::SuperCall { .. }
             | Instruction::GetStatic(_)
-            | Instruction::ClassStaticDecl(_)
-            | Instruction::Yield { .. }
-            | Instruction::MakeGenerator { .. } => self.step_methods_async_generator(instr, ctx),
+            | Instruction::ClassStaticDecl(_) => self.step_methods_async_generator(instr, ctx),
+
+            Instruction::Yield { .. } | Instruction::MakeGenerator { .. } => {
+                self.step_methods_generator(instr, ctx)
+            }
 
             Instruction::DestructArray(_, _)
             | Instruction::DestructObject(_)
@@ -237,30 +279,38 @@ impl VM {
             | Instruction::IntSubCall1(_)
             | Instruction::IntAddCall1(_)
             | Instruction::IntLeJumpIfFalse(_)
-            | Instruction::IntLtJumpIfFalse(_)
-            | Instruction::IntIncrSlot { .. }
-            | Instruction::IntSubLocalI { .. }
-            | Instruction::IntAddLocalI { .. } => self.step_super_instructions(instr, ctx),
+            | Instruction::IntLtJumpIfFalse(_) => self.step_super_instructions(instr, ctx),
 
             // Register-based VM instructions
             | Instruction::IntAdd { .. }
             | Instruction::IntSub { .. }
-            | Instruction::IntMul { .. }
-            | Instruction::IntAddI { .. }
-            | Instruction::IntSubI { .. }
-            | Instruction::IntMulI { .. }
             | Instruction::IntDivI { .. }
             | Instruction::IntModI { .. }
+            | Instruction::IntModCmpI { .. }
+            | Instruction::IntMul { .. }
+            | Instruction::IntMulI { .. }
+            | Instruction::IntAddI { .. }
+            | Instruction::IntSubI { .. }
             | Instruction::LoadIntConst { .. }
             | Instruction::LoadConst { .. }
             | Instruction::LoadNumConst { .. }
 
             | Instruction::IntLeRRJumpIfFalse { .. }
             | Instruction::IntLtRRJumpIfFalse { .. }
-            | Instruction::IntLeRIJumpIfFalse { .. }
-            | Instruction::IntLtRIJumpIfFalse { .. }
+            | Instruction::IntLtRRJumpPacked(_)
+            | Instruction::IntLeRRJumpPacked(_)
+            | Instruction::IntCmpIJumpIfFalse { .. }
+            | Instruction::IntCmpRRJumpIfFalse { .. }
+            | Instruction::IntAddIJump { .. }
+            | Instruction::LoopEndIntAddIJump { .. }
+            | Instruction::IntSubIJump { .. }
+            | Instruction::IntCmpIJumpIfTrue { .. }
+            | Instruction::ReturnConst { .. }
             | Instruction::IntAddReturn { .. }
             | Instruction::IntSubReturn { .. }
+            | Instruction::IntMulReturn { .. }
+            | Instruction::IntDivReturn { .. }
+            | Instruction::IntCmpIReturn { .. }
             | Instruction::IntCmp { .. }
             | Instruction::IntCmpI { .. }
             | Instruction::NumAdd { .. }
@@ -270,30 +320,61 @@ impl VM {
             | Instruction::NumDivI { .. }
             | Instruction::NumSub { .. }
             | Instruction::NumMul { .. }
+            | Instruction::NumMulAddAssign { .. }
+            | Instruction::NumMulAddIndexed { .. }
+            | Instruction::FloatMulAdd { .. }
+            | Instruction::FloatAdd { .. }
+            | Instruction::FloatMul { .. }
+            | Instruction::IntMulMod { .. }
+            | Instruction::IntMulModI { .. }
+            // P5: NumSqrt intrinsic
+            | Instruction::NumSqrt { .. }
+            // P8: MakeArray2
+            | Instruction::MakeArray2 { .. }
+            | Instruction::StrCharEqRR { .. }
             | Instruction::NumDiv { .. }
             | Instruction::IntDiv { .. }
             | Instruction::IntMod { .. }
             | Instruction::NumMod { .. }
             | Instruction::StrCat { .. }
+            | Instruction::StrCat3 { .. }
             | Instruction::StrCatMut { .. }
+            | Instruction::StringConcat { .. }
+            | Instruction::StringIndexOf { .. }
+            | Instruction::ArrayPushIntConst { .. }
+            | Instruction::ArrayPushConst { .. }
             | Instruction::ArrayPush { .. }
+            // P2: fast path length/pop ops
+            | Instruction::ArrayLen { .. }
+            | Instruction::StringLen { .. }
+            | Instruction::ArrayPop { .. }
+            | Instruction::Index { .. }
+            | Instruction::IndexArray { .. }
+            | Instruction::IndexStringAscii { .. }
+            | Instruction::Index2D { .. }
+            | Instruction::IndexAssign2D { .. }
             | Instruction::IndexAssign { .. }
+            | Instruction::IndexAssignArray { .. }
+            | Instruction::IntMulAddAssign { .. }
             | Instruction::Neg { .. }
             | Instruction::Not { .. }
             | Instruction::Move { .. }
             | Instruction::Return { .. }
-            | Instruction::Index { .. }
             | Instruction::MakeArray { .. }
             | Instruction::MakeObject { .. }
             | Instruction::Call { .. }
-            | Instruction::LoadGlobal { .. }
-            | Instruction::StoreGlobal { .. }
-            | Instruction::DeclGlobal { .. }
             | Instruction::StoreConst { .. }
             | Instruction::StringIndexOf { .. }
             | Instruction::StringContains { .. }
-            // PushReg/PopReg replaced by Move to/from register 255
+            | Instruction::IntCmp { .. }
+            | Instruction::IntCmpI { .. }
+            // register-to-register moves and integer/slot super-instructions
+            // are handled by the fast int/slot dispatcher.
             => self.step_int_slot_super(instr, ctx),
+            Instruction::LoadGlobal { .. }
+            | Instruction::StoreGlobal { .. }
+            | Instruction::StoreGlobalConst { .. }
+            | Instruction::DeclGlobal { .. } => self.step_variables(instr, ctx),
         }
     }
 }

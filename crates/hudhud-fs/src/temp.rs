@@ -34,7 +34,7 @@ pub fn dispatch(method: &str, args: &[Value16]) -> HudHudResult<Value16> {
             let path = file.path().to_string_lossy().to_string();
             let _ = file.into_temp_path();
 
-            let mut result = HashMap::new();
+            let mut result = hudhudscript_bytecode::ObjMap::default();
             result.insert("path".to_string(), Value16::string(path));
             Ok(Value16::object(result))
         }
@@ -53,7 +53,7 @@ pub fn dispatch(method: &str, args: &[Value16]) -> HudHudResult<Value16> {
             let path = dir.path().to_string_lossy().to_string();
             let _ = dir.keep();
 
-            let mut result = HashMap::new();
+            let mut result = hudhudscript_bytecode::ObjMap::default();
             result.insert("path".to_string(), Value16::string(path));
             Ok(Value16::object(result))
         }

@@ -50,20 +50,19 @@ pub enum PromiseState<V> {
 pub struct GeneratorState<V> {
     /// Channel receiver for lazy value production.
     receiver: mpsc::Receiver<V>,
+    pub pending: std::collections::VecDeque<V>,
     /// Values already consumed (kept for toArray / serialization).
     pub buffered: Vec<V>,
     /// Whether the generator has been exhausted.
     done: bool,
+    /// V2-B: VM-side OwnedTree receiver key (None for precomputed).
+    pub yield_id: Option<u64>,
 }
 
 impl<V: Clone> GeneratorState<V> {
     /// Create a new lazy generator state from a channel receiver.
     pub fn new(receiver: mpsc::Receiver<V>) -> Self {
-        Self {
-            receiver,
-            buffered: Vec::new(),
-            done: false,
-        }
+        Self { receiver, pending: std::collections::VecDeque::new(), buffered: Vec::new(), done: false, yield_id: None }
     }
 
     /// Advance the generator by one step, returning the next value or `None`
@@ -71,6 +70,10 @@ impl<V: Clone> GeneratorState<V> {
     pub fn advance(&mut self) -> Option<V> {
         if self.done {
             return None;
+        }
+        if let Some(val) = self.pending.pop_front() {
+            self.buffered.push(val.clone());
+            return Some(val);
         }
         match self.receiver.recv() {
             Ok(val) => {
@@ -91,6 +94,9 @@ impl<V: Clone> GeneratorState<V> {
 
     /// Drain all remaining values and return them combined with buffered ones.
     pub fn collect_all(&mut self) -> Vec<V> {
+        while let Some(val) = self.pending.pop_front() {
+            self.buffered.push(val);
+        }
         while !self.done {
             match self.receiver.recv() {
                 Ok(val) => self.buffered.push(val),
@@ -118,23 +124,7 @@ impl<V> fmt::Debug for GeneratorState<V> {
 /// the VM path and tests that construct generators from a `Vec<V>`).
 impl<V: Send + 'static> From<Vec<V>> for GeneratorState<V> {
     fn from(values: Vec<V>) -> Self {
-        let is_empty = values.is_empty();
-        let (tx, rx) = mpsc::sync_channel(0);
-        // Spawn a thread that sends all pre-computed values then exits.
-        std::thread::spawn(move || {
-            for val in values {
-                if tx.send(val).is_err() {
-                    break; // receiver dropped
-                }
-            }
-        });
-        Self {
-            receiver: rx,
-            buffered: Vec::new(),
-            // If no values were provided, mark as done immediately so
-            // is_done() returns the correct result without requiring a
-            // call to next().
-            done: is_empty,
-        }
+        let (_tx, rx) = mpsc::sync_channel(0);
+        Self { receiver: rx, pending: values.into(), buffered: Vec::new(), done: false, yield_id: None }
     }
 }

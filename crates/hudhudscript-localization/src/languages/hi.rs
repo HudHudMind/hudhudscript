@@ -36,7 +36,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
 
     // Agent system
     map.insert("एजेंट".to_string(), Keyword::Agent);
-    map.insert("कार्य".to_string(), Keyword::Task);
     map.insert("उपकरण".to_string(), Keyword::Tool);
     map.insert("संसाधन".to_string(), Keyword::Resource);
     map.insert("एमसीपी".to_string(), Keyword::Mcp);
@@ -107,7 +106,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
     map.insert("ट्रिगर".to_string(), Keyword::Trigger);
     // Native Hindi translations
     map.insert("क्रिया".to_string(), Keyword::Action);
-    map.insert("एजेंट_नियम".to_string(), Keyword::AgentRule);
     map.insert("एजेंट_अवस्था".to_string(), Keyword::AgentState);
     map.insert("अनुमति_दो".to_string(), Keyword::Allow);
     map.insert("संचार_शैली".to_string(), Keyword::CommunicationStyle);
@@ -120,8 +118,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
     map.insert("अनौपचारिक".to_string(), Keyword::Informal);
     map.insert("इरादा".to_string(), Keyword::Intent);
     map.insert("प्राथमिकता".to_string(), Keyword::Priority);
-    map.insert("नियम_श्रृंखला".to_string(), Keyword::RuleChain);
-    map.insert("नियम_समूह".to_string(), Keyword::RuleSet);
     map.insert("स्थिति_मशीन".to_string(), Keyword::StateMachine);
     map.insert("तकनीकी".to_string(), Keyword::Technical);
     map.insert("रूपांतरित_करो".to_string(), Keyword::Transform);

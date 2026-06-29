@@ -35,7 +35,7 @@ pub fn dispatch(method: &str, args: &[Value16]) -> HudHudResult<Value16> {
                     })?;
                 }
             }
-            let mut result = HashMap::new();
+            let mut result = hudhudscript_bytecode::ObjMap::default();
             result.insert("pid".to_string(), Value16::number(pid as f64));
             result.insert("started".to_string(), Value16::bool_(true));
             Ok(Value16::object(result))

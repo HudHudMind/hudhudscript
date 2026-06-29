@@ -41,7 +41,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
 
     // Agent system
     map.insert("agent".to_string(), Keyword::Agent);
-    map.insert("zadanie".to_string(), Keyword::Task);
     map.insert("narzędzie".to_string(), Keyword::Tool);
     map.insert("zasób".to_string(), Keyword::Resource);
     map.insert("mcp".to_string(), Keyword::Mcp);
@@ -117,7 +116,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
     map.insert("wyzwalacz".to_string(), Keyword::Trigger);
     // Native Polish translations
     map.insert("akcja".to_string(), Keyword::Action);
-    map.insert("reguła_agenta".to_string(), Keyword::AgentRule);
     map.insert("stan_agenta".to_string(), Keyword::AgentState);
     map.insert("zezwól".to_string(), Keyword::Allow);
     map.insert("styl_komunikacji".to_string(), Keyword::CommunicationStyle);
@@ -130,8 +128,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
     map.insert("nieformalny".to_string(), Keyword::Informal);
     map.insert("zamiar".to_string(), Keyword::Intent);
     map.insert("priorytet".to_string(), Keyword::Priority);
-    map.insert("łańcuch_reguł".to_string(), Keyword::RuleChain);
-    map.insert("zestaw_reguł".to_string(), Keyword::RuleSet);
     map.insert("maszyna_stanów".to_string(), Keyword::StateMachine);
     map.insert("techniczny".to_string(), Keyword::Technical);
     map.insert("przekształć".to_string(), Keyword::Transform);

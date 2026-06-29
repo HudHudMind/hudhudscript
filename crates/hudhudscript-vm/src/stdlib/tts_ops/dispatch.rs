@@ -76,7 +76,7 @@ pub fn tts_speak(args: &[Value16]) -> SharedResult<Value16> {
                         }
                         drop(aplay_child.stdin.take());
                         let aplay_out = aplay_child.wait_with_output();
-                        let mut obj = HashMap::new();
+                        let mut obj = hudhudscript_bytecode::ObjMap::default();
                         let success = aplay_out
                             .as_ref()
                             .map(|o| o.status.success())
@@ -116,7 +116,7 @@ pub fn tts_speak(args: &[Value16]) -> SharedResult<Value16> {
                 }
                 drop(c.stdin.take());
                 let output = c.wait_with_output();
-                let mut obj = HashMap::new();
+                let mut obj = hudhudscript_bytecode::ObjMap::default();
                 let success = output.as_ref().map(|o| o.status.success()).unwrap_or(false);
                 obj.insert("ok".to_string(), Value16::boolean(success));
                 obj.insert(
@@ -182,7 +182,7 @@ pub fn tts_save(args: &[Value16]) -> SharedResult<Value16> {
                 }
                 drop(c.stdin.take());
                 let output = c.wait_with_output();
-                let mut obj = HashMap::new();
+                let mut obj = hudhudscript_bytecode::ObjMap::default();
                 let success = output.as_ref().map(|o| o.status.success()).unwrap_or(false);
                 obj.insert("ok".to_string(), Value16::boolean(success));
                 obj.insert(
@@ -219,7 +219,7 @@ pub fn tts_save(args: &[Value16]) -> SharedResult<Value16> {
                 }
                 drop(c.stdin.take());
                 let output = c.wait_with_output();
-                let mut obj = HashMap::new();
+                let mut obj = hudhudscript_bytecode::ObjMap::default();
                 let success = output.as_ref().map(|o| o.status.success()).unwrap_or(false);
                 obj.insert("ok".to_string(), Value16::boolean(success));
                 obj.insert(
@@ -274,7 +274,7 @@ pub fn tts_ssml(args: &[Value16]) -> SharedResult<Value16> {
                 }
                 drop(c.stdin.take());
                 let output = c.wait_with_output();
-                let mut obj = HashMap::new();
+                let mut obj = hudhudscript_bytecode::ObjMap::default();
                 let success = output.as_ref().map(|o| o.status.success()).unwrap_or(false);
                 obj.insert("ok".to_string(), Value16::boolean(success));
                 obj.insert(

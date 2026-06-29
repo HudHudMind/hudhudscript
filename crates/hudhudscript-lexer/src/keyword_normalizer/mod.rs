@@ -24,5 +24,7 @@ pub mod map_tr;
 pub mod map_vi;
 pub mod map_zh;
 pub mod normalize;
+pub mod reserved_keywords;
 
 pub use normalize::normalize_keywords;
+pub use reserved_keywords::{is_hard_reserved_keyword, is_reserved_keyword, RESERVED_KEYWORDS};

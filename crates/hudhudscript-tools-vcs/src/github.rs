@@ -10,7 +10,9 @@ pub struct GithubTool {
 
 impl GithubTool {
     pub fn new(token: Option<String>) -> Self {
-        Self { token: token.unwrap_or_default() }
+        Self {
+            token: token.unwrap_or_default(),
+        }
     }
 
     fn client() -> Result<reqwest::blocking::Client, String> {
@@ -28,13 +30,25 @@ impl GithubTool {
             .header("Accept", "application/vnd.github+json")
             .send()
             .map_err(|e| format!("HTTP: {}", e))?;
+        let status = resp.status();
+        if !status.is_success() {
+            return Err(format!("GitHub issues request failed: {}", status));
+        }
         resp.json().map_err(|e| format!("JSON: {}", e))
     }
 
-    pub fn create_issue(&self, owner: &str, repo: &str, title: &str, body: Option<&str>) -> Result<Value, String> {
+    pub fn create_issue(
+        &self,
+        owner: &str,
+        repo: &str,
+        title: &str,
+        body: Option<&str>,
+    ) -> Result<Value, String> {
         let url = format!("https://api.github.com/repos/{}/{}/issues", owner, repo);
         let mut payload = serde_json::json!({ "title": title });
-        if let Some(b) = body { payload["body"] = serde_json::json!(b); }
+        if let Some(b) = body {
+            payload["body"] = serde_json::json!(b);
+        }
         let resp = Self::client()?
             .post(&url)
             .header("Authorization", format!("Bearer {}", self.token))
@@ -42,17 +56,10 @@ impl GithubTool {
             .json(&payload)
             .send()
             .map_err(|e| format!("HTTP: {}", e))?;
+        let status = resp.status();
+        if !status.is_success() {
+            return Err(format!("GitHub create issue failed: {}", status));
+        }
         resp.json().map_err(|e| format!("JSON: {}", e))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_github_tool_creation() {
-        let tool = GithubTool::new(Some("fake".into()));
-        let tool2 = GithubTool::new(None);
     }
 }

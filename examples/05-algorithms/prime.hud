@@ -1,0 +1,22 @@
+print("=== Sieve of Eratosthenes ===");
+let limit = 100;
+let sieve = [];
+for (let i = 0; i <= limit; i = i + 1) {
+    sieve.push(true);
+}
+sieve[0] = false;
+sieve[1] = false;
+
+for (let p = 2; p * p <= limit; p = p + 1) {
+    if (sieve[p]) {
+        for (let m = p * p; m <= limit; m = m + p) {
+            sieve[m] = false;
+        }
+    }
+}
+
+let count = 0;
+for (let i = 2; i <= limit; i = i + 1) {
+    if (sieve[i]) { count = count + 1; }
+}
+print("1-100 asal: " + count + " (25 beklenir)");

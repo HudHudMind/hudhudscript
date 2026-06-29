@@ -17,18 +17,18 @@ impl VM {
             // LoadNumConst/LoadIntConst removed — compiler emits
             // LoadNumConst/LoadIntConst which write to registers directly.
 
-            // ── Local slot operations (LoadLocal/StoreLocal used instead) ──
+            // ── Local register operations ──
 
             // Struct-2a: capture-promotion opcode (BYTECODE_VERSION v13).
             //
             // The compiler emits `PromoteLocal(slot)` in the enclosing
-            // function body, one per captured slot, immediately before the
+            // function body, one per captured register, immediately before the
             // `LoadConst(<FunctionValue>)` that materialises a nested
             // closure.  Struct-2c will replace this arm with actual cell
-            // promotion — the slot's `Value` will be hoisted to a heap-
-            // allocated `Arc<RwLock<Value>>` upvalue, and subsequent
-            // `LoadLocal`/`StoreLocal` on the same slot will route through
-            // the cell so the nested closure sees mutations.
+            // promotion — the value in the register will be hoisted to a heap-
+            // allocated `Arc<RwLock<Value>>` upvalue, and subsequent reads/writes
+            // to the same register will route through the cell so the nested
+            // closure sees mutations.
             //
             // In Struct-2a the arm is a deliberate no-op: the existing
             // flat `FunctionChunk::captures: Vec<String>` call-entry walk

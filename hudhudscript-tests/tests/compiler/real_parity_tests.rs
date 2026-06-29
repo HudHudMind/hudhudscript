@@ -52,8 +52,8 @@ fn vm_to_string(v: &Value16) -> String {
     } else if let Some(map) = v.as_object() {
         let mut pairs: Vec<String> = map
             .iter()
-            .filter(|(k, _)| !k.starts_with("__"))
-            .map(|(k, v)| format!("{}: {}", k, vm_to_string(v)))
+            .filter(|(k, _)| !hudhudscript_bytecode::interner::resolve(hudhudscript_bytecode::interner::SymbolId(k.0)).starts_with("__"))
+            .map(|(k, v)| format!("{}: {}", hudhudscript_bytecode::interner::resolve(hudhudscript_bytecode::interner::SymbolId(k.0)), vm_to_string(v)))
             .collect();
         pairs.sort();
         format!("{{{}}}", pairs.join(", "))
@@ -803,7 +803,7 @@ fn real_parity_try_catch() {
         try {
             throw "boom"
         } catch (e) {
-            result = e
+            result = e.description
         }
     "#;
     assert_vm_value(src, "result", Expected::Ok("boom"));
@@ -1396,7 +1396,7 @@ fn real_parity_compound_assignment() {
         &[
             ("x", Expected::Ok("15")),
             ("y", Expected::Ok("17")),
-            ("z", Expected::Err),
+            ("z", Expected::Ok("12")),
         ],
     );
 }
@@ -2101,7 +2101,7 @@ fn real_parity_spread_array_concat() {
         let y = [3, 4]
         let z = [...x, ...y]
     "#;
-    assert_vm_value(src, "z", Expected::Err);
+    assert_vm_value(src, "z", Expected::Ok("[1, 2, 3, 4]"));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2425,4 +2425,52 @@ fn real_parity_stm_atomically_reads_own_writes() {
         let result = tvar_read(t)
     "#;
     assert_vm_value(src, "result", Expected::Ok("7"));
+}
+
+// ── MAIN_ONLY_REGISTER_BUGFIX tests ───────────────────────────────────
+// These verify the pre-pass shared classification covers ALL statement
+// forms, not just bare top-level function/class declarations.
+
+#[test]
+fn classify_top_var_used_in_function_inside_toplevel_loop() {
+    // collect_shared must descend into top-level for-loop bodies to find
+    // `function add()` referencing the top-level `total`.  If it doesn't,
+    // `total` is misclassified as main-only → stays in register, `add()`
+    // writes to globals only → stale read → wrong result.
+    let src = r#"
+        let total = 0
+        for (let i = 0; i < 3; i = i + 1) {
+            function add() { total = total + 10 }
+            add()
+        }
+        let result = total
+    "#;
+    assert_vm_value(src, "result", Expected::Ok("30"));
+}
+
+#[test]
+fn classify_top_var_used_in_function_inside_toplevel_if() {
+    // collect_shared must descend into top-level if bodies.
+    let src = r#"
+        let acc = 1
+        if (true) {
+            function mul() { acc = acc * 5 }
+            mul()
+        }
+        let result = acc
+    "#;
+    assert_vm_value(src, "result", Expected::Ok("5"));
+}
+
+#[test]
+fn shadowing_function_local_wins_over_top_level() {
+    // A function-local `let x = 99` must shadow the top-level `let x = 1`.
+    // If get_var_by_sym checks main_local_slots before function-local syms,
+    // the function returns the top-level value (1) instead of its own local (99).
+    let src = r#"
+        let x = 1
+        function f() { let x = 99; return x }
+        let result = f()
+    "#;
+    assert_vm_value(src, "result", Expected::Ok("99"));
 }

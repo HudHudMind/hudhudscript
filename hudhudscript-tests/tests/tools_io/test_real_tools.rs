@@ -24,7 +24,8 @@ fn file_read_existing_file() {
 
 #[test]
 fn file_read_nonexistent_file() {
-    let result = StandardTool::FileRead.call(&json!({"path": "/tmp/nonexistent_hudhud_test_file_12345.txt"}));
+    let result = StandardTool::FileRead
+        .call(&json!({"path": "/tmp/nonexistent_hudhud_test_file_12345.txt"}));
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert!(matches!(err, ToolError::ExecutionFailed(_)));
@@ -34,14 +35,20 @@ fn file_read_nonexistent_file() {
 fn file_read_missing_path_arg() {
     let result = StandardTool::FileRead.call(&json!({}));
     assert!(result.is_err());
-    assert!(matches!(result.unwrap_err(), ToolError::InvalidArguments(_)));
+    assert!(matches!(
+        result.unwrap_err(),
+        ToolError::InvalidArguments(_)
+    ));
 }
 
 #[test]
 fn file_read_wrong_type_path() {
     let result = StandardTool::FileRead.call(&json!({"path": 123}));
     assert!(result.is_err());
-    assert!(matches!(result.unwrap_err(), ToolError::InvalidArguments(_)));
+    assert!(matches!(
+        result.unwrap_err(),
+        ToolError::InvalidArguments(_)
+    ));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -50,14 +57,18 @@ fn file_read_wrong_type_path() {
 
 #[test]
 fn json_parse_valid() {
-    let result = StandardTool::JsonParse.call(&json!({"text": "{\"key\": \"value\"}"})).unwrap();
+    let result = StandardTool::JsonParse
+        .call(&json!({"text": "{\"key\": \"value\"}"}))
+        .unwrap();
     // JsonParse returns { value: parsed_json }
     assert_eq!(result["value"]["key"], "value");
 }
 
 #[test]
 fn json_parse_array() {
-    let result = StandardTool::JsonParse.call(&json!({"text": "[1, 2, 3]"})).unwrap();
+    let result = StandardTool::JsonParse
+        .call(&json!({"text": "[1, 2, 3]"}))
+        .unwrap();
     let arr = result["value"].as_array().unwrap();
     assert_eq!(arr.len(), 3);
 }

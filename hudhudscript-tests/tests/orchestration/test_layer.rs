@@ -7,7 +7,12 @@ use uuid::Uuid;
 
 #[test]
 fn test_layer_creation() {
-    let layer = Layer { id: Uuid::new_v4(), name: "test_layer".to_string(), agents: vec!["agent1".to_string(), "agent2".to_string()], config: LayerConfig::default() };
+    let layer = Layer {
+        id: Uuid::new_v4(),
+        name: "test_layer".to_string(),
+        agents: vec!["agent1".to_string(), "agent2".to_string()],
+        config: LayerConfig::default(),
+    };
 
     assert_eq!(layer.name, "test_layer");
     assert_eq!(layer.agents.len(), 2);
@@ -61,7 +66,12 @@ async fn test_layer_executor_creation() {
 #[tokio::test]
 async fn test_register_layer() {
     let executor = LayerExecutor::new();
-    let layer = Layer { id: Uuid::new_v4(), name: "test".to_string(), agents: vec!["agent1".to_string()], config: LayerConfig::default() };
+    let layer = Layer {
+        id: Uuid::new_v4(),
+        name: "test".to_string(),
+        agents: vec!["agent1".to_string()],
+        config: LayerConfig::default(),
+    };
     let layer_id = layer.id;
 
     let result = executor.register_layer(layer).await;
@@ -76,7 +86,12 @@ async fn test_register_layer() {
 #[tokio::test]
 async fn test_register_duplicate_layer() {
     let executor = LayerExecutor::new();
-    let layer = Layer { id: Uuid::new_v4(), name: "dup".to_string(), agents: vec![], config: LayerConfig::default() };
+    let layer = Layer {
+        id: Uuid::new_v4(),
+        name: "dup".to_string(),
+        agents: vec![],
+        config: LayerConfig::default(),
+    };
 
     executor.register_layer(layer.clone()).await.unwrap();
     // Registering the same layer (same ID) again should fail
@@ -92,7 +107,12 @@ async fn test_register_duplicate_layer() {
 #[tokio::test]
 async fn test_get_layer_by_id() {
     let executor = LayerExecutor::new();
-    let layer = Layer { id: Uuid::new_v4(), name: "findable".to_string(), agents: vec![], config: LayerConfig::default() };
+    let layer = Layer {
+        id: Uuid::new_v4(),
+        name: "findable".to_string(),
+        agents: vec![],
+        config: LayerConfig::default(),
+    };
     let layer_id = layer.id;
 
     executor.register_layer(layer).await.unwrap();
@@ -105,7 +125,12 @@ async fn test_get_layer_by_id() {
 #[tokio::test]
 async fn test_execute_layer_parallel() {
     let executor = LayerExecutor::new();
-    let layer = Layer { id: Uuid::new_v4(), name: "test".to_string(), agents: vec!["agent1".to_string(), "agent2".to_string()], config: LayerConfig::default() };
+    let layer = Layer {
+        id: Uuid::new_v4(),
+        name: "test".to_string(),
+        agents: vec!["agent1".to_string(), "agent2".to_string()],
+        config: LayerConfig::default(),
+    };
     let layer_id = layer.id;
 
     executor.register_layer(layer).await.unwrap();
@@ -124,11 +149,21 @@ async fn test_execute_layer_parallel() {
 async fn test_validate_dependencies() {
     let executor = LayerExecutor::new();
 
-    let layer1 = Layer { id: Uuid::new_v4(), name: "layer1".to_string(), agents: vec![], config: LayerConfig::default() };
+    let layer1 = Layer {
+        id: Uuid::new_v4(),
+        name: "layer1".to_string(),
+        agents: vec![],
+        config: LayerConfig::default(),
+    };
     let layer1_id = layer1.id;
     executor.register_layer(layer1).await.unwrap();
 
-    let mut layer2 = Layer { id: Uuid::new_v4(), name: "layer2".to_string(), agents: vec![], config: LayerConfig::default() };
+    let mut layer2 = Layer {
+        id: Uuid::new_v4(),
+        name: "layer2".to_string(),
+        agents: vec![],
+        config: LayerConfig::default(),
+    };
     layer2.config.dependencies.push(layer1_id);
 
     // Registering layer2 with a valid dependency should succeed
@@ -140,7 +175,12 @@ async fn test_validate_dependencies() {
 async fn test_validate_missing_dependency() {
     let executor = LayerExecutor::new();
 
-    let mut layer = Layer { id: Uuid::new_v4(), name: "test".to_string(), agents: vec![], config: LayerConfig::default() };
+    let mut layer = Layer {
+        id: Uuid::new_v4(),
+        name: "test".to_string(),
+        agents: vec![],
+        config: LayerConfig::default(),
+    };
     layer.config.dependencies.push(Uuid::new_v4()); // Non-existent dependency
 
     let result = executor.register_layer(layer).await;
@@ -166,7 +206,12 @@ async fn test_execute_layer_not_found() {
 #[tokio::test]
 async fn test_execute_sequential_layer() {
     let executor = LayerExecutor::new();
-    let mut layer = Layer { id: Uuid::new_v4(), name: "seq_test".to_string(), agents: vec!["agent1".to_string(), "agent2".to_string()], config: LayerConfig::default() };
+    let mut layer = Layer {
+        id: Uuid::new_v4(),
+        name: "seq_test".to_string(),
+        agents: vec!["agent1".to_string(), "agent2".to_string()],
+        config: LayerConfig::default(),
+    };
     layer.config.mode = ExecutionMode::Sequential;
     let layer_id = layer.id;
 
@@ -198,7 +243,12 @@ async fn test_layer_executor_default() {
 #[tokio::test]
 async fn test_execute_layer_continue_strategy() {
     let executor = LayerExecutor::new();
-    let mut layer = Layer { id: Uuid::new_v4(), name: "seq_continue".to_string(), agents: vec!["a1".to_string(), "a2".to_string()], config: LayerConfig::default() };
+    let mut layer = Layer {
+        id: Uuid::new_v4(),
+        name: "seq_continue".to_string(),
+        agents: vec!["a1".to_string(), "a2".to_string()],
+        config: LayerConfig::default(),
+    };
     layer.config.mode = ExecutionMode::Sequential;
     layer.config.failure_strategy = FailureStrategy::Continue;
     let layer_id = layer.id;

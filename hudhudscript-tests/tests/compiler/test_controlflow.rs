@@ -25,15 +25,21 @@ fn compile_only(source: &str) -> hudhudscript_compiler::Bytecode {
 
 #[test]
 fn test_for_in_loop_array_iteration() {
-    let bc = compile_only(r#"
+    let bc = compile_only(
+        r#"
         let arr = [10, 20, 30];
         let total = 0;
         for (item in arr) {
             total = total + item;
         }
-    "#);
+    "#,
+    );
     eprintln!("switch bytecode: {:?}", bc.instructions);
-    let vm = { let mut vm = VM::new(); vm.execute(&bc).unwrap(); vm };
+    let vm = {
+        let mut vm = VM::new();
+        vm.execute(&bc).unwrap();
+        vm
+    };
     assert!(
         vm.get_variable("total").and_then(|v| v.as_number()) == Some(60.0),
         "for-in should iterate array elements: got {:?}",
@@ -45,14 +51,20 @@ fn test_for_in_loop_array_iteration() {
 
 #[test]
 fn test_for_c_style_loop() {
-    let bc = compile_only(r#"
+    let bc = compile_only(
+        r#"
         let sum = 0;
         for (let i = 1; i <= 5; i = i + 1) {
             sum = sum + i;
         }
-    "#);
+    "#,
+    );
     eprintln!("switch bytecode: {:?}", bc.instructions);
-    let vm = { let mut vm = VM::new(); vm.execute(&bc).unwrap(); vm };
+    let vm = {
+        let mut vm = VM::new();
+        vm.execute(&bc).unwrap();
+        vm
+    };
     assert!(
         vm.get_variable("sum").and_then(|v| v.as_number()) == Some(15.0),
         "C-style for loop should sum 1..5: got {:?}",
@@ -64,15 +76,21 @@ fn test_for_c_style_loop() {
 
 #[test]
 fn test_break_in_while_loop() {
-    let bc = compile_only(r#"
+    let bc = compile_only(
+        r#"
         let x = 0;
         while (true) {
             x = x + 1;
             if (x == 3) { break; }
         }
-    "#);
+    "#,
+    );
     eprintln!("switch bytecode: {:?}", bc.instructions);
-    let vm = { let mut vm = VM::new(); vm.execute(&bc).unwrap(); vm };
+    let vm = {
+        let mut vm = VM::new();
+        vm.execute(&bc).unwrap();
+        vm
+    };
     assert!(
         vm.get_variable("x").and_then(|v| v.as_number()) == Some(3.0),
         "break should stop loop at 3: got {:?}",
@@ -112,7 +130,8 @@ fn test_continue_emits_instruction() {
 
 #[test]
 fn test_switch_matches_case() {
-    let bc = compile_only(r#"
+    let bc = compile_only(
+        r#"
         let x = 2;
         let result = 0;
         switch (x) {
@@ -120,9 +139,14 @@ fn test_switch_matches_case() {
             case 2: { result = 20; }
             case 3: { result = 30; }
         }
-    "#);
+    "#,
+    );
     eprintln!("switch bytecode: {:?}", bc.instructions);
-    let vm = { let mut vm = VM::new(); vm.execute(&bc).unwrap(); vm };
+    let vm = {
+        let mut vm = VM::new();
+        vm.execute(&bc).unwrap();
+        vm
+    };
     assert!(
         vm.get_variable("result").and_then(|v| v.as_number()) == Some(20.0),
         "switch should match case 2: got {:?}",
@@ -132,14 +156,16 @@ fn test_switch_matches_case() {
 
 #[test]
 fn test_switch_default_case() {
-    let bc = compile_only(r#"
+    let bc = compile_only(
+        r#"
         let x = 99;
         let result = 0;
         switch (x) {
             case 1: { result = 10; }
             default: { result = 999; }
         }
-    "#);
+    "#,
+    );
     eprintln!("switch bytecode: {:?}", bc.instructions);
     let mut vm = VM::new();
     vm.execute(&bc).expect("execute failed");
@@ -154,16 +180,22 @@ fn test_switch_default_case() {
 
 #[test]
 fn test_try_catch_catches_throw() {
-    let bc = compile_only(r#"
+    let bc = compile_only(
+        r#"
         let caught = 0;
         try {
             throw 42;
         } catch (e) {
-            caught = e;
+            caught = e.value;
         }
-    "#);
+    "#,
+    );
     eprintln!("switch bytecode: {:?}", bc.instructions);
-    let vm = { let mut vm = VM::new(); vm.execute(&bc).unwrap(); vm };
+    let vm = {
+        let mut vm = VM::new();
+        vm.execute(&bc).unwrap();
+        vm
+    };
     assert!(
         vm.get_variable("caught").and_then(|v| v.as_number()) == Some(42.0),
         "catch should receive thrown value: got {:?}",
@@ -173,16 +205,22 @@ fn test_try_catch_catches_throw() {
 
 #[test]
 fn test_try_no_throw_skips_catch() {
-    let bc = compile_only(r#"
+    let bc = compile_only(
+        r#"
         let result = 0;
         try {
             result = 1;
         } catch (e) {
             result = 2;
         }
-    "#);
+    "#,
+    );
     eprintln!("switch bytecode: {:?}", bc.instructions);
-    let vm = { let mut vm = VM::new(); vm.execute(&bc).unwrap(); vm };
+    let vm = {
+        let mut vm = VM::new();
+        vm.execute(&bc).unwrap();
+        vm
+    };
     assert!(
         vm.get_variable("result").and_then(|v| v.as_number()) == Some(1.0),
         "without throw, catch body should not execute: got {:?}",
@@ -191,9 +229,9 @@ fn test_try_no_throw_skips_catch() {
 }
 
 #[test]
-#[ignore = "VM try-catch-finally execution stack underflow — requires exception frame implementation"]
 fn test_try_catch_finally() {
-    let bc = compile_only(r#"
+    let bc = compile_only(
+        r#"
         let log = 0;
         try {
             throw "err";
@@ -202,9 +240,14 @@ fn test_try_catch_finally() {
         } finally {
             log = log + 10;
         }
-    "#);
+    "#,
+    );
     eprintln!("switch bytecode: {:?}", bc.instructions);
-    let vm = { let mut vm = VM::new(); vm.execute(&bc).unwrap(); vm };
+    let vm = {
+        let mut vm = VM::new();
+        vm.execute(&bc).unwrap();
+        vm
+    };
     assert!(
         vm.get_variable("log").and_then(|v| v.as_number()) == Some(11.0),
         "finally should always run: got {:?}",
@@ -216,12 +259,18 @@ fn test_try_catch_finally() {
 
 #[test]
 fn test_template_string_interpolation() {
-    let bc = compile_only(r#"
+    let bc = compile_only(
+        r#"
         let name = "world";
         let greeting = `hello ${name}`;
-    "#);
+    "#,
+    );
     eprintln!("switch bytecode: {:?}", bc.instructions);
-    let vm = { let mut vm = VM::new(); vm.execute(&bc).unwrap(); vm };
+    let vm = {
+        let mut vm = VM::new();
+        vm.execute(&bc).unwrap();
+        vm
+    };
     assert!(
         vm.get_variable("greeting")
             .and_then(|v| v.as_str())
@@ -236,12 +285,18 @@ fn test_template_string_interpolation() {
 
 #[test]
 fn test_arrow_function_expression_body() {
-    let bc = compile_only(r#"
+    let bc = compile_only(
+        r#"
         let double = (x) => x * 2;
         let result = double(5);
-    "#);
+    "#,
+    );
     eprintln!("switch bytecode: {:?}", bc.instructions);
-    let vm = { let mut vm = VM::new(); vm.execute(&bc).unwrap(); vm };
+    let vm = {
+        let mut vm = VM::new();
+        vm.execute(&bc).unwrap();
+        vm
+    };
     assert!(
         vm.get_variable("result").and_then(|v| v.as_number()) == Some(10.0),
         "arrow function should work: got {:?}",
@@ -251,12 +306,18 @@ fn test_arrow_function_expression_body() {
 
 #[test]
 fn test_arrow_function_block_body() {
-    let bc = compile_only(r#"
+    let bc = compile_only(
+        r#"
         let add = (a, b) => { return a + b; };
         let result = add(3, 7);
-    "#);
+    "#,
+    );
     eprintln!("switch bytecode: {:?}", bc.instructions);
-    let vm = { let mut vm = VM::new(); vm.execute(&bc).unwrap(); vm };
+    let vm = {
+        let mut vm = VM::new();
+        vm.execute(&bc).unwrap();
+        vm
+    };
     assert!(
         vm.get_variable("result").and_then(|v| v.as_number()) == Some(10.0),
         "arrow function with block body: got {:?}",
@@ -273,12 +334,11 @@ fn test_class_declaration_compiles() {
     );
     // Class should register its constructor and method as function chunks
     assert!(
-        bc.functions.borrow().contains_key("Point::constructor"),
-        "class should register constructor chunk; keys: {:?}",
-        bc.functions.borrow().keys().collect::<Vec<_>>()
+        bc.has_function("Point::constructor"),
+        "class should register constructor chunk"
     );
     assert!(
-        bc.functions.borrow().contains_key("Point::sum"),
+        bc.has_function("Point::sum"),
         "class should register method chunk"
     );
     // ClassDecl instruction should be emitted
@@ -296,13 +356,12 @@ fn test_class_with_inheritance_compiles() {
     );
     // Dog should have its own bark method
     assert!(
-        bc.functions.borrow().contains_key("Dog::bark"),
-        "Dog should have its own bark method; keys: {:?}",
-        bc.functions.borrow().keys().collect::<Vec<_>>()
+        bc.has_function("Dog::bark"),
+        "Dog should have its own bark method"
     );
     // Dog should inherit Animal::speak
     assert!(
-        bc.functions.borrow().contains_key("Dog::speak"),
+        bc.has_function("Dog::speak"),
         "Dog should inherit speak from Animal"
     );
 }
@@ -327,12 +386,18 @@ fn test_enum_declaration_emits_instruction() {
 
 #[test]
 fn test_function_return_without_value() {
-    let bc = compile_only(r#"
+    let bc = compile_only(
+        r#"
         function noop() { return; }
         let result = noop();
-    "#);
+    "#,
+    );
     eprintln!("switch bytecode: {:?}", bc.instructions);
-    let vm = { let mut vm = VM::new(); vm.execute(&bc).unwrap(); vm };
+    let vm = {
+        let mut vm = VM::new();
+        vm.execute(&bc).unwrap();
+        vm
+    };
     assert!(
         vm.get_variable("result").map(|v| v.is_null()) == Some(true),
         "bare return should produce null: got {:?}",
@@ -344,12 +409,18 @@ fn test_function_return_without_value() {
 
 #[test]
 fn test_if_without_else_false_condition() {
-    let bc = compile_only(r#"
+    let bc = compile_only(
+        r#"
         let x = 0;
         if (false) { x = 1; }
-    "#);
+    "#,
+    );
     eprintln!("switch bytecode: {:?}", bc.instructions);
-    let vm = { let mut vm = VM::new(); vm.execute(&bc).unwrap(); vm };
+    let vm = {
+        let mut vm = VM::new();
+        vm.execute(&bc).unwrap();
+        vm
+    };
     assert!(
         vm.get_variable("x").and_then(|v| v.as_number()) == Some(0.0),
         "if-false without else should not execute body: got {:?}",
@@ -386,15 +457,21 @@ fn test_block_scope_emits_push_pop_scope() {
 
 #[test]
 fn test_nested_function_definition() {
-    let bc = compile_only(r#"
+    let bc = compile_only(
+        r#"
         function outer() {
             function inner() { return 42; }
             return inner();
         }
         let result = outer();
-    "#);
+    "#,
+    );
     eprintln!("switch bytecode: {:?}", bc.instructions);
-    let vm = { let mut vm = VM::new(); vm.execute(&bc).unwrap(); vm };
+    let vm = {
+        let mut vm = VM::new();
+        vm.execute(&bc).unwrap();
+        vm
+    };
     assert!(
         vm.get_variable("result").and_then(|v| v.as_number()) == Some(42.0),
         "nested function should work: got {:?}",
@@ -414,8 +491,7 @@ fn test_async_function_compiles() {
     "#,
     );
     // The function chunk should be marked as async
-    let funcs = bc.functions.borrow();
-    let chunk = funcs.get("fetchData");
+    let chunk = bc.get_function("fetchData");
     assert!(chunk.is_some(), "fetchData chunk should exist");
     assert!(chunk.unwrap().is_async, "fetchData should be marked async");
 }

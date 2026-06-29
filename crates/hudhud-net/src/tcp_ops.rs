@@ -125,7 +125,7 @@ fn tcp_connect(args: &[Value16]) -> HudHudResult<Value16> {
     let fd = raw_handle(&stream);
     std::mem::forget(stream);
 
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     obj.insert(
         "__type".to_string(),
         Value16::string("TcpStream".to_string()),
@@ -163,7 +163,7 @@ fn tcp_listen(args: &[Value16]) -> HudHudResult<Value16> {
         .unwrap_or_else(|_| addr);
     std::mem::forget(listener);
 
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     obj.insert(
         "__type".to_string(),
         Value16::string("TcpListener".to_string()),
@@ -185,7 +185,7 @@ fn tcp_accept(args: &[Value16]) -> HudHudResult<Value16> {
     let sfd = raw_handle(&stream);
     std::mem::forget(stream);
 
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     obj.insert(
         "__type".to_string(),
         Value16::string("TcpStream".to_string()),

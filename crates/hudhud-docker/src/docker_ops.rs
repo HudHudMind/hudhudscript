@@ -85,7 +85,7 @@ pub fn docker_ps(_args: &[Value16]) -> HudHudResult<Value16> {
             continue;
         }
         if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(line) {
-            let mut entry = HashMap::new();
+            let mut entry = hudhudscript_bytecode::ObjMap::default();
             entry.insert(
                 "id".to_string(),
                 Value16::string(str_field(&parsed, "ID").to_string()),
@@ -131,7 +131,7 @@ pub fn docker_images(_args: &[Value16]) -> HudHudResult<Value16> {
             continue;
         }
         if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(line) {
-            let mut entry = HashMap::new();
+            let mut entry = hudhudscript_bytecode::ObjMap::default();
             entry.insert(
                 "id".to_string(),
                 Value16::string(str_field(&parsed, "ID").to_string()),
@@ -226,7 +226,7 @@ pub fn docker_run(args: &[Value16]) -> HudHudResult<Value16> {
     let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("container_id".to_string(), Value16::string(stdout));
     result.insert(
         "status".to_string(),
@@ -304,7 +304,7 @@ pub fn docker_exec(args: &[Value16]) -> HudHudResult<Value16> {
         .output()
         .map_err(|e| runtime_error(format!("docker.exec error: {}", e)))?;
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert(
         "stdout".to_string(),
         Value16::string(String::from_utf8_lossy(&output.stdout).to_string()),
@@ -363,7 +363,7 @@ fn str_field<'a>(v: &'a serde_json::Value, key: &str) -> &'a str {
 }
 
 fn ok_message(ok: bool, msg: String) -> Value16 {
-    let mut m = HashMap::new();
+    let mut m = hudhudscript_bytecode::ObjMap::default();
     m.insert("ok".to_string(), Value16::bool_(ok));
     m.insert("message".to_string(), Value16::string(msg));
     Value16::object(m)

@@ -1,7 +1,0 @@
-# Seeds for failure cases proptest has generated in the past. It is
-# automatically read and these particular cases re-run before any
-# novel cases are generated.
-#
-# It is recommended to check this file in to source control so that
-# everyone who runs the test benefits from these saved cases.
-cc 1ffa48f809770f4ca39c51b88119701de3a6acb6841c525f495244d243dc4602 # shrinks to swarm = Swarm { id: "swarm_aaaaa", name: "A  aa ", agents: ["aaa0"], coordination_strategy: Parallel, shared_state: {} }, state_data = [("jrc", 0), ("jrc", -1)]

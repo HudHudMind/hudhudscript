@@ -27,7 +27,7 @@ pub fn torrent_list(args: &[Value16]) -> SharedResult<Value16> {
 
     let mut arr: Vec<Value16> = Vec::new();
     for t in &torrents {
-        let mut entry = HashMap::new();
+        let mut entry = hudhudscript_bytecode::ObjMap::default();
         entry.insert(
             "id".to_string(),
             Value16::number(t.get("id").and_then(|v| v.as_f64()).unwrap_or(0.0)),
@@ -104,7 +104,7 @@ pub fn torrent_info(args: &[Value16]) -> SharedResult<Value16> {
         }
     };
 
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     obj.insert(
         "id".to_string(),
         Value16::number(t.get("id").and_then(|v| v.as_f64()).unwrap_or(0.0)),
@@ -188,7 +188,7 @@ pub fn torrent_info(args: &[Value16]) -> SharedResult<Value16> {
     let file_values: Vec<Value16> = files
         .iter()
         .map(|f| {
-            let mut fm = HashMap::new();
+            let mut fm = hudhudscript_bytecode::ObjMap::default();
             fm.insert(
                 "name".to_string(),
                 Value16::string(
@@ -223,7 +223,7 @@ pub fn torrent_info(args: &[Value16]) -> SharedResult<Value16> {
     let peer_values: Vec<Value16> = peers
         .iter()
         .map(|p| {
-            let mut pm = HashMap::new();
+            let mut pm = hudhudscript_bytecode::ObjMap::default();
             pm.insert(
                 "address".to_string(),
                 Value16::string(
@@ -259,7 +259,7 @@ pub fn torrent_info(args: &[Value16]) -> SharedResult<Value16> {
     let tracker_values: Vec<Value16> = trackers
         .iter()
         .map(|tr| {
-            let mut tm = HashMap::new();
+            let mut tm = hudhudscript_bytecode::ObjMap::default();
             tm.insert(
                 "announce".to_string(),
                 Value16::string(

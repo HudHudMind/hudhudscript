@@ -70,6 +70,7 @@ pub enum TaskImplementation {
     /// HudHudScript bytecode
     Bytecode(Vec<u8>),
 
-    /// AST reference
+    /// AST reference (DEPRECATED — deserialized but always returns error)
+    /// Use compile+VM pipeline instead.
     Ast(String),
 }

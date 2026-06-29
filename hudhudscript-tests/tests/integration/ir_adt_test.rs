@@ -87,8 +87,17 @@ fn test_match_literal_emits_eq_instruction() {
     "#,
     );
     eprintln!("match instructions: {:?}", bc.instructions);
-    let has_eq = bc.instructions.iter().any(|i| matches!(i, Instruction::IntCmp { op: 4, .. } | Instruction::IntCmp { op: 4, .. }));
-    assert!(has_eq, "Expected CmpRR/IntCmpRR eq instruction for literal pattern");
+    let has_eq = bc.instructions.iter().any(|i| {
+        matches!(
+            i,
+            Instruction::IntCmp { op: 4, .. }
+            | Instruction::IntCmpRRJumpIfFalse { op: 4, .. }
+        )
+    });
+    assert!(
+        has_eq,
+        "Expected IntCmp/IntCmpRRJumpIfFalse eq instruction for literal pattern"
+    );
 }
 
 // ── Match with identifier binding ─────────────────────────────────────────────
@@ -221,18 +230,26 @@ fn test_arabic_while_same_ir_as_english() {
         .instructions
         .iter()
         .any(|i| matches!(i, Instruction::Jump(_)));
-    let en_has_jif = bc_en
-        .instructions
-        .iter()
-        .any(|i| matches!(i, Instruction::JumpIfFalse { .. }
-            | Instruction::IntLeRRJumpIfFalse { .. }
-            | Instruction::IntLtRRJumpIfFalse { .. }));
-    let ar_has_jif = bc_ar
-        .instructions
-        .iter()
-        .any(|i| matches!(i, Instruction::JumpIfFalse { .. }
-            | Instruction::IntLeRRJumpIfFalse { .. }
-            | Instruction::IntLtRRJumpIfFalse { .. }));
+    let en_has_jif = bc_en.instructions.iter().any(|i| {
+        matches!(
+            i,
+            Instruction::JumpIfFalse { .. }
+                | Instruction::IntLeRRJumpIfFalse { .. }
+                | Instruction::IntLtRRJumpIfFalse { .. }
+                | Instruction::IntCmpIJumpIfFalse { .. }
+                | Instruction::IntCmpRRJumpIfFalse { .. }
+        )
+    });
+    let ar_has_jif = bc_ar.instructions.iter().any(|i| {
+        matches!(
+            i,
+            Instruction::JumpIfFalse { .. }
+                | Instruction::IntLeRRJumpIfFalse { .. }
+                | Instruction::IntLtRRJumpIfFalse { .. }
+                | Instruction::IntCmpIJumpIfFalse { .. }
+                | Instruction::IntCmpRRJumpIfFalse { .. }
+        )
+    });
 
     assert!(en_has_jump, "EN: expected Jump");
     assert!(

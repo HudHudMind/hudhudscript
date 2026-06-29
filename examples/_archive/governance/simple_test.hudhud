@@ -1,0 +1,10 @@
+// Simple Constitution Test
+
+constitution DataOps {
+    id: "cons.1",
+    name: "Data Operations",
+    description: "Test constitution",
+    laws: []
+}
+
+print("Constitution created successfully!")

@@ -155,9 +155,7 @@ impl crate::vm::VM {
             let params = &func_data.params;
             let captures = &func_data.captures;
             let chunk = bytecode
-                .functions
-                .borrow()
-                .get(chunk_name)
+                .get_function(chunk_name)
                 .ok_or_else(|| {
                     compile_codes::runtime_error(format!(
                         "Function chunk not found: {}",
@@ -201,5 +199,4 @@ impl crate::vm::VM {
     }
 
     // ── TOML methods (v0.4.38 — #650) ─────────────────────────────────
-
 }

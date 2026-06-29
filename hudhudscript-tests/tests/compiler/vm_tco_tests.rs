@@ -84,10 +84,7 @@ fn test_tco_emits_tail_call_instruction() {
     let ast = parse(src).expect("parse failed");
     let mut compiler = Compiler::new();
     let bytecode = compiler.compile(&ast).expect("compile failed");
-    let funcs = bytecode.functions.borrow();
-    let chunk = funcs
-        .get("loop_rec")
-        .expect("loop_rec chunk missing");
+    let chunk = bytecode.get_function("loop_rec").expect("loop_rec chunk missing");
     let has_tail_call = chunk
         .instructions
         .iter()
@@ -113,8 +110,7 @@ fn test_tco_does_not_emit_for_non_tail_position() {
     let ast = parse(src).expect("parse failed");
     let mut compiler = Compiler::new();
     let bytecode = compiler.compile(&ast).expect("compile failed");
-    let funcs = bytecode.functions.borrow();
-    let chunk = funcs.get("fib").expect("fib chunk missing");
+    let chunk = bytecode.get_function("fib").expect("fib chunk missing");
     let has_tail_call = chunk
         .instructions
         .iter()
@@ -202,8 +198,7 @@ fn tco_print_disassembly() {
         let ast = parse(src).expect("parse");
         let mut compiler = Compiler::new();
         let bc = compiler.compile(&ast).expect("compile");
-        let funcs = bc.functions.borrow();
-        let chunk = funcs.get(name).expect("chunk");
+        let chunk = bc.get_function(name).expect("chunk");
         println!("=== {} (local_count={}) ===", name, chunk.local_count);
         for (i, inst) in chunk.instructions.iter().enumerate() {
             println!("  {:3}: {:?}", i, inst);

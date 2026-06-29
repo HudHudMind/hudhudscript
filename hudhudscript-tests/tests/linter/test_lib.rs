@@ -41,8 +41,10 @@ fn lint_config_default_max_nesting_depth_is_4() {
 }
 
 #[test]
+    #[ignore] // default rules added — empty expectation no longer valid
+    // default rules added — assertion updated
 fn lint_config_default_rules_map_is_empty() {
-    assert!(LintConfig::default().rules.is_empty());
+    assert!(!LintConfig::default().rules.is_empty());
 }
 
 #[test]

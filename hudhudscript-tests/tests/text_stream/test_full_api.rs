@@ -9,7 +9,10 @@ use serde_json::json;
 fn message_text_constructor() {
     let msg = StreamMessage::text("hello world");
     match msg {
-        StreamMessage::Data { payload, content_type } => {
+        StreamMessage::Data {
+            payload,
+            content_type,
+        } => {
             assert_eq!(payload, "hello world");
             assert_eq!(content_type, Some("text/plain".to_string()));
         }
@@ -22,7 +25,10 @@ fn message_json_constructor() {
     let val = json!({"key": "value", "num": 42});
     let msg = StreamMessage::json(&val);
     match msg {
-        StreamMessage::Data { payload, content_type } => {
+        StreamMessage::Data {
+            payload,
+            content_type,
+        } => {
             assert!(payload.contains("key"));
             assert!(payload.contains("42"));
             assert_eq!(content_type, Some("application/json".to_string()));
@@ -119,18 +125,9 @@ async fn agent_pipe_write_and_read_multiple() {
     writer.write_text("second").await.unwrap();
     writer.write_text("third").await.unwrap();
 
-    assert_eq!(
-        reader.next().await.unwrap(),
-        StreamMessage::text("first")
-    );
-    assert_eq!(
-        reader.next().await.unwrap(),
-        StreamMessage::text("second")
-    );
-    assert_eq!(
-        reader.next().await.unwrap(),
-        StreamMessage::text("third")
-    );
+    assert_eq!(reader.next().await.unwrap(), StreamMessage::text("first"));
+    assert_eq!(reader.next().await.unwrap(), StreamMessage::text("second"));
+    assert_eq!(reader.next().await.unwrap(), StreamMessage::text("third"));
 }
 
 #[tokio::test]
@@ -220,9 +217,7 @@ async fn adapter_send_and_receive_value() {
     TextStreamAdapter::send_value(&writer, &val).await.unwrap();
     drop(writer);
 
-    let received = TextStreamAdapter::receive_value(&mut reader)
-        .await
-        .unwrap();
+    let received = TextStreamAdapter::receive_value(&mut reader).await.unwrap();
     assert_eq!(received, val);
 }
 

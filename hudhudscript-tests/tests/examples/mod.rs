@@ -19,7 +19,10 @@ fn collect_hudhud_files(dir: &Path) -> Vec<PathBuf> {
         if path.is_dir() {
             // Skip _wip directories — these contain work-in-progress examples
             // that may have intentionally broken syntax
-            if path.file_name().and_then(|n| n.to_str()) == Some("_wip") {
+            if matches!(
+                path.file_name().and_then(|n| n.to_str()),
+                Some("_wip") | Some("_archive")
+            ) {
                 continue;
             }
             files.extend(collect_hudhud_files(&path));

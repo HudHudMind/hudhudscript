@@ -19,7 +19,7 @@ pub fn torrent_add(args: &[Value16]) -> SharedResult<Value16> {
         .get("torrent-added")
         .or_else(|| result.get("torrent-duplicate"));
 
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     obj.insert("ok".to_string(), Value16::boolean(true));
     if let Some(t) = added {
         obj.insert(

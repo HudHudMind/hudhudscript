@@ -53,7 +53,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
 
     // Agent system
     map.insert("에이전트".to_string(), Keyword::Agent);
-    map.insert("작업".to_string(), Keyword::Task);
     map.insert("도구".to_string(), Keyword::Tool);
     map.insert("자원".to_string(), Keyword::Resource);
 

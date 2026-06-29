@@ -105,7 +105,7 @@ pub fn all(_args: &[Value16]) -> HudHudResult<Value16> {
         "CREDENTIAL",
         "PRIVATE",
     ];
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     for (key, val) in std::env::vars() {
         let upper = key.to_uppercase();
         if SENSITIVE_PATTERNS.iter().any(|p| upper.contains(p)) {
@@ -117,7 +117,7 @@ pub fn all(_args: &[Value16]) -> HudHudResult<Value16> {
 }
 
 pub fn all_unfiltered(_args: &[Value16]) -> HudHudResult<Value16> {
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     for (key, val) in std::env::vars() {
         obj.insert(key, Value16::string(val));
     }

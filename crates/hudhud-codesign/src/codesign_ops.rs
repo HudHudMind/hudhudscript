@@ -81,7 +81,7 @@ pub fn codesign_sign(args: &[Value16]) -> HudHudResult<Value16> {
         .output()
         .map_err(|e| runtime_error(format!("codesign.sign: failed to execute gpg: {}", e)))?;
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     if output.status.success() {
         result.insert(
             "signature_path".to_string(),
@@ -136,7 +136,7 @@ pub fn codesign_verify(args: &[Value16]) -> HudHudResult<Value16> {
         .map(|line| line.to_string())
         .unwrap_or_default();
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("valid".to_string(), Value16::bool_(valid));
     result.insert("signer".to_string(), Value16::string(signer));
     result.insert("message".to_string(), Value16::string(stderr));
@@ -188,7 +188,7 @@ pub fn codesign_generate_manifest(args: &[Value16]) -> HudHudResult<Value16> {
             dir_path
         )));
     }
-    let mut manifest: HashMap<String, Value16> = HashMap::new();
+    let mut manifest: hudhudscript_bytecode::ObjMap = hudhudscript_bytecode::ObjMap::default();
     collect_file_hashes(path, path, &mut manifest)?;
     Ok(Value16::object(manifest))
 }
@@ -196,7 +196,7 @@ pub fn codesign_generate_manifest(args: &[Value16]) -> HudHudResult<Value16> {
 fn collect_file_hashes(
     base: &std::path::Path,
     dir: &std::path::Path,
-    manifest: &mut HashMap<String, Value16>,
+    manifest: &mut hudhudscript_bytecode::ObjMap,
 ) -> HudHudResult<()> {
     let entries = std::fs::read_dir(dir).map_err(|e| {
         runtime_error(format!(
@@ -264,10 +264,10 @@ pub fn codesign_verify_manifest(args: &[Value16]) -> HudHudResult<Value16> {
             None => continue,
         };
 
-        let full_path = base.join(rel_path);
+        let full_path = base.join(rel_path.to_string());
         if !full_path.exists() {
             valid = false;
-            missing.push(Value16::string(rel_path.clone()));
+            missing.push(Value16::string(rel_path.to_string()));
             continue;
         }
 
@@ -284,11 +284,11 @@ pub fn codesign_verify_manifest(args: &[Value16]) -> HudHudResult<Value16> {
 
         if actual != expected {
             valid = false;
-            mismatches.push(Value16::string(rel_path.clone()));
+            mismatches.push(Value16::string(rel_path.to_string()));
         }
     }
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("valid".to_string(), Value16::bool_(valid));
     result.insert("mismatches".to_string(), Value16::array(mismatches));
     result.insert("missing".to_string(), Value16::array(missing));

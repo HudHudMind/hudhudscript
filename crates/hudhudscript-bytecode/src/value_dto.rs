@@ -48,7 +48,7 @@ impl From<&Value16> for ValueDto {
                     ValueDto::Array(arr.iter().map(|x| x.into()).collect())
                 } else if let Some(obj) = v.as_object() {
                     let map: std::collections::HashMap<String, ValueDto> =
-                        obj.iter().map(|(k, v)| (k.clone(), v.into())).collect();
+                        obj.iter().map(|(k, v)| (k.to_string(), v.into())).collect();
                     ValueDto::Object(Box::new(map))
                 } else if let Some(fd) = v.as_function_data() {
                     ValueDto::Function(Box::new(fd.clone()))
@@ -59,7 +59,12 @@ impl From<&Value16> for ValueDto {
                 } else if let Some(set_items) = v.as_set() {
                     ValueDto::Set(set_items.iter().map(|x| x.into()).collect())
                 } else if let Some(map_pairs) = v.as_map_pairs() {
-                    ValueDto::Map(map_pairs.iter().map(|(k, v)| (k.into(), v.into())).collect())
+                    ValueDto::Map(
+                        map_pairs
+                            .iter()
+                            .map(|(k, v)| (k.into(), v.into()))
+                            .collect(),
+                    )
                 } else if let Some(opt) = v.as_option() {
                     ValueDto::Option(opt.map(|x| Box::new(x.into())))
                 } else if let Some(res) = v.as_result() {
@@ -83,13 +88,18 @@ impl From<ValueDto> for Value16 {
             ValueDto::String(s) => Value16::string(s),
             ValueDto::Array(arr) => Value16::array(arr.into_iter().map(|x| x.into()).collect()),
             ValueDto::Object(obj) => {
-                Value16::object(obj.into_iter().map(|(k, v)| (k, v.into())).collect())
+                Value16::object(obj.into_iter().map(|(k, v)| (k, v.into())))
             }
             ValueDto::Function(fd) => Value16::function(*fd),
             ValueDto::Class(cd) => Value16::class(*cd),
             ValueDto::Instance(inst) => Value16::instance(*inst),
             ValueDto::Set(items) => Value16::set(items.into_iter().map(|x| x.into()).collect()),
-            ValueDto::Map(pairs) => Value16::map(pairs.into_iter().map(|(k, v)| (k.into(), v.into())).collect()),
+            ValueDto::Map(pairs) => Value16::map(
+                pairs
+                    .into_iter()
+                    .map(|(k, v)| (k.into(), v.into()))
+                    .collect(),
+            ),
             ValueDto::Option(opt) => Value16::option(opt.map(|x| (*x).into())),
             ValueDto::Result(res) => Value16::result(res.map(|x| (*x).into())),
             // Promise/Generator/Tool/Resource — runtime state, not in bytecode constants

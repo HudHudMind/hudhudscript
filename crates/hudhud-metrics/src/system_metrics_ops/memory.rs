@@ -34,7 +34,7 @@ pub fn sys_memory(_args: &[Value16]) -> HudHudResult<Value16> {
             }
             let used = total.saturating_sub(available);
 
-            let mut obj = HashMap::new();
+            let mut obj = hudhudscript_bytecode::ObjMap::default();
             obj.insert("total".to_string(), Value16::number(total as f64));
             obj.insert("used".to_string(), Value16::number(used as f64));
             obj.insert("free".to_string(), Value16::number(free as f64));
@@ -43,7 +43,7 @@ pub fn sys_memory(_args: &[Value16]) -> HudHudResult<Value16> {
         }
     }
 
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     obj.insert("total".to_string(), Value16::number(0.0));
     obj.insert("used".to_string(), Value16::number(0.0));
     obj.insert("free".to_string(), Value16::number(0.0));

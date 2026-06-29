@@ -1,0 +1,24 @@
+function insertionSort(arr) {
+    let n = arr.length;
+    for (let i = 1; i < n; i = i + 1) {
+        let key = arr[i];
+        let k = i - 1;
+        while (true) {
+            if (k < 0) { break; }
+            if (arr[k] > key) {
+                arr[k + 1] = arr[k];
+                k = k - 1;
+            } else {
+                break;
+            }
+        }
+        arr[k + 1] = key;
+    }
+    return arr;
+}
+
+let data = [64, 34, 25, 12, 22, 11, 90, 5, 77, 3];
+let sorted = insertionSort(data);
+for (let i = 0; i < sorted.length; i = i + 1) {
+    print(sorted[i]);
+}

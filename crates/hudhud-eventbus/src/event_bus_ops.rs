@@ -158,7 +158,7 @@ pub fn event_emit(args: &[Value16]) -> HudHudResult<Value16> {
         state.delivered.remove(0);
     }
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("event".to_string(), Value16::string(event_name));
     result.insert("data".to_string(), data);
     result.insert("delivered".to_string(), Value16::bool_(matched_count > 0));
@@ -212,7 +212,7 @@ fn event_on_impl(args: &[Value16], once: bool) -> HudHudResult<Value16> {
 
     bus().lock().unwrap().subscriptions.insert(id.clone(), sub);
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("id".to_string(), Value16::string(id));
     result.insert("pattern".to_string(), Value16::string(pattern));
     result.insert("handler".to_string(), Value16::string(handler));
@@ -250,7 +250,7 @@ fn event_listeners(args: &[Value16]) -> HudHudResult<Value16> {
                 }
         })
         .map(|sub| {
-            let mut info = HashMap::new();
+            let mut info = hudhudscript_bytecode::ObjMap::default();
             info.insert("id".to_string(), Value16::string(sub.id.clone()));
             info.insert("pattern".to_string(), Value16::string(sub.pattern.clone()));
             info.insert("handler".to_string(), Value16::string(sub.handler.clone()));
@@ -281,7 +281,7 @@ fn event_clear(args: &[Value16]) -> HudHudResult<Value16> {
     }
 
     let cleared = before - state.subscriptions.len();
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("cleared".to_string(), Value16::number(cleared as f64));
     Ok(Value16::object(result))
 }

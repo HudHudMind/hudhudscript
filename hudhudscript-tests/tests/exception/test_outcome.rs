@@ -1,6 +1,5 @@
 //! Tests for Outcome<T> enum.
 
-
 use hudhudscript_exception::{Exception, ExceptionCode, Outcome};
 
 fn make_exc(msg: &str) -> Exception {

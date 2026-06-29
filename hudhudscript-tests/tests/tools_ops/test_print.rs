@@ -11,7 +11,10 @@ fn start_capture_initializes_buffer() {
 #[test]
 fn stop_capture_returns_none_when_not_active() {
     let output = hudhud_print::print_ops::stop_capture();
-    assert!(output.is_none(), "stop_capture without start should return None");
+    assert!(
+        output.is_none(),
+        "stop_capture without start should return None"
+    );
 }
 
 #[test]

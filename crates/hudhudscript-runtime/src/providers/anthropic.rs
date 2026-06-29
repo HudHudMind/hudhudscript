@@ -213,7 +213,10 @@ impl Provider for AnthropicProvider {
         // Record token usage
         let total_tokens =
             anthropic_response.usage.input_tokens + anthropic_response.usage.output_tokens;
-        self.tracker.lock().await.record(total_tokens);
+        self.tracker.lock().await.record(
+            anthropic_response.usage.input_tokens,
+            anthropic_response.usage.output_tokens,
+        );
 
         Ok(LLMResponse {
             content,

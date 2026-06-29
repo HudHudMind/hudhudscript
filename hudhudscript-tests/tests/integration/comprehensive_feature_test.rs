@@ -479,7 +479,6 @@ mod async_tests {
     use super::*;
 
     #[test]
-    #[ignore] // Depends on v0.4.8: async function parser support
     fn test_async_function() {
         let code = r#"
             async function fetchData() {

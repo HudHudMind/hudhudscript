@@ -1,6 +1,5 @@
 use crate::error::CompileResult;
-use crate::Value16;
-use std::collections::HashMap;
+use crate::{ObjMap, Value16};
 
 // ── Shared inline arithmetic (Kural 7 — single source for VM) ──
 
@@ -157,28 +156,28 @@ pub fn property_not_found(
 ///
 /// Supports the JS-compatible `new Error("message", { cause: e })` pattern.
 /// Returns a `HashMap` of fields to set on the error instance.
-pub fn construct_error_fields(class_name: &str, args: &[Value16]) -> HashMap<String, Value16> {
-    let mut fields = HashMap::new();
-    fields.insert("name".to_string(), Value16::string(class_name.to_string()));
+pub fn construct_error_fields(class_name: &str, args: &[Value16]) -> ObjMap {
+    let mut fields = ObjMap::default();
+    fields.insert(crate::sym::SymId::from("name"), Value16::string(class_name.to_string()));
 
     // First argument: message
     if let Some(msg) = args.first() {
-        fields.insert("message".to_string(), msg.clone());
+        fields.insert(crate::sym::SymId::from("message"), msg.clone());
     } else {
-        fields.insert("message".to_string(), Value16::string(String::new()));
+        fields.insert(crate::sym::SymId::from("message"), Value16::string(String::new()));
     }
 
     // Second argument: options object { cause: ... }
     if let Some(options) = args.get(1) {
         if let Some(obj) = options.as_object() {
             if let Some(cause) = obj.get("cause") {
-                fields.insert("cause".to_string(), cause.clone());
+                fields.insert(crate::sym::SymId::from("cause"), cause.clone());
             }
         }
     }
 
     fields.insert(
-        "stack".to_string(),
+        crate::sym::SymId::from("stack"),
         Value16::string(format!("{} at <runtime>", class_name)),
     );
 
@@ -226,6 +225,20 @@ pub fn shared_add(left: &Value16, right: &Value16) -> CompileResult<Value16> {
         s.push_str(b);
         return Ok(Value16::string(s));
     }
+    // N7: String + BigInt before String + Number (avoids BigInt→f64 precision loss)
+    if let (Some(a), Some(b)) = (left.as_str(), right.as_bigint()) {
+        let mut s = String::with_capacity(a.len() + 16);
+        s.push_str(a);
+        s.push_str(&b.to_string());
+        return Ok(Value16::string(s));
+    }
+    if let (Some(a), Some(b)) = (left.as_bigint(), right.as_str()) {
+        let a_str = a.to_string();
+        let mut s = String::with_capacity(a_str.len() + b.len());
+        s.push_str(&a_str);
+        s.push_str(b);
+        return Ok(Value16::string(s));
+    }
     if let (Some(a), Some(b)) = (left.as_str(), right.as_number()) {
         let b_str = format_number(b);
         let mut s = String::with_capacity(a.len() + b_str.len());
@@ -246,7 +259,7 @@ pub fn shared_add(left: &Value16, right: &Value16) -> CompileResult<Value16> {
         result.extend_from_slice(b);
         return Ok(Value16::array(result));
     }
-    // #745: String + Boolean is a TypeError — no auto-coercion.
+// #745: String + Boolean is a TypeError — no auto-coercion.
     if left.as_str().is_some() || right.as_str().is_some() {
         return Err(type_error("String or Number", right.type_name_str(), "+"));
     }

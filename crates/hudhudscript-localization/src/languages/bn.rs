@@ -36,7 +36,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
 
     // Agent system
     map.insert("এজেন্ট".to_string(), Keyword::Agent);
-    map.insert("কাজ".to_string(), Keyword::Task);
     map.insert("টুল".to_string(), Keyword::Tool);
     map.insert("সম্পদ".to_string(), Keyword::Resource);
     map.insert("এমসিপি".to_string(), Keyword::Mcp);
@@ -107,7 +106,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
     map.insert("ট্রিগার".to_string(), Keyword::Trigger);
     // Native Bengali translations
     map.insert("কার্য".to_string(), Keyword::Action);
-    map.insert("এজেন্ট_নিয়ম".to_string(), Keyword::AgentRule);
     map.insert("এজেন্ট_অবস্থা".to_string(), Keyword::AgentState);
     map.insert("অনুমতি_দাও".to_string(), Keyword::Allow);
     map.insert("যোগাযোগ_শৈলী".to_string(), Keyword::CommunicationStyle);
@@ -120,8 +118,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
     map.insert("অনানুষ্ঠানিক".to_string(), Keyword::Informal);
     map.insert("উদ্দেশ্য".to_string(), Keyword::Intent);
     map.insert("অগ্রাধিকার".to_string(), Keyword::Priority);
-    map.insert("নিয়ম_শৃঙ্খল".to_string(), Keyword::RuleChain);
-    map.insert("নিয়ম_সেট".to_string(), Keyword::RuleSet);
     map.insert("অবস্থা_যন্ত্র".to_string(), Keyword::StateMachine);
     map.insert("প্রযুক্তিগত".to_string(), Keyword::Technical);
     map.insert("রূপান্তর_করো".to_string(), Keyword::Transform);

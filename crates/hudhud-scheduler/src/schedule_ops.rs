@@ -61,7 +61,7 @@ fn schedule_cron(args: &[Value16]) -> HudHudResult<Value16> {
         )));
     }
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("expression".to_string(), Value16::string(expr));
     result.insert("type".to_string(), Value16::string("cron".to_string()));
     result.insert("active".to_string(), Value16::bool_(true));
@@ -83,7 +83,7 @@ fn parse_cron(args: &[Value16]) -> HudHudResult<Value16> {
         )));
     }
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("minute".to_string(), Value16::string(fields[0].to_string()));
     result.insert("hour".to_string(), Value16::string(fields[1].to_string()));
     result.insert("dom".to_string(), Value16::string(fields[2].to_string()));

@@ -1,0 +1,16 @@
+// Sample 09: step transition s1 -> s3 (skips s2)
+loop nav {
+  step s1 {
+    gate G { when true -> s3 else -> done }
+  }
+  step s2 {
+    result.s2_ran = true
+    gate G { when true -> done else -> done }
+  }
+  step s3 {
+    result.s3_ran = true
+    gate G { when true -> done else -> done }
+  }
+}
+
+run loop nav

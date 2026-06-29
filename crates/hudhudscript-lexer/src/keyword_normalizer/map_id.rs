@@ -10,7 +10,6 @@ pub(crate) static ID_KEYWORDS: &[(&'static str, &'static str)] = &[
     ("asinkroni", "async"),
     ("atur", "set"),
     ("aturan", "rule"),
-    ("aturan_agen", "agent_rule"),
     ("bağlam", "context"),
     ("bağlı", "depends_on"),
     ("birleştir", "merge"),

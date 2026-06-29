@@ -14,7 +14,7 @@ pub fn file_type(args: &[Value16]) -> HudHudResult<Value16> {
 
     let detected = detect_magic(buf);
 
-    let mut m = HashMap::new();
+    let mut m = hudhudscript_bytecode::ObjMap::default();
     m.insert("type".to_string(), Value16::string(detected.0.to_string()));
     m.insert("mime".to_string(), Value16::string(detected.1.to_string()));
     Ok(Value16::object(m))

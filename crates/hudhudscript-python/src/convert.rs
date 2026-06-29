@@ -6,7 +6,7 @@ use pyo3::types::{PyDict, PyList, PyBool, PyFloat, PyString};
 
 pub fn py_to_value(obj: &Bound<'_, PyAny>) -> PyResult<Value16> {
     if let Ok(dict) = obj.downcast::<PyDict>() {
-        let mut map = std::collections::HashMap::new();
+        let mut map = hudhudscript_bytecode::ObjMap::default();
         for (k, v) in dict.iter() {
             let key: String = k.extract()?;
             let val = py_to_value(&v)?;
@@ -50,7 +50,8 @@ pub fn value_to_py(py: Python<'_>, val: &Value16) -> PyResult<PyObject> {
     } else if let Some(obj) = val.as_object() {
         let dict = PyDict::new(py);
         for (k, v) in obj.iter() {
-            dict.set_item(k, value_to_py(py, v)?)?;
+            let key_str = hudhudscript_bytecode::interner::resolve(hudhudscript_bytecode::interner::SymbolId(k.0));
+            dict.set_item(key_str, value_to_py(py, v)?)?;
         }
         Ok(dict.into())
     } else if val.is_null() {

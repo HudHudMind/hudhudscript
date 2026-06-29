@@ -79,6 +79,17 @@ impl Compiler {
                 },
             ));
         }
+
+        // Merge user-declared fields from the script body (e.g. command:"echo", args:["hello"]).
+        // These supplement config-derived fields with the same key.
+        let config_keys: std::collections::HashSet<String> =
+            fields.iter().map(|(k, _)| k.clone()).collect();
+        for (key, value) in &mcp_decl.fields {
+            if !config_keys.contains(key) {
+                fields.push((key.clone(), value.clone()));
+            }
+        }
+
         self.compile_decl_as_object("mcp_server", &mcp_decl.name, &fields)
     }
 }

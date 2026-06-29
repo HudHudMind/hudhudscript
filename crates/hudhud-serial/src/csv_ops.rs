@@ -56,12 +56,12 @@ pub fn parse(args: &[Value16]) -> HudHudResult<Value16> {
         .map_err(|e| runtime_error(format!("CSV.parse error: {}", e)))?
         .iter()
         .map(|h| h.to_string())
-        .collect();
+        .map(|k| k.to_string()).collect();
 
     let mut rows = Vec::new();
     for result in rdr.records() {
         let record = result.map_err(|e| runtime_error(format!("CSV.parse error: {}", e)))?;
-        let mut obj = HashMap::new();
+        let mut obj = hudhudscript_bytecode::ObjMap::default();
         for (i, field) in record.iter().enumerate() {
             let key = headers.get(i).cloned().unwrap_or_else(|| i.to_string());
             let val = if let Ok(n) = field.parse::<f64>() {
@@ -94,9 +94,7 @@ pub fn stringify(args: &[Value16]) -> HudHudResult<Value16> {
         .as_object()
         .ok_or_else(|| runtime_error("CSV.stringify expects an array of objects"))?
         .keys()
-        .cloned()
-        .collect::<Vec<_>>()
-        .into_iter()
+        .map(|k| k.to_string())
         .collect();
 
     let mut sorted_headers = headers;

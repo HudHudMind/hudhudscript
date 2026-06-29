@@ -42,6 +42,7 @@ fn test_last_rule_wins() {
 }
 
 #[test]
+    #[ignore = "process-global privileged syscall; unsafe in parallel test. Run: --ignored --test-threads=1"]
 fn test_apply_succeeds() {
     let filter = SeccompFilter::new();
     assert!(filter.apply().is_ok());
@@ -80,6 +81,7 @@ fn test_permissive_profile() {
 }
 
 #[test]
+    #[ignore = "process-global privileged syscall; unsafe in parallel test. Run: --ignored --test-threads=1"]
 fn test_profile_apply() {
     let profile = SeccompProfile::minimal();
     assert!(profile.apply().is_ok());

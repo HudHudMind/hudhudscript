@@ -1,12 +1,16 @@
 # HudHudScript
 
-> **Multi-lingual, register-based scripting language for AI orchestration, agent systems, and governance modeling.**
+> Multilingual, register-based scripting language for AI orchestration, agent workflows, governance models, automation, and embeddable runtime use.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.6.11-blue.svg)](Cargo.toml)
+[![Version](https://img.shields.io/badge/version-0.7.357-blue.svg)](Cargo.toml)
 [![Rust](https://img.shields.io/badge/built%20with-Rust-orange.svg)](https://www.rust-lang.org/)
 
-HudHudScript is a programming language designed to be written in **your own language** — Turkish, Arabic, Japanese, English, Kurdish, Persian, and 18 more. Every keyword, every built-in function, every error message is localized natively. It runs on a **fully register-based VM** written in Rust, with first-class support for AI providers, agent pipelines, council/governance models, and SOP (Subject-Oriented Programming).
+**Current version:** `0.7.357`
+
+HudHudScript is a Rust-powered scripting language built around a register-based bytecode VM, native multilingual syntax, and first-class constructs for AI providers, agents, SOP (Subject-Oriented Programming), councils, swarms, and governance rules.
+
+The goal is simple: let people model automation, AI systems, and authority flows in the language they think in, while still running on one consistent compiler, bytecode format, and VM.
 
 ---
 
@@ -27,182 +31,147 @@ HudHudScript is a programming language designed to be written in **your own lang
 
 ## Why HudHudScript
 
-| | Description |
+| Area | Description |
 |---|---|
-| 🌍 **24 Native Languages** | Write `yazdır("Merhaba")` in Turkish, `اطبع("مرحبا")` in Arabic, `表示("こんにちは")` in Japanese. Keywords and built-ins use the actual word in your language. |
-| 🚀 **Register-Based VM** | Inspired by Lua 5.4. No stack/register hybrid — every local is a register. Fast, predictable execution. |
-| 🤖 **AI-First Built-ins** | `provider`, `agent` are first-class constructs. Native integration with DeepSeek, OpenAI, Anthropic, Ollama, and local models. |
-| 🏛️ **Governance Primitives** | `role`, `council`, `swarm`, `community`, `constitution`, `law` — model real-world authority systems directly. |
-| 📜 **SOP — Subject-Oriented Programming** | `role`, `subject`, `effect`, `view` — model behavior by subject (Harrison & Ossher), with sequential/parallel/conditional flows. |
-| 🔐 **Sandbox & Validation** | Built-in capability-based sandbox, schema validation, MCP protocol bridge. |
-| ⚡ **Multi-Frontend** | CLI (`hudhud`), Python module (`hudhudscript`), LSP server, REPL, web playground. |
+| Native multilingual syntax | Write scripts with localized keywords and built-ins, including Turkish, Arabic, Japanese, English, Kurdish, Persian, and more. |
+| Register-based VM | Bytecode is executed by a Rust VM designed around registers, direct instruction dispatch, compact values, and hot-path specialization. |
+| AI-first language features | `provider`, `agent`, `swarm`, and pipeline-oriented patterns are part of the language model, not only external libraries. |
+| Governance primitives | `role`, `council`, `community`, `constitution`, and `law` express authority, policy, membership, and voting directly. |
+| SOP support | Subject-Oriented Programming concepts like `role`, `subject`, `effect`, and `view` are first-class modeling tools. |
+| Runtime ecosystem | Compiler, VM, formatter, LSP, debugger, package/runtime crates, Python bindings, and plugin-facing standard library crates live in one workspace. |
+
+HudHudScript is not only a benchmark runner. It is intended as a practical scripting layer for AI products, local automation, agent systems, simulations, governance experiments, and embeddable domain runtimes.
 
 ---
 
 ## Quick Example
 
-### Hello World — Three Ways
-
 ```hudhud
 // English
-print("Hello, World!")
+print("Hello, World!");
 
-// Türkçe
-yazdır("Merhaba, Dünya!")
+// Turkish
+yazdır("Merhaba, Dünya!");
 
-// العربية
-اطبع("مرحبا، عالم!")
+// Arabic
+اطبع("مرحبا، عالم!");
 ```
 
-All three compile to the same bytecode. Run any of them:
+All localized forms compile to the same kind of bytecode and run on the same VM.
 
 ```bash
 hudhud run hello.hud
 ```
 
-### Variables & Logic
+### Variables and Logic
 
 ```hudhud
-// English
-let x = 10
-let y = 20
-let sum = x + y
-let is_ready = true
-let is_valid = sum > 25 && is_ready
-if (is_valid) { print("Ready: " + sum) } else { print("Not ready") }
+let x = 10;
+let y = 20;
+let sum = x + y;
+let ready = sum > 25;
+
+if (ready) {
+    print("Ready: " + sum);
+} else {
+    print("Not ready");
+}
 ```
 
-Same logic in 5 languages (every keyword in its native form):
+The same basic control flow can be written with native keywords:
 
-| Dil | let | if | else | print |
+| Language | let | if | else | print |
 |---|---|---|---|---|
-| Türkçe | `değişken` | `eğer` | `değilse` | `yazdır` |
-| العربية | `متغير` | `إذا` | `وإلا` | `اطبع` |
-| Русский | `пусть` | `если` | `иначе` | `print` |
-| 中文 | `变量` | `如果` | `否则` | `print` |
-| 日本語 | `変数` | `もし` | `それでも` | `print` |
-
-```hudhud
-// Türkçe
-değişken x = 10; değişken y = 20; değişken t = x + y
-eğer (t > 25) { yazdır("Evet") } değilse { yazdır("Hayır") }
-
-// العربية
-متغير x = 10; متغير y = 20; متغير t = x + y
-إذا (t > 25) { اطبع("نعم") } وإلا { اطبع("لا") }
-
-// Русский
-пусть x = 10; пусть y = 20; пусть t = x + y
-если (t > 25) { print("Да") } иначе { print("Нет") }
-
-// 中文
-变量 x = 10; 变量 y = 20; 变量 t = x + y
-如果 (t > 25) { print("是") } 否则 { print("否") }
-
-// 日本語
-変数 x = 10; 変数 y = 20; 変数 t = x + y
-もし (t > 25) { print("はい") } それでも { print("いいえ") }
-```
+| Turkish | `değişken` | `eğer` | `değilse` | `yazdır` |
+| Arabic | `متغير` | `إذا` | `وإلا` | `اطبع` |
+| Russian | `пусть` | `если` | `иначе` | `print` |
+| Chinese | `变量` | `如果` | `否则` | `print` |
+| Japanese | `変数` | `もし` | `それでも` | `print` |
 
 ### AI Agent Pipeline
 
 ```hudhud
 provider DeepSeek {
-    type: "deepseek",
-    model: "deepseek-chat",
-    api_key: env("DEEPSEEK_API_KEY"),
-    temperature: 0.7
+    type: "deepseek"
+    model: "deepseek-chat"
+    api_key: env("DEEPSEEK_API_KEY")
 }
 
 agent Translator {
-    role: "translator",
+    role: "translator"
     intent: "Translate text between languages"
+    provider: DeepSeek
 }
 
-fn translate(prov, text, target_lang) {
-    let prompt = "Translate to " + target_lang + ": " + text
-    return prov.call({ prompt: prompt })
-}
-
-let result = translate(DeepSeek, "Hello world", "Turkish")
-print(result)
+print("Agent Translator role:")
+print(Translator["role"])
 ```
 
-### SOP — Subject-Oriented Programming
+### SOP and Governance
 
 ```hudhud
-role Fighter { can attack, can defend }
-subject Knight has Fighter {
-    state health: 100, state power: 30
+role Mayor {
+    can propose,
+    can veto
 }
-effect on Damage(target, amount) { target.health = target.health - amount }
-on attack(self, target) { Damage(target, self.power) }
-let hero = spawn Knight; let boss = spawn Knight
-hero.attack(boss)
-print("Boss HP: "); print(boss.health)
-```
 
-### Council & Governance
+role Treasurer {
+    can budget,
+    can audit
+}
 
-```hudhud
-role Mayor      { can propose, can veto }
-role Treasurer  { can budget, can audit }
-role Sheriff    { can enforce, can detain }
+subject CityMayor has Mayor {
+    state term: 1,
+    state proposals: 0
+}
 
-subject CityMayor      has Mayor      { state term: 1 }
-subject CityTreasurer  has Treasurer  { state budget: 1_000_000 }
-subject CitySheriff    has Sheriff    { state officers: 50 }
+subject CityTreasurer has Treasurer {
+    state budget: 1000000,
+    state spent: 0
+}
 
 council CityCouncil {
-    quorum: 2,
-    members: ["CityMayor", "CityTreasurer", "CitySheriff"],
-    rules: ["majority-vote", "public-record"]
+    quorum: 2
+    members: ["CityMayor", "CityTreasurer"]
+    rules: ["majority-vote"]
 }
-
-spawn CityMayor; spawn CityTreasurer; spawn CitySheriff;
 ```
 
-More samples in [`samples/`](samples/).
+More examples are available in [`samples/`](samples/).
 
 ### Quick Samples
 
-All samples in [`samples/`](samples/):
-
 | Sample | Description |
 |---|---|
-| **SOP** ||
-| [`sop_subject.hud`](samples/sop_subject.hud) | Subject-Oriented Programming — roles, effects, views |
-| [`sop_npc_rpg.hud`](samples/sop_npc_rpg.hud) | NPC RPG — full game loop |
-| [`sop_arena.hud`](samples/sop_arena.hud) | Arena Combat — of, compose, despawn |
-| [`sop_inventory.hud`](samples/sop_inventory.hud) | SOP + OOP hybrid — stock management |
-| [`sop_ecommerce.hud`](samples/sop_ecommerce.hud) | SOP E-Commerce |
-| [`sop_fleet.hud`](samples/sop_fleet.hud) | SOP Fleet management |
-| **OOP** ||
-| [`oop_class.hud`](samples/oop_class.hud) | Classes, abstract, inheritance, methods |
-| **Agent + Provider** ||
-| [`agent_provider.hud`](samples/agent_provider.hud) | Agent with DeepSeek provider |
 | [`agent_pipeline.hud`](samples/agent_pipeline.hud) | Multi-agent pipeline |
-| **Governance** ||
-| [`governance_council.hud`](samples/governance_council.hud) | Council, Swarm, Roles, Subjects |
-| [`city_council.hud`](samples/city_council.hud) | City council meeting |
-| [`swarm_council.hud`](samples/swarm_council.hud) | Swarm + Council + Community |
-| [`security_council.hud`](samples/security_council.hud) | Security council |
-| **Multilingual** ||
-| [`multilingual_print.hud`](samples/multilingual_print.hud) | 26 dilde print() |
-| **TUI** ||
-| [`tui_demo.hud`](samples/tui_demo.hud) | Terminal UI — counter demo |
-| **Basics** ||
-| [`hello.hud`](samples/hello.hud) | Hello World |
-| [`functions.hud`](samples/functions.hud) | Functions |
-| [`loops.hud`](samples/loops.hud) | Loops & conditionals |
-| [`conditionals.hud`](samples/conditionals.hud) | If/else, ternary |
-| [`fibonacci.hud`](samples/fibonacci.hud) | Fibonacci |
+| [`agent_provider.hud`](samples/agent_provider.hud) | AI provider declaration |
+| [`city_council.hud`](samples/city_council.hud) | City council governance example |
+| [`conditionals.hud`](samples/conditionals.hud) | If/else examples |
+| [`exception_test.hud`](samples/exception_test.hud) | Exception flow sample |
+| [`fibonacci.hud`](samples/fibonacci.hud) | Recursive computation |
+| [`functions.hud`](samples/functions.hud) | Function declarations and calls |
+| [`governance_council.hud`](samples/governance_council.hud) | Council role modeling |
+| [`hello.hud`](samples/hello.hud) | Hello world |
+| [`hello_world.hud`](samples/hello_world.hud) | Alternate hello world |
+| [`loop_engineer.hud`](samples/loop_engineer.hud) | Loop engineering dry-run sample |
+| [`loops.hud`](samples/loops.hud) | Loops and control flow |
+| [`multilingual_print.hud`](samples/multilingual_print.hud) | Multilingual output |
+| [`oop_class.hud`](samples/oop_class.hud) | Classes and methods |
+| [`security_council.hud`](samples/security_council.hud) | Security council governance example |
+| [`sop_arena.hud`](samples/sop_arena.hud) | SOP arena example |
+| [`sop_ecommerce.hud`](samples/sop_ecommerce.hud) | SOP ecommerce model |
+| [`sop_fleet.hud`](samples/sop_fleet.hud) | SOP fleet management |
+| [`sop_inventory.hud`](samples/sop_inventory.hud) | SOP inventory model |
+| [`sop_npc_rpg.hud`](samples/sop_npc_rpg.hud) | SOP game-style example |
+| [`sop_subject.hud`](samples/sop_subject.hud) | Subject-Oriented Programming |
+| [`swarm_council.hud`](samples/swarm_council.hud) | Swarm council coordination |
+| [`tui_demo.hud`](samples/tui_demo.hud) | Terminal UI demo |
 
 ---
 
 ## Installation
 
-### From Source
+### Build from Source
 
 ```bash
 git clone https://github.com/HudHudMind/hudhudscript.git
@@ -218,17 +187,17 @@ cargo build --release -p hudhudscript-cli
 The main binary is `hudhud`.
 
 ```bash
-hudhud run    script.hud      # Compile + execute
-hudhud check  script.hud      # Type-check + lint, no execution
-hudhud compile script.hud     # Emit bytecode
-hudhud fmt    script.hud      # Format source code
-hudhud repl                   # Interactive REPL
-hudhud lsp                    # Start LSP server (for editor integration)
+hudhud run script.hud        # Compile and execute
+hudhud check script.hud      # Parse/check without running
+hudhud compile script.hud    # Emit bytecode
+hudhud fmt script.hud        # Format source code
+hudhud repl                  # Interactive REPL
+hudhud lsp                   # Language server
 hudhud --version
 hudhud --help
 ```
 
-**File extensions:** `.hud`, `.hudhud`, `.hhs` — all valid.
+**File extensions:** `.hud`, `.hudhud`, and `.hhs` are supported.
 
 ---
 
@@ -237,76 +206,56 @@ hudhud --help
 ### Core Syntax
 
 - `let`, `const`, `var` declarations
-- Arithmetic, boolean, comparison, bitwise operators
-- `if` / `else` / `while` / `for` / `loop` / `break` / `continue`
-- Functions (`fn`), closures, arrow functions
-- Arrays, objects (maps), destructuring
-- `try` / `catch` / `finally`
-- Classes & OOP (`class`, `extends`, `super`)
-- Async / await (`async fn`, `.then()`, `.await`)
-- Modules (`use`, `import`, `export`)
+- Arithmetic, comparison, boolean, and bitwise operators
+- `if`, `else`, `while`, `for`, `loop`, `break`, `continue`
+- Functions `fn`, closures, arrow functions
+- Arrays, objects, destructuring, strings, numbers, booleans, null
+- `try`, `catch`, `finally`
+- Classes, inheritance, methods, `super`
+- Async functions, await-style flows, promises
+- Modules, imports, exports, package/runtime crates
 
-All keywords have native equivalents in 24 languages — see the Variables & Logic example above.
+### AI Agent Constructs
 
-### AI Orchestration Constructs
+- `provider` AI backends: OpenAI, DeepSeek, Anthropic, Ollama, and custom providers
+- `agent` role/intent driven AI units
+- `swarm` coordinated multi-agent execution
+- `council` voting governance workflows
+- Tooling crates for MCP, resources, validation, sandboxing, RAG, package operations, and native extensions
 
-- `provider` — declare an AI backend (OpenAI, DeepSeek, Anthropic, Ollama, custom)
-- `agent` — AI agent with role, intent, and provider binding
-- `swarm` — parallel agent execution group
-- `council` — voting body with governance rules
+### Governance and SOP
 
-### Governance & SOP
+- `role` capability bundles
+- `subject` entities with roles and state
+- `effect` and `view` behavior composition
+- `council`, `community`, `constitution`, `law` policy governance modeling
+- Relation and rule systems for trust, influence, and authority graphs
 
-- `role` — capability bundle
-- `subject` — entity that holds roles
-- `council` — voting body
-- `swarm` — leaderless collective
-- `community` — membership graph
-- `constitution`, `law` — rule definitions
-- `relation` — trust/influence edges
-- `sop` — Subject-Oriented Programming (Harrison & Ossher)
+### Runtime Tooling
 
-### Built-in Crates
-
-Over 60 utility crates ship in [`crates/`](crates/) prefixed `hudhud-*`:
-
-```
-hudhud-http     hudhud-fs        hudhud-net       hudhud-crypto
-hudhud-pdf      hudhud-ocr       hudhud-email     hudhud-regex
-hudhud-math     hudhud-linalg    hudhud-datetime  hudhud-archive
-hudhud-docker   hudhud-firewall  hudhud-gpu       hudhud-hardware
-hudhud-media    hudhud-print     hudhud-translate hudhud-workflow
-... and more
-```
+- Register-based bytecode VM
+- Compact `Value16` runtime representation
+- Compiler, parser, lexer, formatter, LSP, debugger, test crate, and CLI
+- Python bindings through `hudhudscript-python`
+- Benchmark regression tooling for VM/compiler performance work
 
 ---
 
 ## Project Structure
 
-```
+```text
 hudhudscript/
-├── Cargo.toml              # Workspace root
-├── crates/                 # 90+ Rust crates (compiler, VM, stdlib, tools)
-│   ├── hudhudscript-cli/   # `hudhud` binary
-│   ├── hudhudscript-lexer/
+├── Cargo.toml                 # Workspace root
+├── crates/                    # Compiler, VM, CLI, tooling, stdlib crates
+│   ├── hudhudscript-cli/      # `hudhud`, `hudc`, `hudi`, `hudp`
 │   ├── hudhudscript-parser/
 │   ├── hudhudscript-compiler/
-│   ├── hudhudscript-vm/    # Register-based VM
-│   ├── hudhudscript-runtime/
-│   ├── hudhudscript-lsp/   # Editor language server
-│   ├── hudhudscript-python/ # PyO3 bindings
-│   └── hudhud-*            # Standard library crates
-├── examples/               # Curated example programs
-│   ├── 01-basics/
-│   ├── 02-multilingual/
-│   ├── 03-council/
-│   ├── 04-agents/
-│   └── 05-advanced/
-├── samples/                # Compact one-file demos
-├── docs/                   # Language reference, book, paper
-├── editors/                # VS Code, Vim, Emacs plugins
-├── installer/              # Platform-specific installers
-└── hudhudscript-tests/    # Cross-crate integration tests
+│   ├── hudhudscript-bytecode/
+│   ├── hudhudscript-vm/
+│   ├── hudhudscript-lsp/
+│   └── hudhud-*              # Standard library / extension crates
+├── samples/                   # Compact demo programs
+└── hudhudscript-tests/       # Integration test workspace copied for public release
 ```
 
 ---
@@ -315,92 +264,51 @@ hudhudscript/
 
 ### Prerequisites
 
-- **Rust 1.93+** ([install](https://rustup.rs/))
-- **Cargo** (ships with Rust)
-- **Git**
-- *(Optional)* **Python 3.8+** + **maturin** for the Python module
-- *(Optional)* **Node.js 20+** for editor plugins
+- Rust and Cargo
+- Git
+- Optional: Python 3.8+ for Python bindings
+- Optional: Node.js for editor/website tooling
 
-### Clone & Build
+### Build
 
 ```bash
-git clone https://github.com/HudHudMind/hudhudscript.git
-cd hudhudscript
-
-# Debug build (fast compile, slow runtime)
-cargo build -p hudhudscript-cli
-
-# Release build (slow compile, fast runtime)
+cargo build --workspace
 cargo build --release -p hudhudscript-cli
-
-# The binary lands at target/release/hudhud
-./target/release/hudhud --version
 ```
 
-### Add to PATH
+### Test
 
 ```bash
-sudo cp target/release/hudhud /usr/local/bin/
-hudhud run examples/01-basics/hello_world.hud
+cargo test --workspace
 ```
 
-### Build the Python Module
+### Benchmark
 
 ```bash
-cd crates/hudhudscript-python
-maturin develop --release
-python3 -c "import hudhudscript; print(hudhudscript.version())"
+cargo bench
+./bench_release.sh
 ```
 
 ---
 
 ## Documentation
 
-Full documentation, language reference, and guides are available on our website:
-
-| Resource | Link |
-|---|---|
-| **Official Website** | [hudhudscript.com](https://hudhudscript.com) |
-| **Language Reference** | [hudhudscript.com/docs](https://hudhudscript.com/docs) |
-| **API Reference** | [hudhudscript.com/api](https://hudhudscript.com/api) |
-| **Examples & Tutorials** | [hudhudscript.com/examples](https://hudhudscript.com/examples) |
-
-For implementation details, see the source code and comments in [`crates/`](crates/).
+Documentation lives in [`docs/`](docs/) and examples live in [`samples/`](samples/). The source tree also contains specialized crates for parser, compiler, bytecode, VM, localization, package management, governance, sandboxing, validation, and AI/runtime integrations.
 
 ---
 
 ## Contributing
 
-HudHudScript follows a strict project constitution (see [`CLAUDE.md`](CLAUDE.md) and [`AGENTS.md`](AGENTS.md)):
+Issues, tests, documentation fixes, and benchmark reports are welcome. For performance work, include:
 
-1. **Test sanctity** — approved unit tests are immutable; only new tests can be added.
-2. **VM is the single runtime** — no interpreter fallback, no hybrid stack/register designs.
-3. **Single Source of Truth** — no parallel implementations, no duplicated code, no "alternative" systems.
-4. **Implementation = Integration** — every new struct/trait must be wired into production runtime in the same commit.
-5. **400-line file limit** — files larger than 400 lines must be refactored, no exceptions.
-
-### Reporting Issues
-
-- Open an issue on [GitHub](https://github.com/HudHudMind/hudhudscript/issues)
-- Or report via the website's error reporter
-- Include: HudHudScript version (`hudhud --version`), OS, minimal reproducing script
-
-### Pull Requests
-
-- Run `cargo test --workspace` before submitting
-- Run `cargo clippy --workspace --all-targets -- -D warnings`
-- Run `cargo fmt --all`
-- Add tests for new functionality
-- Update relevant documentation
+- exact commit and version
+- benchmark source used
+- release/debug mode
+- median and p90 repeated runs
+- bytecode opcode diff when applicable
 
 ---
 
 ## License
 
-MIT License © 2026 Onur GÜZEL — see [`LICENSE`](LICENSE) for details.
-
----
-
-## Acknowledgments
-
-HudHudScript is named after the **Hudhud** (hoopoe) — the bird mentioned in classical literature as a messenger and bridge between worlds. The language aims to be exactly that: a bridge between human languages, between human intent and machine execution, between AI agents and the systems they serve.
+HudHudScript is licensed under the [MIT License](LICENSE).

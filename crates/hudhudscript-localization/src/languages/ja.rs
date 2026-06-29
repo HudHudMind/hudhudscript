@@ -16,7 +16,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
 
     // エージェント (Agent system)
     map.insert("エージェント".to_string(), Keyword::Agent);
-    map.insert("タスク".to_string(), Keyword::Task);
     map.insert("ツール".to_string(), Keyword::Tool);
     map.insert("資源".to_string(), Keyword::Resource);
     map.insert("mcp".to_string(), Keyword::Mcp);

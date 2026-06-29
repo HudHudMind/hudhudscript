@@ -1,0 +1,152 @@
+// ── AI Soru-Cevap Web Sitesi ──────────────────────────────────────────
+// HudHudScript + DeepSeek AI + hudhud-web prefork framework.
+// Kullanıcı POST /sor → DeepSeek AI → Markdown→HTML → sayfada göster.
+
+provider DeepSeek {
+    type: "deepseek",
+    model: "deepseek-chat",
+    api_key: env("DEEPSEEK_API_KEY"),
+    temperature: 0.7
+}
+
+fn ask(question) {
+    var resp = DeepSeek.call({ prompt: question });
+    return resp.content;
+}
+
+// ── Multi-agent council (script-level, real provider calls) ──────────
+
+fn arastir(soru) {
+    var p = "Kısa ve net cevap ver: " + soru;
+    var r = DeepSeek.call({ prompt: p });
+    return r.content;
+}
+
+fn duzelt(soru, taslak) {
+    var p = "Şu soruya verilen cevabı daha iyi, daha akıcı hale getir:\nSORU: " + soru + "\nCEVAP: " + taslak + "\n\nSADECE düzeltilmiş cevabı yaz.";
+    var r = DeepSeek.call({ prompt: p });
+    return r.content;
+}
+
+fn council_ask(soru) {
+    var taslak = arastir(soru);
+    var sonuc = duzelt(soru, taslak);
+    return sonuc;
+}
+
+fn serve_app(opts) {
+    var role = Web.run(opts);
+    if (role.role == "master") {
+        return role;
+    }
+    var app = Web.serve({
+        host: opts.host,
+        port: opts.port,
+        reuse_port: true
+    });
+    while (true) {
+        var req = Web.accept(app);
+        var resp = dispatch_route(req, opts);
+        Web.respond(req, resp);
+    }
+}
+
+fn dispatch_route(req, opts) {
+    var path = req.path;
+    var method = req.method;
+
+    // Route: GET /
+    if (method == "GET" && Web.route_match("/", path)) {
+        var ctx = { title: "AI'ya Sor" };
+        return Web.render_file("examples/07-ai-website/templates/index.html", ctx);
+    }
+
+    // Route: POST /sor
+    if (method == "POST" && Web.route_match("/sor", path)) {
+        var soru = req.form.question;
+        if (soru == null || soru == "") {
+            return Web.html("<h1>Hata</h1><p>Lütfen bir soru yazın.</p><a href='/'>Geri</a>", 400);
+        }
+        var api_key = env("DEEPSEEK_API_KEY");
+        if (api_key == null || api_key == "") {
+            return Web.html("<h1>API Anahtarı Eksik</h1><p>DeepSeek API anahtarı ayarlanmamış.</p><p><code>export DEEPSEEK_API_KEY=<your-api-key></code></p><a href='/'>Geri</a>", 500);
+        }
+        var cevap = ask(soru);
+        return answer_page(soru, cevap);
+    }
+
+    // Route: POST /kurul — multi-agent council
+    if (method == "POST" && Web.route_match("/kurul", path)) {
+        var soru = req.form.question;
+        if (soru == null || soru == "") {
+            return Web.html("<h1>Hata</h1><p>Lütfen bir soru yazın.</p><a href='/'>Geri</a>", 400);
+        }
+        var api_key = env("DEEPSEEK_API_KEY");
+        if (api_key == null || api_key == "") {
+            return Web.html("<h1>API Anahtarı Eksik</h1><p>DeepSeek API anahtarı ayarlanmamış.</p><p><code>export DEEPSEEK_API_KEY=<your-api-key></code></p><a href='/'>Geri</a>", 500);
+        }
+        var cevap = council_ask(soru);
+        return answer_page(soru, cevap);
+    }
+
+    // Route: GET /static/*
+    if (method == "GET" && Web.route_match("/static/*", path)) {
+        var rel = path.slice(8);
+        return Web.static(req, "examples/07-ai-website/static", rel);
+    }
+
+    return Web.html("<h1>404</h1><p>Bulunamadı.</p><a href='/'>Ana Sayfa</a>", 404);
+}
+
+fn answer_page(soru, cevap) {
+    var cevap_html = Web.markdown(cevap);
+    var kelime = count_words(cevap);
+    var harf = count_chars(cevap);
+    var ctx = {
+        title: "Cevap",
+        soru: soru,
+        kelime: kelime,
+        harf: harf
+    };
+    var base_html = Web.render_file("examples/07-ai-website/templates/answer.html", ctx).body;
+    return Web.html(base_html.replace("___ANSWER_HTML___", cevap_html));
+}
+
+fn count_words(text) {
+    var count = 0;
+    var in_word = false;
+    var i = 0;
+    while (i < text.length) {
+        var c = text.slice(i, i + 1);
+        if (c == " " || c == "\n" || c == "\t") {
+            in_word = false;
+        } else {
+            if (in_word == false) {
+                count = count + 1;
+                in_word = true;
+            }
+        }
+        i = i + 1;
+    }
+    return count;
+}
+
+fn count_chars(text) {
+    var count = 0;
+    var i = 0;
+    while (i < text.length) {
+        var c = text.slice(i, i + 1);
+        if (c != " " && c != "\n" && c != "\t") {
+            count = count + 1;
+        }
+        i = i + 1;
+    }
+    return count;
+}
+
+serve_app({
+    script: "examples/07-ai-website/app.hud",
+    host: "127.0.0.1",
+    port: 8080,
+    workers: 4
+});

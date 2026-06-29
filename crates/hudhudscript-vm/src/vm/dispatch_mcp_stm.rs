@@ -60,7 +60,7 @@ impl crate::vm::VM {
                             .map(|v| Value16::string(v.clone()))
                             .collect();
 
-                        let mut result = HashMap::new();
+                        let mut result = hudhudscript_bytecode::ObjMap::default();
                         result.insert(
                             "compliant".to_string(),
                             Value16::bool_(enforcement_result.allowed),
@@ -72,7 +72,6 @@ impl crate::vm::VM {
                         result.insert("action".to_string(), action);
                         result.insert("violations".to_string(), Value16::array(violations));
                         self.registers[255] = Value16::object(result);
-
                     } else {
                         self.registers[255] = Value16::bool_(true);
                     }
@@ -96,7 +95,7 @@ impl crate::vm::VM {
                 for _i in 0..arg_count {
                     args.push(self.registers[first_arg as usize + _i as usize]);
                 }
-                args.reverse();
+                // Args are in order: server, tool, [arguments] — no reverse needed.
                 let server = self.value_to_string(&args[0]);
                 let tool = self.value_to_string(&args[1]);
                 let tool_args = args.get(2).cloned().unwrap_or(Value16::null());

@@ -52,7 +52,7 @@ pub fn sys_processes(_args: &[Value16]) -> HudHudResult<Value16> {
                                 };
                                 let memory_kb = (rss * page_size) / 1024.0;
 
-                                let mut p = HashMap::new();
+                                let mut p = hudhudscript_bytecode::ObjMap::default();
                                 p.insert("pid".to_string(), Value16::number(pid as f64));
                                 p.insert("name".to_string(), Value16::string(proc_name));
                                 p.insert(

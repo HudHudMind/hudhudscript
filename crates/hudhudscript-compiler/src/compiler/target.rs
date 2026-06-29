@@ -39,19 +39,25 @@ pub trait CompileTarget {
     }
 
     fn ct_emit_load_var(&mut self, name: &str) {
+        self.ct_emit_load_var_to(name, 255)
+    }
+    fn ct_emit_load_var_to(&mut self, name: &str, dst: u8) {
         if let Some(reg) = self.ct_local_reg(name) {
-            self.ct_emit(Instruction::Move { dst: 255, src: reg });
+            self.ct_emit(Instruction::Move { dst, src: reg });
         } else {
             let sym = self.ct_intern(name);
-            self.ct_emit(Instruction::LoadGlobal { dst: 255, sym: sym as u16 });
+            self.ct_emit(Instruction::LoadGlobal { dst, sym: sym as u16 });
         }
     }
     fn ct_emit_store_var(&mut self, name: &str) {
+        self.ct_emit_store_var_from(name, 255)
+    }
+    fn ct_emit_store_var_from(&mut self, name: &str, src: u8) {
         if let Some(reg) = self.ct_local_reg(name) {
-            self.ct_emit(Instruction::Move { dst: reg, src: 255 });
+            self.ct_emit(Instruction::Move { dst: reg, src });
         } else {
             let sym = self.ct_intern(name);
-            self.ct_emit(Instruction::StoreGlobal { src: 255, sym: sym as u16 });
+            self.ct_emit(Instruction::StoreGlobal { src, sym: sym as u16 });
         }
     }
 
@@ -136,6 +142,16 @@ pub trait CompileTarget {
     // instructions, and the RAG Option<SymId> variants.
     /// Register a call-family payload and return its pool index (CROSS-2c).
     fn ct_add_call_payload(&mut self, sym: SymId, arg_count: u8) -> u32;
+    /// P6: register a call payload with a known builtin method ID for fast dispatch.
+    /// Default implementation falls back to regular ct_add_call_payload.
+    fn ct_add_call_payload_with_builtin(
+        &mut self,
+        sym: SymId,
+        arg_count: u8,
+        _builtin_idx: u32,
+    ) -> u32 {
+        self.ct_add_call_payload(sym, arg_count)
+    }
     /// Register a two-symbol payload and return its pool index (CROSS-2d).
     /// `first` is a raw `u32` (either a symbol-table index from
     /// `ct_intern` or a `SymId.0`); `second` is stored as `u32` the same
@@ -145,6 +161,8 @@ pub trait CompileTarget {
     /// (CROSS-2d).
     fn ct_add_opt_sym_payload(&mut self, sym: Option<SymId>) -> u32;
     fn ct_add_super_instr_payload(&mut self, call_idx: u32, slot: u32, imm: i16, offset: i32) -> u32;
+    /// Add a packed compare+jump payload (GÖREV 5) and return its index.
+    fn ct_add_cmp_jump_payload(&mut self, src1: u8, src2: u8, target: u32) -> u32;
 
     // ── Expression helpers ───────────────────────────────────────────────
     /// Track an identifier reference (FunctionCompiler records captures).
@@ -156,6 +174,23 @@ pub trait CompileTarget {
     /// Check whether `name` is a known generator function.
     fn ct_is_known_generator(&self, _name: &str) -> bool {
         false
+    }
+    /// P5c: true when the Math global has been written to (shadow detection).
+    fn ct_math_global_written(&self) -> bool {
+        false
+    }
+    /// P5d: mark that Math global has been reassigned in this compilation unit.
+    fn ct_set_math_reassigned(&mut self) {}
+    /// P3: get a previously-compiled function chunk for inlining analysis.
+    fn ct_get_function_chunk(&self, _name: &str) -> Option<Arc<FunctionChunk>> {
+        None
+    }
+    /// P4: record call-site argument types for a function.
+    /// Called when compiling a Call expression with known argument types.
+    fn ct_record_call_site_types(&mut self, _fn_name: &str, _args: &[(String, crate::compiler::expr::ExprType)]) {}
+    /// P4a: get pre-declared parameter names for a function.
+    fn ct_get_fn_param_names(&self, _fn_name: &str) -> Option<Vec<String>> {
+        None
     }
     /// Validate that `await` is allowed in the current context.
     /// Returns `Ok(())` if allowed, or an error otherwise.
@@ -178,6 +213,12 @@ pub trait CompileTarget {
     fn ct_declare_local(&mut self, name: &str, is_const: bool) -> CompileResult<()>;
     /// True when compiling the outermost scope (not inside a function body).
     fn ct_is_top_level(&self) -> bool;
+    /// True when this top-level symbol is referenced from a function/closure
+    /// body.  Used by the compiler to decide whether to emit StoreGlobal/
+    /// DeclGlobal or stay pure register for main-only symbols.
+    fn ct_is_shared_top_level(&self, name: &str) -> bool {
+        false
+    }
     /// Begin a new scope (emits PushScope and tracks depth).
     fn ct_begin_scope(&mut self);
     /// End the current scope (emits PopScope and cleans up locals).
@@ -248,6 +289,10 @@ pub trait CompileTarget {
     }
     /// K1-3: return true if the named local is declared `const`.
     fn ct_is_const_local(&self, _name: &str) -> bool {
+        false
+    }
+    /// WI-4: return true if the named local is captured by a closure.
+    fn ct_is_captured_local(&self, _name: &str) -> bool {
         false
     }
 

@@ -202,37 +202,20 @@ impl CascadeRouter {
         }
     }
 
-    /// Create with default tiers
-    pub fn with_defaults() -> Self {
-        let tiers = vec![
-            CascadeTier {
-                name: "fast".into(),
-                model: "claude-haiku-3.5".into(),
-                provider: "anthropic".into(),
-                handles: vec![Complexity::Simple],
-                cost_per_1k: 0.0024,
-            },
-            CascadeTier {
-                name: "balanced".into(),
-                model: "claude-sonnet-4".into(),
-                provider: "anthropic".into(),
-                handles: vec![Complexity::Simple, Complexity::Medium],
-                cost_per_1k: 0.009,
-            },
-            CascadeTier {
-                name: "powerful".into(),
-                model: "claude-opus-4".into(),
-                provider: "anthropic".into(),
-                handles: vec![Complexity::Simple, Complexity::Medium, Complexity::Hard],
-                cost_per_1k: 0.045,
-            },
-        ];
-        Self::new(tiers, 0.7)
-    }
-
     /// Update budget status for fallback decisions
     pub fn set_budget_remaining(&mut self, pct: f64) {
         self.budget_remaining_pct = pct.clamp(0.0, 1.0);
+    }
+
+    /// Create with default tiers for testing and backward compatibility.
+    /// Production use should build tiers from `PricingRegistry` instead.
+    pub fn with_defaults() -> Self {
+        let tiers = vec![
+            CascadeTier { name: "fast".into(), model: "claude-haiku-3.5".into(), provider: "anthropic".into(), handles: vec![Complexity::Simple], cost_per_1k: 0.0024 },
+            CascadeTier { name: "balanced".into(), model: "claude-sonnet-4".into(), provider: "anthropic".into(), handles: vec![Complexity::Simple, Complexity::Medium], cost_per_1k: 0.009 },
+            CascadeTier { name: "powerful".into(), model: "claude-opus-4".into(), provider: "anthropic".into(), handles: vec![Complexity::Simple, Complexity::Medium, Complexity::Hard], cost_per_1k: 0.045 },
+        ];
+        Self::new(tiers, 0.7)
     }
 
     /// Route a query to the best model

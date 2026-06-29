@@ -20,6 +20,19 @@ fn run_and_get(code: &str, var: &str) -> hudhudscript_bytecode::Value16 {
     interp.get_variable(var).expect("variable not found")
 }
 
+// Düz VM yolu — register_vm_stdlib_modules çağrılmaz.
+// log dispatch çalışan hudhud_term::log_ops yoluna düşer.
+fn vm_raw_run_and_get(code: &str, var: &str) -> Value16 {
+    use hudhudscript_compiler::Compiler;
+    use hudhudscript_vm::VM;
+    let ast = parse(code).expect("parse failed");
+    let mut compiler = Compiler::new();
+    let bytecode = compiler.compile(&ast).expect("compile failed");
+    let mut vm = VM::new();
+    vm.execute(&bytecode).expect("execution failed");
+    vm.get_variable_owned(var).expect("variable not found")
+}
+
 // ── #656 — stdin module registration ─────────────────────────────
 //
 // `test_input_function_is_registered`, `test_input_hidden_function_is_registered`,
@@ -225,7 +238,7 @@ fn test_style_plain_text_no_opts() {
 
 #[test]
 fn test_log_info_returns_entry() {
-    let val = run_and_get(r#"var x = log.info("server started");"#, "x");
+    let val = vm_raw_run_and_get(r#"var x = log.info("server started");"#, "x");
     if let Some(obj) = val.as_object() {
         assert_eq!(
             obj.get("level"),
@@ -244,7 +257,7 @@ fn test_log_info_returns_entry() {
 
 #[test]
 fn test_log_error_returns_entry() {
-    let val = run_and_get(r#"var x = log.error("disk full");"#, "x");
+    let val = vm_raw_run_and_get(r#"var x = log.error("disk full");"#, "x");
     if let Some(obj) = val.as_object() {
         assert_eq!(
             obj.get("level"),
@@ -257,7 +270,7 @@ fn test_log_error_returns_entry() {
 
 #[test]
 fn test_log_warn_returns_entry() {
-    let val = run_and_get(r#"var x = log.warn("low memory");"#, "x");
+    let val = vm_raw_run_and_get(r#"var x = log.warn("low memory");"#, "x");
     if let Some(obj) = val.as_object() {
         assert_eq!(
             obj.get("level"),
@@ -272,7 +285,7 @@ fn test_log_warn_returns_entry() {
 fn test_log_debug_returns_entry() {
     // Set log level to debug so the entry is emitted
     std::env::set_var("HUDHUD_LOG_LEVEL", "debug");
-    let val = run_and_get(r#"var x = log.debug("trace info");"#, "x");
+    let val = vm_raw_run_and_get(r#"var x = log.debug("trace info");"#, "x");
     std::env::remove_var("HUDHUD_LOG_LEVEL");
 
     if let Some(obj) = val.as_object() {
@@ -287,7 +300,7 @@ fn test_log_debug_returns_entry() {
 
 #[test]
 fn test_log_with_structured_data() {
-    let val = run_and_get(
+    let val = vm_raw_run_and_get(
         r#"var x = log.info("request", { method: "GET", path: "/api" });"#,
         "x",
     );
@@ -300,7 +313,7 @@ fn test_log_with_structured_data() {
 
 #[test]
 fn test_log_level_get() {
-    let val = run_and_get("var x = log.level();", "x");
+    let val = vm_raw_run_and_get("var x = log.level();", "x");
     if let Some(s) = val.as_str() {
         // Should return current level (default is "info")
         assert!(!s.is_empty());

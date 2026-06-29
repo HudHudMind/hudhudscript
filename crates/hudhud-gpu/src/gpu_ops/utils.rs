@@ -34,7 +34,7 @@ pub fn which_exists(program: &str) -> bool {
 }
 
 pub fn make_obj(pairs: Vec<(&str, Value16)>) -> Value16 {
-    let mut m = HashMap::new();
+    let mut m = hudhudscript_bytecode::ObjMap::default();
     for (k, v) in pairs {
         m.insert(k.to_string(), v);
     }

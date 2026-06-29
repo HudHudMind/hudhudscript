@@ -668,3 +668,29 @@ fn test_builtin_values() {
         panic!("values() should return an array");
     }
 }
+
+// ── WI-1.2: needs_async detection ──────────────────────────────
+
+#[test]
+fn test_needs_async_sync_script() {
+    let source = "var x = 5; var y = x + 3;";
+    let stmts = parse(source).unwrap();
+    let mut c = Compiler::new();
+    let bc = c.compile(&stmts).unwrap();
+    assert!(!bc.needs_async, "pure sync script should not need async");
+}
+
+#[test]
+fn test_needs_async_with_spawn() {
+    let source = "agent X { } spawn X;";
+    let stmts = parse(source).unwrap();
+    let mut c = Compiler::new();
+    let bc = c.compile(&stmts).unwrap();
+    assert!(bc.needs_async, "script with spawn should need async");
+}
+
+#[test]
+fn test_needs_async_default_true() {
+    let bc = hudhudscript_bytecode::Bytecode::new();
+    assert!(bc.needs_async, "default should be true (safe)");
+}

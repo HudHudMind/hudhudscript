@@ -38,7 +38,7 @@ pub(crate) fn require_i64(args: &[Value16], idx: usize, name: &str) -> SharedRes
 }
 
 pub(crate) fn ok_message(ok: bool, msg: String) -> Value16 {
-    let mut m = HashMap::new();
+    let mut m = hudhudscript_bytecode::ObjMap::default();
     m.insert("ok".to_string(), Value16::boolean(ok));
     m.insert("message".to_string(), Value16::string(msg));
     Value16::object(m)

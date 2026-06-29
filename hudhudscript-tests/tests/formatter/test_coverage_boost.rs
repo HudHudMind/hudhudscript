@@ -286,8 +286,8 @@ fn test_format_receive_statement() {
 
 #[test]
 fn test_format_perform_statement() {
-    let output = format_source("perform action;");
-    assert!(output.contains("perform action;"), "Got: {}", output);
+    let output = format_source("perform do_work;");
+    assert!(output.contains("perform do_work;"), "Got: {}", output);
 }
 
 // ============================================================================

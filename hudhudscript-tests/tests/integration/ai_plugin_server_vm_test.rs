@@ -151,22 +151,22 @@ fn test_vm_event_bus_channels() {
 // ── Plugin (#598) ───────────────────────────────────────────────────────
 
 #[test]
-fn test_vm_plugin_register() {
+fn test_vm_plugin_register() /* uses register-plugin */ {
     let val = vm_run(
-        r#"var result = Plugin.register({ name: "my-plugin", version: "1.0.0" });"#,
+        r#"var result = Plugin.register({ name: "register-plugin", version: "1.0.0" });"#,
         "result",
     );
-    assert_obj_string(&val, "name", "my-plugin");
+    assert_obj_string(&val, "name", "register-plugin");
     assert_obj_string(&val, "version", "1.0.0");
     assert_obj_bool(&val, "loaded", true);
 }
 
 #[test]
-fn test_vm_plugin_unregister() {
+fn test_vm_plugin_unregister() { /* uses unregister-plugin */
     // Register the plugin first, then unregister it
     let val = vm_run(
-        r#"Plugin.register({ name: "my-plugin", version: "1.0.0" });
-var result = Plugin.unregister("my-plugin");"#,
+        r#"Plugin.register({ name: "unregister-plugin", version: "1.0.0" });
+var result = Plugin.unregister("unregister-plugin");"#,
         "result",
     );
     assert_bool(val, true);
@@ -179,11 +179,11 @@ fn test_vm_plugin_list() {
 }
 
 #[test]
-fn test_vm_plugin_reload() {
+fn test_vm_plugin_reload() { /* uses reload-plugin */
     // Register the plugin first, then reload it
     let val = vm_run(
-        r#"Plugin.register({ name: "my-plugin", version: "1.0.0" });
-var result = Plugin.reload("my-plugin");"#,
+        r#"Plugin.register({ name: "reload-plugin", version: "1.0.0" });
+var result = Plugin.reload("reload-plugin");"#,
         "result",
     );
     assert_obj_bool(&val, "reloaded", true);
@@ -360,7 +360,7 @@ fn test_vm_plugin_config_merge() {
 #[test]
 fn test_vm_plugin_config_defaults() {
     let val = vm_run(
-        r#"var result = PluginConfig.defaults("my-plugin", { timeout: 30 });"#,
+        r#"var result = PluginConfig.defaults("reload-plugin-cfg", { timeout: 30 });"#,
         "result",
     );
     assert_obj_number(&val, "timeout", 30.0);
@@ -369,7 +369,7 @@ fn test_vm_plugin_config_defaults() {
 
 #[test]
 fn test_vm_plugin_config_paths() {
-    let val = vm_run(r#"var result = PluginConfig.paths("my-plugin");"#, "result");
+    let val = vm_run(r#"var result = PluginConfig.paths("reload-plugin-cfg");"#, "result");
     if let Some(obj) = val.as_object() {
         assert!(obj.contains_key("system"));
         assert!(obj.contains_key("user"));

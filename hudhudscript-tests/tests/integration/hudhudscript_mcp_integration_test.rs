@@ -126,28 +126,6 @@ async fn test_error_handling_invalid_command() {
 }
 
 #[tokio::test]
-async fn test_client_with_sandbox() {
-    use hudhudscript_sandbox::SandboxConfig;
-
-    let config = TransportConfig::stdio("echo", vec![]);
-    let sandbox_config = SandboxConfig::default_permissive();
-
-    let result = McpClient::with_sandbox(config, sandbox_config).await;
-    assert!(result.is_ok());
-}
-
-#[tokio::test]
-async fn test_client_with_restrictive_sandbox() {
-    use hudhudscript_sandbox::SandboxConfig;
-
-    let config = TransportConfig::stdio("echo", vec![]);
-    let sandbox_config = SandboxConfig::default_restrictive();
-
-    let result = McpClient::with_sandbox(config, sandbox_config).await;
-    assert!(result.is_ok());
-}
-
-#[tokio::test]
 async fn test_multiple_disconnect_calls() {
     let config = TransportConfig::stdio("echo", vec![]);
     let client = McpClient::new(config).await.unwrap();

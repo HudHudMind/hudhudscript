@@ -37,9 +37,11 @@ impl McpContext for VM {
     fn mcp_check_sandbox(&self, server: &str) -> HudHudResult<()> {
         use hudhudscript_bytecode::shared_value::runtime_error;
         if let Some(sandbox) = &self.sandbox {
-            if !sandbox.allow_network {
+            // MCP-40/41: require network OR process capability.
+            let can_access = sandbox.allow_network || sandbox.allow_process;
+            if !can_access {
                 return Err(runtime_error(format!(
-                    "Sandbox: network access is not allowed (mcp call to '{}' blocked)",
+                    "Sandbox: MCP access denied for '{}'. Enable allow_network or allow_process in sandbox config.",
                     server
                 )));
             }

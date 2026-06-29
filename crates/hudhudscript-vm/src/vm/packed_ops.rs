@@ -82,8 +82,33 @@ pub const OP_INT_SUB_RR: u8 = 119;
 pub const OP_INT_MUL_RR: u8 = 120;
 pub const OP_INT_MOD_RR: u8 = 128;
 pub const OP_LOAD_INT_CONST_R: u8 = 121;
-pub const OP_LOAD_LOCAL_R: u8 = 122;
-pub const OP_STORE_LOCAL_R: u8 = 123;
 pub const OP_PUSH_REG: u8 = 124;
 pub const OP_RETURN_R: u8 = 125;
 pub const OP_STR_CAT: u8 = 126;
+
+// DENSE_OPS
+pub const OP_NUM_ADD_RR: u8 = 129;
+pub const OP_NUM_SUB_RR: u8 = 130;
+pub const OP_NUM_MUL_RR: u8 = 131;
+pub const OP_NUM_DIV_RR: u8 = 132;
+pub const OP_INDEX_ASSIGN_RRR: u8 = 133;
+pub const OP_NUM_ADD_RI: u8 = 134;
+pub const OP_NUM_SUB_RI: u8 = 135;
+pub const OP_NUM_MUL_RI: u8 = 136;
+pub const OP_NUM_DIV_RI: u8 = 137;
+pub const OP_STR_REV_R: u8 = 138;
+pub const OP_NUM_MUL_ADD_ASSIGN: u8 = 139;
+pub const OP_INT_MUL_RI: u8 = 122;
+pub const OP_INT_MOD_I: u8 = 140;
+pub const OP_INT_CMP_LT_I: u8 = 141;
+pub const OP_INT_CMP_LE_I: u8 = 142;
+pub const OP_INT_CMP_EQ_I: u8 = 143;
+pub const OP_INT_CMP_NE_I: u8 = 144;
+pub const OP_NUM_MUL_ADD_INDEXED: u8 = 145;
+pub const OP_STR_CHAR_EQ_RR: u8 = 146;
+pub const OP_INT_LT_RR_JUMP_P: u8 = 147;
+pub const OP_INT_LE_RR_JUMP_P: u8 = 148;
+
+// P1b: specialized index packed opcodes — must match bytecode opcodes.rs
+pub const OP_INDEX_ARRAY_RRR: u8 = 149;
+pub const OP_INDEX_STRING_ASCII_RRR: u8 = 150;

@@ -47,7 +47,7 @@ pub fn detect(args: &[Value16]) -> HudHudResult<Value16> {
         }
     }
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert(
         "language".to_string(),
         Value16::string(language.to_string()),
@@ -86,7 +86,7 @@ pub fn detect_venv(args: &[Value16]) -> HudHudResult<Value16> {
                 .map(|v| Path::new(&v) == p)
                 .unwrap_or(false);
 
-            let mut obj = HashMap::new();
+            let mut obj = hudhudscript_bytecode::ObjMap::default();
             obj.insert("type".to_string(), Value16::string(vtype.to_string()));
             obj.insert(
                 "path".to_string(),
@@ -99,7 +99,7 @@ pub fn detect_venv(args: &[Value16]) -> HudHudResult<Value16> {
 
     if base.join(".nvmrc").exists() || base.join(".node-version").exists() {
         let active = std::env::var("NVM_DIR").is_ok();
-        let mut obj = HashMap::new();
+        let mut obj = hudhudscript_bytecode::ObjMap::default();
         obj.insert("type".to_string(), Value16::string("nvm".to_string()));
         obj.insert(
             "path".to_string(),
@@ -111,7 +111,7 @@ pub fn detect_venv(args: &[Value16]) -> HudHudResult<Value16> {
 
     if base.join(".ruby-version").exists() {
         let active = std::env::var("RBENV_ROOT").is_ok();
-        let mut obj = HashMap::new();
+        let mut obj = hudhudscript_bytecode::ObjMap::default();
         obj.insert("type".to_string(), Value16::string("rbenv".to_string()));
         obj.insert(
             "path".to_string(),
@@ -121,7 +121,7 @@ pub fn detect_venv(args: &[Value16]) -> HudHudResult<Value16> {
         return Ok(Value16::object(obj));
     }
 
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     obj.insert("type".to_string(), Value16::string("none".to_string()));
     obj.insert("path".to_string(), Value16::null());
     obj.insert("active".to_string(), Value16::bool_(false));

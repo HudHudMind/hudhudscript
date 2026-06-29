@@ -36,6 +36,14 @@ impl Decl {
             Decl::Music { span, .. } => *span,
             Decl::UiApp { span, .. } => *span,
             Decl::Deploy { span, .. } => *span,
+            Decl::Loop { span, .. } => *span,
+            Decl::Step { span, .. } => *span,
+            Decl::Gate { span, .. } => *span,
+            Decl::Chain { span, .. } => *span,
+            Decl::AttachStep { span, .. } => *span,
+            Decl::AttachLoop { span, .. } => *span,
+            Decl::RunLoop { span, .. } => *span,
+            Decl::RunChain { span, .. } => *span,
         }
     }
 }

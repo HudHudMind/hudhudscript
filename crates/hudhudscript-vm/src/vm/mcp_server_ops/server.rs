@@ -86,7 +86,7 @@ pub fn mcp_server_start(args: &[Value16]) -> SharedResult<Value16> {
         server.transport = transport.clone();
     }
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("running".to_string(), Value16::boolean(true));
     result.insert("transport".to_string(), Value16::string(transport));
     if port > 0.0 {
@@ -101,7 +101,7 @@ pub fn mcp_server_stop(_args: &[Value16]) -> SharedResult<Value16> {
         server.running = false;
     }
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("running".to_string(), Value16::boolean(false));
     result.insert("stopped".to_string(), Value16::boolean(true));
     Ok(Value16::object(result))
@@ -121,7 +121,7 @@ pub fn mcp_server_status(args: &[Value16]) -> SharedResult<Value16> {
     let tools_count: usize = st.servers.values().map(|s| s.tools.len()).sum();
     let resources_count: usize = st.servers.values().map(|s| s.resources.len()).sum();
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("running".to_string(), Value16::boolean(running));
     result.insert(
         "tools_count".to_string(),

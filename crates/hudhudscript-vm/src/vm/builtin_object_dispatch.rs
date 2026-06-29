@@ -39,189 +39,185 @@ impl crate::vm::VM {
     ) -> CompileResult<Value16> {
         let obj = receiver.as_object().unwrap();
         let args_v: Vec<Value16> = args.iter().map(|v| *v).collect();
-            let args_v: Vec<Value16> = args.iter().map(|v| *v).collect();
-            // #928: Check registered modules first
-            if let Some(module_name) = obj.get("__module").and_then(|v| v.as_string()) {
-                if let Some(result) = self
-                    .module_registry
-                    .call(&module_name, method, args.clone())
-                {
-                    return result;
+        let args_v: Vec<Value16> = args.iter().map(|v| *v).collect();
+        // #928: Check registered modules first
+        if let Some(module_name) = obj.get("__module").and_then(|v| v.as_string()) {
+            if let Some(result) = self
+                .module_registry
+                .call(&module_name, method, args.clone())
+            {
+                return result;
+            }
+        }
+        // Math object
+        if Some(*receiver) == self.math_obj {
+            return self.call_math_method(method, args.clone());
+        }
+        // JSON object
+        if Some(*receiver) == self.json_obj {
+            return self.call_json_method(method, args.clone());
+        }
+        // http module
+        if obj
+            .get("__module")
+            .map_or(false, |v| v.as_string().as_deref() == Some("http"))
+        {
+            return self.call_http_method(method, args_v.clone());
+        }
+        // file module
+        if obj
+            .get("__module")
+            .map_or(false, |v| v.as_string().as_deref() == Some("file"))
+        {
+            return self.call_file_method(method, args_v.clone());
+        }
+        // Promise object
+        if obj
+            .get("__module")
+            .map_or(false, |v| v.as_string().as_deref() == Some("Promise"))
+        {
+            return self.call_promise_method(method, args_v.clone());
+        }
+        // linalg module
+        if obj
+            .get("__module")
+            .map_or(false, |v| v.as_string().as_deref() == Some("linalg"))
+        {
+            return self.call_linalg_method(method, args_v.clone());
+        }
+        // stats module
+        if obj
+            .get("__module")
+            .map_or(false, |v| v.as_string().as_deref() == Some("stats"))
+        {
+            return self.call_stats_method(method, args_v.clone());
+        }
+        // Serialization modules
+        if let Some(module_name) = obj.get("__module").and_then(|v| v.as_string()) {
+            match module_name.as_str() {
+                "TOML" => return self.call_toml_method(method, args.clone()),
+                "YAML" => return self.call_yaml_method(method, args_v.clone()),
+                "CSV" => return self.call_csv_method(method, args_v.clone()),
+                "INI" => return self.call_ini_method(method, args_v.clone()),
+                "Base64" => return self.call_base64_method(method, args_v.clone()),
+                "Hex" => return self.call_hex_method(method, args_v.clone()),
+                "URL" => return self.call_url_method(method, args_v.clone()),
+                "uuid" => return self.call_uuid_method(method, args_v.clone()),
+                "Path" => return self.call_path_method(method, args_v.clone()),
+                "Temp" => return self.call_temp_method(method, args_v.clone()),
+                "URLParser" => return self.call_url_parser_method(method, args_v.clone()),
+                "Glob" => return self.call_glob_method(method, args_v.clone()),
+                "Set" => return self.call_set_module_method(method, args_v.clone()),
+                "Map" => return self.call_map_module_method(method, args_v.clone()),
+                "stdin" => return self.call_stdin_method(method, args_v.clone()),
+                "Terminal" => return self.call_terminal_method(method, args_v.clone()),
+                "log" => return self.call_log_method(method, args_v.clone()),
+                "exec" => return self.call_exec_method(method, args_v.clone()),
+                "tcp" => return self.call_tcp_method(method, args_v.clone()),
+                "udp" => return self.call_udp_method(method, args_v.clone()),
+                "unix" => return self.call_unix_method(method, args.clone()),
+                "ws" => return self.call_ws_method(method, args_v.clone()),
+                "daemon" => return self.call_daemon_method(method, args_v.clone()),
+                "fs" => return self.call_fs_method(method, args_v.clone()),
+                "Env" => return self.call_env_method(method, args_v.clone()),
+                "tokenomics" => return self.call_tokenomics_method(method, args_v.clone()),
+                "channel" => return self.call_channel_method(method, args_v.clone()),
+                "os" => return self.call_os_method(method, args_v.clone()),
+                "Date" => return self.call_date_method(method, args_v.clone()),
+                "Duration" => return self.call_duration_method(method, args_v.clone()),
+                "regex" => return self.call_regex_method(method, args_v.clone()),
+                "schedule" => return self.call_schedule_method(method, args_v.clone()),
+                "EventBus" => return self.call_event_bus_method(method, args_v.clone()),
+                "Plugin" => return self.call_plugin_method(method, args_v.clone()),
+                "McpServer" => return self.call_mcp_server_method(method, args_v.clone()),
+                "Server" => return self.call_server_method(method, args_v.clone()),
+                "PluginConfig" => return self.call_plugin_config_method(method, args_v.clone()),
+                "StringBuilder" => {
+                    return self.call_string_builder_method(method, args_v.clone(), receiver)
                 }
+                _ => {}
             }
-            // Math object
-            if obj.contains_key("PI") && obj.contains_key("E") {
-                return self.call_math_method(method, args.clone());
+        }
+        // Provider / LLM dispatch
+        let is_mcp = obj
+            .get("__module")
+            .map_or(false, |v| v.as_string().as_deref() == Some("mcp"));
+        if (method == "call" || method == "stream") && !is_mcp {
+            let config = args.into_iter().next().unwrap_or(Value16::null());
+            return dispatch_provider_call(self, &config);
+        }
+        // MCP proxy dispatch
+        if obj
+            .get("__module")
+            .map_or(false, |v| v.as_string().as_deref() == Some("mcp"))
+        {
+            if let Some(server_name) = obj.get("__server").and_then(|v| v.as_string()) {
+                let server_name = server_name.to_string();
+                let tool_args = if args.len() == 1 {
+                    args.into_iter().next().unwrap_or(Value16::null())
+                } else if args.is_empty() {
+                    Value16::null()
+                } else {
+                    Value16::array(args)
+                };
+                return dispatch_mcp_tool_call(self, &server_name, method, &tool_args);
             }
-            // JSON object
-            if (method == "parse" || method == "stringify") && !obj.contains_key("__module") {
-                return self.call_json_method(method, args.clone());
+            if method == "call" {
+                if args.len() < 2 {
+                    return Err(compile_codes::runtime_error(
+                        "mcp.call() requires (server, tool, [args])".to_string(),
+                    ));
+                }
+                let server = self.value_to_string(&args[0]);
+                let tool = self.value_to_string(&args[1]);
+                let tool_args = args.get(2).cloned().unwrap_or(Value16::null());
+                return dispatch_mcp_tool_call(self, &server, &tool, &tool_args);
             }
-            // http module
-            if obj
-                .get("__module")
-                .map_or(false, |v| v.as_string().as_deref() == Some("http"))
+        }
+        // Class methods
+        if let Some(chunk_name) = obj.get(method).and_then(|v| v.as_string()) {
+            if let Some(chunk) = bytecode
+                .get_function(chunk_name.as_str())
             {
-                return self.call_http_method(method, args_v.clone());
-            }
-            // file module
-            if obj
-                .get("__module")
-                .map_or(false, |v| v.as_string().as_deref() == Some("file"))
-            {
-                return self.call_file_method(method, args_v.clone());
-            }
-            // Promise object
-            if obj
-                .get("__module")
-                .map_or(false, |v| v.as_string().as_deref() == Some("Promise"))
-            {
-                return self.call_promise_method(method, args_v.clone());
-            }
-            // linalg module
-            if obj
-                .get("__module")
-                .map_or(false, |v| v.as_string().as_deref() == Some("linalg"))
-            {
-                return self.call_linalg_method(method, args_v.clone());
-            }
-            // stats module
-            if obj
-                .get("__module")
-                .map_or(false, |v| v.as_string().as_deref() == Some("stats"))
-            {
-                return self.call_stats_method(method, args_v.clone());
-            }
-            // Serialization modules
-            if let Some(module_name) = obj.get("__module").and_then(|v| v.as_string()) {
-                match module_name.as_str() {
-                    "TOML" => return self.call_toml_method(method, args.clone()),
-                    "YAML" => return self.call_yaml_method(method, args_v.clone()),
-                    "CSV" => return self.call_csv_method(method, args_v.clone()),
-                    "INI" => return self.call_ini_method(method, args_v.clone()),
-                    "Base64" => return self.call_base64_method(method, args_v.clone()),
-                    "Hex" => return self.call_hex_method(method, args_v.clone()),
-                    "URL" => return self.call_url_method(method, args_v.clone()),
-                    "uuid" => return self.call_uuid_method(method, args_v.clone()),
-                    "Path" => return self.call_path_method(method, args_v.clone()),
-                    "Temp" => return self.call_temp_method(method, args_v.clone()),
-                    "URLParser" => return self.call_url_parser_method(method, args_v.clone()),
-                    "Glob" => return self.call_glob_method(method, args_v.clone()),
-                    "Set" => return self.call_set_module_method(method, args_v.clone()),
-                    "Map" => return self.call_map_module_method(method, args_v.clone()),
-                    "stdin" => return self.call_stdin_method(method, args_v.clone()),
-                    "Terminal" => return self.call_terminal_method(method, args_v.clone()),
-                    "log" => return self.call_log_method(method, args_v.clone()),
-                    "exec" => return self.call_exec_method(method, args_v.clone()),
-                    "tcp" => return self.call_tcp_method(method, args_v.clone()),
-                    "udp" => return self.call_udp_method(method, args_v.clone()),
-                    "unix" => return self.call_unix_method(method, args.clone()),
-                    "ws" => return self.call_ws_method(method, args_v.clone()),
-                    "daemon" => return self.call_daemon_method(method, args_v.clone()),
-                    "fs" => return self.call_fs_method(method, args_v.clone()),
-                    "Env" => return self.call_env_method(method, args_v.clone()),
-                    "os" => return self.call_os_method(method, args_v.clone()),
-                    "Date" => return self.call_date_method(method, args_v.clone()),
-                    "Duration" => return self.call_duration_method(method, args_v.clone()),
-                    "regex" => return self.call_regex_method(method, args_v.clone()),
-                    "schedule" => return self.call_schedule_method(method, args_v.clone()),
-                    "EventBus" => return self.call_event_bus_method(method, args_v.clone()),
-                    "Plugin" => return self.call_plugin_method(method, args_v.clone()),
-                    "McpServer" => return self.call_mcp_server_method(method, args_v.clone()),
-                    "Server" => return self.call_server_method(method, args_v.clone()),
-                    "PluginConfig" => {
-                        return self.call_plugin_config_method(method, args_v.clone())
+                let prev_this = self.get_var_cloned("this");
+                self.set_var("this", receiver.clone())?;
+                let result =
+                    self.call_chunk(&chunk, &chunk.params, &args, bytecode, chunk_name.as_str());
+                self.last_instance_mutation = self.get_var_cloned("this").map(Box::new);
+                match prev_this {
+                    Some(old) => {
+                        let _ = self.set_var("this", old);
                     }
-                    "StringBuilder" => {
-                        return self.call_string_builder_method(method, args_v.clone(), receiver)
+                    None => {
+                        self.remove_var("this");
                     }
-                    _ => {}
                 }
+                return result;
             }
-            // Provider / LLM dispatch
-            let is_mcp = obj
-                .get("__module")
-                .map_or(false, |v| v.as_string().as_deref() == Some("mcp"));
-            if (method == "call" || method == "stream") && !is_mcp {
-                let config = args.into_iter().next().unwrap_or(Value16::null());
-                return dispatch_provider_call(self, &config);
+        }
+        // Property access fallback
+        match method {
+            "keys" => {
+                let mut ks: Vec<Value16> = obj.keys().map(|k| Value16::string(k.to_string())).collect();
+                ks.sort_by(|a, b| {
+                    let sa = a.as_string().unwrap_or_default();
+                    let sb = b.as_string().unwrap_or_default();
+                    sa.cmp(&sb)
+                });
+                Ok(Value16::array(ks))
             }
-            // MCP proxy dispatch
-            if obj
-                .get("__module")
-                .map_or(false, |v| v.as_string().as_deref() == Some("mcp"))
-            {
-                if let Some(server_name) = obj.get("__server").and_then(|v| v.as_string()) {
-                    let server_name = server_name.to_string();
-                    let tool_args = if args.len() == 1 {
-                        args.into_iter().next().unwrap_or(Value16::null())
-                    } else if args.is_empty() {
-                        Value16::null()
-                    } else {
-                        Value16::array(args)
-                    };
-                    return dispatch_mcp_tool_call(self, &server_name, method, &tool_args);
-                }
-                if method == "call" {
-                    if args.len() < 2 {
-                        return Err(compile_codes::runtime_error(
-                            "mcp.call() requires (server, tool, [args])".to_string(),
-                        ));
-                    }
-                    let server = self.value_to_string(&args[0]);
-                    let tool = self.value_to_string(&args[1]);
-                    let tool_args = args.get(2).cloned().unwrap_or(Value16::null());
-                    return dispatch_mcp_tool_call(self, &server, &tool, &tool_args);
-                }
+            "values" => {
+                let mut pairs: Vec<(String, Value16)> = obj.iter().map(|(k, v)| (k.to_string(), v.clone())).collect();
+                pairs.sort_by_key(|(k, _)| k.clone());
+                Ok(Value16::array(
+                    pairs.into_iter().map(|(_, v)| v.clone()).collect(),
+                ))
             }
-            // Class methods
-            if let Some(chunk_name) = obj.get(method).and_then(|v| v.as_string()) {
-                if let Some(chunk) = bytecode.functions.borrow().get(chunk_name.as_str()).cloned() {
-                    let prev_this = self.get_var_cloned("this");
-                    self.set_var("this", receiver.clone())?;
-                    let result = self.call_chunk(
-                        &chunk,
-                        &chunk.params,
-                        &args,
-                        bytecode,
-                        chunk_name.as_str(),
-                    );
-                    self.last_instance_mutation = self.get_var_cloned("this").map(Box::new);
-                    match prev_this {
-                        Some(old) => {
-                            let _ = self.set_var("this", old);
-                        }
-                        None => {
-                            self.remove_var("this");
-                        }
-                    }
-                    return result;
-                }
-            }
-            // Property access fallback
-            match method {
-                "keys" => {
-                    let mut ks: Vec<Value16> =
-                        obj.keys().map(|k| Value16::string(k.clone())).collect();
-                    ks.sort_by(|a, b| {
-                        let sa = a.as_string().unwrap_or_default();
-                        let sb = b.as_string().unwrap_or_default();
-                        sa.cmp(&sb)
-                    });
-                    Ok(Value16::array(ks))
-                }
-                "values" => {
-                    let mut pairs: Vec<(&String, &Value16)> = obj.iter().collect();
-                    pairs.sort_by_key(|(k, _)| k.as_str());
-                    Ok(Value16::array(
-                        pairs.into_iter().map(|(_, v)| v.clone()).collect(),
-                    ))
-                }
-                "length" => Ok(Value16::int(obj.len() as i64)),
-                _ => Err(compile_codes::runtime_error(format!(
-                    "Unknown method '{}' on object",
-                    method
-                ))),
-            }
+            "length" => Ok(Value16::int(obj.len() as i64)),
+            _ => Err(compile_codes::runtime_error(format!(
+                "Unknown method '{}' on object",
+                method
+            ))),
+        }
     }
 }

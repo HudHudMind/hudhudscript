@@ -62,7 +62,7 @@ fn build_client() -> HudHudResult<reqwest::blocking::Client> {
 fn response_to_value(resp: reqwest::blocking::Response) -> HudHudResult<Value16> {
     let status = resp.status().as_u16();
     let ok = resp.status().is_success();
-    let mut headers_map: HashMap<String, Value16> = HashMap::new();
+    let mut headers_map: hudhudscript_bytecode::ObjMap = hudhudscript_bytecode::ObjMap::default();
     for (k, v) in resp.headers().iter() {
         if let Ok(val) = v.to_str() {
             headers_map.insert(k.as_str().to_string(), Value16::string(val.to_string()));
@@ -73,7 +73,7 @@ fn response_to_value(resp: reqwest::blocking::Response) -> HudHudResult<Value16>
         .map(|j| hudhud_http::json::serde_to_value(&j))
         .unwrap_or_else(|_| Value16::null());
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("status".to_string(), Value16::number(status as f64));
     result.insert("ok".to_string(), Value16::bool_(ok));
     result.insert("headers".to_string(), Value16::object(headers_map));
@@ -84,7 +84,7 @@ fn response_to_value(resp: reqwest::blocking::Response) -> HudHudResult<Value16>
 
 pub fn workflow_trigger(args: &[Value16]) -> HudHudResult<Value16> {
     let webhook_url = require_str(args, 0, "workflow.trigger")?.to_string();
-    let default_data = Value16::object(HashMap::new());
+    let default_data = Value16::object(hudhudscript_bytecode::ObjMap::default());
     let data = args.get(1).unwrap_or(&default_data);
     let json_body = {
         let json_str = hudhud_http::json::value_to_json_string(data);
@@ -214,7 +214,7 @@ pub fn workflow_create_webhook(args: &[Value16]) -> HudHudResult<Value16> {
     });
 
     let url = format!("http://localhost:{}{}", port, path_normalized);
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("ok".to_string(), Value16::bool_(true));
     result.insert(
         "message".to_string(),

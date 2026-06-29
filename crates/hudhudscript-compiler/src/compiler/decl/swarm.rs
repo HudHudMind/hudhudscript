@@ -8,7 +8,7 @@ impl Compiler {
         strategy: &str,
     ) -> CompileResult<()> {
         use std::collections::HashMap;
-        let mut swarm_obj = HashMap::new();
+        let mut swarm_obj = hudhudscript_bytecode::ObjMap::default();
         swarm_obj.insert("name".to_string(), Value16::string(name.to_string()));
         swarm_obj.insert(
             "agents".to_string(),
@@ -20,7 +20,7 @@ impl Compiler {
         );
         let idx = self.bytecode.add_constant(Value16::object(swarm_obj));
         { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_instr(Instruction::Move { dst: 255, src: tr }); }
-        self.emit_decl_store("swarm", name);
+        self.emit_decl_store("swarm", name, 255);
         Ok(())
     }
 
@@ -32,7 +32,7 @@ impl Compiler {
         culture: &hudhudscript_ast::CultureDecl,
     ) -> CompileResult<()> {
         use std::collections::HashMap;
-        let mut community_obj = HashMap::new();
+        let mut community_obj = hudhudscript_bytecode::ObjMap::default();
         community_obj.insert("name".to_string(), Value16::string(name.to_string()));
         community_obj.insert(
             "members".to_string(),
@@ -47,7 +47,7 @@ impl Compiler {
                     .collect(),
             ),
         );
-        let mut culture_obj = HashMap::new();
+        let mut culture_obj = hudhudscript_bytecode::ObjMap::default();
         culture_obj.insert(
             "values".to_string(),
             Value16::array(
@@ -75,7 +75,7 @@ impl Compiler {
         community_obj.insert("culture".to_string(), Value16::object(culture_obj));
         let idx = self.bytecode.add_constant(Value16::object(community_obj));
         { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_instr(Instruction::Move { dst: 255, src: tr }); }
-        self.emit_decl_store("community", name);
+        self.emit_decl_store("community", name, 255);
         Ok(())
     }
 }

@@ -42,7 +42,7 @@ fn now_millis() -> f64 {
 }
 
 fn record_to_value(r: &PluginRecord) -> Value16 {
-    let mut info = HashMap::new();
+    let mut info = hudhudscript_bytecode::ObjMap::default();
     info.insert("name".to_string(), Value16::string(r.name.clone()));
     info.insert("version".to_string(), Value16::string(r.version.clone()));
     info.insert(
@@ -206,7 +206,7 @@ pub fn plugin_reload(args: &[Value16]) -> HudHudResult<Value16> {
             name
         )));
     }
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("name".to_string(), Value16::string(name));
     result.insert("reloaded".to_string(), Value16::bool_(true));
     Ok(Value16::object(result))

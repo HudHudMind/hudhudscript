@@ -21,7 +21,6 @@ pub(crate) static PL_KEYWORDS: &[(&'static str, &'static str)] = &[
     ("przełącz", "switch"),
     ("przyszłość", "future"),
     ("reguła", "rule"),
-    ("reguła_agenta", "agent_rule"),
     ("rozgłoś", "broadcast"),
     ("rzuć", "throw"),
     ("sieć", "network"),
@@ -36,9 +35,7 @@ pub(crate) static PL_KEYWORDS: &[(&'static str, &'static str)] = &[
     ("zależy_od", "depends_on"),
     ("zapamiętaj", "remember"),
     ("zarządzanie", "governance"),
-    ("zestaw_reguł", "rule_set"),
     ("zwróć", "return"),
     ("złap", "catch"),
     ("ý_định", "intent"),
-    ("łańcuch_reguł", "rule_chain"),
 ];

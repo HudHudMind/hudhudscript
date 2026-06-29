@@ -34,6 +34,6 @@ impl VM {
     /// so they all land in that fallback. We emit the same `Value::String`
     /// shape so that scripts see `typeof(e) == "string"` in both runtimes.
     pub(crate) fn runtime_error_to_value(err: &CompileError) -> Value16 {
-        Value16::string(format!("{}", err))
+        crate::vm::exception_value::runtime_error_to_exception(err)
     }
 }

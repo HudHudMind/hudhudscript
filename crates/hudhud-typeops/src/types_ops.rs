@@ -91,6 +91,12 @@ pub fn shared_to_number(args: &[Value16]) -> HudHudResult<Value16> {
         Ok(Value16::number(if b { 1.0 } else { 0.0 }))
     } else if val.is_null() {
         Ok(Value16::number(0.0))
+    } else if let Some(b) = val.as_bigint() {
+        use num_traits::ToPrimitive;
+        let n = b.to_f64().ok_or_else(|| {
+            runtime_error("BigInt too large to convert to Number")
+        })?;
+        Ok(Value16::number(n))
     } else {
         Err(runtime_error(format!(
             "Cannot convert {} to number",
@@ -127,7 +133,7 @@ pub fn shared_keys(args: &[Value16]) -> HudHudResult<Value16> {
         .first()
         .ok_or_else(|| runtime_error("keys() requires 1 argument"))?;
     if let Some(obj) = val.as_object() {
-        let mut ks: Vec<String> = obj.keys().cloned().collect();
+        let mut ks: Vec<String> = obj.keys().map(|k| k.to_string()).collect();
         ks.sort();
         let items: Vec<Value16> = ks.into_iter().map(Value16::string).collect();
         Ok(Value16::array(items))
@@ -142,9 +148,9 @@ pub fn shared_values(args: &[Value16]) -> HudHudResult<Value16> {
         .first()
         .ok_or_else(|| runtime_error("values() requires 1 argument"))?;
     if let Some(obj) = val.as_object() {
-        let mut pairs: Vec<(&String, &Value16)> = obj.iter().collect();
-        pairs.sort_by_key(|(k, _)| k.as_str().to_string());
-        let items: Vec<Value16> = pairs.into_iter().map(|(_, v)| v.clone()).collect();
+        let mut pairs: Vec<(String, Value16)> = obj.iter().map(|(k, v)| (k.to_string(), v.clone())).collect();
+        pairs.sort_by_key(|(k, _)| k.clone());
+        let items: Vec<Value16> = pairs.into_iter().map(|(_, v)| v).collect();
         Ok(Value16::array(items))
     } else {
         Err(runtime_error("values() requires an object"))

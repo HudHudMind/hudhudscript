@@ -3,7 +3,7 @@
 //! Verify that each declaration type can be parsed and executed correctly.
 
 use hudhud_script_tests::vm_interpreter::Interpreter;
-use hudhudscript_bytecode::Value16;
+use hudhudscript_bytecode::{ObjMap, Value16};
 use hudhudscript_parser::parse;
 
 fn run(source: &str) -> Interpreter {
@@ -17,7 +17,7 @@ fn run(source: &str) -> Interpreter {
 
 // ── Helper: extract an Object from the environment ──────────────────────────
 
-fn get_obj(interp: &Interpreter, name: &str) -> std::collections::HashMap<String, Value16> {
+fn get_obj(interp: &Interpreter, name: &str) -> ObjMap {
     let val = interp
         .get_variable(name)
         .unwrap_or_else(|_| panic!("Variable '{name}' not found"));
@@ -28,7 +28,7 @@ fn get_obj(interp: &Interpreter, name: &str) -> std::collections::HashMap<String
     }
 }
 
-fn assert_str_field(obj: &std::collections::HashMap<String, Value16>, key: &str, expected: &str) {
+fn assert_str_field(obj: &ObjMap, key: &str, expected: &str) {
     match obj.get(key) {
         Some(v) => {
             if let Some(s) = v.as_str() {
@@ -41,7 +41,7 @@ fn assert_str_field(obj: &std::collections::HashMap<String, Value16>, key: &str,
     }
 }
 
-fn assert_num_field(obj: &std::collections::HashMap<String, Value16>, key: &str, expected: f64) {
+fn assert_num_field(obj: &ObjMap, key: &str, expected: f64) {
     match obj.get(key) {
         Some(v) => {
             if let Some(n) = v.as_number() {
@@ -55,24 +55,6 @@ fn assert_num_field(obj: &std::collections::HashMap<String, Value16>, key: &str,
         }
         None => panic!("Field '{key}' not found"),
     }
-}
-
-// ── 1. Tool ─────────────────────────────────────────────────────────────────
-
-// Fix #489: tool_decl removed from grammar — tools removed from agent per design decision
-#[test]
-#[ignore = "tool_decl removed from grammar (#489)"]
-fn test_tool_declaration() {
-    let interp = run(r#"
-        tool my_tool {
-            server: "s",
-            name: "t"
-        }
-    "#);
-
-    let obj = get_obj(&interp, "my_tool");
-    assert_str_field(&obj, "server", "s");
-    assert_str_field(&obj, "name", "t");
 }
 
 // ── 2. Resource ─────────────────────────────────────────────────────────────
@@ -221,7 +203,7 @@ fn test_relation_declaration() {
 #[test]
 fn test_effect_declaration() {
     let interp = run(r#"
-        effect on Damage {
+        effect on Damage() {
             let x = 1;
         }
     "#);

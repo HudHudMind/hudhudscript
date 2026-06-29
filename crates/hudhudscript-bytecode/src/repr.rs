@@ -80,7 +80,7 @@ impl Repr {
     /// Only lower 48 bits of pointer are stored (assumes 48-bit VA space).
     #[inline(always)]
     pub fn new_dynamic(ptr: *const ()) -> Self {
-        let addr = ptr as u64;
+        let addr = sptr::Strict::expose_addr(ptr) as u64;
         debug_assert!(
             addr & 0xFFFF000000000000 == 0,
             "Pointer {:#x} exceeds 48-bit address space",
@@ -130,7 +130,7 @@ impl Repr {
     #[inline(always)]
     pub fn as_ptr(&self) -> Option<*const ()> {
         if self.tag() == ReprTag::Dynamic {
-            Some(self.payload_u64() as *const ())
+            Some(sptr::from_exposed_addr(self.payload_u64() as usize))
         } else {
             None
         }
@@ -167,7 +167,11 @@ impl std::fmt::Debug for Repr {
             ReprTag::Bool => write!(f, "Repr(Bool({}))", self.as_bool().unwrap()),
             ReprTag::Number => write!(f, "Repr(Number({}))", self.as_number().unwrap()),
             ReprTag::Int => write!(f, "Repr(Int({}))", self.as_int().unwrap()),
-            ReprTag::InlineString => write!(f, "Repr(InlineString({:?}))", self.as_inline_string().unwrap()),
+            ReprTag::InlineString => write!(
+                f,
+                "Repr(InlineString({:?}))",
+                self.as_inline_string().unwrap()
+            ),
             ReprTag::Dynamic => write!(f, "Repr(Dynamic({:p}))", self.as_ptr().unwrap()),
         }
     }

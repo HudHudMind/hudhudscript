@@ -30,7 +30,7 @@ pub fn hw_audio_devices(_args: &[Value16]) -> HudHudResult<Value16> {
                         "analog"
                     };
 
-                    let mut dev = HashMap::new();
+                    let mut dev = hudhudscript_bytecode::ObjMap::default();
                     dev.insert("name".to_string(), Value16::string(name));
                     dev.insert("type".to_string(), Value16::string(dev_type.to_string()));
                     devices.push(Value16::object(dev));
@@ -50,7 +50,7 @@ pub fn hw_audio_devices(_args: &[Value16]) -> HudHudResult<Value16> {
                             } else {
                                 "analog"
                             };
-                            let mut dev = HashMap::new();
+                            let mut dev = hudhudscript_bytecode::ObjMap::default();
                             dev.insert("name".to_string(), Value16::string(name));
                             dev.insert("type".to_string(), Value16::string(dev_type.to_string()));
                             devices.push(Value16::object(dev));
@@ -125,7 +125,7 @@ pub fn hw_display_info(_args: &[Value16]) -> HudHudResult<Value16> {
         }
     }
 
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     obj.insert("resolution".to_string(), Value16::string(resolution));
     obj.insert("driver".to_string(), Value16::string(driver));
     Ok(Value16::object(obj))

@@ -107,6 +107,8 @@ impl RegAlloc {
     }
 
     pub fn free_now(&mut self, reg: u8) {
+        // B5: local registers live below base — they're permanent, don't free
+        if reg < self.base { return; }
         let local = reg - self.base;
         self.free.push(local);
     }

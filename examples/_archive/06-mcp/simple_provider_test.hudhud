@@ -1,0 +1,18 @@
+// Simple provider test example
+// This demonstrates basic provider usage
+
+agent SimpleAssistant {
+    // Set the provider to use
+    let provider = "openai";
+    
+    // Simple greeting
+    function greet(name) {
+        let prompt = "Say hello to " + name + " in a friendly way";
+        let response = this.call(prompt);
+        print("AI says: " + response.content);
+        return response;
+    }
+    
+    // Test the greeting
+    greet("World");
+}

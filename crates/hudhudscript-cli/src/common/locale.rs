@@ -134,34 +134,10 @@ pub fn show_info() {
     println!("   Ollama:         ⚠ Check connection ({})", ollama_url);
     println!();
 
-    // MCP Configuration
+    // MCP Configuration — defined in hudhud.toml [mcp.servers]
     println!("🔌 MCP Configuration:");
-    let user_config = dirs::home_dir().map(|mut p| {
-        p.push(".kiro/settings/mcp.json");
-        p
-    });
-    let workspace_config = std::path::PathBuf::from(".kiro/settings/mcp.json");
-
-    if let Some(ref path) = user_config {
-        println!(
-            "   User config:    {} ({})",
-            if path.exists() {
-                "✓ Found"
-            } else {
-                "✗ Not found"
-            },
-            path.display()
-        );
-    }
-    println!(
-        "   Workspace:      {} ({})",
-        if workspace_config.exists() {
-            "✓ Found"
-        } else {
-            "✗ Not found"
-        },
-        workspace_config.display()
-    );
+    println!("   Config: hudhud.toml [mcp.servers.NAME]");
+    println!("   Example: [mcp.servers.git] command=\"uvx\" args=[\"mcp-server-git\"]");
     println!();
 
     // System Paths

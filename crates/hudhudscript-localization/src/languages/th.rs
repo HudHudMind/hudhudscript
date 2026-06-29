@@ -36,7 +36,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
 
     // Agent system
     map.insert("เอเจนต์".to_string(), Keyword::Agent);
-    map.insert("งาน".to_string(), Keyword::Task);
     map.insert("เครื่องมือ".to_string(), Keyword::Tool);
     map.insert("ทรัพยากร".to_string(), Keyword::Resource);
     map.insert("เอ็มซีพี".to_string(), Keyword::Mcp);
@@ -107,7 +106,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
     map.insert("ทริกเกอร์".to_string(), Keyword::Trigger);
     // Native Thai translations
     map.insert("การกระทำ".to_string(), Keyword::Action);
-    map.insert("กฎของเอเจนต์".to_string(), Keyword::AgentRule);
     map.insert("สถานะเอเจนต์".to_string(), Keyword::AgentState);
     map.insert("อนุญาต".to_string(), Keyword::Allow);
     map.insert("สไตล์การสื่อสาร".to_string(), Keyword::CommunicationStyle);
@@ -120,8 +118,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
     map.insert("ไม่เป็นทางการ".to_string(), Keyword::Informal);
     map.insert("ความตั้งใจ".to_string(), Keyword::Intent);
     map.insert("ลำดับความสำคัญ".to_string(), Keyword::Priority);
-    map.insert("ลูกโซ่กฎ".to_string(), Keyword::RuleChain);
-    map.insert("ชุดกฎ".to_string(), Keyword::RuleSet);
     map.insert("เครื่องสถานะ".to_string(), Keyword::StateMachine);
     map.insert("ทางเทคนิค".to_string(), Keyword::Technical);
     map.insert("แปลง".to_string(), Keyword::Transform);

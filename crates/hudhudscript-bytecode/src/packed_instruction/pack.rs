@@ -68,9 +68,6 @@ pub fn pack(instr: &Instruction) -> Option<u32> {
         Instruction::IntLtJumpIfFalse(idx) => Some(encode(OP_INT_LT_JUMP_IF_FALSE, 0, u16::try_from(*idx).ok()?)),
         Instruction::IntSubCall1(idx) => Some(encode(OP_INT_SUB_CALL_1, 0, u16::try_from(*idx).ok()?)),
         Instruction::IntAddCall1(idx) => Some(encode(OP_INT_ADD_CALL_1, 0, u16::try_from(*idx).ok()?)),
-        Instruction::IntIncrSlot { slot } => Some(encode(OP_INT_INCR_SLOT, 0, u16::try_from(*slot).ok()?)),
-        Instruction::IntSubLocalI { dst, payload_idx } => Some(encode(OP_INT_SUB_LOCAL_I, *dst, *payload_idx)),
-        Instruction::IntAddLocalI { dst, payload_idx } => Some(encode(OP_INT_ADD_LOCAL_I, *dst, *payload_idx)),
 
         // --- IndexFast/IndexAssignFast removed → use Index/IndexAssign ---
 
@@ -92,9 +89,27 @@ pub fn pack(instr: &Instruction) -> Option<u32> {
         Instruction::Return { src } => Some(encode(OP_RETURN_R, *src, 0)),
 
         // --- Register comparison (packed by op) ---
-        Instruction::IntCmpI { .. } => None, // unpacked only
+        Instruction::IntCmpI { dst, src, imm, op } => {
+            let imm_i8 = i8::try_from(*imm).ok()?;
+            let opcode = match *op {
+                0 => OP_INT_CMP_LT_I,
+                1 => OP_INT_CMP_LE_I,
+                4 => OP_INT_CMP_EQ_I,
+                5 => OP_INT_CMP_NE_I,
+                _ => return None,
+            };
+            Some(encode(opcode, *dst, ((*src as u16) << 8) | (imm_i8 as u8 as u16)))
+        }
         Instruction::IntDivI { .. } => None, // unpacked only
-        Instruction::IntModI { .. } => None, // unpacked only
+        Instruction::IntModI { dst, src, imm } => {
+            let imm_i8 = i8::try_from(*imm).ok()?;
+            Some(encode(OP_INT_MOD_I, *dst, ((*src as u16) << 8) | (imm_i8 as u8 as u16)))
+        }
+        Instruction::IntModCmpI { .. } => None, // unpacked only
+        Instruction::NumMulAddIndexed { .. } => None, // unpacked (4 regs, no room in 32-bit packed)
+        Instruction::StrCharEqRR { .. } => None, // unpacked (4 regs)
+        Instruction::IntLtRRJumpPacked(idx) => Some(encode(OP_INT_LT_RR_JUMP_P, 0, u16::try_from(*idx).ok()?)),
+        Instruction::IntLeRRJumpPacked(idx) => Some(encode(OP_INT_LE_RR_JUMP_P, 0, u16::try_from(*idx).ok()?)),
         Instruction::IntCmp { dst, src1, src2, op } => match *op {
             0 => Some(encode(OP_INT_LT_RR, *dst, ((*src1 as u16) << 8) | (*src2 as u16))),
             1 => Some(encode(OP_INT_LE_RR, *dst, ((*src1 as u16) << 8) | (*src2 as u16))),
@@ -141,6 +156,9 @@ pub fn pack(instr: &Instruction) -> Option<u32> {
         Instruction::ArrayPush { dst, arr, val } => {
             Some(encode(OP_ARRAY_PUSH_RRR, *dst, ((*arr as u16) << 8) | (*val as u16)))
         }
+        Instruction::StringConcat { regs_start, count, dst } => {
+            Some(encode(OP_STRING_CONCAT_RR, *dst, ((*regs_start as u16) << 8) | (*count as u16)))
+        }
         Instruction::NumAdd { dst, src1, src2 } => {
             Some(encode(OP_NUM_ADD_RR, *dst, ((*src1 as u16) << 8) | (*src2 as u16)))
         }
@@ -152,6 +170,9 @@ pub fn pack(instr: &Instruction) -> Option<u32> {
         }
         Instruction::NumDiv { dst, src1, src2 } => {
             Some(encode(OP_NUM_DIV_RR, *dst, ((*src1 as u16) << 8) | (*src2 as u16)))
+        }
+        Instruction::NumMulAddAssign { dst, mul, add } => {
+            Some(encode(OP_NUM_MUL_ADD_ASSIGN, *dst, ((*mul as u16) << 8) | (*add as u16)))
         }
         Instruction::IndexAssign { obj, idx, val } => {
             Some(encode(OP_INDEX_ASSIGN_RRR, *obj, ((*idx as u16) << 8) | (*val as u16)))
@@ -173,6 +194,9 @@ pub fn pack(instr: &Instruction) -> Option<u32> {
             Some(encode(OP_NUM_DIV_RI, *dst, ((imm_i8 as u8 as u16) << 8) | (*src as u16)))
         }
 
+        Instruction::IntLtRRJumpPacked(..) | Instruction::IntLeRRJumpPacked(..) => {
+            None // already packed by the variants above
+        }
         // --- Complex instructions → unpacked ---
         Instruction::EnumDecl(..)
         | Instruction::DeclStore { .. }
@@ -194,8 +218,6 @@ pub fn pack(instr: &Instruction) -> Option<u32> {
         | Instruction::LoadNumConst { .. }
         | Instruction::IntLeRRJumpIfFalse { .. }
         | Instruction::IntLtRRJumpIfFalse { .. }
-        | Instruction::IntLeRIJumpIfFalse { .. }
-        | Instruction::IntLtRIJumpIfFalse { .. }
         | Instruction::IntAddReturn { .. }
         | Instruction::IntSubReturn { .. }
         | Instruction::MakeArray { .. }
@@ -203,6 +225,7 @@ pub fn pack(instr: &Instruction) -> Option<u32> {
         | Instruction::Call { .. }
         | Instruction::LoadGlobal { .. }
         | Instruction::StoreGlobal { .. }
+        | Instruction::StoreGlobalConst { .. }
         | Instruction::DeclGlobal { .. }
         | Instruction::StoreConst { .. }
         | Instruction::SetProperty { .. }
@@ -210,6 +233,46 @@ pub fn pack(instr: &Instruction) -> Option<u32> {
         | Instruction::StringIndexOf { .. }
         | Instruction::StringContains { .. }
         | Instruction::IntDivI { .. }
-        | Instruction::IntModI { .. } => None,
+        | Instruction::IntModI { .. }
+        | Instruction::IntModCmpI { .. }
+        | Instruction::IntCmpIJumpIfFalse { .. }
+        | Instruction::IntCmpIJumpIfTrue { .. }
+        | Instruction::IntCmpRRJumpIfFalse { .. }
+        | Instruction::IntAddIJump { .. }
+        | Instruction::LoopEndIntAddIJump { .. }
+        | Instruction::IntSubIJump { .. }
+        | Instruction::ReturnConst { .. }
+        | Instruction::IntMulReturn { .. }
+        | Instruction::IntDivReturn { .. }
+        | Instruction::IntCmpIReturn { .. }
+        | Instruction::ArrayPushIntConst { .. } => None,
+        // P1b: specialized index packed opcodes — same RRR layout as Index
+        Instruction::IndexArray { dst, obj, idx }
+        | Instruction::IndexStringAscii { dst, obj, idx } => {
+            #[allow(unused_assignments)]
+            let mut op = OP_INDEX_ARRAY_RRR;
+            if let Instruction::IndexStringAscii { .. } = instr { op = OP_INDEX_STRING_ASCII_RRR; }
+            Some(encode(op, *dst, ((*obj as u16) << 8) | (*idx as u16)))
+        }
+        | Instruction::ArrayPushConst { .. }
+        // P2: not packable yet — single-cycle ops, packed overhead not justified
+        // P8: MakeArray2 not packable (3 registers)
+        | Instruction::MakeArray2 { .. }
+        | Instruction::ArrayLen { .. }
+        | Instruction::StringLen { .. }
+        | Instruction::ArrayPop { .. }
+        // P5: NumSqrt not packable (uses f64 math, complex)
+        | Instruction::NumSqrt { .. }
+        | Instruction::Index2D { .. }
+        | Instruction::IndexAssign2D { .. }
+        | Instruction::IndexAssignArray { .. }
+        | Instruction::IntMulAddAssign { .. }
+        | Instruction::PropertySubAssign { .. }
+        | Instruction::StrCat3 { .. }
+        | Instruction::FloatMulAdd { .. }
+        | Instruction::FloatAdd { .. }
+        | Instruction::FloatMul { .. }
+        | Instruction::IntMulMod { .. }
+        | Instruction::IntMulModI { .. } => None,
     }
 }

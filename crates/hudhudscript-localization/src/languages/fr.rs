@@ -16,7 +16,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
 
     // Agent system
     map.insert("agent".to_string(), Keyword::Agent);
-    map.insert("tâche".to_string(), Keyword::Task);
     map.insert("outil".to_string(), Keyword::Tool);
     map.insert("ressource".to_string(), Keyword::Resource);
     map.insert("mcp".to_string(), Keyword::Mcp);
@@ -70,7 +69,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
     map.insert("exécuter".to_string(), Keyword::Execute);
     // Native French translations for governance/intent/flow keywords
     map.insert("action".to_string(), Keyword::Action);
-    map.insert("règle_agent".to_string(), Keyword::AgentRule);
     map.insert("état_agent".to_string(), Keyword::AgentState);
     map.insert("autoriser".to_string(), Keyword::Allow);
     map.insert("diffuser".to_string(), Keyword::Broadcast);
@@ -110,8 +108,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
     map.insert("procureur".to_string(), Keyword::Prosecutor);
     map.insert("fournisseur".to_string(), Keyword::Provider);
     map.insert("rythme".to_string(), Keyword::Rhythm);
-    map.insert("chaîne_règles".to_string(), Keyword::RuleChain);
-    map.insert("ensemble_règles".to_string(), Keyword::RuleSet);
     map.insert("gamme".to_string(), Keyword::Scale);
     map.insert("état".to_string(), Keyword::State);
     map.insert("machine_état".to_string(), Keyword::StateMachine);

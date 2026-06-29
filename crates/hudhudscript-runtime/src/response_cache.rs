@@ -86,6 +86,8 @@ pub struct CacheStats {
     pub hits: u64,
     /// Number of cache misses.
     pub misses: u64,
+    /// Estimated tokens saved by cache hits.
+    pub saved_tokens: u64,
     /// Current number of entries in the cache.
     pub entries: usize,
     /// Number of entries evicted due to size or TTL.
@@ -168,6 +170,7 @@ impl ResponseCache {
             entry.hit_count += 1;
             entry.last_accessed = Instant::now();
             stats.hits += 1;
+            stats.saved_tokens += entry.response.tokens_used.total_tokens as u64;
             debug!(
                 "cache: hit for model '{}' (hits={})",
                 key.model, entry.hit_count

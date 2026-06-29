@@ -84,7 +84,7 @@ pub(super) fn compile_stmt_part2(
             finally_block,
             ..
         } => {
-            let has_finally = finally_block.is_some();
+            let has_catch = catch_clause.is_some(); let has_finally = finally_block.is_some();
 
             // Reserve FinallyBegin slot (patched once finally_ip is known).
             let finally_start_slot = if has_finally {
@@ -95,10 +95,9 @@ pub(super) fn compile_stmt_part2(
                 None
             };
 
-            let try_start = target.ct_current_ip();
-            target.ct_emit(Instruction::TryBegin(0));
+            let try_start = if has_catch { let ts = target.ct_current_ip(); target.ct_emit(Instruction::TryBegin(0)); Some(ts) } else { None };
             compile_stmt_shared(target, try_block)?;
-            target.ct_emit(Instruction::TryEnd);
+            if has_catch { target.ct_emit(Instruction::TryEnd); }
 
             // Jump over the catch clause.  With finally, we jump to the finally
             // entry (patched later); without finally, we jump to the end.
@@ -107,10 +106,7 @@ pub(super) fn compile_stmt_part2(
 
             // Catch block (or Pop if none).
             let catch_start = target.ct_current_ip();
-            target.ct_patch(
-                try_start,
-                Instruction::TryBegin(jump_off(try_start, catch_start)),
-            );
+            if let Some(ts) = try_start { target.ct_patch(ts, Instruction::TryBegin(jump_off(ts, catch_start))); }
             if let Some(catch) = catch_clause {
                 target.ct_declare_local(&catch.param, false)?;
                 target.ct_emit_store_var(&catch.param);

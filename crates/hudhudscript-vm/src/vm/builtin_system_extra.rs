@@ -35,6 +35,39 @@ impl crate::vm::VM {
         method: &str,
         args: Vec<Value16>,
     ) -> CompileResult<Value16> {
+        // HOST-5: enforce host_access Env.* policy per method.
+        let extract_key = |args: &[Value16]| -> CompileResult<String> {
+            args.first()
+                .and_then(|v| v.as_string())
+                .map(|s| s.to_string())
+                .ok_or_else(|| {
+                    compile_codes::runtime_error(
+                        "Env method expects a string key as first argument".to_string(),
+                    )
+                })
+        };
+        match method {
+            "get" | "has" => {
+                let key = extract_key(&args)?;
+                self.host_access_policy.ensure_env_read(&key)?;
+            }
+            "set" => {
+                let key = extract_key(&args)?;
+                self.host_access_policy.ensure_env_write(&key)?;
+            }
+            "remove" => {
+                let key = extract_key(&args)?;
+                self.host_access_policy.ensure_env_remove(&key)?;
+            }
+            "all" => {
+                self.host_access_policy.ensure_env_all()?;
+            }
+            "all_unfiltered" => {
+                self.host_access_policy.ensure_env_all_unfiltered()?;
+            }
+            _ => {}
+        }
+
         {
             let id = method.parse::<hudhud_env::env_ops::EnvMethodId>()?;
             id.dispatch(&args)
@@ -180,7 +213,7 @@ impl crate::vm::VM {
                     Ok(home) => format!("{}/.config/hudhud/plugins/{}.toml", home, plugin_name),
                     Err(_) => format!("~/.config/hudhud/plugins/{}.toml", plugin_name),
                 };
-                let mut config = HashMap::new();
+                let mut config = hudhudscript_bytecode::ObjMap::default();
                 // Try loading from system and user paths using shared toml_ops
                 for path in [&system_path, &user_path] {
                     if let Ok(content) = std::fs::read_to_string(path) {
@@ -282,9 +315,9 @@ impl crate::vm::VM {
                     },
                 };
                 // Filter out internal keys and stringify via shared toml_ops
-                let filtered: HashMap<String, Value16> = config
+                let filtered: hudhudscript_bytecode::ObjMap = config
                     .iter()
-                    .filter(|(k, _)| !k.starts_with("__"))
+                    .filter(|(k, _)| !k.to_string().starts_with("__"))
                     .map(|(k, v)| (k.clone(), v.clone()))
                     .collect();
                 let content = match hudhud_serial::toml_ops::stringify(&[Value16::object(filtered)])
@@ -309,7 +342,7 @@ impl crate::vm::VM {
                 std::fs::write(&path, content).map_err(|e| {
                     compile_codes::runtime_error(format!("PluginConfig.save: write error: {}", e))
                 })?;
-                let mut result = HashMap::new();
+                let mut result = hudhudscript_bytecode::ObjMap::default();
                 result.insert("saved".to_string(), Value16::bool_(true));
                 result.insert("path".to_string(), Value16::string(path));
                 Ok(Value16::object(result))
@@ -349,7 +382,7 @@ impl crate::vm::VM {
                     },
                     _ => "unknown".to_string(),
                 };
-                let mut result = HashMap::new();
+                let mut result = hudhudscript_bytecode::ObjMap::default();
                 result.insert("watching".to_string(), Value16::bool_(true));
                 result.insert("path".to_string(), Value16::string(path));
                 Ok(Value16::object(result))
@@ -365,7 +398,7 @@ impl crate::vm::VM {
                 };
                 let mut config = match args.get(1).and_then(|v| v.as_object()) {
                     Some(o) => o.clone(),
-                    _ => HashMap::new(),
+                    _ => hudhudscript_bytecode::ObjMap::default(),
                 };
                 config.insert("__plugin".to_string(), Value16::string(plugin_name));
                 config.insert("__defaults_applied".to_string(), Value16::bool_(true));
@@ -385,7 +418,7 @@ impl crate::vm::VM {
                     Ok(home) => format!("{}/.config/hudhud/plugins/{}.toml", home, plugin_name),
                     Err(_) => format!("~/.config/hudhud/plugins/{}.toml", plugin_name),
                 };
-                let mut result = HashMap::new();
+                let mut result = hudhudscript_bytecode::ObjMap::default();
                 result.insert("system".to_string(), Value16::string(system_path));
                 result.insert("user".to_string(), Value16::string(user_path));
                 Ok(Value16::object(result))
@@ -396,4 +429,5 @@ impl crate::vm::VM {
             ))),
         }
     }
+
 }

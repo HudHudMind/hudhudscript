@@ -86,11 +86,15 @@ pub fn estimate_tokens(text: &str) -> usize {
 
 /// Token tracker for budget enforcement
 pub struct TokenTracker {
-    /// Daily token usage
-    daily_usage: usize,
+    /// Daily token usage (prompt)
+    daily_prompt: usize,
+    /// Daily token usage (completion)
+    daily_completion: usize,
 
-    /// Monthly token usage
-    monthly_usage: usize,
+    /// Monthly token usage (prompt)
+    monthly_prompt: usize,
+    /// Monthly token usage (completion)
+    monthly_completion: usize,
 
     /// Last daily reset time
     pub last_daily_reset: std::time::SystemTime,
@@ -104,30 +108,43 @@ impl TokenTracker {
     pub fn new() -> Self {
         let now = std::time::SystemTime::now();
         Self {
-            daily_usage: 0,
-            monthly_usage: 0,
+            daily_prompt: 0,
+            daily_completion: 0,
+            monthly_prompt: 0,
+            monthly_completion: 0,
             last_daily_reset: now,
             last_monthly_reset: now,
         }
     }
 
-    /// Record token usage
-    pub fn record(&mut self, tokens: usize) {
-        // Reset if needed
+    /// Record real token usage from a provider response.
+    pub fn record(&mut self, prompt: usize, completion: usize) {
         self.check_and_reset();
 
-        self.daily_usage += tokens;
-        self.monthly_usage += tokens;
+        self.daily_prompt += prompt;
+        self.daily_completion += completion;
+        self.monthly_prompt += prompt;
+        self.monthly_completion += completion;
     }
 
-    /// Get daily usage
+    /// Get daily usage (prompt + completion)
     pub fn daily_usage(&self) -> usize {
-        self.daily_usage
+        self.daily_prompt + self.daily_completion
     }
 
-    /// Get monthly usage
+    /// Get monthly usage (prompt + completion)
     pub fn monthly_usage(&self) -> usize {
-        self.monthly_usage
+        self.monthly_prompt + self.monthly_completion
+    }
+
+    /// Get prompt tokens used today
+    pub fn daily_prompt(&self) -> usize {
+        self.daily_prompt
+    }
+
+    /// Get completion tokens used today
+    pub fn daily_completion(&self) -> usize {
+        self.daily_completion
     }
 
     /// Get last reset time
@@ -154,12 +171,14 @@ impl TokenTracker {
     /// Check and perform resets if needed
     fn check_and_reset(&mut self) {
         if self.should_reset_daily() {
-            self.daily_usage = 0;
+            self.daily_prompt = 0;
+            self.daily_completion = 0;
             self.last_daily_reset = std::time::SystemTime::now();
         }
 
         if self.should_reset_monthly() {
-            self.monthly_usage = 0;
+            self.monthly_prompt = 0;
+            self.monthly_completion = 0;
             self.last_monthly_reset = std::time::SystemTime::now();
         }
     }
@@ -167,8 +186,8 @@ impl TokenTracker {
     /// Get usage statistics
     pub fn get_stats(&self) -> TokenUsageStats {
         TokenUsageStats {
-            daily_usage: self.daily_usage,
-            monthly_usage: self.monthly_usage,
+            daily_usage: self.daily_usage(),
+            monthly_usage: self.monthly_usage(),
             estimated_cost: self.estimate_cost(),
             last_reset: self.last_daily_reset,
         }
@@ -177,7 +196,7 @@ impl TokenTracker {
     /// Estimate cost based on usage (rough estimate)
     fn estimate_cost(&self) -> f64 {
         // Rough estimate: $0.03 per 1K tokens (GPT-4 pricing)
-        (self.monthly_usage as f64 / 1000.0) * 0.03
+        (self.monthly_usage() as f64 / 1000.0) * 0.03
     }
 }
 

@@ -1,0 +1,11 @@
+function gcd(a, b) {
+    while (b != 0.5 - 0.5) {
+        let t = b;
+        b = a % b;
+        a = t;
+    }
+    return a;
+}
+
+print(gcd(48, 18));
+print(gcd(56, 98));

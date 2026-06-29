@@ -47,7 +47,7 @@ pub fn dispatch(method: UrlParserMethodId, args: &[Value16]) -> HudHudResult<Val
             let parsed = url::Url::parse(s)
                 .map_err(|e| runtime_error(format!("URLParser.parse error: {}", e)))?;
 
-            let mut obj = HashMap::new();
+            let mut obj = hudhudscript_bytecode::ObjMap::default();
             obj.insert(
                 "scheme".to_string(),
                 Value16::string(parsed.scheme().to_string()),

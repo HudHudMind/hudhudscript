@@ -35,16 +35,31 @@ use parking_lot::Mutex;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
+mod actor_core;
+mod actor_messaging;
+mod actor_misc;
+mod actor_spawn;
 mod actors_decl;
+mod branch;
+mod call_load;
+mod class_ops;
 mod classes_modules;
 mod collections_calls;
+mod collections_fast;
 mod control_flow;
+mod indexing;
+mod int_arith;
+mod int_cmp;
 mod int_slot_super;
-mod super_instructions;
 mod literals_locals;
 mod methods_async_generator;
+mod methods_generator;
+mod module_ops;
+mod num_arith;
 mod rag;
 mod step;
+mod string_ops;
+mod super_instructions;
 mod variables;
 
 pub(crate) struct StepContext<'a> {
@@ -53,4 +68,7 @@ pub(crate) struct StepContext<'a> {
     pub(crate) bytecode: &'a Bytecode,
     pub(crate) ip: usize,
     pub(crate) ip_ref: &'a mut usize,
+    /// Raw pointer to the current FunctionChunk (null for top-level bytecode).
+    /// Used by IC fast-paths to access call_ic_slots / prop_ic_slots.
+    pub(crate) chunk_ptr: *const FunctionChunk,
 }

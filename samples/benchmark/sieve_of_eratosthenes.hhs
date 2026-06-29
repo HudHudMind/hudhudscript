@@ -1,0 +1,28 @@
+function sieve(n) {
+    let isPrime = [];
+    for (let i = 0; i <= n; i = i + 1) {
+        isPrime.push(true);
+    }
+    isPrime[0] = false;
+    isPrime[1] = false;
+    for (let p = 2; p * p <= n; p = p + 1) {
+        if (isPrime[p]) {
+            for (let i = p * p; i <= n; i = i + p) {
+                isPrime[i] = false;
+            }
+        }
+    }
+    let primes = [];
+    for (let i = 2; i <= n; i = i + 1) {
+        if (isPrime[i]) {
+            primes.push(i);
+        }
+    }
+    return primes;
+}
+
+let primes = sieve(100);
+print(primes.length);
+for (let i = 0; i < primes.length; i = i + 1) {
+    print(primes[i]);
+}

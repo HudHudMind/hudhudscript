@@ -29,7 +29,7 @@ pub(crate) fn server_create(args: &[Value16]) -> HudHudResult<Value16> {
         None => ("127.0.0.1".to_string(), 8080.0, "hudhud-server".to_string()),
     };
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("name".to_string(), Value16::string(name));
     result.insert("host".to_string(), Value16::string(host));
     result.insert("port".to_string(), Value16::number(port));
@@ -65,9 +65,9 @@ pub(crate) fn server_middleware(args: &[Value16]) -> HudHudResult<Value16> {
     let opts = args
         .get(1)
         .cloned()
-        .unwrap_or_else(|| Value16::object(HashMap::new()));
+        .unwrap_or_else(|| Value16::object(hudhudscript_bytecode::ObjMap::default()));
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("name".to_string(), Value16::string(name));
     result.insert("options".to_string(), opts);
     result.insert("enabled".to_string(), Value16::bool_(true));

@@ -961,11 +961,16 @@ proptest! {
     ) {
         let mut swarm = swarm;
 
+        // The vec strategy can emit duplicate keys; only the last write
+        // is the expected observable value.  Track final expected map so
+        // assertions match real semantics (HashMap last-wins).
+        let mut expected: std::collections::HashMap<String, i32> = std::collections::HashMap::new();
         for (key, value) in &updates {
+            expected.insert(key.clone(), *value);
             swarm.set_shared_state(key.clone(), json!(value));
         }
 
-        for (key, value) in &updates {
+        for (key, value) in &expected {
             let retrieved = swarm.get_shared_state(key);
             prop_assert!(
                 retrieved.is_some(),
@@ -1059,14 +1064,18 @@ proptest! {
     ) {
         let mut swarm = swarm;
 
+        // The vec strategy can emit duplicate keys; last write wins,
+        // so track the final expected values before serialization round-trip.
+        let mut expected: std::collections::HashMap<String, i32> = std::collections::HashMap::new();
         for (key, value) in &state_data {
+            expected.insert(key.clone(), *value);
             swarm.set_shared_state(key.clone(), json!(value));
         }
 
         let serialized = serde_json::to_string(&swarm).unwrap();
         let deserialized: Swarm = serde_json::from_str(&serialized).unwrap();
 
-        for (key, value) in &state_data {
+        for (key, value) in &expected {
             let retrieved = deserialized.get_shared_state(key);
             prop_assert!(
                 retrieved.is_some(),

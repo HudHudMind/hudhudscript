@@ -90,7 +90,6 @@ impl crate::vm::VM {
                         .map(|p| Value16::string(p.to_string()))
                         .collect();
                     self.registers[255] = Value16::array(parts);
-
                 } else {
                     return Err(compile_codes::runtime_error(
                         "split() requires string arguments".to_string(),
@@ -115,7 +114,6 @@ impl crate::vm::VM {
                         .map(|v| self.value_to_string(&v.clone()))
                         .collect();
                     self.registers[255] = Value16::string(parts.join(&d));
-
                 } else {
                     return Err(compile_codes::runtime_error(
                         "join() requires array and string".to_string(),
@@ -142,7 +140,6 @@ impl crate::vm::VM {
                     replacement_v.as_string(),
                 ) {
                     self.registers[255] = Value16::string(s.replace(&p, &r));
-
                 } else {
                     return Err(compile_codes::runtime_error(
                         "replace() requires string arguments".to_string(),
@@ -160,7 +157,6 @@ impl crate::vm::VM {
                 let val = self.registers[first_arg as usize];
                 if let Some(s) = val.as_string() {
                     self.registers[255] = Value16::string(s.trim().to_string());
-
                 } else {
                     return Err(compile_codes::runtime_error(
                         "trim() requires a string".to_string(),
@@ -178,7 +174,6 @@ impl crate::vm::VM {
                 let val = self.registers[first_arg as usize];
                 if let Some(s) = val.as_string() {
                     self.registers[255] = Value16::string(s.to_uppercase());
-
                 } else {
                     return Err(compile_codes::runtime_error(
                         "toUpperCase() requires a string".to_string(),
@@ -196,7 +191,6 @@ impl crate::vm::VM {
                 let val = self.registers[first_arg as usize];
                 if let Some(s) = val.as_string() {
                     self.registers[255] = Value16::string(s.to_lowercase());
-
                 } else {
                     return Err(compile_codes::runtime_error(
                         "toLowerCase() requires a string".to_string(),
@@ -265,7 +259,6 @@ impl crate::vm::VM {
                         .take(end.saturating_sub(start))
                         .collect();
                     self.registers[255] = Value16::string(result);
-
                 } else {
                     return Err(compile_codes::runtime_error(
                         "substring() requires a string".to_string(),
@@ -398,7 +391,6 @@ impl crate::vm::VM {
                     }
                 } else if val_v.is_null() {
                     self.registers[255] = default;
-
                 } else {
                     return Err(compile_codes::runtime_error(
                         "unwrap_or() requires Option or Result".to_string(),

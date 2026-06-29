@@ -5,22 +5,22 @@ use std::collections::HashMap;
 impl VM {
     pub(crate) fn register_platform_globals(&mut self) {
         // PDF / poppler (v0.4.38 — #642). Shared (Kural 7).
-        let mut pdf_obj = HashMap::new();
+        let mut pdf_obj = hudhudscript_bytecode::ObjMap::default();
         pdf_obj.insert("__module".to_string(), Value16::string("pdf".to_string()));
         self.set_global("pdf", Value16::object(pdf_obj));
 
         // D-Bus (v0.4.38 — #613). Shared (Kural 7).
-        let mut dbus_obj = HashMap::new();
+        let mut dbus_obj = hudhudscript_bytecode::ObjMap::default();
         dbus_obj.insert("__module".to_string(), Value16::string("dbus".to_string()));
         self.set_global("dbus", Value16::object(dbus_obj));
 
         // GPU (v0.4.38 — #615). Shared (Kural 7).
-        let mut gpu_obj = HashMap::new();
+        let mut gpu_obj = hudhudscript_bytecode::ObjMap::default();
         gpu_obj.insert("__module".to_string(), Value16::string("gpu".to_string()));
         self.set_global("gpu", Value16::object(gpu_obj));
 
         // LibreTranslate (v0.4.38 — #641). Shared (Kural 7).
-        let mut translate_obj = HashMap::new();
+        let mut translate_obj = hudhudscript_bytecode::ObjMap::default();
         translate_obj.insert(
             "__module".to_string(),
             Value16::string("translate".to_string()),
@@ -28,12 +28,12 @@ impl VM {
         self.set_global("translate", Value16::object(translate_obj));
 
         // E2E encryption (Issue #647). Shared (Kural 7).
-        let mut e2e_obj = HashMap::new();
+        let mut e2e_obj = hudhudscript_bytecode::ObjMap::default();
         e2e_obj.insert("__module".to_string(), Value16::string("e2e".to_string()));
         self.set_global("e2e", Value16::object(e2e_obj));
 
         // Hardware detection (v0.4.38 — #629). Shared (Kural 7).
-        let mut hardware_obj = HashMap::new();
+        let mut hardware_obj = hudhudscript_bytecode::ObjMap::default();
         hardware_obj.insert(
             "__module".to_string(),
             Value16::string("hardware".to_string()),
@@ -41,7 +41,7 @@ impl VM {
         self.set_global("hardware", Value16::object(hardware_obj));
 
         // Project environment detection (v0.4.38 — #637). Shared (Kural 7).
-        let mut project_obj = HashMap::new();
+        let mut project_obj = hudhudscript_bytecode::ObjMap::default();
         project_obj.insert(
             "__module".to_string(),
             Value16::string("project".to_string()),
@@ -49,12 +49,12 @@ impl VM {
         self.set_global("project", Value16::object(project_obj));
 
         // Media (Issue #617). Shared (Kural 7).
-        let mut media_obj = HashMap::new();
+        let mut media_obj = hudhudscript_bytecode::ObjMap::default();
         media_obj.insert("__module".to_string(), Value16::string("media".to_string()));
         self.set_global("media", Value16::object(media_obj));
 
         // Transmission RPC (v0.4.38 — #639). Shared (Kural 7).
-        let mut torrent_obj = HashMap::new();
+        let mut torrent_obj = hudhudscript_bytecode::ObjMap::default();
         torrent_obj.insert(
             "__module".to_string(),
             Value16::string("torrent".to_string()),
@@ -62,17 +62,17 @@ impl VM {
         self.set_global("torrent", Value16::object(torrent_obj));
 
         // MPRIS media player control (v0.4.38 — #638). Shared (Kural 7).
-        let mut mpris_obj = HashMap::new();
+        let mut mpris_obj = hudhudscript_bytecode::ObjMap::default();
         mpris_obj.insert("__module".to_string(), Value16::string("mpris".to_string()));
         self.set_global("mpris", Value16::object(mpris_obj));
 
         // Text-to-Speech (espeak-ng / piper / festival). Shared (Kural 7).
-        let mut tts_obj = HashMap::new();
+        let mut tts_obj = hudhudscript_bytecode::ObjMap::default();
         tts_obj.insert("__module".to_string(), Value16::string("tts".to_string()));
         self.set_global("tts", Value16::object(tts_obj));
 
         // Browser integration (v0.4.38 — #643). Shared (Kural 7).
-        let mut browser_obj = HashMap::new();
+        let mut browser_obj = hudhudscript_bytecode::ObjMap::default();
         browser_obj.insert(
             "__module".to_string(),
             Value16::string("browser".to_string()),
@@ -80,7 +80,7 @@ impl VM {
         self.set_global("browser", Value16::object(browser_obj));
 
         // Error base class (v0.4.38 — #669)
-        let mut error_obj = HashMap::new();
+        let mut error_obj = hudhudscript_bytecode::ObjMap::default();
         error_obj.insert("__class".to_string(), Value16::string("Error".to_string()));
         error_obj.insert("name".to_string(), Value16::string("Error".to_string()));
         error_obj.insert("message".to_string(), Value16::string(String::new()));
@@ -102,7 +102,7 @@ impl VM {
         // keys instead of the generic "Property not found" runtime error.
         // Mirrors the interpreter's `env_lookup` which fell back to
         // `Ok(Value16::string(String::new()))` on miss.
-        let mut env_obj: HashMap<String, Value16> = HashMap::new();
+        let mut env_obj: hudhudscript_bytecode::ObjMap = hudhudscript_bytecode::ObjMap::default();
         for (k, v) in std::env::vars() {
             env_obj.insert(k, Value16::string(v.to_string()));
         }

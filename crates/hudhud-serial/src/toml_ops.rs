@@ -70,7 +70,7 @@ fn toml_to_value(t: &toml::Value) -> Value16 {
         toml::Value::Datetime(dt) => Value16::string(dt.to_string()),
         toml::Value::Array(arr) => Value16::array(arr.iter().map(|v| toml_to_value(v)).collect()),
         toml::Value::Table(tbl) => {
-            let mut obj = HashMap::new();
+            let mut obj = hudhudscript_bytecode::ObjMap::default();
             for (k, v) in tbl {
                 obj.insert(k.clone(), toml_to_value(v));
             }
@@ -104,7 +104,7 @@ fn value_to_toml(v: &Value16) -> HudHudResult<toml::Value> {
     if let Some(obj) = v.as_object() {
         let mut tbl = toml::map::Map::new();
         for (k, val) in obj {
-            tbl.insert(k.clone(), value_to_toml(val)?);
+            tbl.insert(k.to_string(), value_to_toml(val)?);
         }
         return Ok(toml::Value::Table(tbl));
     }

@@ -156,7 +156,7 @@ impl Provider for OpenAICompatibleProvider {
         self.token_tracker
             .write()
             .await
-            .record(tokens_used.total_tokens);
+            .record(tokens_used.prompt_tokens, tokens_used.completion_tokens);
 
         Ok(LLMResponse {
             content,
@@ -318,6 +318,7 @@ impl Provider for OpenAICompatibleProvider {
 
         let mut full_content = String::new();
         let mut total_tokens = 0usize;
+        let mut prompt_tokens = 0usize;
 
         // Read SSE lines
         let bytes = response.bytes_stream();
@@ -348,11 +349,12 @@ impl Provider for OpenAICompatibleProvider {
                 // Extract usage if present (some providers send at end)
                 if let Some(usage) = json.get("usage") {
                     total_tokens = usage["total_tokens"].as_u64().unwrap_or(0) as usize;
+                    prompt_tokens = usage["prompt_tokens"].as_u64().unwrap_or(0) as usize;
                 }
             }
         }
 
-        self.token_tracker.write().await.record(total_tokens);
+        self.token_tracker.write().await.record(prompt_tokens, total_tokens);
 
         Ok(LLMResponse {
             content: full_content.clone(),

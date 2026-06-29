@@ -17,7 +17,7 @@ pub fn tts_voices(_args: &[Value16]) -> SharedResult<Value16> {
                 for line in stdout.lines().skip(1) {
                     let parts: Vec<&str> = line.split_whitespace().collect();
                     if parts.len() >= 4 {
-                        let mut voice = HashMap::new();
+                        let mut voice = hudhudscript_bytecode::ObjMap::default();
                         voice.insert(
                             "language".to_string(),
                             Value16::string(parts[1].to_string()),

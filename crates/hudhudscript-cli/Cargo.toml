@@ -11,6 +11,10 @@ description = "HudHudScript CLI — MCP-based orchestration language with UI, de
 name = "hudhud"
 path = "src/main.rs"
 
+[lib]
+name = "hudhudscript_cli"
+path = "src/lib.rs"
+
 # Note: 'hudhudscript' bin removed in v0.4.47.9 — it pointed to the same
 # main.rs as 'hudhud' which caused build target ambiguity warnings, and the
 # package name 'hudhudscript' conflicted with the Python lib target.
@@ -29,12 +33,15 @@ name = "hudp"
 path = "src/hudp.rs"
 
 [features]
-default = ["governance", "mcp", "rag"]
+default = ["governance", "mcp", "rag", "mimalloc"]
 governance = ["dep:hudhudscript-governance", "dep:hudhudscript-rules"]
 mcp = ["dep:hudhudscript-mcp"]
 rag = ["dep:hudhudscript-rag"]
 tokenomics = ["dep:hudhudscript-tokenomics"]
 minimal = []
+# Use the system allocator instead of mimalloc so heaptrack/valgrind can
+# see the real allocation stacks (mimalloc obscures them).
+sysalloc-profile = []
 
 [dependencies]
 hudhudscript-errors = { path = "../hudhudscript-errors" }
@@ -78,7 +85,7 @@ toml = { workspace = true }
 # wall time ~8.5% on the interpreter and ~15.6% on the VM.  It is a drop-in
 # replacement, thread-safe, and used via `#[global_allocator]` in each
 # binary's main.rs (hudhud, hudi, hudc, hudp).
-mimalloc = { version = "0.1", default-features = false }
+mimalloc = { version = "0.1", default-features = false, optional = true }
 
 [dev-dependencies]
 proptest.workspace = true

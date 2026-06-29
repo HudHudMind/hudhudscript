@@ -10,9 +10,10 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::time::Instant;
 
 pub fn watch_and_run(path: &PathBuf, debug: bool) -> Result<(), CliError> {
-    watch_and_run_with_config(path, debug, None)
+    watch_and_run_with_config(path, debug, None, false)
 }
 
 /// Watch and run with an optional explicit config path (Issue #1006).
@@ -20,6 +21,7 @@ pub fn watch_and_run_with_config(
     path: &PathBuf,
     debug: bool,
     config_path: Option<&std::path::Path>,
+    timing: bool,
 ) -> Result<(), CliError> {
     use std::time::{Duration, SystemTime};
 
@@ -69,7 +71,7 @@ pub fn watch_and_run_with_config(
     // Initial run
     println!("[watch] Running {}...", path.display());
     println!("{}", "=".repeat(60));
-    if let Err(e) = run_file_vm_with_config(path, debug, config_path) {
+    if let Err(e) = run_file_vm_with_config(path, debug, config_path, timing) {
         eprintln!("{}", crate::common::render_error(&e));
     }
     println!("{}", "=".repeat(60));
@@ -104,7 +106,7 @@ pub fn watch_and_run_with_config(
             println!("[watch] Re-running {}...", path.display());
             println!("{}", "=".repeat(60));
 
-            if let Err(e) = run_file_vm_with_config(path, debug, config_path) {
+            if let Err(e) = run_file_vm_with_config(path, debug, config_path, timing) {
                 eprintln!("{}", crate::common::render_error(&e));
             }
 
@@ -140,7 +142,7 @@ pub fn register_vm_stdlib_modules(vm: &mut VM) {
 /// For the legacy AST walker path, use [`run_file_with_config`].
 #[allow(dead_code)]
 pub fn run_file_vm(path: &PathBuf, debug: bool) -> Result<(), CliError> {
-    run_file_vm_with_config(path, debug, None)
+    run_file_vm_with_config(path, debug, None, false)
 }
 
 /// Run a source script via the VM path with an optional explicit config path.
@@ -148,7 +150,9 @@ pub fn run_file_vm_with_config(
     path: &PathBuf,
     debug: bool,
     config_path: Option<&std::path::Path>,
+    timing: bool,
 ) -> Result<(), CliError> {
+    let total_start = Instant::now();
     // If a .hudb bytecode file was passed, delegate to the bytecode runner.
     if path.extension().and_then(|s| s.to_str()) == Some("hudb") {
         return run_bytecode_with_config(path, debug, config_path);
@@ -157,15 +161,15 @@ pub fn run_file_vm_with_config(
     // Read source file
     let source = fs::read_to_string(path)
         .map_err(|e| CliError::Io(format!("Failed to read file: {}", e)))?;
+    let read_done = Instant::now();
 
     // Detect locale — directive (#!dil=tr) > script detection > default
     let directive_locale = hudhudscript_parser::parse_lang_directive(&source);
     let locale_str = directive_locale.unwrap_or_else(|| detect_locale(&source).to_string());
     if locale_str != "default" {
         std::env::set_var("HUDHUD_LOCALE", &locale_str);
-    } else {
-        std::env::remove_var("HUDHUD_LOCALE");
     }
+    // ERR-5: keep external HUDHUD_LOCALE if no directive (was: remove_var deleted external env)
 
     if debug {
         println!("Running (VM): {}", path.display());
@@ -175,21 +179,25 @@ pub fn run_file_vm_with_config(
     }
 
     // Parse
+    let parse_start = Instant::now();
     let ast = parse(&source).map_err(|e| {
         let unified: hudhudscript_errors::Error = e;
         CliError::ParseCompile(unified.render_full())
     })?;
+    let parse_done = Instant::now();
 
     if debug {
         println!("Parsed {} statements", ast.len());
     }
 
     // Compile
+    let compile_start = Instant::now();
     let mut compiler = Compiler::new();
     let bytecode = compiler.compile(&ast).map_err(|e| {
         let unified: hudhudscript_errors::Error = e;
         CliError::ParseCompile(unified.render_full())
     })?;
+    let compile_done = Instant::now();
 
     if debug {
         println!(
@@ -200,6 +208,9 @@ pub fn run_file_vm_with_config(
     }
     // Load hudhud.toml runtime config (Issue #446, #1006)
     let config = load_hudhud_config_with_path(debug, config_path);
+
+    // ISSUE-1: apply GC tuning from [gc] before any VM execution.
+    hudhudscript_bytecode::gc::set_gc_tuning(config.gc.min_objects, config.gc.growth_factor);
 
     // Create VM with detected locale and configure
     let vm_locale = VM::detect_locale(&source);
@@ -221,18 +232,58 @@ pub fn run_file_vm_with_config(
         vm.allow_network();
     }
 
+    // HOST-4: apply [host_access] policy to VM
+    if let Some(ref host_access) = config.host_access {
+        vm.set_host_access_policy(host_access.to_policy());
+    }
+
     // Register all stdlib modules (shared with run_bytecode_with_config)
     register_vm_stdlib_modules(&mut vm);
 
-    // Execute — use a Tokio runtime in case any shared-builtins (http, tcp, ...)
-    // need an async context, matching run_file_with_config.
-    let rt = tokio::runtime::Runtime::new()
-        .map_err(|e| CliError::Runtime(format!("Failed to create runtime: {}", e)))?;
+    // TOKIO T-2+T-3: single conditional current_thread runtime.
+    let needs_async = bytecode.needs_async;
+    #[cfg(feature = "mcp")]
+    let needs_mcp = !config.mcp.servers.is_empty();
+    #[cfg(not(feature = "mcp"))]
+    let needs_mcp = false;
 
-    rt.block_on(async {
+    let exec_start = Instant::now();
+    if needs_async || needs_mcp {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .map_err(|e| CliError::Runtime(format!("Runtime: {}", e)))?;
+        rt.block_on(async {
+            if needs_mcp {
+                match crate::common::provider::setup_mcp_clients(&config.mcp.servers, debug).await {
+                    Ok(mcp_clients) => {
+                        for (name, client) in mcp_clients { vm.register_mcp_client(name, client); }
+                    }
+                    Err(e) => { if debug { eprintln!("⚠ MCP: {}", e); } }
+                }
+            }
+            let exec_result = vm.execute(&bytecode)
+                .map_err(|e| CliError::Runtime(format!("VM error: {}", e)));
+            vm.shutdown_mcp_clients().await;
+            exec_result
+        })?;
+    } else {
         vm.execute(&bytecode)
-            .map_err(|e| CliError::Runtime(format!("VM error: {}", e)))
-    })?;
+            .map_err(|e| CliError::Runtime(format!("VM error: {}", e)))?;
+    }
+    let exec_done = Instant::now();
+
+    if timing {
+        let total_ms = total_start.elapsed().as_secs_f64() * 1000.0;
+        let read_ms = read_done.duration_since(total_start).as_secs_f64() * 1000.0;
+        let parse_ms = parse_done.duration_since(parse_start).as_secs_f64() * 1000.0;
+        let compile_ms = compile_done.duration_since(compile_start).as_secs_f64() * 1000.0;
+        let exec_ms = exec_done.duration_since(exec_start).as_secs_f64() * 1000.0;
+        eprintln!(
+            "timing: read={:.3}ms parse={:.3}ms compile={:.3}ms vm-exec={:.3}ms total={:.3}ms",
+            read_ms, parse_ms, compile_ms, exec_ms, total_ms
+        );
+    }
 
     Ok(())
 }
@@ -264,7 +315,7 @@ fn run_bytecode_with_config(
             println!("     [{}] {:?}", i, instruction);
         }
         println!("   Functions:");
-        for (name, chunk) in bytecode.functions.borrow().iter() {
+        for (name, chunk) in bytecode.function_names.borrow().iter().map(|(n, &i)| (n.clone(), bytecode.functions.borrow()[i].clone())) {
             println!("     Function: {} (local_count={}, local_names={:?})", name, chunk.local_count, chunk.local_names);
             for (i, instruction) in chunk.instructions.iter().enumerate() {
                 println!("       [{}] {:?}", i, instruction);
@@ -298,6 +349,9 @@ fn run_bytecode_with_config(
     // Load hudhud.toml runtime config (Issue #446, #1006)
     let config = load_hudhud_config_with_path(debug, config_path);
 
+    // ISSUE-1: apply GC tuning from [gc] before any VM execution.
+    hudhudscript_bytecode::gc::set_gc_tuning(config.gc.min_objects, config.gc.growth_factor);
+
     // Execute on VM with detected locale
     let mut vm = VM::with_locale(locale);
 
@@ -317,6 +371,11 @@ fn run_bytecode_with_config(
         vm.allow_network();
     }
 
+    // HOST-4: apply [host_access] policy to VM
+    if let Some(ref host_access) = config.host_access {
+        vm.set_host_access_policy(host_access.to_policy());
+    }
+
     // Register stdlib modules from shared-builtins (#928) — Kural 7: single source.
     register_vm_stdlib_modules(&mut vm);
 
@@ -333,19 +392,19 @@ fn run_bytecode_with_config(
 // ── config() builtin helper ────────────────────────────────────────────────
 fn build_config_value(config: &HudHudConfig) -> Value16 {
     use std::collections::HashMap;
-    let mut root = HashMap::new();
+    let mut root = hudhudscript_bytecode::ObjMap::default();
 
     // [runtime]
-    let mut runtime = HashMap::new();
+    let mut runtime = hudhudscript_bytecode::ObjMap::default();
     runtime.insert("max_recursion".to_string(), Value16::int(config.runtime.max_recursion as i64));
     runtime.insert("fuel_limit".to_string(), Value16::int(config.runtime.fuel_limit as i64));
     runtime.insert("allow_network".to_string(), Value16::bool_(config.runtime.allow_network));
     root.insert("runtime".to_string(), Value16::object(runtime));
 
     // [providers]
-    let mut providers = HashMap::new();
+    let mut providers = hudhudscript_bytecode::ObjMap::default();
     for (name, fields) in &config.providers {
-        let mut p = HashMap::new();
+        let mut p = hudhudscript_bytecode::ObjMap::default();
         for (k, v) in fields {
             p.insert(k.clone(), Value16::string(v.clone()));
         }

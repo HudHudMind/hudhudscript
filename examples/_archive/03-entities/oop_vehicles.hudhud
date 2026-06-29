@@ -1,0 +1,239 @@
+// ============================================
+// Temel Araç sınıfı (base class)
+// ============================================
+class Araç {
+    var marka = ""
+    var model = ""
+    var hız = 0
+    var maxHız = 0
+
+    constructor(marka, model, maxHız) {
+        this.marka = marka
+        this.model = model
+        this.maxHız = maxHız
+    }
+
+    fn hızlan(miktar) {
+        this.hız += miktar
+        if (this.hız > this.maxHız) {
+            this.hız = this.maxHız
+        }
+        print(this.marka + " " + this.model + " hızlandı: " + this.hız + " km/s")
+    }
+
+    fn fren(miktar) {
+        this.hız -= miktar
+        if (this.hız < 0) {
+            this.hız = 0
+        }
+        print(this.marka + " " + this.model + " fren: " + this.hız + " km/s")
+    }
+
+    fn dur() {
+        this.hız = 0
+        print(this.marka + " " + this.model + " durdu.")
+    }
+
+    fn bilgi() {
+        return this.marka + " " + this.model + " (" + this.hız + "/" + this.maxHız + " km/s)"
+    }
+}
+
+// ============================================
+// Kara Aracı — Araç'tan türer
+// ============================================
+class KaraAracı extends Araç {
+    var tekerlekSayısı = 0
+    var araziModu = false
+
+    constructor(marka, model, maxHız, tekerlekSayısı) {
+        this.marka = marka
+        this.model = model
+        this.maxHız = maxHız
+        this.tekerlekSayısı = tekerlekSayısı
+    }
+
+    fn araziyeGeç() {
+        this.araziModu = true
+        print(this.marka + " " + this.model + " arazi moduna geçti.")
+    }
+}
+
+// ============================================
+// Otomobil — KaraAracı'ndan türer
+// ============================================
+class Otomobil extends KaraAracı {
+    var koltukSayısı = 0
+    var klimaAçık = false
+
+    constructor(marka, model, maxHız, koltukSayısı) {
+        this.marka = marka
+        this.model = model
+        this.maxHız = maxHız
+        this.tekerlekSayısı = 4
+        this.koltukSayısı = koltukSayısı
+    }
+
+    fn klimaAç() {
+        this.klimaAçık = true
+        print(this.marka + " " + this.model + " klima açıldı.")
+    }
+}
+
+// ============================================
+// Motosiklet — KaraAracı'ndan türer
+// ============================================
+class Motosiklet extends KaraAracı {
+    constructor(marka, model, maxHız) {
+        this.marka = marka
+        this.model = model
+        this.maxHız = maxHız
+        this.tekerlekSayısı = 2
+    }
+
+    fn tekerlekKaldır() {
+        print(this.marka + " " + this.model + " TEKERLEK KALDIRDI!")
+    }
+}
+
+// ============================================
+// Hava Aracı — Araç'tan türer
+// ============================================
+class HavaAracı extends Araç {
+    var irtifa = 0
+    var maxIrtifa = 0
+
+    constructor(marka, model, maxHız, maxIrtifa) {
+        this.marka = marka
+        this.model = model
+        this.maxHız = maxHız
+        this.maxIrtifa = maxIrtifa
+        this.irtifa = 0
+    }
+
+    fn kalk() {
+        print(this.marka + " " + this.model + " kalkış yapıyor...")
+        this.irtifa = 100
+        this.hız = 200
+    }
+
+    fn yüksel(miktar) {
+        this.irtifa += miktar
+        if (this.irtifa > this.maxIrtifa) {
+            this.irtifa = this.maxIrtifa
+        }
+        print(this.marka + " " + this.model + " irtifa: " + this.irtifa + " m")
+    }
+}
+
+// ============================================
+// Uçak — HavaAracı'ndan türer
+// ============================================
+class Uçak extends HavaAracı {
+    var havayolu = ""
+    var yolcuSayısı = 0
+    var otoPilot = false
+
+    constructor(havayolu, model, yolcuSayısı) {
+        this.marka = havayolu
+        this.model = model
+        this.maxHız = 900
+        this.maxIrtifa = 12000
+        this.havayolu = havayolu
+        this.yolcuSayısı = yolcuSayısı
+    }
+
+    fn otoPilotAç() {
+        this.otoPilot = true
+        print(this.havayolu + " " + this.model + " oto-pilot devrede.")
+    }
+}
+
+// ============================================
+// Helikopter — HavaAracı'ndan türer
+// ============================================
+class Helikopter extends HavaAracı {
+    var pervaneSayısı = 0
+
+    constructor(marka, model) {
+        this.marka = marka
+        this.model = model
+        this.maxHız = 250
+        this.maxIrtifa = 5000
+        this.pervaneSayısı = 2
+    }
+
+    fn hover() {
+        this.hız = 0
+        print(this.marka + " " + this.model + " havada asılı duruyor.")
+    }
+}
+
+// ============================================
+// Deniz Aracı — Araç'tan türer
+// ============================================
+class DenizAracı extends Araç {
+    var derinlik = 0
+    var liman = ""
+
+    constructor(marka, model, maxHız) {
+        this.marka = marka
+        this.model = model
+        this.maxHız = maxHız
+    }
+
+    fn demirAt() {
+        this.hız = 0
+        print(this.marka + " " + this.model + " demir attı.")
+    }
+}
+
+// ============================================
+// Gemi — DenizAracı'ndan türer
+// ============================================
+class Gemi extends DenizAracı {
+    var konteynerSayısı = 0
+    var mürettebat = 0
+
+    constructor(marka, model, mürettebat) {
+        this.marka = marka
+        this.model = model
+        this.maxHız = 40
+        this.mürettebat = mürettebat
+    }
+
+    fn yükle(konteyner) {
+        this.konteynerSayısı += konteyner
+        print(this.marka + " " + this.model + " " + konteyner + " konteyner yüklendi. Toplam: " + this.konteynerSayısı)
+    }
+
+    fn sefereÇık(hedef) {
+        print(this.marka + " " + this.model + " " + hedef + " rotası. Mürettebat: " + this.mürettebat)
+        this.hızlan(30)
+    }
+}
+
+// ============================================
+// Simülasyon — new ile çağrı!
+// ============================================
+print("============ OOP ARAÇ SİMÜLASYONU ============")
+
+let bmw = new Otomobil("BMW", "M4", 280, 5)
+bmw.hızlan(120)
+bmw.klimaAç()
+print(bmw.bilgi())
+
+let harley = new Motosiklet("Harley", "Fat Boy", 180)
+harley.hızlan(100)
+harley.tekerlekKaldır()
+
+let thy = new Uçak("THY", "Boeing 737", 180)
+thy.kalk()
+thy.yüksel(10000)
+thy.otoPilotAç()
+
+let kargo = new Gemi("Maersk", "Triple-E", 25)
+kargo.yükle(500)
+kargo.sefereÇık("Rotterdam")
+
+print("============ SİMÜLASYON TAMAMLANDI ============")

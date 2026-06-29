@@ -24,7 +24,7 @@ pub fn exec_stream(args: &[Value16]) -> HudHudResult<Value16> {
     if let Some(stdout) = child.stdout.take() {
         let reader = std::io::BufReader::new(stdout);
         for line in reader.lines().map_while(Result::ok) {
-            let mut entry = HashMap::new();
+            let mut entry = hudhudscript_bytecode::ObjMap::default();
             entry.insert("stream".to_string(), Value16::string("stdout".to_string()));
             entry.insert("line".to_string(), Value16::string(line));
             lines.push(Value16::object(entry));
@@ -33,7 +33,7 @@ pub fn exec_stream(args: &[Value16]) -> HudHudResult<Value16> {
     if let Some(stderr) = child.stderr.take() {
         let reader = std::io::BufReader::new(stderr);
         for line in reader.lines().map_while(Result::ok) {
-            let mut entry = HashMap::new();
+            let mut entry = hudhudscript_bytecode::ObjMap::default();
             entry.insert("stream".to_string(), Value16::string("stderr".to_string()));
             entry.insert("line".to_string(), Value16::string(line));
             lines.push(Value16::object(entry));
@@ -44,7 +44,7 @@ pub fn exec_stream(args: &[Value16]) -> HudHudResult<Value16> {
         .wait()
         .map_err(|e| runtime_error(format!("exec.stream wait error: {}", e)))?;
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("lines".to_string(), Value16::array(lines));
     result.insert(
         "code".to_string(),
@@ -66,7 +66,7 @@ pub fn exec_spawn(args: &[Value16]) -> HudHudResult<Value16> {
         .spawn()
         .map_err(|e| runtime_error(format!("exec.spawn error: {}", e)))?;
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("pid".to_string(), Value16::number(child.id() as f64));
     Ok(Value16::object(result))
 }

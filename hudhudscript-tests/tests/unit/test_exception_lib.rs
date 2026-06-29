@@ -62,7 +62,10 @@ use hudhudscript_exception::*;
 
 #[test]
 fn exception_to_error_and_back() {
-    let exc = Exception::new(ExceptionCode(LexExceptionCode::LexUnexpectedChar as u32), "hello");
+    let exc = Exception::new(
+        ExceptionCode(LexExceptionCode::LexUnexpectedChar as u32),
+        "hello",
+    );
     let err: Error = exc.clone().into();
     let exc2: Exception = err.into();
     assert_eq!(exc.code, exc2.code);

@@ -1,7 +1,7 @@
 use crate::{
     CallPayload, ClassDeclPayload, ClassStaticDeclPayload, DefineFunctionPayload,
     DestructObjectPayload, EnumDeclPayload, FunctionChunk, Instruction, LoadModulePayload,
-    LoopPayload, OptSymPayload, SuperInstrPayload, SymId, TraitCheckPayload, TwoSymPayload,
+    LoopPayload, OptSymPayload, SuperInstrPayload, CmpJumpPayload, SymId, TraitCheckPayload, TwoSymPayload,
     Value16,
 };
 use serde::{Deserialize, Serialize};
@@ -16,9 +16,16 @@ pub struct Bytecode {
     pub constants: Vec<Value16>,
     /// Instructions
     pub instructions: Vec<Instruction>,
-    /// Named function chunks (name -> Arc<FunctionChunk>)
-    /// Wrapped in Arc to avoid expensive deep clones on function lookup (#458).
-    pub functions: std::cell::RefCell<std::collections::HashMap<String, Arc<FunctionChunk>>>,
+    /// Function chunks stored as a Vec for O(1) index-based lookup.
+    pub functions: std::cell::RefCell<Vec<Arc<FunctionChunk>>>,
+    /// Name -> index mapping for O(1) function lookup.
+    /// RefCell so `add_function` can mutate through `&self`.
+    #[serde(skip)]
+    pub function_names: std::cell::RefCell<rustc_hash::FxHashMap<String, usize>>,
+    /// Serialized function names (parallel to `functions` Vec).
+    /// Populated by `to_bytes()`; consumed by `from_bytes()` to rebuild `function_names`.
+    #[serde(default)]
+    pub serialized_function_names: Vec<String>,
     /// Agent action chunks — compiled action bodies keyed by "AgentName.actionName".
     /// These are separate from regular functions because they are dispatched
     /// via `perform` rather than regular call.
@@ -165,6 +172,8 @@ pub struct Bytecode {
     /// need three or more fields share this pool.
     #[serde(default)]
     pub super_instr_payloads: Vec<SuperInstrPayload>,
+    /// GÖREV 5: side-table for packed compare+jump instructions
+    pub cmp_jump_payloads: Vec<CmpJumpPayload>,
     /// PERF-B1: Top-level (main chunk) local variable slot names.
     ///
     /// Parallel to `FunctionChunk::local_names` but for the top-level
@@ -174,12 +183,28 @@ pub struct Bytecode {
     /// HashMap path).  Index = slot number.
     #[serde(default)]
     pub main_local_names: Vec<String>,
+    /// ISSUE-2e-1: parallel bitmap to `main_local_names`.  `true` means
+    /// the corresponding top-level symbol is referenced inside at least
+    /// one function/closure body, so it is "shared" and must live in
+    /// `globals`.  `false` means it is main-frame-only and may live only
+    /// in a register slot.  VM does not act on this in 2e-1 (data-only
+    /// step); 2e-2/2e-3 will route by this flag.
+    #[serde(default)]
+    pub main_local_shared: Vec<bool>,
     /// Number of top-level local variable slots (= main_local_names.len()).
     #[serde(default)]
     pub main_local_count: u32,
     /// Cached packed instructions (PERF-B2: avoid re-prepack on every execute).
     #[serde(skip)]
     pub packed: RefCell<Option<Vec<u32>>>,
+    /// WI-1: Whether this bytecode requires an async runtime (tokio).
+    /// Default true (safe) — compiler sets false for pure sync scripts.
+    #[serde(default = "default_needs_async")]
+    pub needs_async: bool,
+}
+
+fn default_needs_async() -> bool {
+    true
 }
 
 /// Payload for `Instruction::LoopBegin` (CROSS-2b).

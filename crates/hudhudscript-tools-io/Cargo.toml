@@ -14,6 +14,7 @@ db = ["dep:sqlx"]
 [dependencies]
 hudhudscript-errors = { path = "../hudhudscript-errors" }
 hudhudscript-tools-schema = { path = "../hudhudscript-tools-schema" }
+hudhudscript-tools-vcs = { path = "../hudhudscript-tools-vcs" }
 hudhudscript-sandbox = { path = "../hudhudscript-sandbox" }
 serde.workspace = true
 url.workspace = true

@@ -233,6 +233,7 @@ impl Formatter {
             Decl::Deploy { name, fields, .. } => {
                 self.format_decl_with_fields(&indent, "deploy", name, fields)
             }
+            _ => String::new(),
         }
     }
 

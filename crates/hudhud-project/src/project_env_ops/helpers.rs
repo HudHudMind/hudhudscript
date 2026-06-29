@@ -107,7 +107,7 @@ pub(crate) const MARKERS: &[Marker] = &[
 ];
 
 pub(crate) fn make_dep(name: &str, version: &str) -> Value16 {
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     obj.insert("name".to_string(), Value16::string(name.to_string()));
     obj.insert("version".to_string(), Value16::string(version.to_string()));
     Value16::object(obj)

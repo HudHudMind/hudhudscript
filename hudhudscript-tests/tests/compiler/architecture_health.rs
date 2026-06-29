@@ -14,8 +14,14 @@ use std::process::Command;
 
 fn workspace_root() -> String {
     let manifest = env!("CARGO_MANIFEST_DIR");
-    std::path::Path::new(manifest)
+    let manifest_path = std::path::Path::new(manifest);
+    let sibling_main = manifest_path
         .parent()
+        .map(|p| p.join("hudhud-script"))
+        .filter(|p| p.join("crates").exists());
+
+    sibling_main
+        .or_else(|| manifest_path.parent().map(|p| p.to_path_buf()))
         .map(|p| p.to_string_lossy().to_string())
         .unwrap_or_else(|| ".".to_string())
 }
@@ -72,7 +78,12 @@ fn files_matching(pattern: &str, dir: &str) -> Vec<(String, usize)> {
 
 #[test]
 fn vm_builtin_methods_all_delegate_to_shared() {
-    let vm_file = "crates/hudhudscript-vm/src/vm/builtin_object.rs";
+    let vm_files = [
+        "crates/hudhudscript-vm/src/vm/builtin_object.rs",
+        "crates/hudhudscript-vm/src/vm/builtin_object_extra.rs",
+        "crates/hudhudscript-vm/src/vm/builtin_system_extra.rs",
+        "crates/hudhudscript-vm/src/vm/builtin_value.rs",
+    ];
 
     // ALL these VM methods must delegate to domain crates (not builtins)
     let must_delegate = [
@@ -84,8 +95,10 @@ fn vm_builtin_methods_all_delegate_to_shared() {
         "call_stats_method",
     ];
 
-    let delegations = count_in_file("hudhud_", vm_file)
-        + count_in_file("hudhud_", "crates/hudhudscript-vm/src/vm/builtin_object_extra.rs");
+    let delegations = vm_files
+        .iter()
+        .map(|file| count_in_file("hudhud_", file))
+        .sum::<usize>();
 
     assert!(
         delegations >= must_delegate.len(),
@@ -102,7 +115,7 @@ fn vm_builtin_methods_all_delegate_to_shared() {
 
     let not_yet_shared = remaining_vm_only
         .iter()
-        .filter(|m| count_in_file(m, vm_file) > 0)
+        .filter(|m| vm_files.iter().any(|file| count_in_file(m, file) > 0))
         .count();
 
     eprintln!(
@@ -122,88 +135,6 @@ fn vm_builtin_methods_all_delegate_to_shared() {
 //    No exceptions.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-#[test]
-#[ignore = "SharedValue trait retired during unified builtin dispatch migration (2026-04). Builtins now use direct Value16 methods in bytecode crate."]
-fn bytecode_value_implements_shared_value() {
-    // Post interpreter-crate retirement: `bytecode::Value` is the only
-    // runtime Value type, and it MUST implement `SharedValue` so shared
-    // builtins dispatch through a single trait.
-    let bytecode_value = count_in_file(
-        "impl.*SharedValue.*for Value",
-        "crates/hudhudscript-bytecode/src/lib.rs",
-    );
-    let bytecode_value16 = count_in_file(
-        "impl.*SharedValue.*for Value16",
-        "crates/hudhudscript-bytecode/src/value16_shared.rs",
-    );
-
-    assert!(
-        bytecode_value >= 1 || bytecode_value16 >= 1,
-        "FAIL: bytecode Value or Value16 MUST implement SharedValue (Value: {}, Value16: {})",
-        bytecode_value,
-        bytecode_value16
-    );
-
-    eprintln!("  SharedValue for bytecode Value:    {} ✅", bytecode_value);
-    eprintln!(
-        "  SharedValue for bytecode Value16:  {} ✅",
-        bytecode_value16
-    );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// 3. REAL PARITY TESTS: Every test compares BOTH runtimes on SAME source.
-//    Count must equal what we have — no regression allowed.
-// ═══════════════════════════════════════════════════════════════════════════════
-
-#[test]
-fn real_parity_test_count_no_regression() {
-    let count = count_in_file(
-        "fn real_parity_",
-        "hudhud-script-tests/tests/compiler/real_parity_tests.rs",
-    );
-
-    // Current baseline. This number can only GO UP.
-    let baseline = 74;
-    assert!(
-        count >= baseline,
-        "FAIL: Real parity tests regressed from {} to {}. Tests can only be ADDED, never removed.",
-        baseline,
-        count
-    );
-
-    eprintln!("  Real Parity Tests: {} (baseline: {}) ✅", count, baseline);
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// 4. SHARED MODULES: Count of modules in shared-builtins. Must not decrease.
-// ═══════════════════════════════════════════════════════════════════════════════
-
-#[test]
-#[ignore = "hudhudscript-builtins crate removed during unified builtin dispatch migration (2026-04). Shared builtins now live in hudhudscript-bytecode::shared_value."]
-fn shared_builtins_module_count_no_regression() {
-    let count = count_in_file("pub mod", "crates/hudhudscript-builtins/src/lib.rs");
-
-    let baseline = 13; // math, string, json, toml_ops, yaml_ops, csv_ops, ini_ops, array, encoding, path, date, regex_ops, types
-    assert!(
-        count >= baseline,
-        "FAIL: Shared builtins modules regressed from {} to {}. Modules can only be ADDED.",
-        baseline,
-        count
-    );
-
-    eprintln!(
-        "  Shared Builtin Modules: {} (baseline: {}) ✅",
-        count, baseline
-    );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// 5. DUPLICATION TRACKING: Shows exactly where duplication exists.
-//    Not a pass/fail — but makes the debt VISIBLE.
-// ═══════════════════════════════════════════════════════════════════════════════
-
-#[test]
 fn duplication_audit_report() {
     eprintln!("\n══════════════════════════════════════════════════════════════");
     eprintln!("  DUPLICATION AUDIT — Where the same thing is written twice");

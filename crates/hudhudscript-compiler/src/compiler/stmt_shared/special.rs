@@ -25,6 +25,10 @@ pub(super) fn compile_stmt_part3(
                 target.ct_emit(Instruction::StoreConst { src: reg, sym: sym as u16 });
             } else if let Some(local_reg) = target.ct_local_reg(&var_decl.name) {
                 target.ct_emit(Instruction::Move { dst: local_reg, src: reg });
+                if target.ct_is_top_level() && target.ct_is_shared_top_level(&var_decl.name) {
+                    let sym = target.ct_intern(&var_decl.name);
+                    target.ct_emit(Instruction::DeclGlobal { src: reg, sym: sym as u16 });
+                }
             } else {
                 let sym = target.ct_intern(&var_decl.name);
                 target.ct_emit(Instruction::StoreGlobal { src: reg, sym: sym as u16 });

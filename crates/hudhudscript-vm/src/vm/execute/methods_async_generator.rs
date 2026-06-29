@@ -14,12 +14,33 @@ impl VM {
         let ip_ref = &mut *ctx.ip_ref;
 
         match instr {
-            Instruction::MethodCall { dst: 255, obj: 255, payload_idx, first_arg, arg_count } => {
+            Instruction::MethodCall {
+                dst: 255,
+                obj: 255,
+                payload_idx,
+                first_arg,
+                arg_count,
+            } => {
                 // CROSS-2c: resolve the call payload from the side table.
                 let payload = bytecode.get_call_payload(*payload_idx as u32);
                 let method_sym = payload.sym;
                 let payload_arg_count = payload.arg_count;
-                let method = bytecode.resolve_symbol(method_sym.0);
+                let builtin = payload.builtin_method_idx;
+                // P6: skip symbol resolution when builtin ID is known.
+                // Fall back to string path for non-builtin methods.
+                let method: String = if builtin != u32::MAX {
+                    // Known builtin: resolve method name without string table lookup.
+                    match builtin {
+                        0 => "floor".to_string(),
+                        1 => "sqrt".to_string(),
+                        2 => "abs".to_string(),
+                        3 => "ceil".to_string(),
+                        4 => "round".to_string(),
+                        _ => bytecode.resolve_symbol(method_sym.0),
+                    }
+                } else {
+                    bytecode.resolve_symbol(method_sym.0)
+                };
                 let receiver = self.registers[255];
                 let first = *first_arg as usize;
                 let n = *arg_count as usize;
@@ -39,7 +60,7 @@ impl VM {
                 // Returns just the yielded value (or null when exhausted).
                 if method == "next" {
                     if let Some(state) = receiver.as_generator_state() {
-                        let next_val = state.lock().advance();
+                        let next_val = crate::vm::exec::helpers::generator_advance(self, state);
                         self.registers[255] = next_val.unwrap_or(Value16::null());
 
                         *ip_ref = ip + 1;
@@ -53,7 +74,6 @@ impl VM {
                 self.last_instance_mutation = None;
                 let result = self.call_method_on_value(&receiver, &method, args, bytecode)?;
                 self.registers[255] = result;
-
             }
 
             Instruction::WriteBackReceiver(var_sym) => {
@@ -99,7 +119,6 @@ impl VM {
                     match ps {
                         hudhudscript_bytecode::PromiseState16::Resolved(inner) => {
                             self.registers[255] = **inner;
-
                         }
                         hudhudscript_bytecode::PromiseState16::Pending => {
                             return Err(compile_codes::runtime_error(
@@ -117,7 +136,28 @@ impl VM {
                             )));
                         }
                         hudhudscript_bytecode::PromiseState16::AsyncPending(id) => {
-                            if self.promise_registry.has_entry(id) {
+                            // V2-E: DetachedGraph promises are transported on a dedicated
+                            // channel; resolve those first, then fall back to the shared
+                            // registry for externally registered promises.
+                            if let Some(rx) = self.detached_promises.remove(id) {
+                                match rx.recv() {
+                                    Ok(Ok(tree)) => {
+                                        self.registers[255] =
+                                            hudhudscript_bytecode::gc_detach::attach(&tree);
+                                    }
+                                    Ok(Err(msg)) => {
+                                        return Err(compile_codes::runtime_error(format!(
+                                            "Promise rejected: {}",
+                                            msg
+                                        )));
+                                    }
+                                    Err(_) => {
+                                        return Err(compile_codes::runtime_error(
+                                            "blocking task sender dropped".to_string(),
+                                        ));
+                                    }
+                                }
+                            } else if self.promise_registry.has_entry(id) {
                                 match self.promise_registry.await_blocking(id) {
                                     Ok(val) => self.registers[255] = val,
                                     Err(hudhudscript_async::RegistryError::Rejected(msg)) => {
@@ -131,20 +171,25 @@ impl VM {
                                     }
                                 }
                             } else {
-                                self.registers[255] = Value16::promise(
-                                    hudhudscript_bytecode::PromiseState16::AsyncPending(id.clone()),
-                                );
+                                return Err(compile_codes::runtime_error(format!(
+                                    "await on unknown promise id {}",
+                                    id
+                                )));
                             }
                         }
                     }
                 } else {
                     self.registers[255] = value;
-
                 }
             }
 
             // ── Class extensionsClass extensions (Issue #345) ────────────────────────
-            Instruction::SuperCall { dst: 255, payload_idx, first_arg, arg_count } => {
+            Instruction::SuperCall {
+                dst: 255,
+                payload_idx,
+                first_arg,
+                arg_count,
+            } => {
                 // Trampoline-aware: resolve parent method, put chunk in call_cache,
                 // set pending_call + pending_super_call.
                 let payload = bytecode.get_call_payload(*payload_idx as u32);
@@ -176,12 +221,14 @@ impl VM {
                         ))
                     })?;
                 let chunk_name = format!("{}::{}", parent_name, method_name);
-                let chunk = bytecode.functions.borrow().get(chunk_name.as_str()).cloned().ok_or_else(|| {
-                    compile_codes::runtime_error(format!(
-                        "Parent method not found: {}",
-                        chunk_name
-                    ))
-                })?;
+                let chunk = bytecode
+                    .get_function(chunk_name.as_str())
+                    .ok_or_else(|| {
+                        compile_codes::runtime_error(format!(
+                            "Parent method not found: {}",
+                            chunk_name
+                        ))
+                    })?;
                 self.class_context_stack.push(parent_name.clone());
                 let func_sym = hudhudscript_bytecode::SymId(
                     hudhudscript_bytecode::interner::intern(&chunk_name).0,
@@ -193,12 +240,16 @@ impl VM {
                 }
                 let params_box = Box::new(chunk.params.clone());
                 self.call_cache[sym_id] = Some((Arc::as_ptr(&chunk), Box::into_raw(params_box)));
+                // P5.1: call_cache'ye yeni eklenen chunk sabitleri GC root.
+                self.add_chunk_constants(&chunk);
                 self.pending_super_call = true;
                 return Ok(StepAction::Call {
                     func_sym,
+                    function_idx: payload.function_idx,
                     arg_count: payload.arg_count,
                     first_arg: *first_arg,
                     dst: 255,
+                    ip,
                 });
             }
 
@@ -209,12 +260,10 @@ impl VM {
                 let class_name = bytecode.resolve_symbol(payload.first);
                 let member_name = bytecode.resolve_symbol(payload.second);
                 let key = format!("{}::{}", class_name, member_name);
-                if bytecode.functions.borrow().contains_key(&key) {
+                if bytecode.has_function(&key) {
                     self.registers[255] = Value16::string(key);
-
                 } else if let Some(val) = self.get_var_cloned(&key) {
                     self.registers[255] = val;
-
                 } else {
                     return Err(compile_codes::runtime_error(format!(
                         "Static member not found: {}.{}",
@@ -227,23 +276,29 @@ impl VM {
                 // CROSS-2a: payload lives in `bytecode.class_static_decl_payloads`.
                 let payload = &bytecode.class_static_decl_payloads[*payload_idx as usize];
                 let class_name = bytecode.resolve_symbol(payload.class_name.0);
-                let static_methods: Vec<String> =
-                    payload.static_methods.iter().map(|s| bytecode.resolve_symbol(s.0)).collect();
-                let static_fields: Vec<String> =
-                    payload.static_fields.iter().map(|s| bytecode.resolve_symbol(s.0)).collect();
+                let static_methods: Vec<String> = payload
+                    .static_methods
+                    .iter()
+                    .map(|s| bytecode.resolve_symbol(s.0))
+                    .collect();
+                let static_fields: Vec<String> = payload
+                    .static_fields
+                    .iter()
+                    .map(|s| bytecode.resolve_symbol(s.0))
+                    .collect();
                 let class_val = self.get_var_cloned(&class_name);
                 let mut class_obj = match class_val {
                     Some(v) => {
                         if let Some(obj) = v.as_object() {
                             obj.clone()
                         } else {
-                            let mut obj = HashMap::new();
+                            let mut obj = hudhudscript_bytecode::ObjMap::default();
                             obj.insert("__class".to_string(), Value16::string(class_name.clone()));
                             obj
                         }
                     }
                     None => {
-                        let mut obj = HashMap::new();
+                        let mut obj = hudhudscript_bytecode::ObjMap::default();
                         obj.insert("__class".to_string(), Value16::string(class_name.clone()));
                         obj
                     }
@@ -260,167 +315,6 @@ impl VM {
                     }
                 }
                 self.set_var(&class_name, Value16::object(class_obj))?;
-            }
-
-            // Issue #667: Yield — send value lazily or collect eagerly
-            Instruction::Yield { .. } => {
-                let val = self.registers[255];
-                if let Some(ref sender) = self.yield_sender {
-                    // Lazy path: send value through rendezvous channel.
-                    // This blocks until the consumer calls next() / recv().
-                    if sender.send(val).is_err() {
-                        // Consumer dropped — stop execution (exits outer
-                        // loop with `hit_return = false`).
-                        return Ok(StepAction::Break);
-                    }
-                } else {
-                    // Eager fallback: collect into __yield_collector
-                    if let Some(collector_val) = self.get_var_cloned("__yield_collector") {
-                        if let Some(arr) = collector_val.as_array() {
-                            let mut new_arr = arr.clone();
-                            new_arr.push(val);
-                            self.set_var("__yield_collector", Value16::array(new_arr))?;
-                        }
-                    }
-                }
-                // Push null back (yield expression evaluates to null)
-                self.registers[255] = Value16::null();
-            }
-
-            // Issue #667: MakeGenerator — spawn a lazy generator thread
-            Instruction::MakeGenerator { payload_idx, first_arg, arg_count } => {
-                // CROSS-2c: resolve the call payload from the side table.
-                let payload = bytecode.get_call_payload(*payload_idx as u32);
-                let func_name_sym = payload.sym;
-                let func_name = bytecode.resolve_symbol(func_name_sym.0);
-                let n = *arg_count as usize;
-                let first = *first_arg as usize;
-                let args: Vec<Value16> = (0..n).map(|i| self.registers[first + i]).collect();
-
-                if let Some(chunk) = bytecode.functions.borrow().get(&func_name).cloned() {
-                    // Rendezvous channel: sender blocks until receiver calls recv()
-                    let (yield_tx, yield_rx) = std::sync::mpsc::sync_channel::<Value16>(0);
-
-                    // Snapshot state for the generator thread
-                    let chunk_arc = Arc::clone(&chunk);
-                    let bytecode_clone = bytecode.clone();
-                    let global_scope = self.globals.clone();
-                    let classes_clone = self.classes.clone();
-                    let declarations_clone = self.declarations.clone();
-                    let params_clone: Vec<String> = chunk.params.clone();
-
-                    std::thread::spawn(move || {
-                        let mut gen_vm = VM::new();
-                        // Share the caller's globals
-                        for (k, v) in global_scope {
-                            gen_vm.globals.entry(k).or_insert(v);
-                        }
-                        gen_vm.classes = classes_clone;
-                        gen_vm.declarations = declarations_clone;
-                        // Install the yield sender so Yield instructions
-                        // send through the channel instead of collecting.
-                        gen_vm.yield_sender = Some(yield_tx);
-
-                        // Bind parameters.
-                        // Gap 1 — rest-param parity (`...rest` bundles
-                        // trailing args into an Array, keyed by the
-                        // un-dotted name).
-                        //
-                        // S2.2b: bind params to registers
-                        // (and `sym_to_slot` for LoadVar slow-path
-                        // compat) so `LoadLocal(slot)` resolves correctly
-                        // inside the generator body.
-                        let has_rest = params_clone
-                            .last()
-                            .map(|p| p.starts_with("..."))
-                            .unwrap_or(false);
-                        let regular_count = if has_rest {
-                            params_clone.len() - 1
-                        } else {
-                            params_clone.len()
-                        };
-                        // Pre-size slot table from chunk metadata.
-
-                        // Populate call_stack_local_syms for LoadVar slow-path compat.
-                        let mut built: Vec<(u32, usize, Option<usize>)> =
-                            Vec::with_capacity(chunk_arc.local_names.len());
-                        let mut max_sym: u32 = 0;
-                        for (slot, name) in chunk_arc.local_names.iter().enumerate() {
-                            let sid = hudhudscript_bytecode::interner::intern(name).0;
-                            if sid > max_sym {
-                                max_sym = sid;
-                            }
-                            let param_idx = params_clone.iter().position(|p| {
-                                p == name || p.strip_prefix("...").map_or(false, |s| s == name)
-                            });
-                            built.push((sid, slot, param_idx));
-                        }
-                        built.sort_by_key(|(sym_id, _, _)| *sym_id);
-                        let built_ptr = Box::into_raw(Box::new(built));
-                        gen_vm.call_stack_local_syms.push(built_ptr);
-                        gen_vm.owned_local_sym_refs.push(built_ptr);
-                        // Populate slot values from args for each param
-                        // that has a matching slot.
-                        for (i, param) in params_clone.iter().enumerate().take(regular_count) {
-                            let val = args.get(i).cloned().unwrap_or(Value16::null());
-                            if let Some(local_syms_ptr) = gen_vm.call_stack_local_syms.last() {
-                                let local_syms = unsafe { &**local_syms_ptr };
-                                let sym_id = hudhudscript_bytecode::interner::intern(param).0;
-                                if let Ok(idx) = local_syms.binary_search_by_key(&sym_id, |(s, _, _)| *s) {
-                                    let slot = local_syms[idx].1 as i32;
-                                    if slot >= 0 {
-                                        gen_vm.registers[slot as usize] = val;
-                                        continue;
-                                    }
-                                }
-                            }
-                            // Fallback: no slot (shouldn't happen for
-                            // params).  Globals would be the fallback, but
-                            // params are always slot-allocated.
-                        }
-                        if has_rest {
-                            let rest_name = params_clone[regular_count]
-                                .trim_start_matches('.')
-                                .to_string();
-                            let rest_values: Vec<Value16> = if args.len() > regular_count {
-                                args[regular_count..].to_vec()
-                            } else {
-                                Vec::new()
-                            };
-                            let rest_val = Value16::array(rest_values);
-                            let mut stored = false;
-                            if let Some(local_syms_ptr) = gen_vm.call_stack_local_syms.last() {
-                                let local_syms = unsafe { &**local_syms_ptr };
-                                let sym_id = hudhudscript_bytecode::interner::intern(&rest_name).0;
-                                if let Ok(idx) = local_syms.binary_search_by_key(&sym_id, |(s, _, _)| *s) {
-                                    let slot = local_syms[idx].1 as i32;
-                                    if slot >= 0 {
-                                        gen_vm.registers[slot as usize] = rest_val;
-                                        stored = true;
-                                    }
-                                }
-                            }
-                            if !stored {
-                                gen_vm.globals.insert(rest_name, rest_val);
-                            }
-                        }
-
-                        // Execute the generator body; when it finishes (or
-                        // errors) the sender is dropped, signalling "done".
-                        let _ = gen_vm.execute_chunk(&chunk_arc, &bytecode_clone);
-                        // gen_vm (and yield_tx) dropped here → recv returns Err → done
-                    });
-
-                    self.registers[255] = Value16::generator(Arc::new(parking_lot::Mutex::new(
-                        GeneratorState16::new(yield_rx),
-                    )));
-                } else {
-                    // Function not found — push an empty, exhausted generator
-                    let (_tx, rx) = std::sync::mpsc::sync_channel::<Value16>(0);
-                    self.registers[255] = Value16::generator(Arc::new(parking_lot::Mutex::new(
-                        GeneratorState16::new(rx),
-                    )));
-                }
             }
 
             _ => unreachable!("instruction routed to wrong execute helper"),

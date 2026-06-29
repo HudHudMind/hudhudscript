@@ -282,7 +282,10 @@ fn expr_array_span() {
 fn expr_object_span() {
     let span = mk_span();
     let expr = Expr::Object {
-        properties: vec![("x".to_string(), Expr::Literal(Literal::Number(1.0, false), span))],
+        properties: vec![(
+            "x".to_string(),
+            Expr::Literal(Literal::Number(1.0, false), span),
+        )],
         span,
     };
     assert_eq!(expr.span(), span);
@@ -409,7 +412,8 @@ fn template_string_part_interpolation() {
 #[test]
 fn arrow_body_expression() {
     let span = mk_span();
-    let body = ArrowFunctionBody::Expression(Box::new(Expr::Literal(Literal::Number(1.0, false), span)));
+    let body =
+        ArrowFunctionBody::Expression(Box::new(Expr::Literal(Literal::Number(1.0, false), span)));
     match body {
         ArrowFunctionBody::Expression(e) => assert_eq!(e.span(), span),
         _ => panic!("Expected Expression body"),
@@ -1052,7 +1056,10 @@ fn pattern_identifier() {
 #[test]
 fn pattern_identifier_default() {
     let span = mk_span();
-    let p = Pattern::IdentifierDefault("port".into(), Expr::Literal(Literal::Number(8080.0, false), span));
+    let p = Pattern::IdentifierDefault(
+        "port".into(),
+        Expr::Literal(Literal::Number(8080.0, false), span),
+    );
     match p {
         Pattern::IdentifierDefault(name, _) => assert_eq!(name, "port"),
         _ => panic!("Expected IdentifierDefault"),

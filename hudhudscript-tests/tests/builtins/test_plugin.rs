@@ -46,7 +46,7 @@ fn test_register_plugin() {
 
 #[test]
 fn test_register_requires_name() {
-    let opts = HashMap::new();
+    let opts: std::collections::HashMap<hudhudscript_bytecode::sym::SymId, hudhudscript_bytecode::Value16> = std::collections::HashMap::new();
     assert!(plugin_register(&[Value16::object(opts)]).is_err());
 }
 

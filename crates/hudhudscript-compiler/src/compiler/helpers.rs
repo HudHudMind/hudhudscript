@@ -45,7 +45,8 @@ pub(super) struct Local {
     pub(super) name: String,
     pub(super) depth: usize,
     pub(super) is_captured: bool,
-    /// S2.2c: slot index into `FunctionChunk::local_slot_names` (K2-1: local_slots eliminated).
+    /// S2.2c: register index assigned to this local variable.
+    /// `FunctionChunk::local_names` keeps the debug name for the same index.
     pub(super) slot: Option<u32>,
     /// K1-1: register index assigned to this local variable.
     /// `None` for globals / pre-register locals.
@@ -63,6 +64,7 @@ pub(super) fn root_var_name(expr: &Expr) -> Option<String> {
         Expr::Identifier(name, _) => Some(name.clone()),
         Expr::This(_) => Some("this".to_string()),
         Expr::Member { object, .. } => root_var_name(object),
+        Expr::Call { callee, .. } => root_var_name(callee),
         _ => None,
     }
 }

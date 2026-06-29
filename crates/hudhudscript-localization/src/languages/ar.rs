@@ -16,7 +16,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
 
     // Agent system
     map.insert("وكيل".to_string(), Keyword::Agent);
-    map.insert("مهمة".to_string(), Keyword::Task);
     map.insert("أداة".to_string(), Keyword::Tool);
     map.insert("مورد".to_string(), Keyword::Resource);
     map.insert("mcp".to_string(), Keyword::Mcp);
@@ -100,9 +99,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
     map.insert("امنع".to_string(), Keyword::Deny);
 
     // Governance (additional)
-    map.insert("قاعدة_وكيل".to_string(), Keyword::AgentRule);
-    map.insert("مجموعة_قواعد".to_string(), Keyword::RuleSet);
-    map.insert("سلسلة_قواعد".to_string(), Keyword::RuleChain);
 
     // Roles (additional)
     map.insert("مدعي".to_string(), Keyword::Prosecutor);

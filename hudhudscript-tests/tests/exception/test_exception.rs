@@ -48,15 +48,9 @@ fn exception_maybe_at_none() {
 
 #[test]
 fn exception_with_cause() {
-    let inner = Exception::new(
-        ExceptionCode(83),
-        "unterminated string",
-    );
-    let outer = Exception::new(
-        ExceptionCode(82),
-        "caused by unterminated string",
-    )
-    .caused_by(inner.clone());
+    let inner = Exception::new(ExceptionCode(83), "unterminated string");
+    let outer =
+        Exception::new(ExceptionCode(82), "caused by unterminated string").caused_by(inner.clone());
 
     assert!(outer.cause.is_some());
     assert_eq!(*outer.cause.unwrap(), inner);
@@ -64,34 +58,24 @@ fn exception_with_cause() {
 
 #[test]
 fn exception_with_hint() {
-    let exc = Exception::new(
-        ExceptionCode(82),
-        "bad char",
-    )
-    .with_hint("did you mean '#'?");
+    let exc = Exception::new(ExceptionCode(82), "bad char").with_hint("did you mean '#'?");
     assert_eq!(exc.hints.len(), 1);
     assert_eq!(exc.hints[0], "did you mean '#'?");
 }
 
 #[test]
 fn exception_with_hints() {
-    let exc = Exception::new(
-        ExceptionCode(80),
-        "bad escape",
-    )
-    .with_hint("use \\n for newline")
-    .with_hint("use \\t for tab");
+    let exc = Exception::new(ExceptionCode(80), "bad escape")
+        .with_hint("use \\n for newline")
+        .with_hint("use \\t for tab");
     assert_eq!(exc.hints.len(), 2);
 }
 
 #[test]
 fn exception_push_frame() {
-    let exc = Exception::new(
-        ExceptionCode(82),
-        "bad char",
-    )
-    .push_frame(StackFrame::new("parse").at("main.hud", 5, 10))
-    .push_frame(StackFrame::new("main"));
+    let exc = Exception::new(ExceptionCode(82), "bad char")
+        .push_frame(StackFrame::new("parse").at("main.hud", 5, 10))
+        .push_frame(StackFrame::new("main"));
     assert_eq!(exc.stack.len(), 2);
     assert_eq!(exc.stack[0].function, "parse");
     assert_eq!(exc.stack[1].function, "main");
@@ -99,25 +83,15 @@ fn exception_push_frame() {
 
 #[test]
 fn exception_display_includes_code_and_message() {
-    let exc = Exception::new(
-        ExceptionCode(82),
-        "unexpected character '@'",
-    );
+    let exc = Exception::new(ExceptionCode(82), "unexpected character '@'");
     let display = format!("{}", exc);
     assert!(display.contains("unexpected character '@'"));
 }
 
 #[test]
 fn exception_display_with_cause_shows_chain() {
-    let inner = Exception::new(
-        ExceptionCode(80),
-        "unterminated",
-    );
-    let outer = Exception::new(
-        ExceptionCode(82),
-        "outer error",
-    )
-    .caused_by(inner);
+    let inner = Exception::new(ExceptionCode(80), "unterminated");
+    let outer = Exception::new(ExceptionCode(82), "outer error").caused_by(inner);
     let display = format!("{}", outer);
     assert!(display.contains("outer error"));
     // cause chain should be present in debug/display output
@@ -126,22 +100,15 @@ fn exception_display_with_cause_shows_chain() {
 
 #[test]
 fn exception_clone_equality() {
-    let exc = Exception::new(
-        ExceptionCode(82),
-        "test",
-    )
-    .with_hint("try again");
+    let exc = Exception::new(ExceptionCode(82), "test").with_hint("try again");
     let cloned = exc.clone();
     assert_eq!(exc, cloned);
 }
 
 #[test]
 fn exception_serialize_deserialize() {
-    let exc = Exception::new(
-        ExceptionCode(82),
-        "serialization test",
-    )
-    .at(SourcePosition::new(1, 1, 0));
+    let exc =
+        Exception::new(ExceptionCode(82), "serialization test").at(SourcePosition::new(1, 1, 0));
     let json = serde_json::to_string(&exc).unwrap();
     let deser: Exception = serde_json::from_str(&json).unwrap();
     assert_eq!(exc.code, deser.code);

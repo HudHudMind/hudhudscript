@@ -1,0 +1,66 @@
+// Türkçe Yönetişim Sistemi Örneği
+// Turkish Governance System Example
+
+// Anayasa tanımla
+anayasa VeriGüvenliği {
+    description: "Veri güvenliği ve gizlilik anayasası",
+    laws: [
+        {
+            name: "Gizlilik Koruma",
+            description: "Kullanıcı verilerini koru",
+            enforcement: zorunlu,
+            rules: ["kural.1", "kural.2"]
+        },
+        {
+            name: "Veri Kalitesi",
+            description: "Yüksek kalite standartları",
+            enforcement: tavsiye,
+            rules: ["kural.3"]
+        }
+    ]
+}
+
+// Kural tanımla
+kural ErişimKontrol: {
+    conditions: [
+        { type: "equals", field: "rol", value: "yönetici" }
+    ],
+    actions: [
+        { type: "allow" }
+    ],
+    priority: 100
+}
+
+// Konsey oluştur
+konsey GüvenlikKonseyi {
+    constitution: "VeriGüvenliği",
+    members: [
+        { agent: "ajan.hakim.1", role: "Hakim" },
+        { agent: "ajan.savcı.1", role: "Savcı" },
+        { agent: "ajan.icra.1", role: "İcracı" }
+    ],
+    rules: ["kural.1"]
+}
+
+// Sürü oluştur
+sürü VeriİşlemeSürüsü {
+    agents: ["ajan.1", "ajan.2", "ajan.3"],
+    strategy: paralel
+}
+
+// Topluluk oluştur
+topluluk VeriTopluluğu: {
+    members: ["ajan.hakim.1", "ajan.savcı.1", "ajan.1", "ajan.2"],
+    councils: ["GüvenlikKonseyi"],
+    culture: {
+        values: ["şeffaflık", "işbirliği"],
+        norms: ["kod inceleme", "dokümantasyon"],
+        communication_style: teknik
+    }
+}
+
+yaz("Türkçe yönetişim sistemi başarıyla kuruldu!")
+yaz("Anayasa: VeriGüvenliği")
+yaz("Konsey: GüvenlikKonseyi")
+yaz("Sürü: VeriİşlemeSürüsü")
+yaz("Topluluk: VeriTopluluğu")

@@ -116,7 +116,7 @@ pub(crate) fn server_listen(args: &[Value16]) -> HudHudResult<Value16> {
         accept_loop(fd, accept_state);
     });
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("listening".to_string(), Value16::bool_(true));
     result.insert("host".to_string(), Value16::string(host));
     result.insert("port".to_string(), Value16::number(actual_port as f64));
@@ -134,7 +134,7 @@ pub(crate) fn server_stop(args: &[Value16]) -> HudHudResult<Value16> {
     let fd = match extract_server_fd(args, "Server.stop") {
         Ok(fd) => fd,
         Err(_) => {
-            let mut result = HashMap::new();
+            let mut result = hudhudscript_bytecode::ObjMap::default();
             result.insert("stopped".to_string(), Value16::bool_(true));
             result.insert("listening".to_string(), Value16::bool_(false));
             return Ok(Value16::object(result));
@@ -165,7 +165,7 @@ pub(crate) fn server_stop(args: &[Value16]) -> HudHudResult<Value16> {
         registry.remove(&fd);
     }
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("stopped".to_string(), Value16::bool_(true));
     result.insert("listening".to_string(), Value16::bool_(false));
     Ok(Value16::object(result))
@@ -190,7 +190,7 @@ pub(crate) fn server_static_files(args: &[Value16]) -> HudHudResult<Value16> {
         None => "/static".to_string(),
     };
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("type".to_string(), Value16::string("static".to_string()));
     result.insert("directory".to_string(), Value16::string(dir));
     result.insert("prefix".to_string(), Value16::string(prefix));
@@ -234,7 +234,7 @@ pub(crate) fn server_websocket(args: &[Value16]) -> HudHudResult<Value16> {
         .unwrap_or("ws_handler")
         .to_string();
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("type".to_string(), Value16::string("websocket".to_string()));
     result.insert("path".to_string(), Value16::string(path));
     result.insert("handler".to_string(), Value16::string(handler));
@@ -278,7 +278,7 @@ pub(crate) fn server_add_websocket(args: &[Value16]) -> HudHudResult<Value16> {
 }
 
 pub(crate) fn server_status(args: &[Value16]) -> HudHudResult<Value16> {
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
 
     match args.first().and_then(|v| v.as_object()) {
         Some(o) => {

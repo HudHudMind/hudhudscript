@@ -10,16 +10,6 @@ use hudhudscript_parser::parse;
 fn run(source: &str) -> Interpreter {
     let ast = parse(source).unwrap_or_else(|e| panic!("Parse error:\n{e}"));
     let mut interpreter = Interpreter::new();
-    // DEBUG: dump bytecode
-    {
-        use hudhudscript_compiler::Compiler;
-        let mut compiler = Compiler::new();
-        let bytecode = compiler.compile(&ast).unwrap();
-        eprintln!("BYTECODE for: {}", source);
-        for (i, instr) in bytecode.instructions.iter().enumerate() {
-            eprintln!("  {}: {:?}", i, instr);
-        }
-    }
     interpreter
         .execute(&ast)
         .unwrap_or_else(|e| panic!("Runtime error:\n{e:?}"));
@@ -146,9 +136,9 @@ fn stats_std_dev() {
 fn stats_quantile_median_equivalent() {
     // quantile(arr, 0.5) should equal median
     let interp = run(r#"
-        let data = [1, 2, 3, 4, 5];
-        let q = Stats.quantile(data, 0.5);
-        let m = Stats.median(data);
+        let arr = [1, 2, 3, 4, 5];
+        let q = Stats.quantile(arr, 0.5);
+        let m = Stats.median(arr);
     "#);
     let q = get_num(&interp, "q");
     let m = get_num(&interp, "m");

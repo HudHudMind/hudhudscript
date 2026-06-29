@@ -12,9 +12,9 @@ use tower_lsp::lsp_types::{Location, Position as LspPosition, Range as LspRange,
 ///
 /// Returns an empty `Vec` when the source fails to parse.
 pub fn find_references(source: &str, name: &str, uri: &Url) -> Vec<Location> {
-    let stmts = match hudhudscript_parser::parse(source) {
-        Ok(stmts) => stmts,
-        Err(_) => return vec![],
+    let stmts = match crate::server::helpers::isolate(|| hudhudscript_parser::parse(source)) {
+        Some(Ok(stmts)) => stmts,
+        _ => return vec![],
     };
 
     let mut locations = Vec::new();

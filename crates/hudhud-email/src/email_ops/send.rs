@@ -67,7 +67,7 @@ pub fn email_send(args: &[Value16]) -> HudHudResult<Value16> {
             .wait_with_output()
             .map_err(|e| runtime_error(format!("msmtp error: {}", e)))?;
 
-        let mut result = HashMap::new();
+        let mut result = hudhudscript_bytecode::ObjMap::default();
         result.insert("ok".to_string(), Value16::bool_(output.status.success()));
         result.insert(
             "message".to_string(),

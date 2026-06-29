@@ -107,7 +107,7 @@ pub fn apply_opts(cmd: &mut Command, args: &[Value16]) -> Result<(), Error> {
             for (k, v) in env_map {
                 if BLACKLISTED_ENV_VARS
                     .iter()
-                    .any(|b| b.eq_ignore_ascii_case(k))
+                    .any(|b| b.eq_ignore_ascii_case(&k.to_string()))
                 {
                     return Err(runtime_error(format!(
                         "exec: setting env var '{}' is blocked for security",
@@ -115,7 +115,7 @@ pub fn apply_opts(cmd: &mut Command, args: &[Value16]) -> Result<(), Error> {
                     )));
                 }
                 if let Some(val) = v.as_str() {
-                    cmd.env(k, val);
+                    cmd.env(k.to_string(), val);
                 }
             }
         }

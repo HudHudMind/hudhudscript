@@ -50,7 +50,7 @@ pub fn e2e_create_session(args: &[Value16]) -> SharedResult<Value16> {
     let shared = compute_shared_secret(&my_private, &their_public);
     let shared_hex = hex::encode(&shared);
 
-    let mut session = HashMap::new();
+    let mut session = hudhudscript_bytecode::ObjMap::default();
     session.insert("shared_secret".to_string(), Value16::string(shared_hex));
     session.insert("my_public_key".to_string(), Value16::string(my_public_hex));
     session.insert(

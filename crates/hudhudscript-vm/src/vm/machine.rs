@@ -2,9 +2,9 @@
 
 use hudhudscript_async::PromiseRegistry;
 use hudhudscript_bytecode::cache_utils::{MAX_MCP_CACHE, MAX_RAG_STORE_CACHE};
-use hudhudscript_bytecode::{SymId, 
+use hudhudscript_bytecode::{
     actor_registry::{ActorMailbox, SharedActorRegistry},
-    FunctionChunk, GeneratorState16, Value16,
+    FunctionChunk, GeneratorState16, SymId, Value16,
 };
 use hudhudscript_debug::Debugger;
 use hudhudscript_governance::Constitution;
@@ -13,50 +13,17 @@ use hudhudscript_rag::{SimpleEmbedding, VectorStore};
 use hudhudscript_runtime::provider::Provider;
 use hudhudscript_tools::ToolRegistry;
 use parking_lot::Mutex;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use crate::vm::config_types::{OutputLocale, SandboxConfig};
+pub(crate) use crate::vm::machine_types::{CallFrame, ChunkCache};
 use crate::vm::registry::ModuleRegistry;
-
-/// PERF0011: Combined pre-computed chunk metadata cache.
-/// Merges packed instructions + local symbol info into one lookup
-/// (was two separate FxHashMaps with the same key).
-#[derive(Clone)]
-pub(crate) struct ChunkCache {
-    pub(crate) packed: Arc<Vec<u32>>,
-    pub(crate) local_syms: Arc<Vec<(u32, usize, Option<usize>)>>,
-    pub(crate) max_sym: u32,
-}
-
-/// T3-1-B: Call frame for the trampoline loop.
-pub(crate) struct CallFrame {
-    pub(crate) chunk_ptr: *const FunctionChunk,
-    pub(crate) packed: *const Vec<u32>,
-    pub(crate) func_sym: SymId,
-    pub(crate) ip: usize,
-    pub(crate) dst: u8,
-    pub(crate) reg_base: usize,
-    pub(crate) reg_size: usize,
-    pub(crate) saved_finally: Option<Box<crate::vm::types::SavedFinally>>,
-    pub(crate) has_captures: bool,
-    pub(crate) debugger_pushed: bool,
-    pub(crate) call_depth: usize,
-    pub(crate) owned_local_syms: bool,
-    pub(crate) class_context: bool,
-}
 
 /// Virtual Machine state
 pub struct VM {
     /// Operand stack.  Audit v3 Finding 1.1 / S1.1 (PERF-20): stores
-    // ── REGISTER-BASED VM ─────────────────────────────────────────────
-    /// The `stack` field has been removed. All operand passing now uses
-    /// the 256-entry register file (`registers`). Register 255 serves as
-    /// the accumulator / return value slot. Call arguments are passed via
-    /// sequential registers starting at the instruction's `first_arg`.
-    /// See `exec.rs` for the register-based call convention.
-    // ── REGISTER FILE ────────────────────────────────────────────────
     /// Return value relay: function Return/IntAddReturn/IntSubReturn write here.
     /// run_frame_loop reads from here on hit_return path instead of registers[255].
     pub(crate) last_return: Value16,
@@ -65,7 +32,11 @@ pub struct VM {
     /// per-call scope stack. PERF-1 Step 1 migration (2026-04-17) —
     /// All `define_global` / `set_global` / module-level declarations land
     /// here. Inner function/block scopes use `registers` directly.
-    pub(crate) globals: FxHashMap<String, Value16>,
+    pub(crate) globals: FxHashMap<hudhudscript_bytecode::interner::SymbolId, Value16>,
+    /// P3: flat Vec for shared top-level globals, indexed by compile-time
+    /// slot index.  Hot path LoadGlobal/StoreGlobal reads/writes here
+    /// instead of globals HashMap.
+    pub(crate) shared_globals_vec: Vec<Value16>,
     /// Upvalue cell sidecar — stack of cell maps, one per active function
     /// call. When a variable is captured by a closure, its value in the
     /// enclosing function is promoted to a shared cell (`Arc<RwLock<Value>>`).
@@ -209,6 +180,9 @@ pub struct VM {
     /// file/network/MCP ops, so indirect access is irrelevant to the hot
     /// dispatch loop.
     pub(crate) sandbox: Option<Box<SandboxConfig>>,
+    /// HOST-3: runtime host-access policy. Default is permissive to preserve
+    /// existing CLI behaviour when no `[host_access]` section is configured.
+    pub(crate) host_access_policy: crate::vm::host_access::HostAccessPolicy,
     /// STM: shared TVar registry (Kural 7 — `hudhudscript-stm`).
     /// Maps script-visible string handles to live `Arc<TVar<Value>>`.
     pub(crate) tvars: hudhudscript_stm::TVarRegistry<Value16>,
@@ -226,7 +200,7 @@ pub struct VM {
     /// write either way.
     pub(crate) last_instance_mutation: Option<Box<Value16>>,
     /// Set of variable names declared as `const` (immutable after initial assignment)
-    pub(crate) immutables: HashSet<String>,
+    pub(crate) immutables: HashSet<hudhudscript_bytecode::interner::SymbolId>,
     /// Symbol resolution cache: sym_id → resolved name.
     /// Avoids 30M+ interner::resolve calls in hot loops.
     pub(crate) sym_cache: FxHashMap<u32, String>,
@@ -237,6 +211,10 @@ pub struct VM {
     pub(crate) length_sym_id: u32,
     /// Cached sym_id for "push" — most common array method.
     pub(crate) push_sym_id: u32,
+    /// Fast O(1) cache for Math object pointer equality check
+    pub(crate) math_obj: Option<Value16>,
+    /// Fast O(1) cache for JSON object pointer equality check
+    pub(crate) json_obj: Option<Value16>,
 
     /// Whether we are inside an `atomically()` block (#518)
     pub(crate) in_stm_context: bool,
@@ -303,7 +281,7 @@ pub struct VM {
     /// included here because ChunkCache owns them.
     pub(crate) owned_local_sym_refs: Vec<*const Vec<(u32, usize, Option<usize>)>>,
     /// Pending call request set by execute_instructions on StepAction::Call
-    pub(crate) pending_call: Option<(SymId, u8, u8, u8)>,  // (func_sym, arg_count, first_arg, dst)
+    pub(crate) pending_call: Option<(SymId, u32, u8, u8, u8, usize)>, // (func_sym, function_idx, arg_count, first_arg, dst, ip)
     /// Flag: the next exec_call in the trampoline should set class_context on the pushed frame.
     pub(crate) pending_super_call: bool,
     /// T3-1-B: Trampoline call-frame stack.
@@ -346,14 +324,43 @@ pub struct VM {
     /// Lazy generator support: sender for yielded values.
     /// When set, the `Yield` instruction sends through this channel (blocking
     /// on the rendezvous channel until `next()` consumes it) instead of
-    /// eagerly collecting into `__yield_collector`.
-    pub(crate) yield_sender: Option<std::sync::mpsc::SyncSender<Value16>>,
+    /// V2-B: Yield-tabanlı generator'ların DetachedGraph receiver'ları.
+    /// Key = state.yield_id; receiver heap'ten bağımsız → GC trace gerekmez.
+    pub(crate) yield_receivers:
+        FxHashMap<u64, std::sync::mpsc::Receiver<hudhudscript_bytecode::gc_detach::DetachedGraph>>,
+    /// H-BLOCKING: Detached promise receivers (detach in thread, attach on await).
+    pub(crate) detached_promises: FxHashMap<
+        String,
+        std::sync::mpsc::Receiver<Result<hudhudscript_bytecode::gc_detach::DetachedGraph, String>>,
+    >,
+    pub(crate) next_yield_id: u64,
+    // Eski yield_sender (Value16) — V2-B'de DetachedGraph'e geçildi. Hâlâ kurulumda kullanılır
+    // ama kanal artık gc_detach::DetachedGraph taşır.
+    pub(crate) yield_sender:
+        Option<std::sync::mpsc::SyncSender<hudhudscript_bytecode::gc_detach::DetachedGraph>>,
     /// PERF0011: Unified chunk cache — single FxHashMap lookup for both
     /// packed instructions and local symbol metadata (same key for both).
     pub(crate) chunk_cache: FxHashMap<usize, Arc<ChunkCache>>,
     /// Inline cache for chunk_cache — skip FxHashMap on repeated calls.
     pub(crate) chunk_cache_last_key: usize,
     pub(crate) chunk_cache_last_val: Option<Arc<ChunkCache>>,
+    /// Current chunk pointer set by the trampoline before executing instructions.
+    /// Used by property/call IC fast-paths to access ic_slots.
+    pub(crate) current_chunk_ptr: *const FunctionChunk,
+    /// PERF-2: compile-time SymbolId → top-level slot mapping.
+    /// P3: stored as a flat Vec indexed by SymbolId to avoid HashMap
+    /// probe cost on every LoadGlobal/StoreGlobal/DeclGlobal.
+    /// GÖREV 4d: char decomposition cache for non-ASCII string indexing.
+    /// Keyed by string content (avoid repeated chars() iteration).
+    pub(crate) str_chars_cache: FxHashMap<String, Vec<char>>,
+    /// `u32::MAX` means "not a top-level local"; low byte = slot,
+    /// bit 8 = shared flag.
+    pub(crate) main_local_slots: Vec<u32>,
+    /// P5.1: GC-root olarak izlenecek sabit havuzu değerleri (Bytecode +
+    /// FunctionChunk constants). execute() girişinde + chunk cache eklemede doldurulur.
+    pub(crate) gc_constant_roots: Vec<Value16>,
+    /// G3-2: Already registered chunk roots — guards duplicate extend.
+    pub(crate) constant_root_chunks: FxHashSet<*const hudhudscript_bytecode::FunctionChunk>,
     /// Callee cache indexed by function-name sym_id.
     /// `(*const FunctionChunk, *const Vec<String> params)`.
     /// Populated on first successful Call to that name; avoids repeated
@@ -363,6 +370,45 @@ pub struct VM {
     /// Arc::clone atomic refcount ops on every recursive call.
     pub(crate) call_cache: Vec<Option<(*const FunctionChunk, *const Vec<String>)>>,
 
+    /// ISSUE-5: single-entry inline cache for subject ability dispatch.
+    /// P2: ability inline cache — 2-entry PIC (polymorphic inline cache).
+    /// Each entry: (template, method, chunk, chunk_name).
+    /// On lookup, check entries in order; on miss, do full lookup and
+    /// insert into LRU position.  Avoids repeated String-key HashMap
+    /// lookup for hot ability call sequences.
+    pub(crate) ability_cache: [(Option<(String, String, Arc<hudhudscript_bytecode::FunctionChunk>, String)>, u8); 2],
+
+}
+
+impl VM {
+    /// Return the last function return value (the result object).
+    /// Available after VM::execute completes with a Return instruction.
+    pub fn last_return_value(&self) -> Value16 {
+        self.last_return
+    }
+
+    /// P3: fast SymbolId-indexed top-level slot lookup.
+    /// `u32::MAX` means no slot.  Low byte = slot index, bit 8 = shared flag.
+    #[inline(always)]
+    pub(crate) fn main_slot_encoded(&self, sym_id: u32) -> Option<u32> {
+        let idx = sym_id as usize;
+        if idx < self.main_local_slots.len() {
+            let enc = self.main_local_slots[idx];
+            if enc != u32::MAX { Some(enc) } else { None }
+        } else {
+            None
+        }
+    }
+
+    #[inline(always)]
+    pub(crate) fn main_slot_decode(encoded: u32) -> (usize, bool) {
+        ((encoded & 0xFF) as usize, ((encoded >> 8) & 1) != 0)
+    }
+
+    #[inline(always)]
+    pub(crate) fn main_slot_shared_index(encoded: u32) -> usize {
+        (encoded >> 9) as usize
+    }
 }
 
 impl Drop for VM {

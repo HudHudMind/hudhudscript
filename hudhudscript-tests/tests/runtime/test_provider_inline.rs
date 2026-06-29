@@ -146,7 +146,9 @@ async fn test_registry_unregister() {
     #[async_trait::async_trait]
     impl Provider for MockProvider {
         async fn call(&self, _req: LLMRequest) -> Result<LLMResponse, ProviderError> {
-            unimplemented!()
+            Err(ProviderError::ApiError(
+                "mock call not implemented".to_string(),
+            ))
         }
         async fn list_models(&self) -> Result<Vec<String>, ProviderError> {
             Ok(vec!["mock-model".to_string()])
@@ -195,7 +197,9 @@ async fn test_registry_overwrite() {
     #[async_trait::async_trait]
     impl Provider for ProviderA {
         async fn call(&self, _req: LLMRequest) -> Result<LLMResponse, ProviderError> {
-            unimplemented!()
+            Err(ProviderError::ApiError(
+                "mock call not implemented".to_string(),
+            ))
         }
         async fn list_models(&self) -> Result<Vec<String>, ProviderError> {
             Ok(vec!["model-a".to_string()])
@@ -223,7 +227,9 @@ async fn test_registry_overwrite() {
     #[async_trait::async_trait]
     impl Provider for ProviderB {
         async fn call(&self, _req: LLMRequest) -> Result<LLMResponse, ProviderError> {
-            unimplemented!()
+            Err(ProviderError::ApiError(
+                "mock call not implemented".to_string(),
+            ))
         }
         async fn list_models(&self) -> Result<Vec<String>, ProviderError> {
             Ok(vec!["model-b".to_string()])

@@ -15,7 +15,7 @@ pub fn serde_to_value(v: &serde_json::Value) -> Value16 {
             Value16::array(arr.iter().map(|v| serde_to_value(v)).collect())
         }
         serde_json::Value::Object(obj) => {
-            let m: std::collections::HashMap<String, Value16> = obj
+            let m: hudhudscript_bytecode::ObjMap = obj
                 .iter()
                 .map(|(k, v)| (k.clone(), serde_to_value(v)))
                 .collect();
@@ -48,7 +48,7 @@ pub fn value_to_json_string(value: &Value16) -> String {
     if let Some(obj) = value.as_object() {
         let mut pairs: Vec<String> = obj
             .iter()
-            .filter(|(k, _)| !k.starts_with("__"))
+            .filter(|(k, _)| !k.to_string().starts_with("__"))
             .map(|(k, v)| format!("\"{}\":{}", k, value_to_json_string(v)))
             .collect();
         pairs.sort();

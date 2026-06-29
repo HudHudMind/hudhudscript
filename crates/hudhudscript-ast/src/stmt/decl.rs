@@ -300,6 +300,121 @@ pub enum Decl {
         fields: Vec<(String, Expr)>,
         span: Span,
     },
+
+    // ── Loop engineering (LP-001) ──
+    Loop {
+        name: String,
+        mode: RunModeAst,
+        items: Vec<LoopItemAst>,
+        goal: Option<GoalSpecAst>,
+        span: Span,
+    },
+    RunLoop {
+        name: String,
+        span: Span,
+    },
+    RunChain {
+        name: String,
+        span: Span,
+    },
+    Step {
+        name: String,
+        params: Vec<String>,
+        body: Vec<super::Stmt>,
+        gate: Option<StepGateAst>,
+        span: Span,
+    },
+    Gate {
+        name: String,
+        branches: Vec<GateBranchAst>,
+        else_target: GateTargetAst,
+        span: Span,
+    },
+    Chain {
+        name: String,
+        mode: RunModeAst,
+        links: Vec<ChainLinkAst>,
+        span: Span,
+    },
+    AttachStep {
+        targets: Vec<AttachStepTarget>,
+        loop_name: String,
+        span: Span,
+    },
+    AttachLoop {
+        loop_name: String,
+        chain_name: String,
+        mode: Option<RunModeAst>,
+        on_done: Option<ChainTargetAst>,
+        on_fail: Option<ChainTargetAst>,
+        span: Span,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ChainLinkAst {
+    pub loop_name: String,
+    pub inline_loop: Option<Box<Decl>>,
+    pub on_done: ChainTargetAst,
+    pub on_fail: ChainTargetAst,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ChainTargetAst {
+    Next,
+    ChainDone,
+    ChainFail,
+    Loop(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AttachStepTarget {
+    pub step: String,
+    pub gate: Option<String>,
+}
+
+/// B: Goal specification for agentic loops.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct GoalSpecAst {
+    pub metric: String,
+    pub target: Expr,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum RunModeAst { Once, Times(u64), Cyclic, UntilConverged, Until(Expr) }
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum LoopItemAst {
+    InlineStep(Box<Decl>),
+    UseStep { name: String, alias: Option<String>, args: Vec<Expr> },
+    AttachGate { gate: String, step: String },
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StepGateAst {
+    pub name: String,
+    pub branches: Vec<GateBranchAst>,
+    pub else_target: GateTargetAst,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct GateBranchAst {
+    pub cond: Expr,
+    pub target: GateTargetAst,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum GateTargetAst {
+    Step(String),
+    Loop(String),
+    LoopStep(String, String),
+    Done,
+    Fail,
+    Continue,
+    Retry,
+    Pause,
+    Approval,
+    Escalate,
 }
 
 // ── Issue #536: UI AST helper types ─────────────────────────────────────

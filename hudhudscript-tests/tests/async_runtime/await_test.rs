@@ -146,7 +146,7 @@ fn test_function_with_no_params() {
 fn test_nested_await() {
     let source = r#"
         async function test() {
-            let x = await await promise;
+            let x = await await p;
             return x;
         }
     "#;

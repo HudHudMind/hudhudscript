@@ -73,7 +73,9 @@ pub fn call_array_method(
             let mut s = String::with_capacity(total);
             let mut first = true;
             for v in arr {
-                if !first { s.push_str(delimiter); }
+                if !first {
+                    s.push_str(delimiter);
+                }
                 first = false;
                 match v.as_str() {
                     Some(st) => s.push_str(st),

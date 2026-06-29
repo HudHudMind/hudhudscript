@@ -38,7 +38,7 @@ pub fn sec_check_ssl(args: &[Value16]) -> HudHudResult<Value16> {
         .stderr(std::process::Stdio::piped())
         .output();
 
-    let mut result: HashMap<String, Value16> = HashMap::new();
+    let mut result: hudhudscript_bytecode::ObjMap = hudhudscript_bytecode::ObjMap::default();
 
     match output {
         Ok(out) => {
@@ -221,7 +221,7 @@ pub fn sec_failed_logins(args: &[Value16]) -> HudHudResult<Value16> {
             }
         }
 
-        let mut entry = HashMap::new();
+        let mut entry = hudhudscript_bytecode::ObjMap::default();
         entry.insert("user".to_string(), Value16::string(user));
         entry.insert("ip".to_string(), Value16::string(ip));
         entry.insert("timestamp".to_string(), Value16::string(timestamp));
@@ -271,7 +271,7 @@ pub fn sec_check_permissions(args: &[Value16]) -> HudHudResult<Value16> {
     let last_digit = mode.chars().last().unwrap_or('0').to_digit(8).unwrap_or(0);
     let is_secure = last_digit == 0;
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("owner".to_string(), Value16::string(owner));
     result.insert("group".to_string(), Value16::string(group));
     result.insert("mode".to_string(), Value16::string(mode));

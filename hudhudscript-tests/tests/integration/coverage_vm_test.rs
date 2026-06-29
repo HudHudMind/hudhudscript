@@ -518,7 +518,11 @@ fn test_vm_strcat_mut_optimization() {
     let vm = run_vm(r#"let s = "Hello"; s = s + " " + "World" + "!";"#).expect("VM should execute");
     let s = get_var(&vm, "s");
     if let Some(str) = s.as_str() {
-        assert_eq!(str, "Hello World!", "Expected 'Hello World!', got '{}'", str)
+        assert_eq!(
+            str, "Hello World!",
+            "Expected 'Hello World!', got '{}'",
+            str
+        )
     } else {
         panic!("Expected String, got {:?}", s)
     }

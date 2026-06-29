@@ -49,7 +49,7 @@ pub fn parse(args: &[Value16]) -> HudHudResult<Value16> {
         .and_then(|v| v.as_str())
         .ok_or_else(|| runtime_error("INI.parse() requires a string argument"))?;
 
-    let mut result: HashMap<String, Value16> = HashMap::new();
+    let mut result: hudhudscript_bytecode::ObjMap = hudhudscript_bytecode::ObjMap::default();
     let mut current_section = String::new();
 
     for line in s.lines() {
@@ -60,7 +60,7 @@ pub fn parse(args: &[Value16]) -> HudHudResult<Value16> {
         if line.starts_with('[') && line.ends_with(']') {
             current_section = line[1..line.len() - 1].trim().to_string();
             if !result.contains_key(&current_section) {
-                result.insert(current_section.clone(), Value16::object(HashMap::new()));
+                result.insert(current_section.clone(), Value16::object(hudhudscript_bytecode::ObjMap::default()));
             }
         } else if let Some((key, val)) = line.split_once('=') {
             let key = key.trim().to_string();
@@ -121,7 +121,7 @@ pub fn stringify(args: &[Value16]) -> HudHudResult<Value16> {
         output.push_str(&format!("[{}]\n", section));
         if let Some(entries) = val.as_object() {
             let mut sorted: Vec<_> = entries.iter().collect();
-            sorted.sort_by(|a, b| a.0.cmp(b.0));
+            sorted.sort_by(|a, b| a.0.cmp(&b.0));
             for (k, v) in sorted {
                 output.push_str(&format!("{} = {}\n", k, value_to_ini_string(v)));
             }

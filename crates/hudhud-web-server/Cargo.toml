@@ -1,0 +1,14 @@
+[package]
+name = "hudhud-web-server"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+hudhudscript-bytecode = { path = "../hudhudscript-bytecode" }
+hudhudscript-errors = { path = "../hudhudscript-errors" }
+hudhud-http = { path = "../hudhud-http" }
+hudhud-web-request = { path = "../hudhud-web-request" }
+socket2 = "0.6"

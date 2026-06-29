@@ -29,6 +29,9 @@ pub(crate) enum ExprType {
     Bool,
     #[allow(dead_code)]
     Str,
+    /// P2: proven array value — used to emit IndexArray / IndexAssignArray.
+    #[allow(dead_code)]
+    Array,
     Unknown,
 }
 
@@ -72,6 +75,7 @@ where
         }
         Expr::Literal(Literal::Boolean(_), _) => ExprType::Bool,
         Expr::Literal(Literal::String(_), _) => ExprType::Str,
+        Expr::Array { .. } => ExprType::Array,
         Expr::Literal(Literal::Null, _) => ExprType::Unknown,
 
         Expr::Binary {
@@ -188,10 +192,11 @@ where
 #[inline]
 pub(crate) fn emit_numeric_literal(target: &mut impl CompileTarget, n: f64) {
     let temp = crate::compiler::regalloc::temp_reg();
+    // N4: genişletilmiş Int aralığı — i64::MAX'a kadar (BigInt overflow temeli)
     if n.is_finite()
         && n.fract() == 0.0
-        && n >= -(1i64 << 53) as f64
-        && n <= (1i64 << 53) as f64
+        && n >= (i64::MIN as f64)
+        && n <= (i64::MAX as f64)
     {
         let i = n as i64;
         let idx = target.ct_emit_int_const(i);

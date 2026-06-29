@@ -1,3 +1,4 @@
+use hudhudscript_ast::{Decl, Span, Stmt};
 use hudhudscript_formatter::{Formatter, FormatterConfig};
 use hudhudscript_parser::parse;
 
@@ -399,7 +400,7 @@ fn format_enum_declaration() {
 
 #[test]
 fn format_agent_declaration() {
-    let output = format_source(r#"agent Bot { model = "gpt-4" }"#);
+    let output = format_source(r#"agent Bot { model: "gpt-4" }"#);
     assert!(output.contains("agent"));
     assert!(output.contains("Bot"));
 }
@@ -412,8 +413,13 @@ fn format_subject_declaration() {
 
 #[test]
 fn format_tool_declaration() {
-    let output = format_source(r#"tool search { description = "finds things" }"#);
-    assert!(output.contains("tool"));
+    let mut formatter = Formatter::new();
+    let output = formatter.format_program(&[Stmt::Decl(Decl::Tool {
+        name: "search".to_string(),
+        fields: vec![],
+        span: Span::default(),
+    })]);
+    assert!(output.contains("tool search"));
 }
 
 // ============================================================================

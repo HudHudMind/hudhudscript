@@ -167,14 +167,29 @@ fn sanitize_id_truncates_to_256_chars() {
 
 #[test]
 fn sanitize_and_validate_combined() {
-    assert_eq!(sanitize_and_validate_constitution_id("cons.1"), Some("cons.1".to_string()));
-    assert_eq!(sanitize_and_validate_constitution_id("  cons.42  "), Some("cons.42".to_string()));
+    assert_eq!(
+        sanitize_and_validate_constitution_id("cons.1"),
+        Some("cons.1".to_string())
+    );
+    assert_eq!(
+        sanitize_and_validate_constitution_id("  cons.42  "),
+        Some("cons.42".to_string())
+    );
     assert_eq!(sanitize_and_validate_constitution_id("invalid"), None);
 
-    assert_eq!(sanitize_and_validate_law_id("cons1.law1"), Some("cons1.law1".to_string()));
+    assert_eq!(
+        sanitize_and_validate_law_id("cons1.law1"),
+        Some("cons1.law1".to_string())
+    );
     assert_eq!(sanitize_and_validate_law_id("invalid"), None);
 
-    assert_eq!(sanitize_and_validate_rule_id("rule.1"), Some("rule.1".to_string()));
-    assert_eq!(sanitize_and_validate_rule_id("  rule.99\n"), Some("rule.99".to_string()));
+    assert_eq!(
+        sanitize_and_validate_rule_id("rule.1"),
+        Some("rule.1".to_string())
+    );
+    assert_eq!(
+        sanitize_and_validate_rule_id("  rule.99\n"),
+        Some("rule.99".to_string())
+    );
     assert_eq!(sanitize_and_validate_rule_id("nope"), None);
 }

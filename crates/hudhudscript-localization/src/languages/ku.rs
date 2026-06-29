@@ -36,7 +36,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
 
     // Agent system
     map.insert("ajans".to_string(), Keyword::Agent);
-    map.insert("kar".to_string(), Keyword::Task);
     map.insert("amûr".to_string(), Keyword::Tool);
     map.insert("çavkanî".to_string(), Keyword::Resource);
     map.insert("mcp".to_string(), Keyword::Mcp);
@@ -107,7 +106,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
     map.insert("vekirin".to_string(), Keyword::Trigger);
     // Native Kurdish (Kurmanji) translations
     map.insert("çalakî".to_string(), Keyword::Action);
-    map.insert("rêbaza_ajansê".to_string(), Keyword::AgentRule);
     map.insert("rewşa_ajansê".to_string(), Keyword::AgentState);
     map.insert("destûr_bide".to_string(), Keyword::Allow);
     map.insert(
@@ -123,8 +121,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
     map.insert("ne_fermî".to_string(), Keyword::Informal);
     map.insert("mebestî".to_string(), Keyword::Intent);
     map.insert("pêşînî".to_string(), Keyword::Priority);
-    map.insert("zincîra_rêbazan".to_string(), Keyword::RuleChain);
-    map.insert("komela_rêbazan".to_string(), Keyword::RuleSet);
     map.insert("makîneya_rewşan".to_string(), Keyword::StateMachine);
     map.insert("teknîk".to_string(), Keyword::Technical);
     map.insert("veguherîne".to_string(), Keyword::Transform);

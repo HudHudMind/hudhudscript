@@ -74,6 +74,25 @@ impl crate::vm::VM {
         method: &str,
         args: Vec<Value16>,
     ) -> CompileResult<Value16> {
+        // HOST-6: enforce host_access exec policy.
+        self.host_access_policy.ensure_module_allowed("exec")?;
+        self.host_access_policy.ensure_exec_method(method)?;
+
+        // Methods that spawn a child process must also pass command-level checks.
+        const COMMAND_METHODS: &[&str] = &["run", "output", "stream", "lines", "spawn", "timeout"];
+        if COMMAND_METHODS.contains(&method) {
+            match hudhud_exec::exec_ops::utils::parse_cmd(&args) {
+                Ok((command, _)) => {
+                    self.host_access_policy.ensure_command_allowed(&command)?;
+                }
+                Err(e) => {
+                    // Only fail parsing if the command is actually needed.
+                    // Some methods may be called with no args for inspection.
+                    return Err(compile_codes::runtime_error(e.to_string()));
+                }
+            }
+        }
+
         hudhud_exec::exec_ops::dispatch(method, &args)
     }
 
@@ -151,7 +170,7 @@ impl crate::vm::VM {
                 // Prevent dropping the stream so the fd stays open —
                 // the caller manages the fd lifetime via the returned object.
                 let _ = std::mem::ManuallyDrop::new(stream);
-                let mut obj = HashMap::new();
+                let mut obj = hudhudscript_bytecode::ObjMap::default();
                 obj.insert(
                     "__type".to_string(),
                     Value16::string("UnixStream".to_string()),
@@ -269,7 +288,7 @@ impl crate::vm::VM {
                     compile_codes::runtime_error(format!("unix.http read error: {}", e))
                 })?;
 
-                let mut result = HashMap::new();
+                let mut result = hudhudscript_bytecode::ObjMap::default();
                 if let Some(header_end) = response.find("\r\n\r\n") {
                     let header_part = &response[..header_end];
                     let body_part = &response[header_end + 4..];
@@ -286,7 +305,7 @@ impl crate::vm::VM {
                         }
                     }
 
-                    let mut headers = HashMap::new();
+                    let mut headers = hudhudscript_bytecode::ObjMap::default();
                     for line in header_part.lines().skip(1) {
                         if let Some((k, v)) = line.split_once(": ") {
                             headers.insert(
@@ -310,7 +329,7 @@ impl crate::vm::VM {
                     result.insert("status".to_string(), Value16::number(0.0));
                     result.insert("ok".to_string(), Value16::bool_(false));
                     result.insert("body".to_string(), Value16::string(response));
-                    result.insert("headers".to_string(), Value16::object(HashMap::new()));
+                    result.insert("headers".to_string(), Value16::object(hudhudscript_bytecode::ObjMap::default()));
                     result.insert("json".to_string(), Value16::null());
                 }
 
@@ -350,5 +369,78 @@ impl crate::vm::VM {
         args: Vec<Value16>,
     ) -> CompileResult<Value16> {
         hudhud_fs::fs_builtins::dispatch(method, &args)
+    }
+
+    // ── tokenomics methods (T3 — #TOK-3) ───────────────────────────
+
+    pub(crate) fn call_tokenomics_method(
+        &self,
+        method: &str,
+        _args: Vec<Value16>,
+    ) -> CompileResult<Value16> {
+        match method {
+            "session_cost" => Ok(Value16::number(0.0)),
+            "usage" => {
+                let mut m = hudhudscript_bytecode::ObjMap::default();
+                m.insert("daily".to_string(), Value16::int(0));
+                m.insert("monthly".to_string(), Value16::int(0));
+                Ok(Value16::object(m))
+            },
+            "budget_health" => Ok(Value16::number(1.0)),
+            _ => Err(compile_codes::runtime_error(format!(
+                "Unknown tokenomics method: {}",
+                method
+            ))),
+        }
+    }
+
+    // ── channel methods (CH2 — #CH-2) ────────────────────────────
+
+    pub(crate) fn call_channel_method(
+        &self,
+        method: &str,
+        args: Vec<Value16>,
+    ) -> CompileResult<Value16> {
+        match method {
+            "send" => {
+                if args.len() < 2 {
+                    return Err(compile_codes::runtime_error(
+                        "channel.send() requires at least 2 arguments: channel_name, text"
+                            .to_string(),
+                    ));
+                }
+                let _channel_name = args[0].as_string().ok_or_else(|| {
+                    compile_codes::runtime_error(
+                        "channel.send() first argument must be a string (channel name)".to_string(),
+                    )
+                })?;
+                let _text = args[1].as_string().ok_or_else(|| {
+                    compile_codes::runtime_error(
+                        "channel.send() second argument must be a string (message text)"
+                            .to_string(),
+                    )
+                })?;
+                // CH4: wire to ChannelRegistry
+                Ok(Value16::null())
+            }
+            "notify" => {
+                if args.is_empty() {
+                    return Err(compile_codes::runtime_error(
+                        "channel.notify() requires at least 1 argument: text".to_string(),
+                    ));
+                }
+                let _text = args[0].as_string().ok_or_else(|| {
+                    compile_codes::runtime_error(
+                        "channel.notify() first argument must be a string (message text)"
+                            .to_string(),
+                    )
+                })?;
+                Ok(Value16::null())
+            }
+            _ => Err(compile_codes::runtime_error(format!(
+                "Unknown channel method: {}",
+                method
+            ))),
+        }
     }
 }

@@ -7,7 +7,7 @@ impl Compiler {
         fields: &[(String, Expr)],
     ) -> CompileResult<()> {
         use std::collections::HashMap;
-        let mut store_obj = HashMap::new();
+        let mut store_obj = hudhudscript_bytecode::ObjMap::default();
         store_obj.insert("__type".to_string(), Value16::string("store".to_string()));
         store_obj.insert("name".to_string(), Value16::string(name.to_string()));
         for (key, value_expr) in fields {
@@ -25,7 +25,7 @@ impl Compiler {
         }
         let idx = self.bytecode.add_constant(Value16::object(store_obj));
         { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_instr(Instruction::Move { dst: 255, src: tr }); }
-        self.emit_decl_store("store", name);
+        self.emit_decl_store("store", name, 255);
         Ok(())
     }
 }

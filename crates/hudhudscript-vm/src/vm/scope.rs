@@ -5,6 +5,21 @@ use parking_lot::RwLock;
 use std::sync::Arc;
 
 impl VM {
+    /// Resolve a SymbolId to a String via the interner, caching the result
+    /// in VM::sym_cache for subsequent lock-free lookups.  Hot paths
+    /// (LoadGlobal/StoreGlobal/DeclGlobal) call this instead of the raw
+    /// bytecode.resolve_symbol, which acquires the global interner RwLock
+    /// on every invocation.  Cache miss → lock once; cache hit → no lock.
+    #[inline]
+    pub(crate) fn resolve_symbol_cached(&mut self, sym_id: u32, bytecode: &hudhudscript_bytecode::Bytecode) -> String {
+        if let Some(cached) = self.sym_cache.get(&sym_id) {
+            return cached.clone();
+        }
+        let resolved = bytecode.resolve_symbol(sym_id);
+        self.sym_cache.insert(sym_id, resolved.clone());
+        resolved
+    }
+
     pub(crate) fn push_scope_cells(&mut self) {
         if let Some(mut map) = self.scope_cells_pool.pop() {
             map.clear();
@@ -140,14 +155,157 @@ impl VM {
         None
     }
 
+    /// Look up a variable by SymbolId, bypassing the name→SymbolId conversion.
+    /// Mirrors `get_var` but uses the already-resolved symbol.  Checks current
+    /// frame slot-based locals first, then globals.  Does NOT resolve upvalue
+    /// cells; callers that need the cell value should use `get_var_cloned_by_sym`.
+    /// ISSUE-2e-C: main-frame-only top-level symbols are read from their
+    /// absolute slot so the value is visible regardless of the active frame base.
+    pub(crate) fn get_var_by_sym(&self, sym_id: u32) -> Option<&Value16> {
+        // Main-frame top-level path: main-only reads from absolute slot,
+        // shared falls through to globals (canonical home per 2e-E).
+        if let Some(encoded) = self.main_slot_encoded(sym_id) {
+            let (slot, is_shared) = crate::vm::VM::main_slot_decode(encoded);
+            if !is_shared && slot != usize::MAX {
+                return Some(self.registers.get_absolute_ref(slot));
+            }
+            // is_shared: skip local_syms, fall to globals
+        } else if let Some(local_syms_ptr) = self.call_stack_local_syms.last() {
+            // Function-local relative slot path (non-top-level symbols).
+            let local_syms = unsafe { &**local_syms_ptr };
+            if !local_syms.is_empty() {
+                if let Ok(idx) = local_syms.binary_search_by_key(&sym_id, |(s, _, _)| *s) {
+                    let slot = local_syms[idx].1 as i32;
+                    if slot >= 0 {
+                        return Some(&self.registers[slot as usize]);
+                    }
+                }
+            }
+        }
+        self.globals
+            .get(&hudhudscript_bytecode::interner::SymbolId(sym_id))
+    }
+
+    /// Cloned variant of `get_var_by_sym`.  Prefers a promoted upvalue cell,
+    /// then current-frame locals, then globals — all keyed by SymbolId.
+    /// ISSUE-2e-C: main-frame-only top-level symbols use their absolute slot.
+    /// P0-D: main_local_slots check BEFORE interner::resolve — main-only reads
+    /// skip the RwLock entirely; shared reads skip the cell path (globals is
+    /// canonical per 2e-E).
+    pub(crate) fn get_var_cloned_by_sym(&self, sym_id: u32) -> Option<Value16> {
+        // Main-frame top-level hot path FIRST (no interner lock).
+        if let Some(encoded) = self.main_slot_encoded(sym_id) {
+            let (slot, is_shared) = crate::vm::VM::main_slot_decode(encoded);
+            if !is_shared && slot != usize::MAX {
+                return Some(self.registers.get_absolute(slot));
+            }
+            // is_shared: skip cell/local_syms — go directly to shared_globals_vec.
+            let idx = crate::vm::VM::main_slot_shared_index(encoded);
+            return self.shared_globals_vec.get(idx).copied();
+        }
+        // Function-local relative slot path (non-top-level).
+        if let Some(local_syms_ptr) = self.call_stack_local_syms.last() {
+            let local_syms = unsafe { &**local_syms_ptr };
+            if !local_syms.is_empty() {
+                if let Ok(idx) = local_syms.binary_search_by_key(&sym_id, |(s, _, _)| *s) {
+                    let slot = local_syms[idx].1 as i32;
+                    if slot >= 0 {
+                        return Some(self.registers[slot as usize]);
+                    }
+                }
+            }
+        }
+        // Cell path — COLD: needs interner.resolve (RwLock) to get the name.
+        // Only non-top-level symbols with upvalue cells reach this.
+        let name = hudhudscript_bytecode::interner::resolve(
+            hudhudscript_bytecode::interner::SymbolId(sym_id),
+        );
+        if !name.is_empty() {
+            if let Some(cell) = self.find_cell(&name) {
+                return Some(cell.read().clone());
+            }
+        }
+        self.globals
+            .get(&hudhudscript_bytecode::interner::SymbolId(sym_id))
+            .cloned()
+    }
+
     /// Look up a variable by walking the scope stack from top to bottom.
-    ///
-    /// NOTE: This does NOT resolve upvalue cells (because the return is a
-    /// borrow into the scope HashMap).  Hot paths that need the effective
-    /// value should call [`get_var_cloned`], which prefers any installed
-    /// cell via [`find_cell`].
+    /// Also checks the current frame's slot-based locals (params / let-bound
+    /// registers) via `call_stack_local_syms`, but does NOT resolve upvalue
+    /// cells (because the return is a borrow into the scope / registers).
+    /// Hot paths that need the effective cell value should call
+    /// [`get_var_cloned`], which prefers any installed cell via [`find_cell`].
     pub(crate) fn get_var(&self, name: &str) -> Option<&Value16> {
-        self.globals.get(name)
+        // P0-A: post-execution path — when all call frames are torn down,
+        // top-level main-only symbols still live in their absolute register
+        // slot and shared top-level symbols live in globals (canonical home).
+        if self.call_stack_local_syms.is_empty() {
+            let sym_id = hudhudscript_bytecode::interner::try_resolve_id(name)?;
+            if let Some(encoded) = self.main_slot_encoded(sym_id) {
+                let (slot, is_shared) = crate::vm::VM::main_slot_decode(encoded);
+                if !is_shared && slot != usize::MAX {
+                    return Some(self.registers.get_absolute_ref(slot));
+                }
+                if is_shared {
+                    let idx = crate::vm::VM::main_slot_shared_index(encoded);
+                    return self.shared_globals_vec.get(idx);
+                }
+            }
+            // Names outside main_local_slots may still be pure globals
+            // (builtins injected by the host, etc.).
+            return self.globals.get(&hudhudscript_bytecode::interner::SymbolId(sym_id));
+        }
+        // Fast path: current frame's register-based locals.  This avoids the
+        // clone + cell checks in get_var_cloned for the ack/collatz hot read
+        // path (ISSUE-9a).
+        if let Some(local_syms_ptr) = self.call_stack_local_syms.last() {
+            let local_syms = unsafe { &**local_syms_ptr };
+            if !local_syms.is_empty() {
+                let sym_id = {
+                    let cache = self.name_sym_cache.borrow();
+                    let cached = cache.get(name).copied();
+                    drop(cache);
+                    match cached {
+                        Some(id) => Some(id),
+                        None => {
+                            hudhudscript_bytecode::interner::try_resolve_id(name).and_then(|id| {
+                                self.name_sym_cache
+                                    .borrow_mut()
+                                    .insert(name.to_string(), id);
+                                Some(id)
+                            })
+                        }
+                    }
+                };
+                if let Some(sym_id) = sym_id {
+                    // ISSUE-2e-C: main-frame-only top-level symbols live in an
+                    // absolute slot that is independent of the current frame base.
+                    // ISSUE-2e-optimize: shared top-level symbols live in shared_globals_vec
+                    // (2e-E).  Skip local_syms to avoid reading a stale slot.
+                    if let Some(encoded) = self.main_slot_encoded(sym_id) {
+                        let (slot, is_shared) = crate::vm::VM::main_slot_decode(encoded);
+                        if !is_shared && slot != usize::MAX {
+                            return Some(self.registers.get_absolute_ref(slot));
+                        }
+                        if is_shared {
+                            let idx = crate::vm::VM::main_slot_shared_index(encoded);
+                            return self.shared_globals_vec.get(idx);
+                        }
+                        // is_shared: skip local_syms, read from shared_globals_vec
+                    } else if let Ok(idx) = local_syms.binary_search_by_key(&sym_id, |(s, _, _)| *s)
+                    {
+                        let slot = local_syms[idx].1 as i32;
+                        if slot >= 0 {
+                            return Some(&self.registers[slot as usize]);
+                        }
+                    }
+                }
+            }
+        }
+        let sym = hudhudscript_bytecode::interner::try_resolve_id(name)?;
+        self.globals
+            .get(&hudhudscript_bytecode::interner::SymbolId(sym))
     }
 
     /// Look up a variable (cloned). Prefers a promoted upvalue cell (shared
@@ -163,6 +321,22 @@ impl VM {
         if let Some(cell) = self.find_cell(name) {
             return Some(cell.read().clone());
         }
+        // REGRESSION FIX: empty-frame path — top-level main-only/shared symbols
+        // must be read from register/Vec via main_slot, same as get_var does.
+        if self.call_stack_local_syms.is_empty() {
+            let sym_id = hudhudscript_bytecode::interner::try_resolve_id(name)?;
+            if let Some(encoded) = self.main_slot_encoded(sym_id) {
+                let (slot, is_shared) = crate::vm::VM::main_slot_decode(encoded);
+                if !is_shared && slot != usize::MAX {
+                    return Some(self.registers.get_absolute(slot));
+                }
+                if is_shared {
+                    let idx = crate::vm::VM::main_slot_shared_index(encoded);
+                    return self.shared_globals_vec.get(idx).copied();
+                }
+            }
+            return self.globals.get(&hudhudscript_bytecode::interner::SymbolId(sym_id)).cloned();
+        }
         if let Some(local_syms_ptr) = self.call_stack_local_syms.last() {
             let local_syms = unsafe { &**local_syms_ptr };
             if !local_syms.is_empty() {
@@ -177,13 +351,29 @@ impl VM {
                         Some(id) => Some(id),
                         None => {
                             let id = hudhudscript_bytecode::interner::try_resolve_id(name)?;
-                            self.name_sym_cache.borrow_mut().insert(name.to_string(), id);
+                            self.name_sym_cache
+                                .borrow_mut()
+                                .insert(name.to_string(), id);
                             Some(id)
                         }
                     }
                 };
                 if let Some(sym_id) = sym_id {
-                    if let Ok(idx) = local_syms.binary_search_by_key(&sym_id, |(s, _, _)| *s) {
+                    // ISSUE-2e-C: main-frame-only top-level symbols use their
+                    // absolute slot so call dispatch and other name-based lookups
+                    // see the same value regardless of the active frame base.
+                    if let Some(encoded) = self.main_slot_encoded(sym_id) {
+                        let (slot, is_shared) = crate::vm::VM::main_slot_decode(encoded);
+                        if !is_shared && slot != usize::MAX {
+                            return Some(self.registers.get_absolute(slot));
+                        }
+                        if is_shared {
+                            let idx = crate::vm::VM::main_slot_shared_index(encoded);
+                            return self.shared_globals_vec.get(idx).copied();
+                        }
+                        // is_shared: skip local_syms, read from shared_globals_vec
+                    } else if let Ok(idx) = local_syms.binary_search_by_key(&sym_id, |(s, _, _)| *s)
+                    {
                         let slot = local_syms[idx].1 as i32;
                         if slot >= 0 {
                             return Some(self.registers[slot as usize]);
@@ -192,6 +382,9 @@ impl VM {
                 }
             }
         }
-        self.globals.get(name).cloned()
+        let sym = hudhudscript_bytecode::interner::try_resolve_id(name)?;
+        self.globals
+            .get(&hudhudscript_bytecode::interner::SymbolId(sym))
+            .cloned()
     }
 }

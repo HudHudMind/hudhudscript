@@ -55,7 +55,7 @@ pub fn dispatch(method: DurationMethodId, args: &[Value16]) -> HudHudResult<Valu
         DurationMethodId::Millis => (n / 1000.0, n),
     };
 
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     obj.insert("seconds".to_string(), Value16::number(seconds));
     obj.insert("millis".to_string(), Value16::number(millis));
     Ok(Value16::object(obj))

@@ -33,7 +33,7 @@ pub fn e2e_encrypt_message(args: &[Value16]) -> SharedResult<Value16> {
     let mut ct_with_tag = ciphertext;
     ct_with_tag.extend_from_slice(&tag);
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert(
         "ciphertext".to_string(),
         Value16::string(hex::encode(&ct_with_tag)),

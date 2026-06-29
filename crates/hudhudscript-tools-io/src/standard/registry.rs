@@ -31,6 +31,9 @@ pub fn register_standard_tools(registry: &ToolRegistry) -> Result<usize, Registr
 
     count += crate::database::register_database_tools(registry)?;
 
+    // Register git tools (side effect, not counted)
+    let _git_count = hudhudscript_tools_vcs::git::register_git_tools(registry)?;
+
     Ok(count)
 }
 

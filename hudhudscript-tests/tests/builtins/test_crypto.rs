@@ -2,7 +2,9 @@ use hudhudscript_bytecode::Value16;
 use hudhudscript_shared_builtins::crypto_ops::cipher::{crypto_decrypt, crypto_encrypt};
 use hudhudscript_shared_builtins::crypto_ops::hash::crypto_hash;
 use hudhudscript_shared_builtins::crypto_ops::hmac::crypto_hmac;
-use hudhudscript_shared_builtins::crypto_ops::password::{crypto_hash_password, crypto_verify_password};
+use hudhudscript_shared_builtins::crypto_ops::password::{
+    crypto_hash_password, crypto_verify_password,
+};
 use hudhudscript_shared_builtins::crypto_ops::random::crypto_random_bytes;
 
 #[test]

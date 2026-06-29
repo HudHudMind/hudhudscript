@@ -34,7 +34,7 @@ pub fn sys_disk_usage(args: &[Value16]) -> HudHudResult<Value16> {
                     0.0
                 };
 
-                let mut obj = HashMap::new();
+                let mut obj = hudhudscript_bytecode::ObjMap::default();
                 obj.insert("total".to_string(), Value16::number(total as f64));
                 obj.insert("used".to_string(), Value16::number(used as f64));
                 obj.insert("free".to_string(), Value16::number(avail as f64));
@@ -52,7 +52,7 @@ pub fn sys_disk_usage(args: &[Value16]) -> HudHudResult<Value16> {
         let _ = path;
     }
 
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     obj.insert("total".to_string(), Value16::number(0.0));
     obj.insert("used".to_string(), Value16::number(0.0));
     obj.insert("free".to_string(), Value16::number(0.0));

@@ -13,9 +13,9 @@ use std::path::PathBuf;
 use std::process;
 
 use clap::{Parser as ClapParser, Subcommand};
+use hudhudscript_cli::common::*;
 
-mod common;
-use common::*;
+mod startup;
 
 #[derive(ClapParser)]
 #[command(name = "hudhud")]
@@ -56,6 +56,14 @@ enum Commands {
         /// Enable strict type checking (Issue #866 TYPE-001)
         #[arg(long)]
         strict: bool,
+
+        /// Print GC statistics after execution
+        #[arg(long)]
+        gc_stats: bool,
+
+        /// Print timing breakdown: parse | compile | VM-exec | total
+        #[arg(long)]
+        timing: bool,
     },
 
     /// Deploy a HudHudScript app
@@ -196,27 +204,12 @@ enum Commands {
 }
 
 fn main() {
-    // Thread stack size: hudhud.toml [runtime].thread_stack_mb veya
-    // HUDHUD_THREAD_STACK_MB env var ile override edilebilir.
-    // Varsayılan: 64MB (deep-recursive programlar için).
-    let stack_mb: u32 = std::env::var("HUDHUD_THREAD_STACK_MB")
-        .ok()
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(64);
-    let stack_size = (stack_mb as usize) * 1024 * 1024;
-    let builder = std::thread::Builder::new()
-        .stack_size(stack_size)
-        .name("hudhud-main".into());
-    let result = builder
-        .spawn(move || {
-            let cli = Cli::parse();
-            run_cli(cli);
-        })
-        .unwrap()
-        .join();
-    if let Err(e) = result {
-        eprintln!("Thread panicked: {:?}", e);
-        std::process::exit(1);
+    let cli = Cli::parse();
+
+    if let Some(stack_mb) = startup::requested_thread_stack_mb() {
+        startup::run_with_stack(stack_mb, move || run_cli(cli));
+    } else {
+        run_cli(cli);
     }
 }
 
@@ -236,9 +229,16 @@ fn run_cli(cli: Cli) {
             watch,
             ui,
             strict,
+            gc_stats,
+            timing,
         }) => {
             if watch {
-                if let Err(e) = watch_and_run_with_config(&file, debug || cli.verbose, config_path)
+                if let Err(e) = watch_and_run_with_config(
+                    &file,
+                    debug || cli.verbose,
+                    config_path,
+                    timing,
+                )
                 {
                     eprintln!("{}", render_error(&e));
                     process::exit(e.exit_code());
@@ -254,10 +254,14 @@ fn run_cli(cli: Cli) {
                 if strict {
                     eprintln!("Warning: --strict type checking is not yet wired into the VM path; running without it.");
                 }
-                run_file_vm_with_config(&file, debug || cli.verbose, config_path)
+                run_file_vm_with_config(&file, debug || cli.verbose, config_path, timing)
             } {
                 eprintln!("{}", render_error(&e));
                 process::exit(e.exit_code());
+            }
+            if gc_stats {
+                let stats = hudhudscript_bytecode::gc::stats();
+                println!("GC stats: {:?}", stats);
             }
         }
         Some(Commands::Deploy {

@@ -1,12 +1,16 @@
 //! Orchestration tests — adapted to current hudhudscript-orchestration API
 
+use hudhudscript_orchestration::orchestration::types::{StepConfig, StepType, WorkflowStep};
 use hudhudscript_orchestration::*;
 use std::collections::HashMap;
 use std::sync::Arc;
 use uuid::Uuid;
-use hudhudscript_orchestration::orchestration::types::{StepConfig, StepType, WorkflowStep};
 
-fn create_test_engine() -> (OrchestrationEngine, Arc<LayerExecutor>, Arc<NetworkExecutor>) {
+fn create_test_engine() -> (
+    OrchestrationEngine,
+    Arc<LayerExecutor>,
+    Arc<NetworkExecutor>,
+) {
     let event_bus = Arc::new(EventBus::new());
     let layer_executor = Arc::new(LayerExecutor::new());
     let network_executor = Arc::new(NetworkExecutor::new(layer_executor.clone()));
@@ -20,7 +24,6 @@ fn create_test_engine() -> (OrchestrationEngine, Arc<LayerExecutor>, Arc<Network
     (engine, layer_executor, network_executor)
 }
 
-
 #[tokio::test]
 async fn test_orchestration_engine_creation() {
     let (engine, _, _) = create_test_engine();
@@ -30,7 +33,12 @@ async fn test_orchestration_engine_creation() {
 
 #[tokio::test]
 async fn test_workflow_creation() {
-    let workflow = Workflow { id: Uuid::new_v4(), name: "test_workflow".to_string(), steps: vec![], config: WorkflowConfig::default() };
+    let workflow = Workflow {
+        id: Uuid::new_v4(),
+        name: "test_workflow".to_string(),
+        steps: vec![],
+        config: WorkflowConfig::default(),
+    };
 
     assert_eq!(workflow.name, "test_workflow");
     assert_eq!(workflow.steps.len(), 0);
@@ -38,17 +46,31 @@ async fn test_workflow_creation() {
 
 #[tokio::test]
 async fn test_workflow_add_network_step() {
-    let mut workflow = Workflow { id: Uuid::new_v4(), name: "test".to_string(), steps: vec![], config: WorkflowConfig::default() };
+    let mut workflow = Workflow {
+        id: Uuid::new_v4(),
+        name: "test".to_string(),
+        steps: vec![],
+        config: WorkflowConfig::default(),
+    };
     let network_id = Uuid::new_v4();
 
-    workflow.steps.push(WorkflowStep { name: "step".to_string(), step_type: StepType::Network { network_id }, config: StepConfig::default() });
+    workflow.steps.push(WorkflowStep {
+        name: "step".to_string(),
+        step_type: StepType::Network { network_id },
+        config: StepConfig::default(),
+    });
     assert_eq!(workflow.steps.len(), 1);
 }
 
 #[tokio::test]
 async fn test_register_layer() {
     let (_, le, _) = create_test_engine();
-    let layer = Layer { id: Uuid::new_v4(), name: "test_layer".to_string(), agents: vec![], config: LayerConfig::default() };
+    let layer = Layer {
+        id: Uuid::new_v4(),
+        name: "test_layer".to_string(),
+        agents: vec![],
+        config: LayerConfig::default(),
+    };
     let layer_id = layer.id;
 
     le.register_layer(layer).await.unwrap();
@@ -60,7 +82,12 @@ async fn test_register_network() {
     let (_, le, _) = create_test_engine();
 
     // Create and register a layer first
-    let layer = Layer { id: Uuid::new_v4(), name: "layer1".to_string(), agents: vec![], config: LayerConfig::default() };
+    let layer = Layer {
+        id: Uuid::new_v4(),
+        name: "layer1".to_string(),
+        agents: vec![],
+        config: LayerConfig::default(),
+    };
     let layer_id = layer.id;
     le.register_layer(layer).await.unwrap();
 
@@ -75,7 +102,12 @@ async fn test_register_workflow() {
     let (engine, le, ne) = create_test_engine();
 
     // Register a layer first
-    let layer = Layer { id: Uuid::new_v4(), name: "layer1".to_string(), agents: vec![], config: LayerConfig::default() };
+    let layer = Layer {
+        id: Uuid::new_v4(),
+        name: "layer1".to_string(),
+        agents: vec![],
+        config: LayerConfig::default(),
+    };
     let layer_id = layer.id;
     le.register_layer(layer).await.unwrap();
 
@@ -86,8 +118,17 @@ async fn test_register_workflow() {
     ne.register_network(network).await.unwrap();
 
     // Register workflow with the network step
-    let mut workflow = Workflow { id: Uuid::new_v4(), name: "workflow1".to_string(), steps: vec![], config: WorkflowConfig::default() };
-    workflow.steps.push(WorkflowStep { name: "step".to_string(), step_type: StepType::Network { network_id }, config: StepConfig::default() });
+    let mut workflow = Workflow {
+        id: Uuid::new_v4(),
+        name: "workflow1".to_string(),
+        steps: vec![],
+        config: WorkflowConfig::default(),
+    };
+    workflow.steps.push(WorkflowStep {
+        name: "step".to_string(),
+        step_type: StepType::Network { network_id },
+        config: StepConfig::default(),
+    });
 
     let result = engine.register_workflow(workflow).await;
     assert!(result.is_ok());
@@ -97,8 +138,18 @@ async fn test_register_workflow() {
 async fn test_register_duplicate_workflow() {
     let (engine, _, _) = create_test_engine();
 
-    let workflow1 = Workflow { id: Uuid::new_v4(), name: "test".to_string(), steps: vec![], config: WorkflowConfig::default() };
-    let workflow2 = Workflow { id: Uuid::new_v4(), name: "test".to_string(), steps: vec![], config: WorkflowConfig::default() };
+    let workflow1 = Workflow {
+        id: Uuid::new_v4(),
+        name: "test".to_string(),
+        steps: vec![],
+        config: WorkflowConfig::default(),
+    };
+    let workflow2 = Workflow {
+        id: Uuid::new_v4(),
+        name: "test".to_string(),
+        steps: vec![],
+        config: WorkflowConfig::default(),
+    };
 
     engine.register_workflow(workflow1).await.unwrap();
     let result = engine.register_workflow(workflow2).await;
@@ -114,7 +165,12 @@ async fn test_register_duplicate_workflow() {
 async fn test_get_workflow_by_name() {
     let (engine, _, _) = create_test_engine();
 
-    let workflow = Workflow { id: Uuid::new_v4(), name: "test".to_string(), steps: vec![], config: WorkflowConfig::default() };
+    let workflow = Workflow {
+        id: Uuid::new_v4(),
+        name: "test".to_string(),
+        steps: vec![],
+        config: WorkflowConfig::default(),
+    };
     engine.register_workflow(workflow).await.unwrap();
 
     let retrieved = engine.get_workflow_by_name("test").await;
@@ -127,7 +183,12 @@ async fn test_execute_workflow() {
     let (engine, le, ne) = create_test_engine();
 
     // Register layer
-    let layer = Layer { id: Uuid::new_v4(), name: "layer1".to_string(), agents: vec!["agent1".to_string()], config: LayerConfig::default() };
+    let layer = Layer {
+        id: Uuid::new_v4(),
+        name: "layer1".to_string(),
+        agents: vec!["agent1".to_string()],
+        config: LayerConfig::default(),
+    };
     let layer_id = layer.id;
     le.register_layer(layer).await.unwrap();
 
@@ -138,8 +199,17 @@ async fn test_execute_workflow() {
     ne.register_network(network).await.unwrap();
 
     // Register workflow
-    let mut workflow = Workflow { id: Uuid::new_v4(), name: "workflow1".to_string(), steps: vec![], config: WorkflowConfig::default() };
-    workflow.steps.push(WorkflowStep { name: "step".to_string(), step_type: StepType::Network { network_id }, config: StepConfig::default() });
+    let mut workflow = Workflow {
+        id: Uuid::new_v4(),
+        name: "workflow1".to_string(),
+        steps: vec![],
+        config: WorkflowConfig::default(),
+    };
+    workflow.steps.push(WorkflowStep {
+        name: "step".to_string(),
+        step_type: StepType::Network { network_id },
+        config: StepConfig::default(),
+    });
     let workflow_id = engine.register_workflow(workflow).await.unwrap();
 
     // Execute workflow
@@ -160,8 +230,18 @@ async fn test_execute_workflow() {
 async fn test_list_workflows() {
     let (engine, _, _) = create_test_engine();
 
-    let workflow1 = Workflow { id: Uuid::new_v4(), name: "workflow1".to_string(), steps: vec![], config: WorkflowConfig::default() };
-    let workflow2 = Workflow { id: Uuid::new_v4(), name: "workflow2".to_string(), steps: vec![], config: WorkflowConfig::default() };
+    let workflow1 = Workflow {
+        id: Uuid::new_v4(),
+        name: "workflow1".to_string(),
+        steps: vec![],
+        config: WorkflowConfig::default(),
+    };
+    let workflow2 = Workflow {
+        id: Uuid::new_v4(),
+        name: "workflow2".to_string(),
+        steps: vec![],
+        config: WorkflowConfig::default(),
+    };
 
     let id1 = engine.register_workflow(workflow1).await.unwrap();
     let id2 = engine.register_workflow(workflow2).await.unwrap();
@@ -175,8 +255,18 @@ async fn test_list_workflows() {
 async fn test_list_layers() {
     let (_, le, _) = create_test_engine();
 
-    let layer1 = Layer { id: Uuid::new_v4(), name: "layer1".to_string(), agents: vec![], config: LayerConfig::default() };
-    let layer2 = Layer { id: Uuid::new_v4(), name: "layer2".to_string(), agents: vec![], config: LayerConfig::default() };
+    let layer1 = Layer {
+        id: Uuid::new_v4(),
+        name: "layer1".to_string(),
+        agents: vec![],
+        config: LayerConfig::default(),
+    };
+    let layer2 = Layer {
+        id: Uuid::new_v4(),
+        name: "layer2".to_string(),
+        agents: vec![],
+        config: LayerConfig::default(),
+    };
 
     let id1 = layer1.id;
     let id2 = layer2.id;
@@ -235,8 +325,19 @@ async fn test_workflow_validation() {
     let (engine, _, _) = create_test_engine();
 
     // Create workflow referencing a non-existent network
-    let mut workflow = Workflow { id: Uuid::new_v4(), name: "invalid".to_string(), steps: vec![], config: WorkflowConfig::default() };
-    workflow.steps.push(WorkflowStep { name: "step".to_string(), step_type: StepType::Network { network_id: Uuid::new_v4() }, config: StepConfig::default() });
+    let mut workflow = Workflow {
+        id: Uuid::new_v4(),
+        name: "invalid".to_string(),
+        steps: vec![],
+        config: WorkflowConfig::default(),
+    };
+    workflow.steps.push(WorkflowStep {
+        name: "step".to_string(),
+        step_type: StepType::Network {
+            network_id: Uuid::new_v4(),
+        },
+        config: StepConfig::default(),
+    });
 
     // Registration succeeds (network existence checked at execution time)
     let wfid = engine.register_workflow(workflow).await.unwrap();
@@ -287,7 +388,12 @@ async fn test_orchestration_error_display_all_variants() {
 #[tokio::test]
 async fn test_get_workflow_by_id() {
     let (engine, _, _) = create_test_engine();
-    let workflow = Workflow { id: Uuid::new_v4(), name: "findme".to_string(), steps: vec![], config: WorkflowConfig::default() };
+    let workflow = Workflow {
+        id: Uuid::new_v4(),
+        name: "findme".to_string(),
+        steps: vec![],
+        config: WorkflowConfig::default(),
+    };
     let wid = engine.register_workflow(workflow).await.unwrap();
     let found = engine.get_workflow(wid).await;
     assert!(found.is_some());

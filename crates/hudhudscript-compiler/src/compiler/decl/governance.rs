@@ -8,7 +8,7 @@ impl Compiler {
         laws: &[hudhudscript_ast::LawDecl],
     ) -> CompileResult<()> {
         use std::collections::HashMap;
-        let mut const_obj = HashMap::new();
+        let mut const_obj = hudhudscript_bytecode::ObjMap::default();
         let constitution_id = format!("cons.{}", name);
         const_obj.insert("id".to_string(), Value16::string(constitution_id));
         const_obj.insert("name".to_string(), Value16::string(name.to_string()));
@@ -18,7 +18,7 @@ impl Compiler {
         let laws_array: Vec<Value16> = laws
             .iter()
             .map(|law| {
-                let mut law_obj = HashMap::new();
+                let mut law_obj = hudhudscript_bytecode::ObjMap::default();
                 law_obj.insert("name".to_string(), Value16::string(law.name.clone()));
                 law_obj.insert(
                     "description".to_string(),
@@ -43,7 +43,7 @@ impl Compiler {
         const_obj.insert("laws".to_string(), Value16::array(laws_array));
         let idx = self.bytecode.add_constant(Value16::object(const_obj));
         { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_instr(Instruction::Move { dst: 255, src: tr }); }
-        self.emit_decl_store("constitution", name);
+        self.emit_decl_store("constitution", name, 255);
         Ok(())
     }
 
@@ -55,7 +55,7 @@ impl Compiler {
         rules: &[Expr],
     ) -> CompileResult<()> {
         use std::collections::HashMap;
-        let mut law_obj = HashMap::new();
+        let mut law_obj = hudhudscript_bytecode::ObjMap::default();
         law_obj.insert("name".to_string(), Value16::string(name.to_string()));
         law_obj.insert(
             "description".to_string(),
@@ -76,7 +76,7 @@ impl Compiler {
         );
         let idx = self.bytecode.add_constant(Value16::object(law_obj));
         { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_instr(Instruction::Move { dst: 255, src: tr }); }
-        self.emit_decl_store("law", name);
+        self.emit_decl_store("law", name, 255);
         Ok(())
     }
 
@@ -88,7 +88,7 @@ impl Compiler {
         rules: &[String],
     ) -> CompileResult<()> {
         use std::collections::HashMap;
-        let mut council_obj = HashMap::new();
+        let mut council_obj = hudhudscript_bytecode::ObjMap::default();
         council_obj.insert("name".to_string(), Value16::string(name.to_string()));
         council_obj.insert(
             "constitution".to_string(),
@@ -97,7 +97,7 @@ impl Compiler {
         let members_array: Vec<Value16> = members
             .iter()
             .map(|member| {
-                let mut member_obj = HashMap::new();
+                let mut member_obj = hudhudscript_bytecode::ObjMap::default();
                 member_obj.insert(
                     "agent_id".to_string(),
                     Value16::string(member.agent_id.clone()),
@@ -113,7 +113,7 @@ impl Compiler {
         );
         let idx = self.bytecode.add_constant(Value16::object(council_obj));
         { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_instr(Instruction::Move { dst: 255, src: tr }); }
-        self.emit_decl_store("council", name);
+        self.emit_decl_store("council", name, 255);
         Ok(())
     }
 
@@ -142,7 +142,7 @@ impl Compiler {
             }
             inferred
         };
-        let mut rule_obj = HashMap::new();
+        let mut rule_obj = hudhudscript_bytecode::ObjMap::default();
         rule_obj.insert("name".to_string(), Value16::string(name.to_string()));
         rule_obj.insert(
             "priority".to_string(),
@@ -151,7 +151,7 @@ impl Compiler {
         let conditions_array: Vec<Value16> = conditions
             .iter()
             .map(|cond| {
-                let mut cond_obj = HashMap::new();
+                let mut cond_obj = hudhudscript_bytecode::ObjMap::default();
                 cond_obj.insert(
                     "type".to_string(),
                     Value16::string(cond.condition_type.clone()),
@@ -165,7 +165,7 @@ impl Compiler {
         let actions_array: Vec<Value16> = actions
             .iter()
             .map(|action| {
-                let mut action_obj = HashMap::new();
+                let mut action_obj = hudhudscript_bytecode::ObjMap::default();
                 action_obj.insert(
                     "type".to_string(),
                     Value16::string(action.action_type.clone()),
@@ -181,7 +181,7 @@ impl Compiler {
         rule_obj.insert("actions".to_string(), Value16::array(actions_array));
         let idx = self.bytecode.add_constant(Value16::object(rule_obj));
         { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_instr(Instruction::Move { dst: 255, src: tr }); }
-        self.emit_decl_store("rule", name);
+        self.emit_decl_store("rule", name, 255);
         Ok(())
     }
 
@@ -207,7 +207,7 @@ impl Compiler {
             "hybrid" => (0.7, 0.7, 0.7),
             _ => (0.7, 0.7, 0.7),
         };
-        let mut gov_obj = HashMap::new();
+        let mut gov_obj = hudhudscript_bytecode::ObjMap::default();
         gov_obj.insert("name".to_string(), Value16::string(name.to_string()));
         gov_obj.insert("type".to_string(), Value16::string(base_type.to_string()));
         gov_obj.insert(
@@ -228,7 +228,7 @@ impl Compiler {
         }
         let idx = self.bytecode.add_constant(Value16::object(gov_obj));
         { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_instr(Instruction::Move { dst: 255, src: tr }); }
-        self.emit_decl_store("governance", name);
+        self.emit_decl_store("governance", name, 255);
         Ok(())
     }
 }

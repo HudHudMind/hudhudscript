@@ -773,7 +773,7 @@ fn token_tracker_default_zero_usage() {
 #[test]
 fn token_tracker_record_increments_usage() {
     let mut t = TokenTracker::new();
-    t.record(100);
+    t.record(100, 0);
     assert_eq!(t.daily_usage(), 100);
     assert_eq!(t.monthly_usage(), 100);
 }
@@ -781,9 +781,9 @@ fn token_tracker_record_increments_usage() {
 #[test]
 fn token_tracker_record_multiple() {
     let mut t = TokenTracker::new();
-    t.record(100);
-    t.record(200);
-    t.record(300);
+    t.record(100, 0);
+    t.record(200, 0);
+    t.record(300, 0);
     assert_eq!(t.daily_usage(), 600);
     assert_eq!(t.monthly_usage(), 600);
 }
@@ -800,7 +800,7 @@ fn token_tracker_last_reset() {
 #[test]
 fn token_tracker_get_stats() {
     let mut t = TokenTracker::new();
-    t.record(1000);
+    t.record(1000, 0);
     let stats = t.get_stats();
     assert_eq!(stats.daily_usage, 1000);
     assert_eq!(stats.monthly_usage, 1000);
@@ -810,7 +810,7 @@ fn token_tracker_get_stats() {
 #[test]
 fn token_tracker_cost_estimation() {
     let mut t = TokenTracker::new();
-    t.record(1000);
+    t.record(1000, 0);
     let stats = t.get_stats();
     // 1000 tokens / 1000 * 0.03 = 0.03
     assert!((stats.estimated_cost - 0.03).abs() < 0.001);
@@ -819,7 +819,7 @@ fn token_tracker_cost_estimation() {
 #[test]
 fn token_tracker_large_usage_cost() {
     let mut t = TokenTracker::new();
-    t.record(100_000);
+    t.record(100_000, 0);
     let stats = t.get_stats();
     // 100000 / 1000 * 0.03 = 3.0
     assert!((stats.estimated_cost - 3.0).abs() < 0.01);

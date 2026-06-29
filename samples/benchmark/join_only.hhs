@@ -1,0 +1,6 @@
+let chars = [];
+for (let i = 0; i < 50000; i = i + 1) {
+    chars.push("a");
+}
+let s = chars.join("");
+print(s.length);

@@ -108,7 +108,7 @@ pub fn unix_connect(args: &[Value16]) -> HudHudResult<Value16> {
     let fd = stream.as_raw_fd();
     std::mem::forget(stream);
 
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     obj.insert(
         "__type".to_string(),
         Value16::string("UnixStream".to_string()),
@@ -221,7 +221,7 @@ pub fn unix_http(args: &[Value16]) -> HudHudResult<Value16> {
         .read_to_string(&mut response)
         .map_err(|e| runtime_error(format!("unix.http read error: {}", e)))?;
 
-    let mut result: HashMap<String, Value16> = HashMap::new();
+    let mut result: hudhudscript_bytecode::ObjMap = hudhudscript_bytecode::ObjMap::default();
 
     if let Some(header_end) = response.find("\r\n\r\n") {
         let header_part = &response[..header_end];
@@ -239,7 +239,7 @@ pub fn unix_http(args: &[Value16]) -> HudHudResult<Value16> {
             }
         }
 
-        let mut headers: HashMap<String, Value16> = HashMap::new();
+        let mut headers: hudhudscript_bytecode::ObjMap = hudhudscript_bytecode::ObjMap::default();
         for line in header_part.lines().skip(1) {
             if let Some((k, v)) = line.split_once(": ") {
                 headers.insert(k.to_lowercase(), Value16::string(v.to_string()));
@@ -257,7 +257,7 @@ pub fn unix_http(args: &[Value16]) -> HudHudResult<Value16> {
         result.insert("status".to_string(), Value16::number(0.0));
         result.insert("ok".to_string(), Value16::bool_(false));
         result.insert("body".to_string(), Value16::string(response));
-        result.insert("headers".to_string(), Value16::object(HashMap::new()));
+        result.insert("headers".to_string(), Value16::object(hudhudscript_bytecode::ObjMap::default()));
         result.insert("json".to_string(), Value16::null());
     }
 
@@ -289,8 +289,7 @@ fn serde_json_to_value16(v: &serde_json::Value) -> Value16 {
         }
         serde_json::Value::Object(map) => Value16::object(
             map.iter()
-                .map(|(k, v)| (k.clone(), serde_json_to_value16(v)))
-                .collect(),
+                .map(|(k, v)| (k.clone(), serde_json_to_value16(v))),
         ),
     }
 }
@@ -318,7 +317,7 @@ fn value_to_json_string(value: &Value16) -> String {
     if let Some(obj) = value.as_object() {
         let mut pairs: Vec<String> = obj
             .iter()
-            .filter(|(k, _)| !k.starts_with("__"))
+            .filter(|(k, _)| !k.to_string().starts_with("__"))
             .map(|(k, v)| format!("\"{}\":{}", k, value_to_json_string(v)))
             .collect();
         pairs.sort();

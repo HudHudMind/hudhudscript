@@ -75,7 +75,9 @@ impl VM {
             return None;
         }
         let (finally_ip, _id, _ld) = self.finally_frames.pop()?;
-        let return_val = self.registers[255];
+        // E2: the loop driver already stashed the return value in
+        // last_return; save it so FinallyExit can restore it.
+        let return_val = self.last_return;
         self.pending_flow = Some(PendingFlow::Return(Box::new(return_val)));
         Some(finally_ip)
     }
@@ -157,7 +159,7 @@ impl VM {
         for (i, v) in args_arr.iter().enumerate() {
             self.registers[first_arg as usize + i] = v.clone();
         }
-        self.exec_call(name_sym, argc, first_arg, 255, bytecode, ip)
+        self.exec_call(name_sym, u32::MAX, argc, first_arg, 255, bytecode, ip)
     }
 
     /// Gap 1 — unified dispatcher for `CallSpread` / `MethodCallSpread`
@@ -186,7 +188,7 @@ impl VM {
     pub(crate) fn exec_spread_into_object(&mut self) -> CompileResult<()> {
         let src = self.registers[255];
         let dest = self.registers[255];
-        let mut dest_map: std::collections::HashMap<String, Value16> = match dest.as_object() {
+        let mut dest_map: hudhudscript_bytecode::ObjMap = match dest.as_object() {
             Some(m) => m.clone(),
             _ => {
                 return Err(compile_codes::runtime_error(format!(
@@ -315,8 +317,7 @@ impl VM {
                 let thrown = *v;
                 // Re-raise: next try-frame → catch; else next finally →
                 // propagate; else uncaught.
-                if let Some((catch_ip, iter_depth, loop_depth)) = self.try_frames.pop()
-                {
+                if let Some((catch_ip, iter_depth, loop_depth)) = self.try_frames.pop() {
                     // Register-based VM: no stack truncation.
                     self.iterators.truncate(iter_depth);
                     self.iterator_generators.truncate(iter_depth);

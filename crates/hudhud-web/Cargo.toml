@@ -1,0 +1,19 @@
+[package]
+name = "hudhud-web"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+hudhudscript-bytecode = { path = "../hudhudscript-bytecode" }
+hudhudscript-errors = { path = "../hudhudscript-errors" }
+hudhud-web-server = { path = "../hudhud-web-server" }
+hudhud-web-prefork = { path = "../hudhud-web-prefork" }
+hudhud-web-request = { path = "../hudhud-web-request" }
+hudhud-web-response = { path = "../hudhud-web-response" }
+hudhud-web-template = { path = "../hudhud-web-template" }
+hudhud-web-session = { path = "../hudhud-web-session" }
+hudhud-web-markdown = { path = "../hudhud-web-markdown" }
+hudhud-web-static = { path = "../hudhud-web-static" }

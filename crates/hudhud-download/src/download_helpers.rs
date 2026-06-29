@@ -32,8 +32,7 @@ pub(crate) fn serde_json_to_value16(v: &serde_json::Value) -> Value16 {
         }
         serde_json::Value::Object(map) => Value16::object(
             map.iter()
-                .map(|(k, v)| (k.clone(), serde_json_to_value16(v)))
-                .collect(),
+                .map(|(k, v)| (k.clone(), serde_json_to_value16(v))),
         ),
     }
 }

@@ -1,4 +1,6 @@
 use super::*;
+use hudhudscript_lexer::is_hard_reserved_keyword;
+
 
 pub(super) fn parse_number(pair: Pair<Rule>) -> ParseResult<Expr> {
     let span = pair_to_span(&pair);
@@ -11,7 +13,7 @@ pub(super) fn parse_number(pair: Pair<Rule>) -> ParseResult<Expr> {
 
     // Convert Arabic-Indic digits to ASCII before parsing
     let num_str = arabic_to_ascii(num_str);
-    let is_float = num_str.contains('.');
+    let is_float = num_str.contains('.') || num_str.contains('e') || num_str.contains('E');
     let value = num_str
         .parse::<f64>()
         .map_err(|_| parse_codes::invalid_syntax("Invalid number", span))?;
@@ -105,44 +107,12 @@ pub(super) fn parse_identifier(pair: Pair<Rule>) -> ParseResult<Expr> {
         return Ok(Expr::This(span));
     }
 
-    // Check if it's a reserved keyword
-    let reserved_keywords = [
-        // Logical operators
-        "and", "or", "ve", "veya", "そして", "または",
-        "و", "أو", "এবং", "অথবা", "и", "или",
-        "und", "oder", "et", "ou", "और", "या",
-        "dan", "atau", "và", "hoặc", "και", "ή",
-        "lub", "และ", "หรือ", "ili", "یا", "yan", "û",
-        // Language keywords (all supported languages)
-        "let", "var", "const", "set",
-        "if", "else", "while", "for", "in",
-        "return", "break", "continue",
-        "switch", "case", "default", "match", "enum",
-        "function", "async", "await", "promise", "future",
-        "class", "extends", "new", "super", "this", "self",
-        "constructor", "static", "public", "private", "protected",
-        "implements", "instanceof", "trait",
-        "try", "catch", "finally", "throw",
-        "import", "export", "use", "from", "as",
-        "null",
-        "agent", "tool", "resource", "mcp", "server",
-        "config", "provider", "model",
-        "state", "statemachine", "entity", "agentstate",
-        "intent", "want", "spawn", "send", "receive",
-        "perform", "require",
-        "data", "governance",
-        // Turkish
-        "değişken", "tanım", "eğer", "değilse", "iken", "için", "içinde",
-        "döndür", "sonlandır", "devam", "sınıf", "kalıtım", "yeni", "üst", "bu", "kendi",
-        "yapıcı", "genel", "özel", "korumalı", "dene", "yakala", "sonunda", "fırlat",
-        "içeAktar", "dışaAktar", "kullan", "den", "olarak",
-        "işlev", "eşzamansız", "bekle",
-        "ajan", "araç", "kaynak", "sunucu", "yapılandırma", "sağlayıcı", "model",
-        "durum", "varlık", "niyet", "başlat", "gönder", "al", "gerçekleştir", "gerektir",
-        "veri", "yönetişim",
-    ];
+    if ident == "super" {
+        return Ok(Expr::Identifier(ident.to_string(), span));
+    }
 
-    if reserved_keywords.contains(&ident) {
+    // Check if it's a reserved keyword using the lexer canonical table.
+    if is_hard_reserved_keyword(ident) {
         return Err(parse_codes::invalid_syntax(
             format!(
                 "'{}' is a reserved keyword and cannot be used as an identifier",
@@ -154,3 +124,4 @@ pub(super) fn parse_identifier(pair: Pair<Rule>) -> ParseResult<Expr> {
 
     Ok(Expr::Identifier(ident.to_string(), span))
 }
+

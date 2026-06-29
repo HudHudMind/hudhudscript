@@ -131,7 +131,7 @@ pub fn xdg_parse_desktop(args: &[Value16]) -> HudHudResult<Value16> {
     let content = std::fs::read_to_string(&path)
         .map_err(|e| runtime_error(format!("xdg.parse_desktop: cannot read '{}': {}", path, e)))?;
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     let mut in_desktop_entry = false;
 
     for line in content.lines() {
@@ -287,7 +287,7 @@ pub fn xdg_launch(args: &[Value16]) -> HudHudResult<Value16> {
         .spawn()
         .map_err(|e| runtime_error(format!("xdg.launch: failed to launch '{}': {}", program, e)))?;
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("pid".to_string(), Value16::number(child.id() as f64));
     result.insert("command".to_string(), Value16::string(cleaned));
     Ok(Value16::object(result))

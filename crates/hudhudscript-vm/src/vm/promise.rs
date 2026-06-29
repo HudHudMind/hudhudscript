@@ -40,7 +40,21 @@ impl crate::vm::VM {
     where
         F: FnOnce() -> Result<Value16, String> + Send + 'static,
     {
-        let id = self.promise_registry.spawn_task(task);
+        // H-BLOCKING: detach in thread, attach on await
+        use hudhudscript_bytecode::gc_detach;
+        let (tx, rx) = std::sync::mpsc::channel::<Result<gc_detach::DetachedGraph, String>>();
+        let id = self.promise_registry.next_id();
+        self.detached_promises.insert(id.clone(), rx);
+        std::thread::spawn(move || {
+            let result = match task() {
+                Ok(v) => match gc_detach::detach(v) {
+                    Ok(tree) => Ok(tree),
+                    Err(e) => Err(e.to_string()),
+                },
+                Err(msg) => Err(msg),
+            };
+            let _ = tx.send(result);
+        });
         Value16::promise(hudhudscript_bytecode::PromiseState16::AsyncPending(id))
     }
 
@@ -61,10 +75,19 @@ impl crate::vm::VM {
                     Err("Cannot resolve a bare Pending promise".to_string())
                 }
                 hudhudscript_bytecode::PromiseState16::AsyncPending(id) => {
-                    match self.promise_registry.await_blocking(id) {
-                        Ok(val) => Ok(val),
-                        Err(hudhudscript_async::RegistryError::Rejected(msg)) => Err(msg),
-                        Err(e) => Err(format!("{}", e)),
+                    // H-BLOCKING: Check detached promises first (V2-E detach/attach)
+                    if let Some(rx) = self.detached_promises.remove(id) {
+                        match rx.recv() {
+                            Ok(Ok(tree)) => Ok(hudhudscript_bytecode::gc_detach::attach(&tree)),
+                            Ok(Err(msg)) => Err(msg),
+                            Err(_) => Err("blocking task sender dropped".to_string()),
+                        }
+                    } else {
+                        match self.promise_registry.await_blocking(id) {
+                            Ok(val) => Ok(val),
+                            Err(hudhudscript_async::RegistryError::Rejected(msg)) => Err(msg),
+                            Err(e) => Err(format!("{}", e)),
+                        }
                     }
                 }
             }
@@ -239,21 +262,22 @@ impl crate::vm::VM {
         let classes_clone = self.classes.clone();
         let declarations_clone = self.declarations.clone();
 
-        // Delegate thread-spawn + channel wiring to the shared registry.
-        // The closure owns everything it needs; the spawned VM runs the
-        // function body and returns the result (or an error string) to the
-        // registry, which relays it to the matching `Await` later.
-        let id = self.promise_registry.spawn_task(move || {
+        // H-BLOCKING: Detach değerleri thread heap'inden çıkar, DetachedGraph taşınır.
+        // Main thread await'te attach ile kendi heap'ine alır.
+        use hudhudscript_bytecode::gc_detach;
+        let (tx, rx) = std::sync::mpsc::channel::<Result<gc_detach::DetachedGraph, String>>();
+        let id = self.promise_registry.next_id();
+        self.detached_promises.insert(id.clone(), rx);
+
+        std::thread::spawn(move || {
             let mut task_vm = VM::new();
-            // Overlay the caller's globals onto the task VM's globals so
-            // top-level bindings (other functions, constants) are visible.
             for (k, v) in global_scope {
                 task_vm.globals.entry(k).or_insert(v);
             }
             task_vm.classes = classes_clone;
             task_vm.declarations = declarations_clone;
-
-            let result = task_vm.call_chunk_with_captures(
+            // run attached chunk, capture result
+            let raw_result = task_vm.call_chunk_with_captures(
                 &chunk_arc,
                 &params_clone,
                 &args_clone,
@@ -261,10 +285,14 @@ impl crate::vm::VM {
                 &name_clone,
                 &captures_clone,
             );
-            match result {
-                Ok(val) => Ok(val),
+            let detached = match raw_result {
+                Ok(val) => match gc_detach::detach(val) {
+                    Ok(tree) => Ok(tree),
+                    Err(e) => Err(e.to_string()),
+                },
                 Err(e) => Err(format!("{}", e)),
-            }
+            };
+            let _ = tx.send(detached);
         });
 
         Value16::promise(hudhudscript_bytecode::PromiseState16::AsyncPending(id))

@@ -71,7 +71,7 @@ fn yaml_to_value(y: &serde_yaml::Value) -> Value16 {
             Value16::array(arr.iter().map(|v| yaml_to_value(v)).collect())
         }
         serde_yaml::Value::Mapping(map) => {
-            let mut obj = HashMap::new();
+            let mut obj = hudhudscript_bytecode::ObjMap::default();
             for (k, v) in map {
                 if let Some(key) = k.as_str() {
                     obj.insert(key.to_string(), yaml_to_value(v));
@@ -103,7 +103,7 @@ fn value_to_yaml(v: &Value16) -> HudHudResult<serde_yaml::Value> {
     if let Some(obj) = v.as_object() {
         let mut map = serde_yaml::Mapping::new();
         for (k, val) in obj {
-            map.insert(serde_yaml::Value::String(k.clone()), value_to_yaml(val)?);
+            map.insert(serde_yaml::Value::String(k.to_string()), value_to_yaml(val)?);
         }
         return Ok(serde_yaml::Value::Mapping(map));
     }

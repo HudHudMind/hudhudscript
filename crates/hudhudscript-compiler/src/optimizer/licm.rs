@@ -1,27 +1,18 @@
 use super::*;
 
-/// Loop-Invariant Code Motion (LICM) — hoisting pass (PERF-48 / Issue #951).
+/// Loop-Invariant Code Motion (LICM) — inactive skeleton (PERF-48 / Issue #951).
 ///
-/// Finds `LoadVar(x)` reads inside `LoopBegin`/back-edge pairs where `x`
-/// is never written inside the loop body AND the body contains no
-/// opaque / side-effecting instructions (see [`stack_effect`] and the
-/// skip-lists therein).  For each such invariant, emits
-/// `LoadVar(x); DeclLocal(new_slot)` BEFORE the loop's condition, then
-/// rewrites every in-body `LoadVar(x)` to `LoadLocal(new_slot)`.
-///
-/// Stack discipline is preserved because `LoadVar` and `LoadLocal` both
-/// push exactly 1 operand.  The hoist prelude is a balanced (+1 push,
-/// −1 pop) pair, so the outer stack height is also unchanged.
+/// The original implementation hoisted `LoadVar(x)` reads into a prelude of
+/// `LoadVar(x); DeclLocal(new_slot)` and rewrote in-body reads to
+/// `LoadLocal(new_slot)`.  Those opcodes were removed when the VM moved to a
+/// register-only local model under H.5, so the pass is currently a no-op.
+/// The skeleton is preserved so a future register-based LICM pass can reuse
+/// the loop-range analysis and source-position bookkeeping.
 ///
 /// # Safety
 /// * Only runs on the top-level `Bytecode::instructions`.  Function
 ///   chunks are never passed through this pass (see
 ///   `optimize_with_positions`).
-/// * `DeclLocal(slot)` grows `local_slots` dynamically at runtime, so
-///   slot allocation cannot exceed any compile-time capacity.
-/// * All relative jump offsets that cross each insertion point are
-///   shifted in tandem; `LoopBegin(start, end)` operands are also
-///   bumped when the insertion precedes them.
 /// * Loops containing `Call`, `MethodCall`, `DefineFunction`,
 ///   `TryBegin`, `Break`, `Yield`, `ForIn`, or any other opaque
 ///   instruction (returning `None` from `stack_effect`) are skipped

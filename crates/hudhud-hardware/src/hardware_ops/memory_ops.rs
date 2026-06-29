@@ -45,7 +45,7 @@ pub fn hw_memory_info(_args: &[Value16]) -> HudHudResult<Value16> {
         }
     }
 
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     obj.insert("total_mb".to_string(), Value16::number(total_mb));
     obj.insert("type_hint".to_string(), Value16::string(type_hint));
     Ok(Value16::object(obj))

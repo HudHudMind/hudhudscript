@@ -90,7 +90,7 @@ pub fn dispatch(method: LogMethodId, args: &[Value16]) -> HudHudResult<Value16> 
     let structured = if let Some(obj) = args.get(1).and_then(|v| v.as_object()) {
         let pairs: Vec<String> = obj
             .iter()
-            .filter(|(k, _)| k.as_str() != "__module")
+            .filter(|(k, _)| k.to_string() != "__module")
             .map(|(k, v)| format!("{}={}", k, v.display_string()))
             .collect();
         if pairs.is_empty() {
@@ -115,7 +115,7 @@ pub fn dispatch(method: LogMethodId, args: &[Value16]) -> HudHudResult<Value16> 
         color_code, level_str, message, structured
     );
 
-    let mut entry = HashMap::new();
+    let mut entry = hudhudscript_bytecode::ObjMap::default();
     entry.insert(
         "level".to_string(),
         Value16::string(level_str.to_lowercase()),

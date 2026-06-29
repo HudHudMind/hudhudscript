@@ -24,12 +24,7 @@ impl OpenAICompatibleProvider {
         // Ollama Cloud (ollama.com) does require an API key
         let is_local_or_no_auth = matches!(config.provider_type, ProviderType::Http)
             || (matches!(config.provider_type, ProviderType::Ollama)
-                && (base_url.starts_with("http://localhost")
-                    || base_url.starts_with("http://127.")
-                    || base_url.starts_with("http://0.0.0.0")
-                    || base_url.starts_with("http://192.")
-                    || base_url.starts_with("http://10.")
-                    || base_url.starts_with("http://172.")));
+                && crate::providers::http_client::is_local_url(&base_url));
         if config.api_key.is_none() && !is_local_or_no_auth {
             return Err(ProviderError::InvalidConfig(format!(
                 "API key is required for {:?} provider",

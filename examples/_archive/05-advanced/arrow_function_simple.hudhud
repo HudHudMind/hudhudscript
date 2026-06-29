@@ -1,0 +1,4 @@
+// Simple Arrow Function Test
+
+var add = (x, y) => x + y;
+var result = add(5, 3);

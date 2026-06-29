@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>{{ soru }}</h2>
+<div class="answer">
+___ANSWER_HTML___
+</div>
+<div class="stats">
+    📊 <strong>{{ kelime }}</strong> kelime &bull; <strong>{{ harf }}</strong> karakter
+</div>
+<p style="margin-top: 2rem;"><a href="/">← Yeni soru sor</a></p>
+{% endblock %}

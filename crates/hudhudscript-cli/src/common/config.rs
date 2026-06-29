@@ -134,6 +134,11 @@ pub fn load_hudhud_config_with_path(
         vec![PathBuf::from(
             "/Library/Application Support/hudhud/script/hudhud.toml",
         )]
+    } else if cfg!(target_os = "windows") {
+        // %PROGRAMDATA%\hudhud\script\hudhud.toml
+        vec![std::env::var("PROGRAMDATA")
+            .map(|d| PathBuf::from(d).join("hudhud/script/hudhud.toml"))
+            .unwrap_or_else(|_| PathBuf::from("C:/ProgramData/hudhud/script/hudhud.toml"))]
     } else {
         vec![PathBuf::from("/etc/hudhud/script/hudhud.toml")]
     };
@@ -143,11 +148,19 @@ pub fn load_hudhud_config_with_path(
         }
     }
 
-    // Layer 2: User global (XDG_CONFIG_HOME or ~/.config)
-    let user_config_dir = std::env::var("XDG_CONFIG_HOME")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| dirs_fallback_home().join(".config"));
-    let user_path = user_config_dir.join("hudhud/script/hudhud.toml");
+    // Layer 2: User global
+    let user_path = if cfg!(target_os = "windows") {
+        // %APPDATA%\hudhud\script\hudhud.toml
+        std::env::var("APPDATA")
+            .map(|d| PathBuf::from(d).join("hudhud/script/hudhud.toml"))
+            .unwrap_or_else(|_| dirs_fallback_home().join("hudhud/script/hudhud.toml"))
+    } else {
+        // XDG_CONFIG_HOME or ~/.config
+        let xdg = std::env::var("XDG_CONFIG_HOME")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| dirs_fallback_home().join(".config"));
+        xdg.join("hudhud/script/hudhud.toml")
+    };
     if let Some(loaded) = try_load_config(&user_path, debug) {
         config = merge_config(config, loaded);
     }
@@ -244,8 +257,15 @@ fn merge_config(base: HudHudConfig, overlay: HudHudConfig) -> HudHudConfig {
         },
         _stream: base._stream, // stream config from first found
         _security: base._security,
+        host_access: base
+            .host_access
+            .clone()
+            .map(|c| c.merge(overlay.host_access.as_ref()))
+            .or_else(|| overlay.host_access.clone()),
         providers: overlay.providers, // overlay wins (project > user > system)
         lint: overlay.lint,
+        mcp: overlay.mcp,
+        gc: overlay.gc,
     }
 }
 

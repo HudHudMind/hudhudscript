@@ -1,0 +1,46 @@
+// HudHudScript — Loops
+// Demonstrates while loops and iteration patterns
+
+// Count from 1 to 5
+let i = 1;
+while (i <= 5) {
+    print(i);
+    i = i + 1;
+}
+
+// Sum of 1 to 100
+let total = 0;
+let n = 1;
+while (n <= 100) {
+    total = total + n;
+    n = n + 1;
+}
+print(total);
+
+// Factorial using loop
+fn factorial_loop(n) {
+    let result = 1;
+    let j = 1;
+    while (j <= n) {
+        result = result * j;
+        j = j + 1;
+    }
+    return result;
+}
+
+print(factorial_loop(5));
+print(factorial_loop(10));
+
+// Power function
+fn power(base, exp) {
+    let result = 1;
+    let k = 0;
+    while (k < exp) {
+        result = result * base;
+        k = k + 1;
+    }
+    return result;
+}
+
+print(power(2, 10));
+print(power(3, 4));

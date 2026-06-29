@@ -1,6 +1,6 @@
 use crate::{
     ClassData, DataData, DynamicData, DynamicKind, DynamicObject, FunctionData, GeneratorState16,
-    InstanceData, PromiseState16, ReprTag, ResourceRef, ToolRef, Value16,
+    InstanceData, ObjMap, PromiseState16, ReprTag, ResourceRef, ToolRef, Value16,
 };
 use parking_lot::Mutex;
 use std::sync::Arc;
@@ -48,8 +48,11 @@ impl Value16 {
         let ptr = self.0.as_ptr().unwrap();
         let obj = unsafe { &*(ptr as *const DynamicObject) };
         debug_assert!(matches!(obj.kind, DynamicKind::String));
-        if let DynamicData::String(ref s) = obj.data { s.as_str() }
-        else { unsafe { std::hint::unreachable_unchecked() } }
+        if let DynamicData::String(ref s) = obj.data {
+            s.as_str()
+        } else {
+            unsafe { std::hint::unreachable_unchecked() }
+        }
     }
 
     #[inline(always)]
@@ -82,7 +85,7 @@ impl Value16 {
         }
         None
     }
-    
+
     #[inline]
     pub fn as_array_mut(&mut self) -> Option<&mut Vec<Value16>> {
         if self.0.tag() == ReprTag::Dynamic {
@@ -104,8 +107,11 @@ impl Value16 {
         debug_assert!(self.0.tag() == ReprTag::Dynamic);
         let obj = unsafe { &*(self.0.as_ptr().unwrap() as *const DynamicObject) };
         debug_assert!(matches!(obj.kind, DynamicKind::Array));
-        if let DynamicData::Array(ref a) = obj.data { a }
-        else { unsafe { std::hint::unreachable_unchecked() } }
+        if let DynamicData::Array(ref a) = obj.data {
+            a
+        } else {
+            unsafe { std::hint::unreachable_unchecked() }
+        }
     }
 
     /// Unchecked mutable array access.
@@ -114,8 +120,11 @@ impl Value16 {
         debug_assert!(self.0.tag() == ReprTag::Dynamic);
         let obj = unsafe { &mut *(self.0.as_ptr().unwrap() as *mut DynamicObject) };
         debug_assert!(matches!(obj.kind, DynamicKind::Array));
-        if let DynamicData::Array(ref mut a) = obj.data { a }
-        else { unsafe { std::hint::unreachable_unchecked() } }
+        if let DynamicData::Array(ref mut a) = obj.data {
+            a
+        } else {
+            unsafe { std::hint::unreachable_unchecked() }
+        }
     }
 
     /// Fast combined array element access: type check + bounds check + clone.
@@ -137,11 +146,16 @@ impl Value16 {
     #[inline]
     pub fn array_set(&mut self, idx: usize, val: Value16) -> bool {
         if self.0.tag() == ReprTag::Dynamic {
-            let ptr = match self.0.as_ptr() { Some(p) => p, None => return false };
+            let ptr = match self.0.as_ptr() {
+                Some(p) => p,
+                None => return false,
+            };
             let obj = unsafe { &mut *(ptr as *mut DynamicObject) };
             if matches!(obj.kind, DynamicKind::Array) {
                 if let DynamicData::Array(ref mut a) = obj.data {
-                    if idx >= a.len() { a.resize(idx + 1, Value16::null()); }
+                    if idx >= a.len() {
+                        a.resize(idx + 1, Value16::null());
+                    }
                     a[idx] = val;
                     return true;
                 }
@@ -151,7 +165,7 @@ impl Value16 {
     }
 
     #[inline(always)]
-    pub fn as_object(&self) -> Option<&std::collections::HashMap<String, Value16>> {
+    pub fn as_object(&self) -> Option<&ObjMap> {
         if self.0.tag() == ReprTag::Dynamic {
             let ptr = self.0.as_ptr()?;
             let obj = unsafe { &*(ptr as *const DynamicObject) };
@@ -164,7 +178,7 @@ impl Value16 {
         None
     }
 
-    pub fn as_object_mut(&mut self) -> Option<&mut std::collections::HashMap<String, Value16>> {
+    pub fn as_object_mut(&mut self) -> Option<&mut ObjMap> {
         if self.0.tag() == ReprTag::Dynamic {
             let ptr = self.0.as_ptr()? as *mut DynamicObject;
             let obj = unsafe { &mut *ptr };
@@ -276,6 +290,35 @@ impl Value16 {
     }
 
     #[inline]
+    pub fn as_bigint(&self) -> Option<&num_bigint::BigInt> {
+        if self.0.tag() == ReprTag::Dynamic {
+            let ptr = self.0.as_ptr()?;
+            let obj = unsafe { &*(ptr as *const DynamicObject) };
+            if matches!(obj.kind, DynamicKind::BigInt) {
+                if let DynamicData::BigInt(b) = &obj.data {
+                    return Some(b);
+                }
+            }
+        }
+        None
+    }
+
+    #[inline(always)]
+    pub fn as_bigint_unchecked(&self) -> &num_bigint::BigInt {
+        let ptr = self.0.as_ptr().unwrap();
+        let obj = unsafe { &*(ptr as *const DynamicObject) };
+        if let DynamicData::BigInt(ref b) = obj.data { b } else { unreachable!() }
+    }
+
+    #[inline]
+    pub fn to_bigint_value(&self) -> Option<num_bigint::BigInt> {
+        if let Some(i) = self.as_int() {
+            return Some(num_bigint::BigInt::from(i));
+        }
+        self.as_bigint().cloned()
+    }
+
+    #[inline]
     pub fn as_generator_state(&self) -> Option<&Arc<Mutex<GeneratorState16>>> {
         if self.0.tag() == ReprTag::Dynamic {
             let ptr = self.0.as_ptr()?;
@@ -344,5 +387,4 @@ impl Value16 {
         }
         None
     }
-
 }

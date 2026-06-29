@@ -23,7 +23,7 @@ pub fn sec_suid_files(args: &[Value16]) -> HudHudResult<Value16> {
         .map(|line| {
             let parts: Vec<&str> = line.split_whitespace().collect();
             if parts.len() >= 11 {
-                let mut obj = HashMap::new();
+                let mut obj = hudhudscript_bytecode::ObjMap::default();
                 obj.insert(
                     "permissions".to_string(),
                     Value16::string(parts[2].to_string()),
@@ -112,7 +112,7 @@ pub fn sec_open_ports(_args: &[Value16]) -> HudHudResult<Value16> {
             }
         }
 
-        let mut entry = HashMap::new();
+        let mut entry = hudhudscript_bytecode::ObjMap::default();
         entry.insert("port".to_string(), Value16::number(port_num));
         entry.insert("pid".to_string(), Value16::string(pid));
         entry.insert("process".to_string(), Value16::string(process_name));

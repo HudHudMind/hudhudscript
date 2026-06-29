@@ -81,7 +81,7 @@ pub fn apt_list_installed(_args: &[Value16]) -> HudHudResult<Value16> {
     for line in stdout.lines() {
         let parts: Vec<&str> = line.splitn(3, '\t').collect();
         if parts.len() >= 2 {
-            let mut pkg = HashMap::new();
+            let mut pkg = hudhudscript_bytecode::ObjMap::default();
             pkg.insert("name".to_string(), Value16::string(parts[0].to_string()));
             pkg.insert("version".to_string(), Value16::string(parts[1].to_string()));
             pkg.insert(
@@ -113,7 +113,7 @@ pub fn apt_search(args: &[Value16]) -> HudHudResult<Value16> {
         if line.is_empty() {
             continue;
         }
-        let mut pkg = HashMap::new();
+        let mut pkg = hudhudscript_bytecode::ObjMap::default();
         if let Some((name, desc)) = line.split_once(" - ") {
             pkg.insert("name".to_string(), Value16::string(name.trim().to_string()));
             pkg.insert(
@@ -143,7 +143,7 @@ pub fn apt_info(args: &[Value16]) -> HudHudResult<Value16> {
         )));
     }
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     obj.insert("name".to_string(), Value16::string(package));
     obj.insert("version".to_string(), Value16::string(String::new()));
     obj.insert("description".to_string(), Value16::string(String::new()));
@@ -221,7 +221,7 @@ pub fn apt_upgradable(_args: &[Value16]) -> HudHudResult<Value16> {
         if line.is_empty() || line.starts_with("Listing") {
             continue;
         }
-        let mut pkg = HashMap::new();
+        let mut pkg = hudhudscript_bytecode::ObjMap::default();
         let name = line.split('/').next().unwrap_or("").to_string();
         pkg.insert("name".to_string(), Value16::string(name));
         let after_slash = line.split('/').nth(1).unwrap_or("");
@@ -267,7 +267,7 @@ pub fn apt_add_key(args: &[Value16]) -> HudHudResult<Value16> {
         .map_err(|e| runtime_error(format!("apt.add_key: curl failed: {e}")))?;
 
     if !curl.status.success() {
-        let mut obj = HashMap::new();
+        let mut obj = hudhudscript_bytecode::ObjMap::default();
         obj.insert("ok".to_string(), Value16::bool_(false));
         obj.insert(
             "message".to_string(),
@@ -286,7 +286,7 @@ pub fn apt_add_key(args: &[Value16]) -> HudHudResult<Value16> {
         .stderr(std::process::Stdio::piped())
         .spawn();
 
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     match gpg {
         Ok(mut child) => {
             use std::io::Write;
@@ -338,7 +338,7 @@ fn run_cmd_result(cmd: &mut Command, op: &str) -> HudHudResult<Value16> {
     } else {
         String::from_utf8_lossy(&output.stderr).trim().to_string()
     };
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     obj.insert("ok".to_string(), Value16::bool_(ok));
     obj.insert("message".to_string(), Value16::string(msg));
     Ok(Value16::object(obj))

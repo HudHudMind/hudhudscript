@@ -60,7 +60,10 @@ fn highlight_rust_keywords() {
 fn language_from_tag() {
     assert!(matches!(Language::from_tag("rust"), Language::Rust));
     assert!(matches!(Language::from_tag("py"), Language::Python));
-    assert!(matches!(Language::from_tag("hudhud"), Language::HudHudScript));
+    assert!(matches!(
+        Language::from_tag("hudhud"),
+        Language::HudHudScript
+    ));
     assert!(matches!(Language::from_tag("unknown"), Language::Generic));
 }
 

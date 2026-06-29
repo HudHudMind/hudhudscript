@@ -37,7 +37,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
 
     // Agent system
     map.insert("đại_lý".to_string(), Keyword::Agent);
-    map.insert("nhiệm_vụ".to_string(), Keyword::Task);
     map.insert("công_cụ".to_string(), Keyword::Tool);
     map.insert("tài_nguyên".to_string(), Keyword::Resource);
     map.insert("mcp".to_string(), Keyword::Mcp);
@@ -108,7 +107,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
     map.insert("kích_hoạt".to_string(), Keyword::Trigger);
     // Native Vietnamese translations
     map.insert("hành_động".to_string(), Keyword::Action);
-    map.insert("quy_tắc_đại_lý".to_string(), Keyword::AgentRule);
     map.insert("trạng_thái_đại_lý".to_string(), Keyword::AgentState);
     map.insert("cho_phép".to_string(), Keyword::Allow);
     map.insert(
@@ -124,8 +122,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
     map.insert("không_trang_trọng".to_string(), Keyword::Informal);
     map.insert("mục_đích".to_string(), Keyword::Intent);
     map.insert("ưu_tiên".to_string(), Keyword::Priority);
-    map.insert("chuỗi_quy_tắc".to_string(), Keyword::RuleChain);
-    map.insert("tập_quy_tắc".to_string(), Keyword::RuleSet);
     map.insert("máy_trạng_thái".to_string(), Keyword::StateMachine);
     map.insert("kỹ_thuật".to_string(), Keyword::Technical);
     map.insert("biến_đổi".to_string(), Keyword::Transform);

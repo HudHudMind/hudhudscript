@@ -1,0 +1,17 @@
+// String Methods Demo
+
+var text = "Hello World";
+
+// Length property
+var len = text.length;
+
+// Case conversion
+var upper = text.toUpper();
+var lower = text.toLower();
+
+// Trimming
+var spaced = "  trim me  ";
+var trimmed = spaced.trim();
+
+// Substring
+var sub = text.substring(0, 5);

@@ -1,2 +1,2 @@
-mod test_schema;
 mod test_cache;
+mod test_schema;

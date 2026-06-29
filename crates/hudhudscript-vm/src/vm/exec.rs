@@ -1,4 +1,4 @@
-mod helpers;
+pub(crate) mod helpers;
 use crate::vm::machine::ChunkCache;
 use crate::vm::prepack::prepack_instructions;
 use crate::vm::VM;
@@ -6,7 +6,7 @@ use crate::vm::{numeric_slot, GenStep, NumericSlot};
 use hudhudscript_bytecode::error::compile_codes;
 use hudhudscript_bytecode::error::{CompileError, CompileResult};
 use hudhudscript_bytecode::FunctionData;
-use hudhudscript_bytecode::{Bytecode, FunctionChunk, Value16};
+use hudhudscript_bytecode::{Bytecode, FunctionChunk, SymId, Value16};
 use std::mem::ManuallyDrop;
 use std::sync::Arc;
 
@@ -15,6 +15,7 @@ impl VM {
     pub(crate) fn exec_call(
         &mut self,
         name_sym: hudhudscript_bytecode::SymId,
+        function_idx: u32,
         arg_count: u8,
         first_arg: u8,
         dst: u8,
@@ -23,8 +24,70 @@ impl VM {
     ) -> CompileResult<()> {
         let sym_id = name_sym.0 as usize;
 
+        // DIRECT INDEX FAST PATH: payload already resolved the function index.
+        // Skip symbol resolution, variable lookup, and call-cache setup.
+        if function_idx != u32::MAX {
+            let chunk = {
+                let funcs = bytecode.functions.borrow();
+                if let Some(chunk) = funcs.get(function_idx as usize).cloned() {
+                    chunk
+                } else {
+                    return Err(compile_codes::runtime_error(format!(
+                        "Call direct index {} out of bounds",
+                        function_idx
+                    )));
+                }
+            };
+            let n = arg_count as usize;
+            let first = first_arg as usize;
+            let mut arr = [Value16::null(); 8];
+            let mut saved_scratch = Vec::new();
+            let args: &[Value16] = if n > 8 {
+                self.args_scratch.clear();
+                self.args_scratch
+                    .extend((0..n).map(|i| self.registers[first + i]));
+                saved_scratch = std::mem::take(&mut self.args_scratch);
+                &saved_scratch
+            } else {
+                for i in 0..n {
+                    arr[i] = self.registers[first + i];
+                }
+                &arr[..n]
+            };
+            if chunk.is_async {
+                let name = bytecode.resolve_symbol(name_sym.0);
+                let promise = self.spawn_async_chunk(
+                    Arc::clone(&chunk),
+                    &chunk.params,
+                    args,
+                    bytecode,
+                    &name,
+                    None,
+                );
+                self.registers[255] = promise;
+            } else if chunk.is_plain_function {
+                // P1: fast path for plain recursive functions
+                self.fast_call_push_frame(&chunk, &chunk.params, args, name_sym, first_arg, dst)?;
+            } else {
+                self.exec_call_push_frame(
+                    &chunk,
+                    &chunk.params,
+                    args,
+                    bytecode,
+                    name_sym,
+                    None,
+                    first_arg,
+                    dst,
+                )?;
+            }
+            return Ok(());
+        }
+
         // FAST PATH: call-cache hit — raw pointer, no atomic ops.
-        let cached = self.call_cache.get(sym_id).and_then(|slot| slot.as_ref().map(|(ptr, params_ptr)| (*ptr, *params_ptr)));
+        let cached = self
+            .call_cache
+            .get(sym_id)
+            .and_then(|slot| slot.as_ref().map(|(ptr, params_ptr)| (*ptr, *params_ptr)));
 
         let n = arg_count as usize;
         let first = first_arg as usize;
@@ -34,11 +97,14 @@ impl VM {
         let mut saved_scratch = Vec::new();
         let args: &[Value16] = if n > 8 {
             self.args_scratch.clear();
-            self.args_scratch.extend((0..n).map(|i| self.registers[first + i]));
+            self.args_scratch
+                .extend((0..n).map(|i| self.registers[first + i]));
             saved_scratch = std::mem::take(&mut self.args_scratch);
             &saved_scratch
         } else {
-            for i in 0..n { arr[i] = self.registers[first + i]; }
+            for i in 0..n {
+                arr[i] = self.registers[first + i];
+            }
             &arr[..n]
         };
 
@@ -59,7 +125,9 @@ impl VM {
                 );
                 self.registers[255] = promise;
             } else {
-                self.exec_call_push_frame(chunk, params, args, bytecode, name_sym, None, first_arg, dst)?;
+                self.exec_call_push_frame(
+                    chunk, params, args, bytecode, name_sym, None, first_arg, dst,
+                )?;
             }
             Ok(())
         } else {
@@ -69,8 +137,15 @@ impl VM {
                 Ok(())
             } else if let Some(func_val) = self.get_var_cloned(&name) {
                 if let Some(func) = func_val.as_function_data() {
-                    let FunctionData { chunk_name, params, captures, .. } = func;
-                    if let Some(chunk) = bytecode.functions.borrow().get(chunk_name.as_str()).cloned() {
+                    let FunctionData {
+                        chunk_name,
+                        params,
+                        captures,
+                        ..
+                    } = func;
+                    if let Some(chunk) = bytecode
+                        .get_function(chunk_name.as_str())
+                    {
                         if captures.is_empty() {
                             if self.call_cache.len() <= sym_id {
                                 self.call_cache.resize(sym_id + 1, None);
@@ -81,11 +156,25 @@ impl VM {
                         }
                         if chunk.is_async {
                             let promise = self.spawn_async_chunk(
-                                Arc::clone(&chunk), &params, args, bytecode, &name, Some(&captures),
+                                Arc::clone(&chunk),
+                                &params,
+                                args,
+                                bytecode,
+                                &name,
+                                Some(&captures),
                             );
                             self.registers[255] = promise;
                         } else {
-                            self.exec_call_push_frame(&chunk, &params, args, bytecode, name_sym, Some(&captures), first_arg, dst)?;
+                            self.exec_call_push_frame(
+                                &chunk,
+                                &params,
+                                args,
+                                bytecode,
+                                name_sym,
+                                Some(&captures),
+                                first_arg,
+                                dst,
+                            )?;
                         }
                         Ok(())
                     } else {
@@ -97,20 +186,45 @@ impl VM {
                     }
                 } else {
                     // Try action_registry for perform-style calls (AgentName.actionName)
-                    if let Some(action_chunk) = bytecode.action_registry.borrow().get(name.as_str()).cloned() {
+                    if let Some(action_chunk) = bytecode
+                        .action_registry
+                        .borrow()
+                        .get(name.as_str())
+                        .cloned()
+                    {
                         if action_chunk.params.len() != n {
                             return Err(Self::runtime_error_with_pos(
-                                format!("Action {} expects {} arguments, got {}", name, action_chunk.params.len(), n),
-                                bytecode, ip,
+                                format!(
+                                    "Action {} expects {} arguments, got {}",
+                                    name,
+                                    action_chunk.params.len(),
+                                    n
+                                ),
+                                bytecode,
+                                ip,
                             ));
                         }
                         if action_chunk.is_async {
                             let promise = self.spawn_async_chunk(
-                                Arc::clone(&action_chunk), &action_chunk.params, args, bytecode, &name, None,
+                                Arc::clone(&action_chunk),
+                                &action_chunk.params,
+                                args,
+                                bytecode,
+                                &name,
+                                None,
                             );
                             self.registers[255] = promise;
                         } else {
-                            self.exec_call_push_frame(&action_chunk, &action_chunk.params, args, bytecode, name_sym, None, first_arg, dst)?;
+                            self.exec_call_push_frame(
+                                &action_chunk,
+                                &action_chunk.params,
+                                args,
+                                bytecode,
+                                name_sym,
+                                None,
+                                first_arg,
+                                dst,
+                            )?;
                         }
                         Ok(())
                     } else {
@@ -123,28 +237,69 @@ impl VM {
                 }
             } else {
                 // Direct functions lookup (effects registered as functions)
-                if let Some(chunk) = bytecode.functions.borrow().get(name.as_str()).cloned() {
+                if let Some(chunk) = bytecode.get_function(name.as_str()) {
                     if chunk.is_async {
-                        let promise = self.spawn_async_chunk(Arc::clone(&chunk), &chunk.params, args, bytecode, &name, None);
+                        let promise = self.spawn_async_chunk(
+                            Arc::clone(&chunk),
+                            &chunk.params,
+                            args,
+                            bytecode,
+                            &name,
+                            None,
+                        );
                         self.registers[255] = promise;
                     } else {
-                        self.exec_call_push_frame(&chunk, &chunk.params, args, bytecode, name_sym, None, first_arg, dst)?;
+                        self.exec_call_push_frame(
+                            &chunk,
+                            &chunk.params,
+                            args,
+                            bytecode,
+                            name_sym,
+                            None,
+                            first_arg,
+                            dst,
+                        )?;
                     }
                     Ok(())
-                } else if let Some(action_chunk) = bytecode.action_registry.borrow().get(name.as_str()).cloned() {
+                } else if let Some(action_chunk) = bytecode
+                    .action_registry
+                    .borrow()
+                    .get(name.as_str())
+                    .cloned()
+                {
                     if action_chunk.params.len() != n {
                         return Err(Self::runtime_error_with_pos(
-                            format!("Action {} expects {} arguments, got {}", name, action_chunk.params.len(), n),
-                            bytecode, ip,
+                            format!(
+                                "Action {} expects {} arguments, got {}",
+                                name,
+                                action_chunk.params.len(),
+                                n
+                            ),
+                            bytecode,
+                            ip,
                         ));
                     }
                     if action_chunk.is_async {
                         let promise = self.spawn_async_chunk(
-                            Arc::clone(&action_chunk), &action_chunk.params, args, bytecode, &name, None,
+                            Arc::clone(&action_chunk),
+                            &action_chunk.params,
+                            args,
+                            bytecode,
+                            &name,
+                            None,
                         );
                         self.registers[255] = promise;
                     } else {
-                        self.exec_call_push_frame(&action_chunk, &action_chunk.params, args, bytecode, name_sym, None, first_arg, dst)?;
+                        self.exec_call_push_frame(
+                            &action_chunk,
+                            &action_chunk.params,
+                            args,
+                            bytecode,
+                            name_sym,
+                            None,
+                            first_arg,
+                            dst,
+                        )?;
                     }
                     Ok(())
                 } else {
@@ -177,14 +332,17 @@ impl VM {
         // PERF-T1-1: Same zero-alloc fast path as exec_call.
         if n > 8 {
             self.args_scratch.clear();
-            self.args_scratch.extend((0..n).map(|i| self.registers[first + i]));
+            self.args_scratch
+                .extend((0..n).map(|i| self.registers[first + i]));
             let args = std::mem::take(&mut self.args_scratch);
             let result = self.exec_super_call_inner(&args, method_name_sym, bytecode);
             self.args_scratch = args;
             result
         } else {
             let mut arr = [Value16::null(); 8];
-            for i in 0..n { arr[i] = self.registers[first + i]; }
+            for i in 0..n {
+                arr[i] = self.registers[first + i];
+            }
             self.exec_super_call_inner(&arr[..n], method_name_sym, bytecode)
         }
     }
@@ -225,10 +383,21 @@ impl VM {
             })?;
 
         let chunk_name = format!("{}::{}", parent_name, method_name);
-        if let Some(chunk) = bytecode.functions.borrow().get(chunk_name.as_str()).cloned() {
+        if let Some(chunk) = bytecode
+            .get_function(chunk_name.as_str())
+        {
             self.class_context_stack.push(parent_name.clone());
             let func_sym = hudhudscript_bytecode::interner::intern(&chunk_name);
-            self.exec_call_push_frame(&chunk, &chunk.params, args, bytecode, hudhudscript_bytecode::SymId(func_sym.0), Some(&std::collections::HashMap::new()), 0, 255)?;
+            self.exec_call_push_frame(
+                &chunk,
+                &chunk.params,
+                args,
+                bytecode,
+                hudhudscript_bytecode::SymId(func_sym.0),
+                Some(&std::collections::HashMap::new()),
+                0,
+                255,
+            )?;
             if let Some(frame) = self.frame_stack.last_mut() {
                 frame.class_context = true;
             }
@@ -265,6 +434,8 @@ impl VM {
                 max_sym: 0,
             });
             self.chunk_cache.insert(cache_key, Arc::clone(&c));
+            // P5.1: Sonradan yüklenen chunk sabitleri GC root.
+            self.gc_constant_roots.extend_from_slice(&chunk.constants);
             self.chunk_cache_last_key = cache_key;
             self.chunk_cache_last_val = Some(Arc::clone(&c));
             c

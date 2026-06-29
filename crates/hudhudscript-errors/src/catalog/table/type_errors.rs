@@ -238,6 +238,38 @@ let x = add(1, 2);"),
         category: ErrorCategory::Type,
     };
 
+pub const TYPE_BIGINT_NUMBER_MIX: ErrorEntry =
+    ErrorEntry {
+        code: ErrorCode(310),
+        long_code: "HHS_E_TYPE_BIGINT_NUMBER_MIX",
+        short_code: "E0310",
+        title: "BigInt and Number cannot be mixed",
+        short_description: "A BigInt value was used in an arithmetic operation with a Number (float) operand. Implicit conversion is forbidden because it loses precision.",
+        long_description: "BigInt and Number (floating-point) types cannot be automatically mixed in arithmetic or comparison. BigInt values represent exact integers of arbitrary size, while Number values are IEEE 754 64-bit floats with ~53 bits of integer precision. Any implicit conversion would silently lose information, which violates explicit correctness guarantees.\n\nTo force a BigInt to Number conversion (accepting potential precision loss), use the to_number() builtin. Example: to_number(myBigInt) + 0.5.",
+        hints: &["Use to_number(x) to explicitly convert a BigInt to Number", "Keep both operands as integers to preserve exact precision", "Split the computation: compute the BigInt part first, then convert the final result"],
+        example_bad: Some("let x = bigint(2).pow(100); print(x + 0.5);"),
+        example_good: Some("let x = bigint(2).pow(100); print(to_number(x) + 0.5);"),
+        see_also: &[],
+        since_version: "0.7.9",
+        category: ErrorCategory::Type,
+    };
+
+pub const TYPE_THREAD_TRANSFER_UNSUPPORTED: ErrorEntry =
+    ErrorEntry {
+        code: ErrorCode(311),
+        long_code: "HHS_E_TYPE_THREAD_TRANSFER_UNSUPPORTED",
+        short_code: "E0311",
+        title: "Value type cannot cross thread boundary",
+        short_description: "This value type cannot be safely transferred between threads via detach/attach.",
+        long_description: "Some value types (Function, Class, Generator, Tool, Resource) contain runtime state that cannot be serialized or transferred to another thread's heap. Transferring them would cause undefined behavior.\n\nLimit yield/actor-send to data types: strings, numbers, BigInts, arrays, objects, sets, maps, instances, options, or results.",
+        hints: &["Convert to an array or string before transferring", "Use a wrapper object to transfer the needed data instead", "Check the generator body: only heap-safe types can be yielded"],
+        example_bad: Some("function* gen(instance) { yield instance; }"),
+        example_good: Some("function* gen(instance) { yield instance.toObject(); }"),
+        see_also: &[],
+        since_version: "0.7.16",
+        category: ErrorCategory::Type,
+    };
+
 pub const TYPE_NON_EXHAUSTIVE_MATCH: ErrorEntry =
     ErrorEntry {
         code: ErrorCode(324),
@@ -267,6 +299,7 @@ match x {
 
 pub static ENTRIES: &[ErrorEntry] = &[
     TYPE_AWAIT_IN_ATOMICALLY,
+    TYPE_BIGINT_NUMBER_MIX,
     TYPE_DUPLICATE_VARIABLE,
     TYPE_INVALID_AWAIT,
     TYPE_INVALID_INDEX,
@@ -278,4 +311,5 @@ pub static ENTRIES: &[ErrorEntry] = &[
     TYPE_UNDEFINED_FUNCTION,
     TYPE_UNDEFINED_VARIABLE,
     TYPE_WRONG_ARGUMENT_COUNT,
+    TYPE_THREAD_TRANSFER_UNSUPPORTED,
 ];

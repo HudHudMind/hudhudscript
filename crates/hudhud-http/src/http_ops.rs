@@ -93,12 +93,13 @@ fn execute_request(http_method: &str, args: &[Value16]) -> HudHudResult<Value16>
     };
 
     for (k, v) in &headers_map {
-        let clean_k = k.replace(['\r', '\n'], "");
+        let clean_k = k.to_string().replace(['\r', '\n'], "");
         let clean_v = v.replace(['\r', '\n'], "");
         req = req.header(clean_k.as_str(), clean_v.as_str());
     }
     for (k, v) in &query_params {
-        req = req.query(&[(k.as_str(), v.as_str())]);
+        let k_str = k.to_string();
+        req = req.query(&[(k_str.as_str(), v.as_str())]);
     }
     if let Some(body) = &body_str {
         req = req
@@ -112,7 +113,7 @@ fn execute_request(http_method: &str, args: &[Value16]) -> HudHudResult<Value16>
 
     let status = response.status().as_u16();
     let ok = response.status().is_success();
-    let resp_headers: HashMap<String, Value16> = response
+    let resp_headers: hudhudscript_bytecode::ObjMap = response
         .headers()
         .iter()
         .map(|(k, v)| {
@@ -130,7 +131,7 @@ fn execute_request(http_method: &str, args: &[Value16]) -> HudHudResult<Value16>
         .map(|j| serde_to_value(&j))
         .unwrap_or_else(Value16::null);
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("status".to_string(), Value16::number(status as f64));
     result.insert("ok".to_string(), Value16::bool_(ok));
     result.insert("headers".to_string(), Value16::object(resp_headers));

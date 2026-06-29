@@ -4,8 +4,9 @@ pub(super) use crate::bytecode::{
     Bytecode, FunctionChunk, FunctionData, Instruction, SymId, Value16,
 };
 pub(super) use crate::error::{compile_codes, CompileResult, SourcePosition};
-pub(super) use hudhudscript_ast::{BinaryOp, Decl, Expr, Literal, Span, Stmt};
+pub(super) use hudhudscript_ast::{BinaryOp, Decl, Expr, Literal, Span, Stmt, GateBranchAst, GateTargetAst, LoopItemAst, StepGateAst, ChainTargetAst, ChainLinkAst};
 pub(super) use std::collections::{HashMap, HashSet};
+use rustc_hash::FxHashMap;
 pub(super) use std::sync::Arc;
 
 mod expr;
@@ -39,12 +40,33 @@ pub struct Compiler {
     known_classes: HashSet<String>,
     /// Track declared generator function names so we can emit MakeGenerator
     known_generators: HashSet<String>,
+    /// P5d: true when the Math global has been reassigned in this compilation unit.
+    math_reassigned: bool,
+    /// P3a: function registry for compiler-side inlining.
+    /// Populated at function declaration time, independent of bytecode.function_names RefCell.
+    inline_function_chunks: FxHashMap<String, Arc<FunctionChunk>>,
+    /// P4: call-site parameter type tracking.
+    /// fn_name -> Vec<(param_name, ExprType)>
+    call_site_param_types: HashMap<String, Vec<(String, crate::compiler::expr::ExprType)>>,
+    /// P4a: function parameter names registry.
+    /// fn_name -> Vec<param_name>
+    fn_param_names: HashMap<String, Vec<String>>,
+    /// P4: current function being compiled (None = top-level)
+    current_function_name: Option<String>,
     /// Issue #982: Track declared trait names → required method names for SOP enforcement
     known_traits: HashMap<String, Vec<String>>,
     /// SOP0003: Track declared role names → capability names for role enforcement
     known_roles: HashMap<String, Vec<String>>,
     /// FUNCTION0001: Track function names per scope for duplicate detection
     declared_fns: Vec<HashMap<String, usize>>,
+    /// ISSUE-2e-1: set of top-level names referenced inside any function/closure
+    /// body.  Used to build `Bytecode::main_local_shared` so the VM can later
+    /// decide whether a top-level symbol is main-frame-only or shared.
+    pub(super) referenced_top_level: HashSet<String>,
+    /// ISSUE-2e-optimize: top-level names classified as "shared" BEFORE
+    /// codegen starts, via a pre-pass.  Used by assignment.rs and core.rs
+    /// to decide whether to emit StoreGlobal/DeclGlobal or stay pure register.
+    pub(super) shared_top_level_names: HashSet<String>,
     /// Pending statement-boundary source position consumed by the next
     /// `ct_emit`. Populated by `ct_mark_stmt_pos` at the start of every
     /// statement; drained when the first instruction of that statement
@@ -67,6 +89,20 @@ pub struct Compiler {
     /// K1-1: Next local-variable register index (params + locals).
     /// Parameters start at r0, locals continue sequentially.
     pub(super) next_local_reg: u8,
+    /// FAZ F: Loop step name registry for cross-loop entry selector lookup.
+    /// Maps loop_name → step_names (in order).
+    pub(super) loop_step_names: HashMap<String, Vec<String>>,
+    /// FAZ G: Gate declaration registry for AttachGate resolution.
+    /// Maps gate_name → (branches, else_target).
+    pub(super) gate_registry: HashMap<String, (Vec<GateBranchAst>, GateTargetAst)>,
+    /// A2: Standalone step registry for use_step resolution.
+    /// Maps step_name → (params, body, gate).
+    pub(super) step_registry: HashMap<String, (Vec<String>, Vec<Stmt>, Option<StepGateAst>)>,
+    /// A3: Attached steps pending injection per loop.
+    /// Maps loop_name → Vec<LoopItemAst>.
+    pub(super) attach_step_queue: HashMap<String, Vec<LoopItemAst>>,
+    /// A3: Attached loops pending injection per chain.
+    pub(super) attach_loop_queue: HashMap<String, Vec<(String, Option<ChainTargetAst>, Option<ChainTargetAst>)>>,
 }
 
 /// Per-function-body compilation context (ISSUE-2).
@@ -87,11 +123,13 @@ fn span_pos(span: &Span) -> SourcePosition {
     }
 }
 
-mod decl;
+pub mod decl;
 mod decl_core;
+mod decl_precompute;
 mod decl_expr;
 mod decl_function;
 mod target_impl;
+mod p4b_prepass;
 
 pub use decl::*;
 pub use decl_core::*;

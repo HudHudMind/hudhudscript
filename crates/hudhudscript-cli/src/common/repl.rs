@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 pub fn run_repl(debug: bool, load_file: Option<PathBuf>) -> Result<(), CliError> {
-    use hudhudscript_cli::repl::HudCompleter;
+    use crate::repl::HudCompleter;
     use rustyline::error::ReadlineError;
     use rustyline::Editor;
     // In-memory history mirror for :history command (rustyline's history is opaque)
@@ -40,11 +40,11 @@ pub fn run_repl(debug: bool, load_file: Option<PathBuf>) -> Result<(), CliError>
     // setup kept for future wiring (VM pulls providers from shared crates,
     // so we don't need to stash the registry on the VM the way the
     // interpreter did).
-    let _provider_registry = setup_provider_registry(debug).map_err(CliError::Runtime)?;
+    let _provider_registry = setup_provider_registry(debug, None).map_err(CliError::Runtime)?;
 
     // Keep a Tokio runtime alive for the whole REPL so async providers
     // (reqwest, tcp, ws) have a context when VM-side builtins call them.
-    let rt = tokio::runtime::Runtime::new()
+    let rt = tokio::runtime::Builder::new_current_thread().enable_all().build()
         .map_err(|e| CliError::Runtime(format!("Failed to create runtime: {}", e)))?;
     let _rt_guard = rt.enter();
 
@@ -233,19 +233,16 @@ pub fn execute_code(code: &str, vm: &mut hudhudscript_vm::VM, debug: bool) {
 fn show_vars(vm: &hudhudscript_vm::VM) {
     let mut user_vars: Vec<(String, String, String)> = vm
         .all_globals()
-        .filter(|(name, v)| {
-            // Hide reserved markers and stdlib-module shim objects
-            // (`{"__module": "http"}` registered by
-            // `register_vm_stdlib_modules`). `bytecode::Value` has no
-            // NativeFunction variant — natives live in the module_registry,
-            // not in scopes[0] — so nothing else to filter out.
+        .filter(|(sym, v)| {
+            let name = hudhudscript_bytecode::interner::resolve(hudhudscript_bytecode::interner::SymbolId(sym.0));
             !name.starts_with("__")
                 && !v
                     .as_object()
                     .map(|obj| obj.contains_key("__module"))
                     .unwrap_or(false)
         })
-        .map(|(name, value)| {
+        .map(|(sym, value)| {
+            let name = hudhudscript_bytecode::interner::resolve(hudhudscript_bytecode::interner::SymbolId(sym.0));
             let type_name = vm_value_type_name(value).to_string();
             let display = format!("{:?}", value);
             let display = if display.len() > 80 {

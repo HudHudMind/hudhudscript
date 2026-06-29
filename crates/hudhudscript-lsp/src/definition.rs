@@ -63,12 +63,12 @@ pub fn word_at_position(source: &str, pos: Position) -> Option<String> {
         return None;
     }
 
-    let start = line[..col]
+    let start = line.get(..col).unwrap_or(line)
         .rfind(|c: char| !c.is_alphanumeric() && c != '_')
         .map(|i| i + 1)
         .unwrap_or(0);
 
-    let end = line[col..]
+    let end = line.get(col..).unwrap_or("")
         .find(|c: char| !c.is_alphanumeric() && c != '_')
         .map(|i| col + i)
         .unwrap_or(line.len());
@@ -77,7 +77,7 @@ pub fn word_at_position(source: &str, pos: Position) -> Option<String> {
         return None;
     }
 
-    Some(line[start..end].to_string())
+    Some(line.get(start..end).unwrap_or("").to_string())
 }
 
 // ── AstVisitor-based definition collector ──────────────────────────────────
@@ -186,6 +186,7 @@ impl AstVisitor for DefinitionCollector {
             Decl::Music { name, span, .. } => (name.clone(), *span),
             Decl::UiApp { name, span, .. } => (name.clone(), *span),
             Decl::Deploy { name, span, .. } => (name.clone(), *span),
+            _ => return VisitControl::Continue,
         };
 
         self.defs.push(DefinitionEntry {
@@ -198,9 +199,9 @@ impl AstVisitor for DefinitionCollector {
 
 /// Walk the AST and collect all named definition locations.
 pub fn collect_definitions(source: &str) -> Vec<DefinitionEntry> {
-    let ast = match parse(source) {
-        Ok(ast) => ast,
-        Err(_) => return Vec::new(),
+    let ast = match crate::server::helpers::isolate(|| parse(source)) {
+        Some(Ok(ast)) => ast,
+        _ => return Vec::new(),
     };
 
     let mut collector = DefinitionCollector { defs: Vec::new() };

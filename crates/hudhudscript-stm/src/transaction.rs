@@ -82,4 +82,20 @@ impl<V: Clone> Transaction<V> {
     pub fn write_count(&self) -> usize {
         self.writes.len()
     }
+
+    /// Snapshot values reachable from this transaction for conservative
+    /// traversals such as GC root marking.
+    pub fn root_values(&self) -> Vec<V> {
+        let mut values = Vec::with_capacity(self.reads.len() + self.writes.len());
+        for tvar in self.reads.keys() {
+            if self.writes.contains_key(tvar) {
+                continue;
+            }
+            values.push(tvar.read_committed().0);
+        }
+        for entry in self.writes.values() {
+            values.push(entry.new_value.clone());
+        }
+        values
+    }
 }

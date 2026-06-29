@@ -20,10 +20,7 @@ impl AgentExecutor for SuccessExecutor {
 }
 
 fn make_executor() -> SwarmExecutor {
-    SwarmExecutor::with_agent_executor(
-        Arc::new(EventBus::new()),
-        Arc::new(SuccessExecutor),
-    )
+    SwarmExecutor::with_agent_executor(Arc::new(EventBus::new()), Arc::new(SuccessExecutor))
 }
 
 fn agents() -> Vec<String> {
@@ -184,7 +181,6 @@ fn test_swarm_config_default() {
 async fn test_custom_agent_executor() {
     use hudhudscript_orchestration::agent_executor::AgentTaskResult;
 
-
     struct HighConfidenceExecutor;
 
     #[async_trait::async_trait]
@@ -206,7 +202,10 @@ async fn test_custom_agent_executor() {
         }
     }
 
-    let exec = SwarmExecutor::with_agent_executor(Arc::new(EventBus::new()), Arc::new(HighConfidenceExecutor));
+    let exec = SwarmExecutor::with_agent_executor(
+        Arc::new(EventBus::new()),
+        Arc::new(HighConfidenceExecutor),
+    );
     exec.register(
         "sx".to_string(),
         SwarmConfig {

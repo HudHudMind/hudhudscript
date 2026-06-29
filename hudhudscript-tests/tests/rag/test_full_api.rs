@@ -27,14 +27,27 @@ fn chunk_strategy_recursive() {
 
 #[test]
 fn chunker_chunk_basic() {
-    let text = "HudHudScript is a multilingual scripting language. It supports many human languages.";
-    let chunks = Chunker::chunk(text, ChunkStrategy::Fixed { size: 100, overlap: 10 });
+    let text =
+        "HudHudScript is a multilingual scripting language. It supports many human languages.";
+    let chunks = Chunker::chunk(
+        text,
+        ChunkStrategy::Fixed {
+            size: 100,
+            overlap: 10,
+        },
+    );
     assert!(!chunks.is_empty());
 }
 
 #[test]
 fn chunk_empty_document_returns_empty() {
-    let chunks = Chunker::chunk("", ChunkStrategy::Fixed { size: 100, overlap: 0 });
+    let chunks = Chunker::chunk(
+        "",
+        ChunkStrategy::Fixed {
+            size: 100,
+            overlap: 0,
+        },
+    );
     assert!(chunks.is_empty());
 }
 
@@ -55,7 +68,10 @@ fn document_plain_text() {
 
 #[test]
 fn document_format_variants() {
-    assert!(matches!(DocumentFormat::PlainText, DocumentFormat::PlainText));
+    assert!(matches!(
+        DocumentFormat::PlainText,
+        DocumentFormat::PlainText
+    ));
     assert!(matches!(DocumentFormat::Markdown, DocumentFormat::Markdown));
     assert!(matches!(DocumentFormat::Code, DocumentFormat::Code));
 }
@@ -158,8 +174,12 @@ fn vector_store_insert_and_search() {
         persist_path: None,
     };
     let mut store = VectorStore::new(cfg).unwrap();
-    store.insert("doc_a", vec![1.0, 0.0, 0.0, 0.0], serde_json::Value::Null).unwrap();
-    store.insert("doc_b", vec![0.9, 0.1, 0.0, 0.0], serde_json::Value::Null).unwrap();
+    store
+        .insert("doc_a", vec![1.0, 0.0, 0.0, 0.0], serde_json::Value::Null)
+        .unwrap();
+    store
+        .insert("doc_b", vec![0.9, 0.1, 0.0, 0.0], serde_json::Value::Null)
+        .unwrap();
     let results = store.query(&[1.0, 0.0, 0.0, 0.0], 2).unwrap();
     assert_eq!(results.len(), 2);
     assert_eq!(results[0].text, "doc_a");
@@ -181,10 +201,7 @@ fn vector_store_wrong_dimension_errors() {
 
 #[test]
 fn distance_metric_variants() {
-    assert!(matches!(
-        DistanceMetric::Cosine,
-        DistanceMetric::Cosine
-    ));
+    assert!(matches!(DistanceMetric::Cosine, DistanceMetric::Cosine));
     assert!(matches!(
         DistanceMetric::Euclidean,
         DistanceMetric::Euclidean

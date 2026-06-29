@@ -152,7 +152,7 @@ pub fn ocr_extract_with_confidence(args: &[Value16]) -> HudHudResult<Value16> {
     } else {
         0.0
     };
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("text".to_string(), Value16::string(text));
     result.insert("confidence".to_string(), Value16::number(avg_confidence));
     Ok(Value16::object(result))
@@ -202,7 +202,7 @@ pub fn ocr_pdf(args: &[Value16]) -> HudHudResult<Value16> {
     }
     cmd.arg("pdf");
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     match cmd.output() {
         Ok(output) => {
             let success = output.status.success();

@@ -158,7 +158,7 @@ pub fn dispatch(method: RegexMethodId, args: &[Value16]) -> HudHudResult<Value16
             match re.captures(&input) {
                 Some(caps) => {
                     let m = caps.get(0).unwrap();
-                    let mut result = HashMap::new();
+                    let mut result = hudhudscript_bytecode::ObjMap::default();
                     result.insert("matched".to_string(), Value16::bool_(true));
                     result.insert("index".to_string(), Value16::number(m.start() as f64));
                     result.insert("value".to_string(), Value16::string(m.as_str().to_string()));
@@ -181,7 +181,7 @@ pub fn dispatch(method: RegexMethodId, args: &[Value16]) -> HudHudResult<Value16
             let matches: Vec<Value16> = re
                 .find_iter(&input)
                 .map(|m| {
-                    let mut obj = HashMap::new();
+                    let mut obj = hudhudscript_bytecode::ObjMap::default();
                     obj.insert("index".to_string(), Value16::number(m.start() as f64));
                     obj.insert("value".to_string(), Value16::string(m.as_str().to_string()));
                     Value16::object(obj)

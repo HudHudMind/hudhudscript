@@ -115,6 +115,40 @@ impl crate::vm::VM {
                 Ok(true)
             }
 
+            // exception() constructor — canonical exception type (lowercase)
+            "exception" | "istisna" => {
+                if arg_count < 2 {
+                    return Err(compile_codes::runtime_error(
+                        "exception() requires at least 2 arguments: code, title".to_string(),
+                    ));
+                }
+                let code = self.registers[first_arg as usize]
+                    .as_string()
+                    .ok_or_else(|| {
+                        compile_codes::runtime_error("exception() code must be string".to_string())
+                    })?;
+                let title = self.registers[first_arg as usize + 1]
+                    .as_string()
+                    .ok_or_else(|| {
+                        compile_codes::runtime_error("exception() title must be string".to_string())
+                    })?;
+                let description = if arg_count >= 3 {
+                    self.registers[first_arg as usize + 2]
+                        .as_string()
+                        .unwrap_or_default()
+                } else {
+                    String::new()
+                };
+                let value = if arg_count >= 4 {
+                    self.registers[first_arg as usize + 3]
+                } else {
+                    Value16::null()
+                };
+                self.registers[255] =
+                    crate::vm::exception_value::make_exception(&code, &title, &description, value);
+                Ok(true)
+            }
+
             // env() function
             "env" => {
                 if arg_count != 1 {
@@ -125,9 +159,10 @@ impl crate::vm::VM {
                 }
                 let val = self.registers[first_arg as usize];
                 if let Some(key) = val.as_string() {
-                    let result = Self::env_lookup(&key);
+                    // HOST-5: enforce env read policy before lookup.
+                    self.host_access_policy.ensure_env_read(&key)?;
+                    let result = self.env_lookup(&key);
                     self.registers[255] = result;
-
                 } else {
                     return Err(compile_codes::runtime_error(
                         "env() requires a string key".to_string(),
@@ -160,9 +195,8 @@ impl crate::vm::VM {
                 }
                 let val = self.registers[first_arg as usize];
                 let msg = self.value_to_string(&val);
-                self.registers[255] = Value16::promise(
-                    hudhudscript_bytecode::PromiseState::Rejected(msg),
-                );
+                self.registers[255] =
+                    Value16::promise(hudhudscript_bytecode::PromiseState::Rejected(msg));
                 Ok(true)
             }
             "Promise.all" => {
@@ -182,11 +216,10 @@ impl crate::vm::VM {
                     // `eval_promise_all_async` semantics.
                     match self.resolve_promise_all(promises_v) {
                         Ok(values) => {
-                            self.registers[255] = Value16::promise(
-                                hudhudscript_bytecode::PromiseState::Resolved(Box::new(
-                                    Value16::array(values),
-                                )),
-                            );
+                            self.registers[255] =
+                                Value16::promise(hudhudscript_bytecode::PromiseState::Resolved(
+                                    Box::new(Value16::array(values)),
+                                ));
                         }
                         Err(msg) => {
                             self.registers[255] = Value16::promise(
@@ -218,12 +251,16 @@ impl crate::vm::VM {
                     // array rejects with the canonical message rather
                     // than hanging.
                     match self.resolve_promise_race(promises.clone()) {
-                        Ok(val) => self.registers[255] = Value16::promise(
-                            hudhudscript_bytecode::PromiseState16::Resolved(Box::new(val)),
-                        ),
-                        Err(msg) => self.registers[255] = Value16::promise(
-                            hudhudscript_bytecode::PromiseState16::Rejected(msg),
-                        ),
+                        Ok(val) => {
+                            self.registers[255] = Value16::promise(
+                                hudhudscript_bytecode::PromiseState16::Resolved(Box::new(val)),
+                            )
+                        }
+                        Err(msg) => {
+                            self.registers[255] = Value16::promise(
+                                hudhudscript_bytecode::PromiseState16::Rejected(msg),
+                            )
+                        }
                     }
                 } else {
                     return Err(compile_codes::runtime_error(
@@ -249,7 +286,7 @@ impl crate::vm::VM {
                         if let Some(ps) = p.as_promise_state() {
                             match ps {
                                 hudhudscript_bytecode::PromiseState16::Resolved(v) => {
-                                    let mut obj = HashMap::new();
+                                    let mut obj = hudhudscript_bytecode::ObjMap::default();
                                     obj.insert(
                                         "status".to_string(),
                                         Value16::string("fulfilled".to_string()),
@@ -258,7 +295,7 @@ impl crate::vm::VM {
                                     results.push(Value16::object(obj));
                                 }
                                 hudhudscript_bytecode::PromiseState16::Rejected(reason) => {
-                                    let mut obj = HashMap::new();
+                                    let mut obj = hudhudscript_bytecode::ObjMap::default();
                                     obj.insert(
                                         "status".to_string(),
                                         Value16::string("rejected".to_string()),
@@ -275,7 +312,7 @@ impl crate::vm::VM {
                                             id.clone(),
                                         ),
                                     );
-                                    let mut obj = HashMap::new();
+                                    let mut obj = hudhudscript_bytecode::ObjMap::default();
                                     match self.resolve_promise_value(async_pending) {
                                         Ok(val) => {
                                             obj.insert(
@@ -303,7 +340,7 @@ impl crate::vm::VM {
                                     // `fulfilled` with the Pending promise itself
                                     // as the value. Preserve that here to stay in
                                     // lock-step with the interpreter.
-                                    let mut obj = HashMap::new();
+                                    let mut obj = hudhudscript_bytecode::ObjMap::default();
                                     obj.insert(
                                         "status".to_string(),
                                         Value16::string("fulfilled".to_string()),
@@ -318,7 +355,7 @@ impl crate::vm::VM {
                                 }
                             }
                         } else {
-                            let mut obj = HashMap::new();
+                            let mut obj = hudhudscript_bytecode::ObjMap::default();
                             obj.insert(
                                 "status".to_string(),
                                 Value16::string("fulfilled".to_string()),
@@ -327,11 +364,10 @@ impl crate::vm::VM {
                             results.push(Value16::object(obj));
                         }
                     }
-                    self.registers[255] = Value16::promise(
-                        hudhudscript_bytecode::PromiseState16::Resolved(Box::new(Value16::array(
-                            results,
-                        ))),
-                    );
+                    self.registers[255] =
+                        Value16::promise(hudhudscript_bytecode::PromiseState16::Resolved(
+                            Box::new(Value16::array(results)),
+                        ));
                 } else {
                     return Err(compile_codes::runtime_error(
                         "Promise.allSettled() requires an array".to_string(),

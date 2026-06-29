@@ -51,7 +51,7 @@ pub fn browser_installed_browsers(_args: &[Value16]) -> HudHudResult<Value16> {
         for path in *paths {
             if Path::new(path).exists() {
                 let version = get_browser_version(path);
-                let mut entry = HashMap::new();
+                let mut entry = hudhudscript_bytecode::ObjMap::default();
                 entry.insert("name".to_string(), Value16::string(name.to_string()));
                 entry.insert("path".to_string(), Value16::string(path.to_string()));
                 entry.insert("version".to_string(), Value16::string(version));

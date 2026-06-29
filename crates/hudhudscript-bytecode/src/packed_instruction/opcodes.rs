@@ -69,6 +69,7 @@ pub(crate) const OP_ARRAY_PUSH_RRR: u8 = 15;
 pub(crate) const OP_STRING_INDEX_OF_RRR: u8 = 16;
 pub(crate) const OP_STRING_CONTAINS_RRR: u8 = 17;
 pub(crate) const OP_STRCAT_MUT_RR: u8 = 18;
+pub(crate) const OP_STRING_CONCAT_RR: u8 = 19;
 
 pub(crate) const OP_INT_ADD_RR: u8 = 118;
 pub(crate) const OP_INT_SUB_RR: u8 = 119;
@@ -95,3 +96,18 @@ pub(crate) const OP_NUM_ADD_RI: u8 = 134;
 pub(crate) const OP_NUM_SUB_RI: u8 = 135;
 pub(crate) const OP_NUM_MUL_RI: u8 = 136;
 pub(crate) const OP_NUM_DIV_RI: u8 = 137;
+pub(crate) const OP_STR_REV_R: u8 = 138; // WI-7: string reverse (single arg)
+pub(crate) const OP_NUM_MUL_ADD_ASSIGN: u8 = 139;
+pub(crate) const OP_INT_MOD_I: u8 = 140;
+pub(crate) const OP_INT_CMP_LT_I: u8 = 141;
+pub(crate) const OP_INT_CMP_LE_I: u8 = 142;
+pub(crate) const OP_INT_CMP_EQ_I: u8 = 143;
+pub(crate) const OP_INT_CMP_NE_I: u8 = 144;
+pub(crate) const OP_NUM_MUL_ADD_INDEXED: u8 = 145;
+pub(crate) const OP_STR_CHAR_EQ_RR: u8 = 146;
+pub(crate) const OP_INT_LT_RR_JUMP_P: u8 = 147;
+pub(crate) const OP_INT_LE_RR_JUMP_P: u8 = 148;
+
+// P1b: specialized index packed opcodes
+pub(crate) const OP_INDEX_ARRAY_RRR: u8 = 149;
+pub(crate) const OP_INDEX_STRING_ASCII_RRR: u8 = 150;

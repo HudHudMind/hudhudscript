@@ -58,7 +58,7 @@ fn firefox_bookmarks() -> HudHudResult<Value16> {
                 for line in text.lines() {
                     let parts: Vec<&str> = line.splitn(3, '|').collect();
                     if parts.len() >= 2 {
-                        let mut entry = HashMap::new();
+                        let mut entry = hudhudscript_bytecode::ObjMap::default();
                         entry.insert("title".to_string(), Value16::string(parts[0].to_string()));
                         entry.insert("url".to_string(), Value16::string(parts[1].to_string()));
                         entry.insert(
@@ -96,7 +96,7 @@ fn extract_bookmarks_from_json(content: &str, results: &mut Vec<Value16>) {
                     String::new()
                 };
                 if !uri.is_empty() && (uri.starts_with("http://") || uri.starts_with("https://")) {
-                    let mut entry = HashMap::new();
+                    let mut entry = hudhudscript_bytecode::ObjMap::default();
                     entry.insert("title".to_string(), Value16::string(title));
                     entry.insert("url".to_string(), Value16::string(uri));
                     entry.insert("folder".to_string(), Value16::string(String::new()));
@@ -165,7 +165,7 @@ fn extract_chromium_bookmarks(content: &str, results: &mut Vec<Value16>) {
                     String::new()
                 };
                 if url.starts_with("http://") || url.starts_with("https://") {
-                    let mut entry = HashMap::new();
+                    let mut entry = hudhudscript_bytecode::ObjMap::default();
                     entry.insert("title".to_string(), Value16::string(name));
                     entry.insert("url".to_string(), Value16::string(url));
                     entry.insert("folder".to_string(), Value16::string(String::new()));

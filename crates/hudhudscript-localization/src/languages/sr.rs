@@ -36,7 +36,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
 
     // Agent system
     map.insert("агент".to_string(), Keyword::Agent);
-    map.insert("задатак".to_string(), Keyword::Task);
     map.insert("алат".to_string(), Keyword::Tool);
     map.insert("ресурс".to_string(), Keyword::Resource);
     map.insert("мцп".to_string(), Keyword::Mcp);
@@ -107,7 +106,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
     map.insert("окидач".to_string(), Keyword::Trigger);
     // Native Serbian translations (Cyrillic)
     map.insert("акција".to_string(), Keyword::Action);
-    map.insert("правило_агента".to_string(), Keyword::AgentRule);
     map.insert("стање_агента".to_string(), Keyword::AgentState);
     map.insert("дозволи".to_string(), Keyword::Allow);
     map.insert("стил_комуникације".to_string(), Keyword::CommunicationStyle);
@@ -120,8 +118,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
     map.insert("неформално".to_string(), Keyword::Informal);
     map.insert("намера".to_string(), Keyword::Intent);
     map.insert("приоритет".to_string(), Keyword::Priority);
-    map.insert("ланац_правила".to_string(), Keyword::RuleChain);
-    map.insert("скуп_правила".to_string(), Keyword::RuleSet);
     map.insert("машина_стања".to_string(), Keyword::StateMachine);
     map.insert("техничко".to_string(), Keyword::Technical);
     map.insert("трансформисати".to_string(), Keyword::Transform);

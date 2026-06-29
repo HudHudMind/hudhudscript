@@ -1,7 +1,10 @@
+mod mcp_server_test;
 mod test_client;
+mod test_mcp_vm_dispatch;
 mod test_mock_client;
 mod test_protocol;
 mod test_protocol_edges;
+mod test_real_git_server;
+mod test_real_stdio_fixture;
 mod test_stdio_transport;
 mod test_transport;
-mod mcp_server_test;

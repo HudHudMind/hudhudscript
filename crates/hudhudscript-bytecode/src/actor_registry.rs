@@ -19,7 +19,7 @@
 //! `hudhudscript_interpreter_core::Value` and `hudhudscript_bytecode::Value`
 //! satisfy `Clone + Send + 'static`.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{self, Receiver, SyncSender, TryRecvError, TrySendError};
 
@@ -85,11 +85,15 @@ pub struct ActorMessage<V: Clone + Send + 'static> {
 /// [`SharedActorRegistry::spawn`] and never stored in the registry.
 pub struct ActorMailbox<V: Clone + Send + 'static> {
     rx: Receiver<ActorMessage<V>>,
+    pending: Mutex<VecDeque<ActorMessage<V>>>,
 }
 
 impl<V: Clone + Send + 'static> ActorMailbox<V> {
     /// Receive the next message, blocking until one arrives.
     pub fn recv(&self) -> SharedResult<ActorMessage<V>> {
+        if let Some(msg) = self.pending.lock().pop_front() {
+            return Ok(msg);
+        }
         self.rx
             .recv()
             .map_err(|_| runtime_error("Actor mailbox disconnected"))
@@ -97,10 +101,25 @@ impl<V: Clone + Send + 'static> ActorMailbox<V> {
 
     /// Try to receive a message without blocking.
     pub fn try_recv(&self) -> Option<ActorMessage<V>> {
+        if let Some(msg) = self.pending.lock().pop_front() {
+            return Some(msg);
+        }
         match self.rx.try_recv() {
             Ok(msg) => Some(msg),
             Err(TryRecvError::Empty) | Err(TryRecvError::Disconnected) => None,
         }
+    }
+
+    /// Snapshot currently queued messages without consuming them.
+    pub fn peek_nonblocking(&self) -> Vec<ActorMessage<V>> {
+        let mut pending = self.pending.lock();
+        loop {
+            match self.rx.try_recv() {
+                Ok(msg) => pending.push_back(msg),
+                Err(TryRecvError::Empty) | Err(TryRecvError::Disconnected) => break,
+            }
+        }
+        pending.iter().cloned().collect()
     }
 }
 
@@ -208,7 +227,10 @@ impl<V: Clone + Send + 'static> SharedActorRegistry<V> {
             id: id.clone(),
             tx: tx.clone(),
         };
-        let mailbox = ActorMailbox { rx };
+        let mailbox = ActorMailbox {
+            rx,
+            pending: Mutex::new(VecDeque::new()),
+        };
 
         // Store a second ref under the id so other code paths can look it
         // up (registry.get) without cloning the caller's handle.

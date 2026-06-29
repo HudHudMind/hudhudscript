@@ -36,7 +36,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
 
     // Agent system
     map.insert("agent".to_string(), Keyword::Agent);
-    map.insert("zadatak".to_string(), Keyword::Task);
     map.insert("alat".to_string(), Keyword::Tool);
     map.insert("resurs".to_string(), Keyword::Resource);
     map.insert("mcp".to_string(), Keyword::Mcp);
@@ -107,7 +106,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
     map.insert("okidač".to_string(), Keyword::Trigger);
     // Native Croatian translations
     map.insert("akcija".to_string(), Keyword::Action);
-    map.insert("pravilo_agenta".to_string(), Keyword::AgentRule);
     map.insert("stanje_agenta".to_string(), Keyword::AgentState);
     map.insert("dopusti".to_string(), Keyword::Allow);
     map.insert("stil_komunikacije".to_string(), Keyword::CommunicationStyle);
@@ -120,8 +118,6 @@ pub fn get_keywords() -> HashMap<String, Keyword> {
     map.insert("neformalno".to_string(), Keyword::Informal);
     map.insert("namjera".to_string(), Keyword::Intent);
     map.insert("prioritet".to_string(), Keyword::Priority);
-    map.insert("lanac_pravila".to_string(), Keyword::RuleChain);
-    map.insert("skup_pravila".to_string(), Keyword::RuleSet);
     map.insert("stroj_stanja".to_string(), Keyword::StateMachine);
     map.insert("tehničko".to_string(), Keyword::Technical);
     map.insert("transformirati".to_string(), Keyword::Transform);

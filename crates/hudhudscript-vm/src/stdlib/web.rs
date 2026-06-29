@@ -24,4 +24,11 @@ pub fn register(vm: &mut VM) {
             hudhud_scheduler::schedule_ops::dispatch(id, &args)
         }),
     );
+    vm.register_module(
+        "Web",
+        Box::new(|method, args| {
+            let id = method.parse::<hudhud_web::WebMethodId>()?;
+            hudhud_web::dispatch(id, &args)
+        }),
+    );
 }

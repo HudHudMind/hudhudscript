@@ -55,14 +55,14 @@ impl Interner {
     /// Borrow the interned string. Lifetime is bound to `&self`, so the
     /// `&str` is only usable while the (read-)lock on the interner is held.
     pub fn resolve(&self, id: SymbolId) -> &str {
-        &self.to_str[id.0 as usize]
+        self.to_str.get(id.0 as usize).map(|s| &**s).unwrap_or("<???>")
     }
 
     /// Cheap `Arc<str>` clone — atomic increment only, no allocation.
     /// Preferred over `resolve`+`to_string` for hot paths that need to
     /// outlive the interner lock.
     pub fn resolve_arc(&self, id: SymbolId) -> Arc<str> {
-        Arc::clone(&self.to_str[id.0 as usize])
+        self.to_str.get(id.0 as usize).map(Arc::clone).unwrap_or_else(|| Arc::from("<???>"))
     }
 }
 
@@ -89,7 +89,7 @@ pub fn intern(s: &str) -> SymbolId {
 /// known, without ever taking a write lock. VM hot path should prefer
 /// this over `intern` at runtime.
 #[inline(always)]
-    pub fn try_resolve_id(s: &str) -> Option<u32> {
+pub fn try_resolve_id(s: &str) -> Option<u32> {
     let guard = GLOBAL_INTERNER.read();
     guard.as_ref().and_then(|i| i.to_id.get(s).map(|id| id.0))
 }
@@ -143,7 +143,8 @@ pub fn resolve_arc(id: SymbolId) -> Arc<str> {
 /// `snapshot()[i]` is the string for SymbolId(i).
 pub fn snapshot() -> Vec<String> {
     let guard = GLOBAL_INTERNER.read();
-    guard.as_ref()
+    guard
+        .as_ref()
         .map(|i| i.to_str.iter().map(|s| s.to_string()).collect())
         .unwrap_or_default()
 }

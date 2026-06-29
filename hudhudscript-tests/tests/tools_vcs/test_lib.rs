@@ -1,6 +1,19 @@
 use hudhudscript_tools_vcs::*;
 
 // =========================================================================
+// GithubTool
+// =========================================================================
+
+#[test]
+fn test_github_tool_creation() {
+    let t1 = GithubTool::new(Some("fake-token".into()));
+    let t2 = GithubTool::new(None);
+    // Both should construct without panic. Verify no-token case uses empty string.
+    assert!(t1.list_issues("owner", "repo").is_err()); // no real token → HTTP error
+    assert!(t2.list_issues("owner", "repo").is_err());
+}
+
+// =========================================================================
 // GitOutput
 // =========================================================================
 

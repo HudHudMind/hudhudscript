@@ -7,7 +7,7 @@ use tower_lsp::LanguageServer;
 use hudhudscript_parser::parse;
 
 use crate::server::backend::HudHudLanguageServer;
-use crate::server::helpers::{completion_kind_to_lsp, position_to_offset};
+use crate::server::helpers::{completion_item_to_lsp, position_to_offset};
 
 #[tower_lsp::async_trait]
 impl LanguageServer for HudHudLanguageServer {
@@ -19,7 +19,38 @@ impl LanguageServer for HudHudLanguageServer {
                 )),
                 completion_provider: Some(CompletionOptions {
                     resolve_provider: Some(false),
-                    trigger_characters: Some(vec![".".to_string()]),
+                    // Tüm harfler, Türkçe karakterler, alt çizgi ve nokta için completion tetikle
+                    trigger_characters: Some(vec![
+                        ".".to_string(),
+                        "a".to_string(), "b".to_string(), "c".to_string(),
+                        "d".to_string(), "e".to_string(), "f".to_string(),
+                        "g".to_string(), "h".to_string(), "i".to_string(),
+                        "j".to_string(), "k".to_string(), "l".to_string(),
+                        "m".to_string(), "n".to_string(), "o".to_string(),
+                        "p".to_string(), "q".to_string(), "r".to_string(),
+                        "s".to_string(), "t".to_string(), "u".to_string(),
+                        "v".to_string(), "w".to_string(), "x".to_string(),
+                        "y".to_string(), "z".to_string(),
+                        "A".to_string(), "B".to_string(), "C".to_string(),
+                        "D".to_string(), "E".to_string(), "F".to_string(),
+                        "G".to_string(), "H".to_string(), "I".to_string(),
+                        "J".to_string(), "K".to_string(), "L".to_string(),
+                        "M".to_string(), "N".to_string(), "O".to_string(),
+                        "P".to_string(), "Q".to_string(), "R".to_string(),
+                        "S".to_string(), "T".to_string(), "U".to_string(),
+                        "V".to_string(), "W".to_string(), "X".to_string(),
+                        "Y".to_string(), "Z".to_string(),
+                        // Türkçe karakterler
+                        "ç".to_string(), "ğ".to_string(), "ı".to_string(),
+                        "ö".to_string(), "ş".to_string(), "ü".to_string(),
+                        "Ç".to_string(), "Ğ".to_string(), "İ".to_string(),
+                        "Ö".to_string(), "Ş".to_string(), "Ü".to_string(),
+                        // Rakamlar ve alt çizgi
+                        "0".to_string(), "1".to_string(), "2".to_string(),
+                        "3".to_string(), "4".to_string(), "5".to_string(),
+                        "6".to_string(), "7".to_string(), "8".to_string(),
+                        "9".to_string(), "_".to_string(),
+                    ]),
                     ..Default::default()
                 }),
                 hover_provider: Some(HoverProviderCapability::Simple(true)),
@@ -128,12 +159,7 @@ impl LanguageServer for HudHudLanguageServer {
             .completion_provider
             .complete(&text, offset)
             .into_iter()
-            .map(|ci| CompletionItem {
-                label: ci.label,
-                kind: Some(completion_kind_to_lsp(ci.kind)),
-                detail: ci.detail,
-                ..Default::default()
-            })
+            .map(completion_item_to_lsp)
             .collect();
 
         Ok(Some(CompletionResponse::Array(items)))
@@ -198,9 +224,9 @@ impl LanguageServer for HudHudLanguageServer {
             .map(|d| d.text().to_string())
             .unwrap_or_default();
 
-        let ast = match parse(&text) {
-            Ok(ast) => ast,
-            Err(_) => return Ok(None),
+        let ast = match crate::server::helpers::isolate(|| parse(&text)) {
+            Some(Ok(ast)) => ast,
+            _ => return Ok(None),
         };
 
         let syms = crate::symbols::extract_symbols(&ast);
@@ -279,10 +305,9 @@ impl LanguageServer for HudHudLanguageServer {
 
         // Format the document using the HudHudScript formatter
         let mut formatter = hudhudscript_formatter::Formatter::new();
-        match hudhudscript_parser::parse(&text) {
-            Ok(ast) => {
+        match crate::server::helpers::isolate(|| hudhudscript_parser::parse(&text)) {
+            Some(Ok(ast)) => {
                 let formatted = formatter.format_program(&ast);
-                // Return a single edit that replaces the entire document
                 let line_count = text.lines().count() as u32;
                 let last_line_len = text.lines().last().map(|l| l.len()).unwrap_or(0) as u32;
                 Ok(Some(vec![TextEdit {
@@ -299,7 +324,7 @@ impl LanguageServer for HudHudLanguageServer {
                     new_text: formatted,
                 }]))
             }
-            Err(_) => Ok(None), // Can't format invalid syntax
+            _ => Ok(None),
         }
     }
 }

@@ -158,11 +158,11 @@ async fn test_token_tracker() {
     assert_eq!(tracker.monthly_usage(), 0);
 
     // Record usage
-    tracker.record(100);
+    tracker.record(100, 0);
     assert_eq!(tracker.daily_usage(), 100);
     assert_eq!(tracker.monthly_usage(), 100);
 
-    tracker.record(200);
+    tracker.record(200, 0);
     assert_eq!(tracker.daily_usage(), 300);
     assert_eq!(tracker.monthly_usage(), 300);
 

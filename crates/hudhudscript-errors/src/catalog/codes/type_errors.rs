@@ -25,6 +25,10 @@ pub enum TypeErrorCode {
     TypeUndefinedVariable = 308,
     /// E0309 — Wrong number of arguments in function call
     TypeWrongArgumentCount = 309,
+    /// E0310 — BigInt mixed with Number (float) — undefined precision loss
+    TypeBigIntNumberMix = 310,
+    /// E0311 — Value type cannot cross thread boundary (detach unsupported)
+    TypeThreadTransferUnsupported = 311,
     /// E0324 — Match on union type does not cover all variants
     TypeNonExhaustiveMatch = 324,
 }

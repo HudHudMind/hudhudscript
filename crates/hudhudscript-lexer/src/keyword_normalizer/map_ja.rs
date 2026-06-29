@@ -3,7 +3,6 @@ pub(crate) static JA_KEYWORDS: &[(&'static str, &'static str)] = &[
     ("から", "from"),
     ("これ", "this"),
     ("それでも", "else"),
-    ("それなら", "else if"),
     ("できる", "can"),
     ("として", "as"),
     ("もし", "if"),

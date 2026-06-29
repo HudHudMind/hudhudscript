@@ -52,16 +52,19 @@ impl ProviderContext for VM {
         // PROVIDER0003: build from receiver object (script-declared provider)
         if let Some(receiver_val) = &self.dispatch_provider_receiver {
             if let Some(obj) = receiver_val.as_object() {
-                let provider_type = obj.get("type")
-                    .and_then(|v| v.as_string())
-                    .ok_or_else(|| runtime_error(
+                let provider_type =
+                    obj.get("type").and_then(|v| v.as_string()).ok_or_else(|| {
+                        runtime_error(
                         "provider missing required 'type' field (e.g. \"deepseek\", \"openai\")"
-                    ))?;
-                let api_key = obj.get("api_key")
+                    )
+                    })?;
+                let api_key = obj
+                    .get("api_key")
                     .and_then(|v| v.as_string())
                     .map(|s| s.to_string())
                     .unwrap_or_default();
-                let model = obj.get("model")
+                let model = obj
+                    .get("model")
                     .and_then(|v| v.as_string())
                     .map(|s| s.to_string());
                 let provider = hudhudscript_runtime::providers::openai_compatible::OpenAICompatibleProvider::from_name(
@@ -75,7 +78,8 @@ impl ProviderContext for VM {
             return Ok(provider.clone());
         }
 
-        let provider_value = self.find_cell("provider")
+        let provider_value = self
+            .find_cell("provider")
             .map(|c| c.read().clone())
             .or_else(|| self.get_var_cloned("provider"));
         if let Some(provider_val) = provider_value {

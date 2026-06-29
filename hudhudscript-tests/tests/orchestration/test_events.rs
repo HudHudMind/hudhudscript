@@ -2,8 +2,8 @@
 
 use hudhudscript_orchestration::*;
 
-use tokio::time::{timeout, Duration};
 use hudhudscript_orchestration::orchestration::types::{StepConfig, StepType, WorkflowStep};
+use tokio::time::{timeout, Duration};
 
 #[tokio::test]
 async fn test_event_bus_emit_and_receive() {

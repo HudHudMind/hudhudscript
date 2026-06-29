@@ -1,9 +1,7 @@
 //! Extended STM tests — edge cases and retry behavior.
 //! Covers: TVar::id, TVarRegistry operations, atomically retry limits, StmConfig.
 
-use hudhudscript_stm::{
-    atomically, atomically_with_config, StmConfig, TVar, TVarRegistry,
-};
+use hudhudscript_stm::{atomically, atomically_with_config, StmConfig, TVar, TVarRegistry};
 use std::sync::Arc;
 
 type V = i64;

@@ -132,7 +132,7 @@ impl Provider for OllamaProvider {
         let total_tokens = prompt_tokens + completion_tokens;
 
         // Record token usage
-        self.tracker.lock().await.record(total_tokens);
+        self.tracker.lock().await.record(prompt_tokens, completion_tokens);
 
         Ok(LLMResponse {
             content: ollama_response.response,

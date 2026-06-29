@@ -4,6 +4,10 @@
 //! Binds a real TCP socket via `std::net::TcpListener`, spawns a background
 //! accept loop thread, parses HTTP/1.1 requests, dispatches to registered
 //! routes, and writes responses.
+//!
+//! Re-exports `ParsedRequest`, `parse_http_request`, `write_response`,
+//! `guess_content_type`, `route_matches`, `extract_path_params` for reuse
+//! by `hudhud-web` (Kural 7).
 
 use helpers::*;
 use hudhudscript_bytecode::Value16;
@@ -11,10 +15,14 @@ use hudhudscript_errors::{Error, HudHudResult};
 use server_api_core::*;
 use server_api_listen::*;
 
-pub(crate) mod connection;
-pub(crate) mod helpers;
+pub mod connection;
+pub mod helpers;
 pub(crate) mod server_api_core;
 pub(crate) mod server_api_listen;
+
+// ── Re-exports for hudhud-web (Kural 7 — single source) ────────────────
+pub use connection::{parse_http_request, write_response, ParsedRequest};
+pub use helpers::{extract_path_params, guess_content_type, route_matches};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum HttpServerMethodId {

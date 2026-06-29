@@ -240,7 +240,7 @@ pub fn value_to_serde_json(val: &Value16) -> serde_json::Value {
         let map: serde_json::Map<String, serde_json::Value> = obj
             .iter()
             .map(|(k, v)| (k.clone(), value_to_serde_json(v)))
-            .collect();
+            .map(|(k, v)| (k.to_string(), v)).collect();
         return serde_json::Value::Object(map);
     }
     if let Some(items) = val.as_set() {
@@ -250,7 +250,7 @@ pub fn value_to_serde_json(val: &Value16) -> serde_json::Value {
         let map: serde_json::Map<String, serde_json::Value> = pairs
             .iter()
             .map(|(k, v)| (k.display_string(), value_to_serde_json(v)))
-            .collect();
+            .map(|(k, v)| (k.to_string(), v)).collect();
         return serde_json::Value::Object(map);
     }
     serde_json::Value::Null
@@ -263,7 +263,7 @@ pub fn value_to_eval_context(action: &Value16) -> EvaluationContext {
     let mut ctx = EvaluationContext::new();
     if let Some(obj) = action.as_object() {
         for (key, val) in obj {
-            ctx.insert(key.clone(), value_to_serde_json(val));
+            ctx.insert(key.to_string(), value_to_serde_json(val));
         }
     }
     ctx

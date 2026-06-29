@@ -70,7 +70,9 @@ impl crate::vm::VM {
                         if let Some(chunk_name) =
                             parent_cls.vtable.get(method).and_then(|v| v.as_string())
                         {
-                            if let Some(chunk) = bytecode.functions.borrow().get(&chunk_name).cloned() {
+                            if let Some(chunk) =
+                                bytecode.get_function(&chunk_name)
+                            {
                                 return self.call_chunk(
                                     &chunk,
                                     &chunk.params,

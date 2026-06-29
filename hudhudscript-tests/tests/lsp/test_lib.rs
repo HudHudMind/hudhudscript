@@ -42,7 +42,6 @@ fn test_completion_top_level() {
     let provider = CompletionProvider::new();
     let items = provider.complete("", 0);
     assert!(!items.is_empty());
-    // Should contain top-level keywords
     assert!(items.iter().any(|i| i.label == "agent"));
     assert!(items.iter().any(|i| i.label == "function"));
 }
@@ -112,7 +111,6 @@ fn test_goto_definition_not_found() {
     let uri = Url::parse("file:///test.hudhud").unwrap();
     let source = "let x = 42;";
     let result = goto_definition(&uri, source, Position::new(0, 10));
-    // "42" is not a definition
     assert!(result.is_none());
 }
 
@@ -152,14 +150,12 @@ fn test_hover_user_defined_var() {
 
 #[test]
 fn test_parse_diagnostics_valid() {
-    // An empty program produces no diagnostics.
     let diags = parse_diagnostics("");
     assert!(diags.is_empty());
 }
 
 #[test]
 fn test_parse_diagnostics_invalid() {
-    // Garbage input should produce at least one diagnostic.
     let diags = parse_diagnostics("@@@@invalid@@@@");
     assert!(!diags.is_empty());
     assert_eq!(diags[0].severity, Some(DiagnosticSeverity::ERROR));
@@ -168,11 +164,8 @@ fn test_parse_diagnostics_invalid() {
 #[test]
 fn test_position_to_offset() {
     let text = "line one\nline two\nline three";
-    // Line 0, col 0 → offset 0
     assert_eq!(position_to_offset(text, Position::new(0, 0)), 0);
-    // Line 1, col 0 → offset 9 (after "line one\n")
     assert_eq!(position_to_offset(text, Position::new(1, 0)), 9);
-    // Line 1, col 4 → offset 13
     assert_eq!(position_to_offset(text, Position::new(1, 4)), 13);
 }
 
@@ -248,7 +241,6 @@ fn test_identifier_at_position() {
     );
     assert_eq!(id.as_deref(), Some("bar"));
 
-    // On the '=' sign — not an identifier
     let id = identifier_at_position(
         src,
         &LspPosition {
@@ -270,4 +262,88 @@ fn test_span_to_range() {
     assert_eq!(range.start.character, 0);
     assert_eq!(range.end.line, 0);
     assert_eq!(range.end.character, 3);
+}
+
+// ── server helpers (isolate) tests ─────────────────────────────────────
+
+use hudhudscript_lsp::server::helpers::isolate;
+
+#[test]
+fn isolate_catches_panic_returns_none() {
+    let result = isolate(|| panic!("kasıtlı test paniği"));
+    assert!(result.is_none(), "isolate MUST return None on panic");
+}
+
+#[test]
+fn isolate_passes_through_normal_value() {
+    let result = isolate(|| 42);
+    assert_eq!(result, Some(42));
+}
+
+// ── LSP.md §4 koruyucu testler ──────────────────────────────────────
+
+#[test]
+fn lsp_broken_source_no_crash() {
+    // Incomplete/garbage source — parse_diagnostics must NOT panic.
+    let diags = parse_diagnostics("function {{{\n  let x =\n  }\n}");
+    let _ = diags.len(); // just must not crash
+}
+
+#[test]
+fn lsp_multibyte_position_no_crash() {
+    // Turkish identifier — position_to_offset must handle multi-byte chars.
+    let text = "let değişken = 5\nlet sonuç = değişken + 1\n";
+    let off = position_to_offset(text, Position::new(0, 4));
+    let _ = text.get(..off); // must be valid char boundary
+}
+
+#[test]
+fn lsp_multibyte_hover_no_crash() {
+    let text = "let değişken = 5\nlet sonuç = değişken + 1\n";
+    let _ = hudhudscript_lsp::hover_at(text, Position::new(0, 4));
+}
+
+#[test]
+fn lsp_multibyte_completion_no_crash() {
+    let text = "let değişken = 5\nlet sonuç = değişken + 1\n";
+    let provider = CompletionProvider::new();
+    let off = position_to_offset(text, Position::new(1, 15));
+    let _ = provider.complete(text, off);
+}
+
+#[test]
+fn lsp_multibyte_definition_no_crash() {
+    use hudhudscript_lsp::goto_definition;
+    use tower_lsp::lsp_types::Url;
+    let text = "let değişken = 5\nlet sonuç = değişken + 1\n";
+    let uri = Url::parse("file:///tr.hudhud").unwrap();
+    let _ = goto_definition(&uri, text, Position::new(0, 4));
+}
+
+#[test]
+fn lsp_position_past_eof_no_crash() {
+    let text = "let x = 1";
+    let off = position_to_offset(text, Position::new(999, 999));
+    assert_eq!(off, text.len());
+}
+
+#[test]
+fn lsp_crlf_hover_correct() {
+    let text = "let x = 1\r\nlet y = 2\r\nlet z = x + y\r\n";
+    let word = hover_word_at_position(text, Position::new(1, 4));
+    assert_eq!(word.as_deref(), Some("y"));
+}
+
+#[test]
+fn lsp_empty_source_no_crash() {
+    let _ = parse_diagnostics("");
+    let _ = parse_diagnostics("   \n  \n  ");
+}
+
+#[test]
+fn lsp_safe_slice_completion_get() {
+    // Offset past text length — .get() should clamp, not panic.
+    let text = "let x = 1";
+    let provider = CompletionProvider::new();
+    let _ = provider.complete(text, 999);
 }

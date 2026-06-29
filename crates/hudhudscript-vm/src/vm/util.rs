@@ -71,6 +71,8 @@ pub(crate) fn builtin_name_set() -> &'static rustc_hash::FxHashSet<&'static str>
             "is_ok",
             "is_err",
             "env",
+            "exception",
+            "istisna",
             "Promise.resolve",
             "Promise.reject",
             "Promise.all",
@@ -107,7 +109,16 @@ pub(crate) fn builtin_name_set() -> &'static rustc_hash::FxHashSet<&'static str>
         ];
         let mut set: rustc_hash::FxHashSet<&'static str> =
             rustc_hash::FxHashSet::with_capacity_and_hasher(
-                print_aliases.len() + println_aliases.len() + eprint_aliases.len() + eprintln_aliases.len() + input_aliases.len() + put_aliases.len() + putf_aliases.len() + other_builtins.len(), Default::default());
+                print_aliases.len()
+                    + println_aliases.len()
+                    + eprint_aliases.len()
+                    + eprintln_aliases.len()
+                    + input_aliases.len()
+                    + put_aliases.len()
+                    + putf_aliases.len()
+                    + other_builtins.len(),
+                Default::default(),
+            );
         set.extend(print_aliases.iter().copied());
         set.extend(println_aliases.iter().copied());
         set.extend(eprint_aliases.iter().copied());

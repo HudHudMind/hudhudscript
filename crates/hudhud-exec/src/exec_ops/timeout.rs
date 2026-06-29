@@ -57,7 +57,7 @@ pub fn exec_timeout(args: &[Value16]) -> HudHudResult<Value16> {
                         buf
                     })
                     .unwrap_or_default();
-                let mut result = HashMap::new();
+                let mut result = hudhudscript_bytecode::ObjMap::default();
                 result.insert(
                     "code".to_string(),
                     Value16::number(status.code().unwrap_or(-1) as f64),
@@ -72,7 +72,7 @@ pub fn exec_timeout(args: &[Value16]) -> HudHudResult<Value16> {
                 if start.elapsed() >= timeout {
                     let _ = child.kill();
                     let _ = child.wait();
-                    let mut result = HashMap::new();
+                    let mut result = hudhudscript_bytecode::ObjMap::default();
                     result.insert("code".to_string(), Value16::number(-1.0));
                     result.insert("stdout".to_string(), Value16::string(String::new()));
                     result.insert(

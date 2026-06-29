@@ -57,18 +57,23 @@ impl crate::vm::VM {
                 } else {
                     vec![]
                 };
-                let mut result = HashMap::new();
+                let mut result = hudhudscript_bytecode::ObjMap::default();
                 result.insert("subject".to_string(), Value16::string(subject_name.clone()));
                 result.insert("intent".to_string(), Value16::string(intent_name.clone()));
                 result.insert("args".to_string(), Value16::array(intent_args.clone()));
 
                 // SOP: try to dispatch via subject instances and action registry
                 let chunk_name = format!("intent::{}.{}", subject_name, intent_name);
-                if let Some(chunk) = bytecode.functions.borrow().get(&chunk_name).cloned() {
+                if let Some(chunk) = bytecode.get_function(&chunk_name) {
                     let params = chunk.params.clone();
                     let call_args = intent_args;
                     let dispatch_result = self.call_chunk_with_captures(
-                        &chunk, &params, &call_args, bytecode, &chunk_name, &HashMap::new(),
+                        &chunk,
+                        &params,
+                        &call_args,
+                        bytecode,
+                        &chunk_name,
+                        &HashMap::new(),
                     )?;
                     // Merge result into response
                     if let Some(res_obj) = dispatch_result.as_object() {
@@ -79,9 +84,13 @@ impl crate::vm::VM {
                     result.insert("dispatched".to_string(), Value16::bool_(true));
                 } else {
                     result.insert("dispatched".to_string(), Value16::bool_(false));
-                    result.insert("error".to_string(), Value16::string(format!(
-                        "No handler for intent '{}' on subject '{}'", intent_name, subject_name
-                    )));
+                    result.insert(
+                        "error".to_string(),
+                        Value16::string(format!(
+                            "No handler for intent '{}' on subject '{}'",
+                            intent_name, subject_name
+                        )),
+                    );
                 }
                 self.registers[255] = Value16::object(result);
 
@@ -134,11 +143,11 @@ impl crate::vm::VM {
                 let relation = self
                     .relations
                     .entry(key)
-                    .or_insert_with(|| Value16::object(HashMap::new()));
+                    .or_insert_with(|| Value16::object(hudhudscript_bytecode::ObjMap::default()));
                 let mut new_obj = if let Some(obj) = relation.as_object() {
                     obj.clone()
                 } else {
-                    HashMap::new()
+                    hudhudscript_bytecode::ObjMap::default()
                 };
                 new_obj.insert(field_name, value);
                 *relation = Value16::object(new_obj);
@@ -190,7 +199,7 @@ impl crate::vm::VM {
                 // Look up protocol declaration
                 let decl_key = format!("protocol:{}", protocol_name);
                 let protocol = self.declarations.get(&decl_key).cloned();
-                let mut result = HashMap::new();
+                let mut result = hudhudscript_bytecode::ObjMap::default();
                 result.insert("protocol".to_string(), Value16::string(protocol_name));
                 result.insert("hook".to_string(), Value16::string(hook_name));
                 result.insert("found".to_string(), Value16::bool_(protocol.is_some()));

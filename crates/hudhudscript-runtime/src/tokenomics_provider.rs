@@ -69,7 +69,10 @@ impl Provider for TokenomicsProvider {
 
         {
             let mut tracker = self.tracker.lock().unwrap();
-            tracker.record(response.tokens_used.total_tokens);
+            tracker.record(
+                response.tokens_used.prompt_tokens,
+                response.tokens_used.completion_tokens,
+            );
         }
 
         Ok(response)
@@ -87,7 +90,10 @@ impl Provider for TokenomicsProvider {
 
         {
             let mut tracker = self.tracker.lock().unwrap();
-            tracker.record(response.tokens_used.total_tokens);
+            tracker.record(
+                response.tokens_used.prompt_tokens,
+                response.tokens_used.completion_tokens,
+            );
         }
 
         Ok(response)

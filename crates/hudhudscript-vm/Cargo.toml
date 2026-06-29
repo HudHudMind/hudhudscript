@@ -17,6 +17,7 @@ hudhudscript-mcp = { path = "../hudhudscript-mcp" }
 hudhudscript-errors = { path = "../hudhudscript-errors" }
 hudhudscript-localization = { path = "../hudhudscript-localization" }
 hudhudscript-modules = { path = "../hudhudscript-modules" }
+num-bigint = "0.4"
 hudhudscript-rag = { path = "../hudhudscript-rag" }
 hex = "0.4"
 sha2 = { workspace = true }
@@ -37,6 +38,7 @@ hudhud-linalg = { path = "../hudhud-linalg" }
 hudhud-stats = { path = "../hudhud-stats" }
 hudhud-math = { path = "../hudhud-math" }
 hudhud-url = { path = "../hudhud-url" }
+hudhud-web = { path = "../hudhud-web" }
 hudhud-regex = { path = "../hudhud-regex" }
 hudhud-scheduler = { path = "../hudhud-scheduler" }
 hudhud-term = { path = "../hudhud-term" }

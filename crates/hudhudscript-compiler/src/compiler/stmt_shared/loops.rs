@@ -33,6 +33,59 @@ pub(super) fn compile_for_c_style(
         compile_stmt_shared(target, init_stmt)?;
     }
     let loop_start = target.ct_current_ip();
+
+    // P1: fused compare+branch for simple identifier loop conditions
+    // (e.g. `i < n` in fib_iterative) instead of IntCmp + JumpIfFalse.
+    if let Some(cond) = condition {
+        if let Expr::Binary { left, op, right, .. } = cond {
+            if matches!(op, BinaryOp::Lt | BinaryOp::Le | BinaryOp::Gt | BinaryOp::Ge) {
+                let get_reg = |e: &Expr| -> Option<u8> {
+                    if let Expr::Identifier(name, _) = e {
+                        target.ct_local_reg(name)
+                    } else { None }
+                };
+                if let (Some(a_reg), Some(b_reg)) = (get_reg(left), get_reg(right)) {
+                    let resolve = |n: &str| target.ct_local_type(n);
+                    let l_ty = crate::compiler::expr::infer_type_with_locals(left, &resolve);
+                    let r_ty = crate::compiler::expr::infer_type_with_locals(right, &resolve);
+                    let both_int = (l_ty == crate::compiler::expr::ExprType::Int || l_ty == crate::compiler::expr::ExprType::Unknown)
+                        && (r_ty == crate::compiler::expr::ExprType::Int || r_ty == crate::compiler::expr::ExprType::Unknown);
+                    if both_int {
+                        let jump_to_end = target.ct_current_ip();
+                        match op {
+                            BinaryOp::Lt => target.ct_emit(Instruction::IntLtRRJumpIfFalse { src1: a_reg, src2: b_reg, offset: 0 }),
+                            BinaryOp::Le => target.ct_emit(Instruction::IntLeRRJumpIfFalse { src1: a_reg, src2: b_reg, offset: 0 }),
+                            BinaryOp::Gt => target.ct_emit(Instruction::IntLtRRJumpIfFalse { src1: b_reg, src2: a_reg, offset: 0 }),
+                            BinaryOp::Ge => target.ct_emit(Instruction::IntLeRRJumpIfFalse { src1: b_reg, src2: a_reg, offset: 0 }),
+                            _ => unreachable!(),
+                        }
+                        let payload_idx = target.ct_add_loop_payload(loop_start as u32, 0);
+                        target.ct_emit(Instruction::LoopBegin(payload_idx));
+                        compile_stmt_shared(target, body)?;
+                        target.ct_emit(Instruction::LoopEnd);
+                        if let Some(update_stmt) = update {
+                            compile_stmt_shared(target, update_stmt)?;
+                        }
+                        let back_jump_site = target.ct_current_ip();
+                        target.ct_emit(Instruction::Jump(jump_off(back_jump_site, loop_start)));
+                        let end = target.ct_current_ip();
+                        let offset = jump_off(jump_to_end, end);
+                        let patch_instr = match op {
+                            BinaryOp::Lt => Instruction::IntLtRRJumpIfFalse { src1: a_reg, src2: b_reg, offset: offset as i16 },
+                            BinaryOp::Le => Instruction::IntLeRRJumpIfFalse { src1: a_reg, src2: b_reg, offset: offset as i16 },
+                            BinaryOp::Gt => Instruction::IntLtRRJumpIfFalse { src1: b_reg, src2: a_reg, offset: offset as i16 },
+                            BinaryOp::Ge => Instruction::IntLeRRJumpIfFalse { src1: b_reg, src2: a_reg, offset: offset as i16 },
+                            _ => unreachable!(),
+                        };
+                        target.ct_patch(jump_to_end, patch_instr);
+                        target.ct_patch_loop_payload_end(payload_idx, end as u32);
+                        return Ok(());
+                    }
+                }
+            }
+        }
+    }
+
     let cr = if let Some(cond) = condition {
         crate::compiler::expr::compile_reg::compile_expr_to_reg(
             target, cond, &mut crate::compiler::regalloc::RegAlloc::new_with_base(target.ct_next_local_reg()).expect("out of register zones"),

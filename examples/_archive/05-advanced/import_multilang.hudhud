@@ -1,0 +1,17 @@
+// Multi-Language Import Statements
+// All compile to the same AST!
+
+// English (SVO): Subject-Verb-Object
+use postgres as db;
+use redis as cache;
+
+// Turkish (SOV): Subject-Object-Verb
+postgres sunucusunu db olarak kullan;
+redis sunucusunu cache olarak kullan;
+
+// Japanese (SOV + Particles): Subject-Object-Verb with particles
+postgres wo db toshite tsukau;
+redis wo cache toshite tsukau;
+
+// All six statements produce identical AST nodes!
+// This is the power of PEG-based multi-language parsing.

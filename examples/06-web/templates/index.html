@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+<p>{{ message }}</p>
+
+<div style="margin-top: 2rem; padding: 1rem; background: #f0f9ff; border-radius: 0.5rem;">
+    <h3>Özellikler</h3>
+    <ul>
+        <li>Jinja2-style template engine (değişken, filtre, if, for, extends)</li>
+        <li>Flask-grade routing DSL (<code>get()</code>, <code>post()</code>, <code>put()</code>)</li>
+        <li>Gunicorn prefork model (SO_REUSEPORT ile N worker)</li>
+        <li>Session (HMAC imzalı cookie)</li>
+        <li>Statik dosya servisi</li>
+        <li>Markdown → HTML dönüşümü</li>
+        <li>JSON API desteği</li>
+    </ul>
+</div>
+{% endblock %}

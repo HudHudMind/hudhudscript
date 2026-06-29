@@ -286,6 +286,7 @@ fn decl_to_symbol(decl: &Decl) -> Option<DocumentSymbol> {
         Decl::Music { name, span, .. } => (name.clone(), "music", SymbolKind::FUNCTION, *span),
         Decl::UiApp { name, span, .. } => (name.clone(), "ui", SymbolKind::MODULE, *span),
         Decl::Deploy { name, span, .. } => (name.clone(), "deploy", SymbolKind::MODULE, *span),
+        _ => return None,
     };
 
     Some(DocumentSymbol {

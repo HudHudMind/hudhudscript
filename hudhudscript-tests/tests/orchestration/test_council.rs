@@ -20,10 +20,7 @@ impl AgentExecutor for SuccessExecutor {
 }
 
 fn make_executor() -> CouncilExecutor {
-    CouncilExecutor::with_agent_executor(
-        Arc::new(EventBus::new()),
-        Arc::new(SuccessExecutor),
-    )
+    CouncilExecutor::with_agent_executor(Arc::new(EventBus::new()), Arc::new(SuccessExecutor))
 }
 
 fn members() -> Vec<CouncilMember> {
@@ -259,7 +256,6 @@ async fn test_unregistered_council_uses_defaults() {
 #[tokio::test]
 async fn test_custom_agent_executor() {
     use hudhudscript_orchestration::agent_executor::AgentTaskResult;
-
 
     struct RejectExecutor;
 

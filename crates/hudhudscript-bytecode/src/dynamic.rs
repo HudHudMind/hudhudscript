@@ -1,6 +1,6 @@
 use crate::{
-    ClassData, DataData, FunctionData, GeneratorState16, InstanceData, PromiseState16, Repr,
-    ResourceRef, ToolRef, Value16,
+    ClassData, DataData, FunctionData, GeneratorState16, InstanceData, ObjMap,
+    PromiseState16, Repr, ResourceRef, ToolRef, Value16,
 };
 use parking_lot::Mutex;
 use std::sync::Arc;
@@ -8,6 +8,7 @@ use std::sync::Arc;
 /// Wrapped by Repr with Dynamic tag.
 pub struct DynamicObject {
     pub kind: DynamicKind,
+    pub marked: std::cell::Cell<bool>,
     pub data: DynamicData,
 }
 
@@ -27,12 +28,13 @@ pub enum DynamicKind {
     Resource,
     Option,
     Result,
+    BigInt,
 }
 
 pub enum DynamicData {
     String(String),
     Array(Vec<Value16>),
-    Object(std::collections::HashMap<String, Value16>),
+    Object(ObjMap),
     Function(FunctionData),
     Instance(InstanceData),
     Promise(PromiseState16),
@@ -45,4 +47,5 @@ pub enum DynamicData {
     Resource(Box<ResourceRef>),
     Option(Option<Box<Value16>>),
     Result(Result<Box<Value16>, String>),
+    BigInt(num_bigint::BigInt),
 }

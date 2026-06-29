@@ -1,0 +1,171 @@
+// ============================================================================
+// RAG Multi-Agent Research Pipeline — HudHudScript v0.4.2
+// Issue #228: Retrieval-Augmented Generation for Research Collaboration
+//
+// Demonstrates multi-agent shared vector memory using store, remember, recall.
+// Uses only syntax supported by the current parser.
+//
+// Aspirational features (tracked in v0.4.x roadmap):
+//   - record declarations (typed structs)
+//   - memory bindings inside subjects
+//   - recall...top N where { filter }
+//   - remember...with { metadata }
+//   - typed state annotations
+// ============================================================================
+
+// ============================================================
+// 1. Providers
+// ============================================================
+
+provider analysis_llm {
+    type: "anthropic",
+    model: "claude-3-opus",
+    api_key: "sk-ant-your-key",
+    max_tokens: 4096,
+    temperature: 0.2
+}
+
+provider writing_llm {
+    type: "anthropic",
+    model: "claude-3-sonnet",
+    api_key: "sk-ant-your-key",
+    max_tokens: 8192,
+    temperature: 0.5
+}
+
+// ============================================================
+// 2. Vector Stores — shared research memory
+// ============================================================
+
+store research_papers {
+    backend: "hnsw",
+    dimensions: 3072,
+    distance: "cosine"
+}
+
+store analysis_notes {
+    backend: "hnsw",
+    dimensions: 3072,
+    distance: "cosine"
+}
+
+store draft_sections {
+    backend: "hnsw",
+    dimensions: 3072,
+    distance: "cosine"
+}
+
+// ============================================================
+// 3. Roles
+// ============================================================
+
+role ResearchRole {
+    can extract,
+    can cite
+}
+
+role AnalystRole {
+    can compare,
+    can synthesize
+}
+
+role WriterRole {
+    can compose,
+    can verify_citations
+}
+
+// ============================================================
+// 4. Subjects
+// ============================================================
+
+subject Researcher has ResearchRole {
+    state papers_ingested: 0,
+    state domains: "AI, NLP, retrieval systems"
+}
+
+subject Analyst has AnalystRole {
+    state findings_produced: 0,
+    state hypotheses_tested: 0
+}
+
+subject Writer has WriterRole {
+    state sections_written: 0,
+    state total_words: 0,
+    state citations_used: 0
+}
+
+// ============================================================
+// 5. Relations
+// ============================================================
+
+relation Researcher <-> Analyst {
+    trust: 85,
+    papers_shared: 0
+}
+
+relation Analyst <-> Writer {
+    trust: 80,
+    findings_shared: 0
+}
+
+relation Researcher <-> Writer {
+    trust: 75,
+    direct_citations: 0
+}
+
+// ============================================================
+// 6. Stage 1: Paper Ingestion
+// ============================================================
+
+print("=== Stage 1: Paper Ingestion ===");
+
+remember "RAG combines parametric knowledge in LLMs with non-parametric retrieval from external corpora. This hybrid approach reduces hallucination." in research_papers;
+remember "Dense passage retrieval using dual-encoder architectures outperforms BM25 on open-domain QA benchmarks." in research_papers;
+remember "HNSW graphs provide logarithmic search complexity for approximate nearest neighbor search." in research_papers;
+remember "Chain-of-thought prompting with retrieved evidence improves factual accuracy by 23%." in research_papers;
+remember "Multi-agent RAG systems show 18% improvement in answer quality on complex multi-hop questions." in research_papers;
+remember "Embedding model fine-tuning on domain-specific data improves retrieval precision by 31%." in research_papers;
+
+print("Ingested 6 papers into research store.");
+
+// ============================================================
+// 7. Stage 2: Analysis
+// ============================================================
+
+print("=== Stage 2: Analysis ===");
+
+let q1 = "How does retrieval-augmented generation reduce hallucination?";
+recall q1 from research_papers;
+print("Analyzed: " + q1);
+
+remember "Finding: RAG reduces hallucination through grounding — the LLM conditions output on retrieved evidence." in analysis_notes;
+remember "Finding: Dense retrieval outperforms BM25. HNSW makes this practical at scale." in analysis_notes;
+remember "Finding: Multi-agent specialized pipelines outperform monolithic RAG by 18%." in analysis_notes;
+
+print("Produced 3 analytical findings.");
+
+// ============================================================
+// 8. Stage 3: Writing
+// ============================================================
+
+print("=== Stage 3: Writing ===");
+
+recall "overview of RAG systems" from analysis_notes;
+
+remember "Introduction: RAG has emerged as a leading paradigm for grounding LLM outputs in factual knowledge." in draft_sections;
+remember "Methods: Dense passage retrieval with HNSW indexing provides the retrieval backbone." in draft_sections;
+remember "Results: Multi-agent pipeline with shared vector memory improves coherence and citation accuracy." in draft_sections;
+
+print("Wrote 3 sections (130 words).");
+
+// ============================================================
+// 9. Summary
+// ============================================================
+
+print("=== Research RAG Pipeline Summary ===");
+print("Papers ingested: 6");
+print("Findings produced: 3");
+print("Sections written: 3");
+print("3 vector stores used: papers, notes, drafts");
+print("3 subjects defined: Researcher, Analyst, Writer");
+print("Multi-agent research RAG pipeline demo complete.");

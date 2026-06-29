@@ -183,7 +183,7 @@ fn run_logger(cmd_args: &[&str]) -> HudHudResult<Value16> {
 fn run_command(program: &str, cmd_args: &[&str]) -> HudHudResult<Value16> {
     let result = std::process::Command::new(program).args(cmd_args).output();
 
-    let mut obj: HashMap<String, Value16> = HashMap::new();
+    let mut obj: hudhudscript_bytecode::ObjMap = hudhudscript_bytecode::ObjMap::default();
     match result {
         Ok(output) => {
             let success = output.status.success();

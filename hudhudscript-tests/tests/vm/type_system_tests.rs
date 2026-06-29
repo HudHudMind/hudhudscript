@@ -49,11 +49,7 @@ fn int_literal_positive_is_int() {
 fn float_literal_zero_point_zero_is_number() {
     let vm = run(r#"let x = 0.0; x;"#).expect("execution failed");
     let x = vm.get_variable("x").expect("x not found");
-    assert!(
-        x.is_number(),
-        "0.0 must be Number, not Int. Got {:?}",
-        x
-    );
+    assert!(x.is_number(), "0.0 must be Number, not Int. Got {:?}", x);
     assert!((x.as_number().unwrap() - 0.0).abs() < 1e-10);
 }
 
@@ -61,11 +57,7 @@ fn float_literal_zero_point_zero_is_number() {
 fn float_literal_two_point_zero_is_number() {
     let vm = run(r#"let x = 2.0; x;"#).expect("execution failed");
     let x = vm.get_variable("x").expect("x not found");
-    assert!(
-        x.is_number(),
-        "2.0 must be Number, not Int. Got {:?}",
-        x
-    );
+    assert!(x.is_number(), "2.0 must be Number, not Int. Got {:?}", x);
     assert!((x.as_number().unwrap() - 2.0).abs() < 1e-10);
 }
 
@@ -93,11 +85,7 @@ fn number_arithmetic_produces_number() {
 fn array_length_returns_int() {
     let vm = run(r#"let arr = [1, 2, 3]; let n = arr.length; n;"#).expect("execution failed");
     let n = vm.get_variable("n").expect("n not found");
-    assert!(
-        n.is_int(),
-        "arr.length must return Int, got {:?}",
-        n
-    );
+    assert!(n.is_int(), "arr.length must return Int, got {:?}", n);
     assert_eq!(n.as_int(), Some(3));
 }
 
@@ -105,11 +93,7 @@ fn array_length_returns_int() {
 fn string_length_returns_int() {
     let vm = run(r#"let s = "hello"; let n = s.length; n;"#).expect("execution failed");
     let n = vm.get_variable("n").expect("n not found");
-    assert!(
-        n.is_int(),
-        "string.length must return Int, got {:?}",
-        n
-    );
+    assert!(n.is_int(), "string.length must return Int, got {:?}", n);
     assert_eq!(n.as_int(), Some(5));
 }
 
@@ -209,7 +193,10 @@ result;
 "#)
     .expect("execution failed");
     let result = vm.get_variable("result").expect("result not found");
-    assert!(result.as_bool().unwrap_or(false), "IntEq should accept Number");
+    assert!(
+        result.as_bool().unwrap_or(false),
+        "IntEq should accept Number"
+    );
 }
 
 #[test]
@@ -257,7 +244,10 @@ result;
 "#)
     .expect("execution failed");
     let result = vm.get_variable("result").expect("result not found");
-    assert!(result.as_bool().unwrap_or(false), "NumberNe for different values should be true");
+    assert!(
+        result.as_bool().unwrap_or(false),
+        "NumberNe for different values should be true"
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -276,7 +266,10 @@ result;
 "#)
     .expect("execution failed");
     let result = vm.get_variable("result").expect("result not found");
-    assert!(result.as_bool().unwrap_or(false), "unknown-type variable compared with Int should work");
+    assert!(
+        result.as_bool().unwrap_or(false),
+        "unknown-type variable compared with Int should work"
+    );
 }
 
 #[test]
@@ -290,8 +283,16 @@ y;
 "#)
     .expect("execution failed");
     let y = vm.get_variable("y").expect("y not found");
-    let val = y.as_int().map(|v| v as f64).or_else(|| y.as_number()).unwrap_or(f64::NAN);
-    assert!((val - 15.0).abs() < 1e-10, "x + 5 should equal 15, got {:?}", y);
+    let val = y
+        .as_int()
+        .map(|v| v as f64)
+        .or_else(|| y.as_number())
+        .unwrap_or(f64::NAN);
+    assert!(
+        (val - 15.0).abs() < 1e-10,
+        "x + 5 should equal 15, got {:?}",
+        y
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

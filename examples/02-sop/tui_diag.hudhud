@@ -1,0 +1,47 @@
+// TUI Diagnostic — Windows test (ASCII only)
+use tui
+use file
+
+print("")
+print("STEP 1: HudHudScript started")
+print("STEP 2: Loading modules...")
+
+let test_files = file.list(".")
+let test_count = test_files.length
+print("STEP 3: file.list('.') = " + test_count + " files — OK")
+print("STEP 4: Calling tui.init()...")
+print("If you see STEP 5, TUI works!")
+print("If you see an ERROR below, TUI failed.")
+print("")
+
+tui.init()
+
+let loop_count = 0
+while (loop_count < 10) {
+    tui.draw()
+    let sz = tui.size()
+
+    tui.block({
+        title: " TUI TEST ",
+        borders: "all",
+        border_style: { fg: "green" },
+        area: sz
+    })
+
+    tui.paragraph({
+        text: "TUI WORKS!\n\nPress any key to exit...",
+        style: { fg: "yellow", bold: 1 },
+        area: sz
+    })
+
+    let ev = tui.poll_event(200)
+    if (ev != null) {
+        loop_count = 99
+    }
+    loop_count = loop_count + 1
+}
+
+tui.restore()
+print("")
+print("TEST PASSED — TUI is working!")
+print("")

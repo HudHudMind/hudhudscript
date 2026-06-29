@@ -1,0 +1,179 @@
+// HudHudScript — SOP Döküman İşleme (Çalışan Demo)
+// Multi-agent belge pipeline'ı — OCR, çeviri, özet
+
+print("╔══════════════════════════════════╗");
+print("║  SOP Döküman İşleme v2.0        ║");
+print("╚══════════════════════════════════╝");
+print("");
+
+// ============================================================
+// 1. Enum
+// ============================================================
+enum DocStatus { Received, Processing, Translated, Summarized, Done }
+enum Language { TR, EN, DE, FR, AR }
+
+// ============================================================
+// 2. Roller
+// ============================================================
+role OCRProcessor {
+    can scan_document,
+    can extract_text,
+    can detect_language
+}
+
+role Translator {
+    can translate_to,
+    can detect_grammar,
+    can preserve_formatting
+}
+
+role Summarizer {
+    can extract_keywords,
+    can generate_summary,
+    can rate_importance
+}
+
+role Notifier {
+    can send_report,
+    can log_result
+}
+
+// ============================================================
+// 3. Subject'ler
+// ============================================================
+subject OCR_Agent has OCRProcessor {
+    state docs_processed: 0,
+    state accuracy: 98,
+    state queue_size: 0
+}
+
+subject Translate_Agent has Translator {
+    state translations_done: 0,
+    state target_lang: "EN",
+    state quality_score: 95
+}
+
+subject Summary_Agent has Summarizer {
+    state summaries_generated: 0,
+    state avg_length: 200,
+    state importance_threshold: 70
+}
+
+subject Report_Agent has Notifier {
+    state reports_sent: 0,
+    state log_file: "pipeline.log"
+}
+
+// ============================================================
+// 4. Relations
+// ============================================================
+relation OCR_Agent <-> Translate_Agent {
+    docs_forwarded: 0,
+    error_rate: 2
+}
+
+relation Translate_Agent <-> Summary_Agent {
+    texts_forwarded: 0,
+    latency_ms: 150
+}
+
+relation Summary_Agent <-> Report_Agent {
+    summaries_forwarded: 0
+}
+
+// ============================================================
+// 5. Events
+// ============================================================
+event DocScanned { agent: Subject, pages: Int }
+event TranslationDone { agent: Subject, from: Text, to: Text }
+event SummaryGenerated { agent: Subject, length: Int }
+event ReportSent { agent: Subject, recipient: Text }
+
+// ============================================================
+// 6. Effects
+// ============================================================
+effect on DocScanned { print("  📄 Belge tarandı!"); }
+effect on TranslationDone { print("  🌐 Çeviri tamam!"); }
+effect on SummaryGenerated { print("  📝 Özet hazır!"); }
+effect on ReportSent { print("  ✉️  Rapor gönderildi!"); }
+
+// ============================================================
+// 7. Spawn
+// ============================================================
+print("── Pipeline Başlatılıyor ──");
+spawn OCR_Agent;
+spawn Translate_Agent;
+spawn Summary_Agent;
+spawn Report_Agent;
+print("  4 agent hazır");
+print("");
+
+// ============================================================
+// 8. Simülasyon — 3 belge işleniyor
+// ============================================================
+print("╔══════════════════════════════════╗");
+print("║   BELGE İŞLEME BAŞLADI          ║");
+print("╚══════════════════════════════════╝");
+print("");
+
+// Belge 1
+print("── Belge 1: contract_tr.pdf ──");
+let docs = 0;
+let translations = 0;
+let summaries = 0;
+
+print("  [OCR]      Taranıyor... 12 sayfa");
+docs = docs + 1;
+print("  [OCR]      Metin çıkarıldı: 3,200 kelime (TR)");
+print("  [Çeviri]   TR → EN çevriliyor...");
+translations = translations + 1;
+print("  [Çeviri]   Çeviri tamam (2,980 kelime EN)");
+print("  [Özet]     Özetleniyor...");
+summaries = summaries + 1;
+print("  [Özet]     150 kelimelik özet hazır");
+print("  [Rapor]    pipeline.log'a yazıldı");
+print("");
+
+// Belge 2
+print("── Belge 2: report_de.pdf ──");
+print("  [OCR]      Taranıyor... 8 sayfa");
+docs = docs + 1;
+print("  [OCR]      Metin çıkarıldı: 1,800 kelime (DE)");
+print("  [Çeviri]   DE → EN çevriliyor...");
+translations = translations + 1;
+print("  [Çeviri]   Çeviri tamam (1,750 kelime EN)");
+print("  [Özet]     Özetleniyor...");
+summaries = summaries + 1;
+print("  [Özet]     120 kelimelik özet hazır");
+print("  [Rapor]    pipeline.log'a yazıldı");
+print("");
+
+// Belge 3
+print("── Belge 3: article_ar.pdf ──");
+print("  [OCR]      Taranıyor... 5 sayfa");
+docs = docs + 1;
+print("  [OCR]      Metin çıkarıldı: 950 kelime (AR)");
+print("  [OCR]      ⚠️  Düşük güven: %87 (el yazısı)");
+print("  [Çeviri]   AR → EN çevriliyor...");
+translations = translations + 1;
+print("  [Çeviri]   Çeviri tamam (910 kelime EN)");
+print("  [Özet]     Özetleniyor...");
+summaries = summaries + 1;
+print("  [Özet]     80 kelimelik özet hazır");
+print("  [Özet]     ⚠️  Önem seviyesi: DÜŞÜK");
+print("  [Rapor]    pipeline.log'a yazıldı");
+print("");
+
+// Sonuç
+print("╔══════════════════════════════════╗");
+print("║   PIPELINE RAPORU               ║");
+print("╚══════════════════════════════════╝");
+print("  Belgeler işlendi : " + docs);
+print("  Çeviriler        : " + translations + " (TR→EN, DE→EN, AR→EN)");
+print("  Özetler          : " + summaries + " (toplam ~350 kelime)");
+print("  Başarı oranı     : %100 (3/3)");
+print("  Toplam sayfa     : 25");
+print("  Toplam kelime    : 5,950");
+print("");
+print("  4 rol, 4 subject, 3 relation, 4 event kullanıldı");
+print("  Pipeline başarıyla tamamlandı! ✓");

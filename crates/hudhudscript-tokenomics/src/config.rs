@@ -124,7 +124,7 @@ pub struct TokenomicsConfig {
     pub default_budget: u64,
     #[serde(default = "default_min_threshold")]
     pub min_threshold: u64,
-    #[serde(default)]
+    #[serde(default = "default_true")]
     pub ml_enabled: bool,
     #[serde(default)]
     pub federated_learning: bool,

@@ -71,7 +71,7 @@ fn parse_firefox_session_tabs(content: &str) -> HudHudResult<Value16> {
                     } else {
                         String::new()
                     };
-                    let mut entry = HashMap::new();
+                    let mut entry = hudhudscript_bytecode::ObjMap::default();
                     entry.insert("title".to_string(), Value16::string(title));
                     entry.insert("url".to_string(), Value16::string(url));
                     results.push(Value16::object(entry));
@@ -112,7 +112,7 @@ fn chromium_tabs(browser_name: &str) -> HudHudResult<Value16> {
                     let abs_pos = i + pos;
                     if let Some(url) = extract_json_string(&content, abs_pos + 5) {
                         if url.starts_with("http://") || url.starts_with("https://") {
-                            let mut entry = HashMap::new();
+                            let mut entry = hudhudscript_bytecode::ObjMap::default();
                             entry.insert("title".to_string(), Value16::string(String::new()));
                             entry.insert("url".to_string(), Value16::string(url));
                             results.push(Value16::object(entry));

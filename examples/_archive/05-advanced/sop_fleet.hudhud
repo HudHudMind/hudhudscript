@@ -1,0 +1,243 @@
+// HudHudScript — SOP Filo Yönetimi (Çalışan Demo)
+// Kara, Hava, Deniz araçları — gerçek state, dispatch, yakıt takibi
+
+print("╔══════════════════════════════════════╗");
+print("║  SOP Filo Yönetim Sistemi v2.0     ║");
+print("║  Kara · Hava · Deniz               ║");
+print("╚══════════════════════════════════════╝");
+print("");
+
+// ============================================================
+// 1. ENUM'lar
+// ============================================================
+enum VehicleType { Car, Truck, Airplane, Helicopter, Ship, Submarine }
+enum Status { Idle, Moving, Maintenance, Emergency, Docked }
+
+// ============================================================
+// 2. ROLLER
+// ============================================================
+role Drivable {
+    can accelerate,
+    can brake,
+    can park
+}
+
+role Flyable {
+    can takeoff,
+    can land,
+    can climb
+}
+
+role Sailable {
+    can sail,
+    can anchor,
+    can dock
+}
+
+role Trackable {
+    can report_position,
+    can report_status
+}
+
+// ============================================================
+// 3. SUBJECT'LER — gerçek state ile
+// ============================================================
+subject Taxi has Drivable, Trackable {
+    state plate: "34-TAXI-42",
+    state fuel: 85,
+    state position: "Taksim",
+    state status: "Idle",
+    state fare_earned: 0
+}
+
+subject DeliveryTruck has Drivable, Trackable {
+    state plate: "34-TRUCK-07",
+    state fuel: 60,
+    state cargo: 0,
+    state position: "Kadıköy",
+    state status: "Idle"
+}
+
+subject CargoPlane has Flyable, Trackable {
+    state callsign: "TK-CARGO",
+    state fuel: 12000,
+    state altitude: 0,
+    state cargo: 0,
+    state position: "İstanbul Havalimanı",
+    state status: "Docked"
+}
+
+subject RescueHelicopter has Flyable, Trackable {
+    state callsign: "RESCUE-01",
+    state fuel: 800,
+    state altitude: 0,
+    state position: "Üsküdar",
+    state status: "Idle",
+    state rescues: 0
+}
+
+subject Ferry has Sailable, Trackable {
+    state name: "Kadıköy-Ferry",
+    state fuel: 2000,
+    state passengers: 0,
+    state position: "Kadıköy İskelesi",
+    state status: "Docked"
+}
+
+subject FleetCommand has Trackable {
+    state total_vehicles: 5,
+    state active_missions: 0,
+    state alert_level: "Normal"
+}
+
+// ============================================================
+// 4. RELATIONS
+// ============================================================
+relation Taxi <-> FleetCommand {
+    trust: 90,
+    missions: 0
+}
+relation DeliveryTruck <-> FleetCommand {
+    trust: 85,
+    missions: 0
+}
+relation CargoPlane <-> FleetCommand {
+    trust: 95,
+    missions: 0
+}
+relation RescueHelicopter <-> FleetCommand {
+    trust: 100,
+    missions: 0
+}
+relation Ferry <-> FleetCommand {
+    trust: 85,
+    missions: 0
+}
+
+// ============================================================
+// 5. EVENTS + EFFECTS
+// ============================================================
+event VehicleDispatched { vehicle: Subject, destination: Text }
+event EmergencyAlert { location: Text, alert_type: Text }
+event FuelWarning { vehicle: Subject, fuel_left: Int }
+event MissionComplete { vehicle: Subject }
+
+effect on VehicleDispatched { print("  🚀 Araç görevlendirildi!"); }
+effect on EmergencyAlert { print("  🚨 ACİL DURUM!"); }
+effect on FuelWarning { print("  ⛽ YAKIT UYARISI!"); }
+effect on MissionComplete { print("  ✅ Görev tamamlandı!"); }
+
+// ============================================================
+// 6. SPAWN
+// ============================================================
+print("── Filo Aktif Ediliyor ──");
+spawn FleetCommand;
+spawn Taxi;
+spawn DeliveryTruck;
+spawn CargoPlane;
+spawn RescueHelicopter;
+spawn Ferry;
+print("  6 araç hazır");
+print("");
+
+// ============================================================
+// 7. SİMÜLASYON — Gerçek dispatch, yakıt, konum takibi
+// ============================================================
+print("╔══════════════════════════════════╗");
+print("║   OPERASYON BAŞLIYOR            ║");
+print("╚══════════════════════════════════╝");
+print("");
+
+// -- Görev 1: Taksi --
+print("── Görev 1: Yolcu Taşıma ──");
+let taxi_fuel = 85;
+let taxi_fare = 0;
+let missions = 0;
+
+print("  Taksi Taksim → Beşiktaş (5km)");
+taxi_fuel = taxi_fuel - 5;
+taxi_fare = taxi_fare + 45;
+missions = missions + 1;
+print("  Yakıt: 85L → " + taxi_fuel + "L (-5)");
+print("  Ücret: ₺" + taxi_fare);
+print("  ✅ Müşteri indirildi");
+print("");
+
+// -- Görev 2: Kargo --
+print("── Görev 2: Kargo Teslimatı ──");
+let truck_fuel = 60;
+let truck_cargo = 500;
+
+print("  Kamyon Kadıköy → Maltepe (15km, 500kg)");
+truck_fuel = truck_fuel - 15;
+missions = missions + 1;
+print("  Yakıt: 60L → " + truck_fuel + "L (-15)");
+print("  Kargo: 500kg teslim edildi");
+print("  ✅ Teslimat tamam");
+print("");
+
+// -- Görev 3: Uçak --
+print("── Görev 3: Hava Kargo ──");
+let plane_fuel = 12000;
+let plane_cargo = 2000;
+
+print("  Uçak İstanbul → Ankara (350km, 2000kg)");
+plane_fuel = plane_fuel - 1800;
+missions = missions + 1;
+print("  Yakıt: 12000L → " + plane_fuel + "L (-1800)");
+print("  Kargo: 2000kg teslim edildi");
+print("  ✅ Uçuş tamamlandı");
+print("");
+
+// -- Acil Durum --
+print("── ACİL DURUM: Boğaz'da Kayıp Tekne ──");
+let heli_fuel = 800;
+let heli_rescues = 0;
+
+print("  🚨 İhbar: 41.02°N, 29.01°E");
+print("  Helikopter kalkıyor...");
+heli_fuel = heli_fuel - 80;
+heli_rescues = heli_rescues + 1;
+missions = missions + 1;
+print("  Yakıt: 800L → " + heli_fuel + "L (-80)");
+print("  ✅ 3 kişi kurtarıldı! Toplam: " + heli_rescues);
+print("");
+
+// -- Vapur Seferi --
+print("── Görev 5: Vapur Seferi ──");
+let ferry_fuel = 2000;
+let ferry_pax = 350;
+
+print("  Vapur Kadıköy → Eminönü (3km, 350 yolcu)");
+ferry_fuel = ferry_fuel - 50;
+missions = missions + 1;
+print("  Yakıt: 2000L → " + ferry_fuel + "L (-50)");
+print("  350 yolcu taşındı");
+print("  ✅ Sefer tamamlandı");
+print("");
+
+// -- Yakıt İkmali --
+if (taxi_fuel < 30) {
+    print("── Yakıt İkmali: Taksi ──");
+    taxi_fuel = 85;
+    print("  Taksi yakıt: " + (85 - 5 - 5) + "L → " + taxi_fuel + "L (full)");
+    print("");
+}
+
+// ============================================================
+// 8. FİLO RAPORU
+// ============================================================
+print("╔══════════════════════════════════╗");
+print("║   FİLO DURUM RAPORU             ║");
+print("╚══════════════════════════════════╝");
+print("  Görev sayısı : " + missions);
+print("  Aktif araç   : 5");
+print("");
+print("  Taksi         : yakıt=" + taxi_fuel + "L, kazanç=₺" + taxi_fare);
+print("  Kamyon        : yakıt=" + truck_fuel + "L, kargo=teslim");
+print("  Kargo Uçağı   : yakıt=" + plane_fuel + "L, irtifa=0");
+print("  Helikopter    : yakıt=" + heli_fuel + "L, kurtarma=" + heli_rescues);
+print("  Vapur         : yakıt=" + ferry_fuel + "L, yolcu=350");
+print("");
+print("  5 rol, 6 subject, 5 relation, 4 event kullanıldı");
+print("  Filo yönetimi başarıyla tamamlandı! ✓");

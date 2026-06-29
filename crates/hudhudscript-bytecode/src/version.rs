@@ -23,10 +23,10 @@ pub type GeneratorState16 = hudhudscript_errors::GeneratorState<Value16>;
 /// - v5: `FunctionChunk::source_positions` added for per-instruction
 ///   file/line tracking inside function bodies (DAP / debugger step-into).
 /// - v6: Jump offsets `usize` → `i32` relative (PERF-12 / S2.3).
-/// - v7: `LoadLocal(u32)` / `StoreLocal(u32)` / `DeclLocal(u32)` added
-///   as slot-direct local-variable instructions (S2.2a / Audit Finding 3.1).
-///   Compiler doesn't emit them yet — subsequent sub-issues (S2.2b/c)
-///   migrate function-body locals off the name-indirection path.
+/// - v7: Reserved.  Originally planned for `LoadLocal`/`StoreLocal`/
+///   `DeclLocal` slot-direct local-variable instructions, but the VM
+///   adopted a register-only local model under H.5.  Those opcodes
+///   were never added and the slot-based direction was abandoned.
 /// - v8: Wire encoding migrated bincode → postcard (PERF-49, Audit v3
 ///   Finding 15.1).  Postcard varint encoding is typically 40-60% smaller
 ///   than bincode's fixed-width layout.  Old bincode `.hudb`/`.hudc` caches
@@ -121,7 +121,8 @@ pub type GeneratorState16 = hudhudscript_errors::GeneratorState<Value16>;
 ///     if-not-greater idiom hot in recursion base cases and loop bounds.
 ///   * `IntSubCall1 { call_idx: u32, slot: u32, imm: i16 }` — fuses
 ///     `IntSubISlot{slot, imm} + Call(call_idx)` when the call payload's
-///     arg_count equals 1.  Computes `local_slots[slot] - imm` and
+///     arg_count equals 1.  Computes the local register at `slot`
+///     minus `imm` and stores the result back into the same register.
 ///     immediately dispatches the call with that single argument on the
 ///     stack.  Fires 2× per fib frame (`fib(n-1)`, `fib(n-2)`).
 ///   * `AddReturn` — fuses `Add + Return` (fib result-combining tail).

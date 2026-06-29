@@ -55,7 +55,7 @@ pub fn tui_restore(_args: &[Value16]) -> CompileResult<Value16> {
 
 pub fn tui_size(_args: &[Value16]) -> CompileResult<Value16> {
     let (w, h) = size().map_err(|e| compile_codes::runtime_error(format!("size: {}", e)))?;
-    let mut obj = std::collections::HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     obj.insert("width".to_string(), Value16::int(w as i64));
     obj.insert("height".to_string(), Value16::int(h as i64));
     Ok(Value16::object(obj))
@@ -122,7 +122,7 @@ pub fn tui_split(args: &[Value16]) -> CompileResult<Value16> {
 
     let chunks = Layout::default().direction(direction).constraints(constraints).split(area);
     let result: Vec<Value16> = chunks.iter().map(|r| {
-        let mut o = std::collections::HashMap::new();
+        let mut o = hudhudscript_bytecode::ObjMap::default();
         o.insert("x".to_string(), Value16::int(r.x as i64));
         o.insert("y".to_string(), Value16::int(r.y as i64));
         o.insert("width".to_string(), Value16::int(r.width as i64));

@@ -42,7 +42,7 @@ pub fn file_type(args: &[Value16]) -> HudHudResult<Value16> {
         .read(&mut buf)
         .map_err(|e| runtime_error(format!("media.file_type: {}", e)))?;
     let (kind, subkind) = detect_magic(&buf[..n]);
-    let mut m = std::collections::HashMap::new();
+    let mut m = hudhudscript_bytecode::ObjMap::default();
     m.insert("kind".to_string(), Value16::string(kind.to_string()));
     m.insert("subkind".to_string(), Value16::string(subkind.to_string()));
     Ok(Value16::object(m))

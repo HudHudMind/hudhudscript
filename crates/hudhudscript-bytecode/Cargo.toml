@@ -18,6 +18,10 @@ postcard = { version = "1.0", features = ["use-std"] }
 thiserror = { workspace = true }
 parking_lot = { version = "0.12", features = ["serde"] }
 rustc-hash = { workspace = true }
+indexmap = { version = "2", features = ["serde"] }
+num-bigint = "0.4"
+num-traits = "0.2"
+sptr = "0.3.2"
 
 [dev-dependencies]
 criterion = { workspace = true }

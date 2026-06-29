@@ -1,6 +1,6 @@
 //! VM integration tests for Batch 5: I/O & Terminal (v0.4.38)
 
-use hudhudscript_bytecode::Value16;
+use hudhudscript_bytecode::{ObjMap, Value16};
 use hudhudscript_compiler::{Compiler, VM};
 use hudhudscript_parser::parse;
 
@@ -29,7 +29,7 @@ fn unwrap_string(val: Value16) -> String {
     }
 }
 
-fn unwrap_object(val: Value16) -> std::collections::HashMap<String, Value16> {
+fn unwrap_object(val: Value16) -> ObjMap {
     match val.as_object() {
         Some(obj) => obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect(),
         other => panic!("Expected Object, got {:?}", other),

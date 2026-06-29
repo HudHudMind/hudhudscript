@@ -10,7 +10,7 @@ impl Compiler {
         arrow_body: &hudhudscript_ast::ArrowFunctionBody,
         is_async: bool,
     ) -> CompileResult<()> {
-        let anon_name = format!("__arrow_{}", self.bytecode.functions.borrow().len());
+        let anon_name = format!("__arrow_{}", self.bytecode.function_count());
         let body_stmts: Vec<hudhudscript_ast::Stmt> = match arrow_body {
             hudhudscript_ast::ArrowFunctionBody::Block(stmts) => stmts.clone(),
             hudhudscript_ast::ArrowFunctionBody::Expression(expr) => {
@@ -24,9 +24,7 @@ impl Compiler {
         let has_captures = !chunk.captures.is_empty();
         let params_clone = chunk.params.clone();
         self.bytecode
-            .functions
-            .borrow_mut()
-            .insert(anon_name.clone(), Arc::new(chunk));
+            .add_function(anon_name.clone(), Arc::new(chunk));
 
         if has_captures {
             // DefineFunction: runtime'da upvalue_cell_for() çağrılır, değerler capture edilir
@@ -64,6 +62,8 @@ impl Compiler {
         is_generator: bool,
         span: Span,
     ) -> CompileResult<()> {
+        // P4a: store param names for type propagation
+        self.fn_param_names.insert(name.to_string(), params.to_vec());
         // FUNCTION0003: duplicate function detection
         if let Some(scope) = self.declared_fns.last_mut() {
             let line = span.start.line;
@@ -85,22 +85,29 @@ impl Compiler {
         } else {
             Some(name.to_string())
         };
-        let mut chunk = self.compile_function_body_named_async(
-            params.to_vec(),
-            fn_name_for_tco,
-            body,
-            is_async,
-        )?;
+        let mut chunk = {
+            // P4b: save/restore current_function_name for nested function safety
+            let previous = self.current_function_name.replace(name.to_string());
+            let result = self.compile_function_body_named_async(
+                params.to_vec(),
+                fn_name_for_tco,
+                body,
+                is_async,
+            );
+            self.current_function_name = previous;
+            result?
+        };
         chunk.is_generator = is_generator;
         if is_generator {
             self.known_generators.insert(name.to_string());
         }
         let has_fn_captures = !chunk.captures.is_empty();
         let name_sym_id = hudhudscript_bytecode::interner::intern(name).0;
+        let chunk_arc = Arc::new(chunk);
+        // P3a: register for compiler-side inlining
+        self.inline_function_chunks.insert(name.to_string(), Arc::clone(&chunk_arc));
         self.bytecode
-            .functions
-            .borrow_mut()
-            .insert(name.to_string(), Arc::new(chunk));
+            .add_function(name.to_string(), chunk_arc);
 
         if has_fn_captures {
             // Closure: DefineFunction handler runtime'da upvalue_cell_for() çağırır

@@ -10,7 +10,7 @@ pub fn parse_env_file(args: &[Value16]) -> HudHudResult<Value16> {
     let file_path = require_string(args, 0, "project.parse_env_file")?;
     let content = read_file(Path::new(&file_path), "project.parse_env_file")?;
 
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     for line in content.lines() {
         let trimmed = line.trim();
         if trimmed.is_empty() || trimmed.starts_with('#') {

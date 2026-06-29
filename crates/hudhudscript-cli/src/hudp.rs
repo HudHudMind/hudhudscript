@@ -9,13 +9,13 @@ static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 // Share the `common` module with hudi/hudhud/hudc bins so `hudp run` can
 // reuse `register_vm_stdlib_modules` etc.
-mod common;
 
 use std::path::PathBuf;
 use std::process;
 
 use clap::{Parser, Subcommand};
 use colored::Colorize;
+use hudhudscript_cli::common::*;
 use hudhudscript_package::{
     get_exported_modules, is_application_package, HudhudConfig, PackageBuilder, PackageManager,
     PackageRunner,
@@ -127,7 +127,7 @@ fn main() {
 }
 
 fn run(cli: Cli) -> std::result::Result<(), String> {
-    let rt = tokio::runtime::Runtime::new()
+    let rt = tokio::runtime::Builder::new_current_thread().enable_all().build()
         .map_err(|e| format!("Failed to create async runtime: {}", e))?;
 
     match cli.command {
@@ -202,11 +202,30 @@ fn run(cli: Cli) -> std::result::Result<(), String> {
                 .map_err(|e| format!("Compile error: {}", e))?;
 
             let mut vm = hudhudscript_vm::VM::new();
-            common::register_vm_stdlib_modules(&mut vm);
+            register_vm_stdlib_modules(&mut vm);
             vm.set_current_file(entry.to_string_lossy().to_string());
 
-            vm.execute(&bytecode)
-                .map_err(|e| format!("Runtime error: {}", e))?;
+            // TOKIO T-2: conditional runtime
+            #[cfg(not(feature = "mcp"))]
+            {
+                vm.execute(&bytecode).map_err(|e| format!("Runtime: {}", e))?;
+            }
+            #[cfg(feature = "mcp")]
+            {
+                let rt = tokio::runtime::Builder::new_current_thread()
+                    .enable_all().build()
+                    .map_err(|e| format!("Runtime: {}", e))?;
+                rt.block_on(async {
+                    let servers = std::collections::HashMap::new();
+                    match setup_mcp_clients(&servers, debug || cli.verbose).await {
+                        Ok(c) => { for (n, c) in c { vm.register_mcp_client(n, c); } }
+                        Err(e) => { if debug || cli.verbose { eprintln!("⚠ MCP: {}", e); } }
+                    }
+                    let r = vm.execute(&bytecode).map_err(|e| format!("Runtime: {}", e));
+                    vm.shutdown_mcp_clients().await;
+                    r
+                })?;
+            }
 
             if debug {
                 println!("{} Script completed", ">>".green());

@@ -60,95 +60,95 @@ pub struct LocalizedErrorEntry {
 const EMBEDDED_TRANSLATION_SOURCES: &[(&str, &str)] = &[
     (
         "ar",
-        include_str!("../../../docs/translations/errors_ar.json"),
+        include_str!("../translations/errors_ar.json"),
     ),
     (
         "bn",
-        include_str!("../../../docs/translations/errors_bn.json"),
+        include_str!("../translations/errors_bn.json"),
     ),
     (
         "bs",
-        include_str!("../../../docs/translations/errors_bs.json"),
+        include_str!("../translations/errors_bs.json"),
     ),
     (
         "de",
-        include_str!("../../../docs/translations/errors_de.json"),
+        include_str!("../translations/errors_de.json"),
     ),
     (
         "el",
-        include_str!("../../../docs/translations/errors_el.json"),
+        include_str!("../translations/errors_el.json"),
     ),
     (
         "es",
-        include_str!("../../../docs/translations/errors_es.json"),
+        include_str!("../translations/errors_es.json"),
     ),
     (
         "fa",
-        include_str!("../../../docs/translations/errors_fa.json"),
+        include_str!("../translations/errors_fa.json"),
     ),
     (
         "fr",
-        include_str!("../../../docs/translations/errors_fr.json"),
+        include_str!("../translations/errors_fr.json"),
     ),
     (
         "hi",
-        include_str!("../../../docs/translations/errors_hi.json"),
+        include_str!("../translations/errors_hi.json"),
     ),
     (
         "hr",
-        include_str!("../../../docs/translations/errors_hr.json"),
+        include_str!("../translations/errors_hr.json"),
     ),
     (
         "id",
-        include_str!("../../../docs/translations/errors_id.json"),
+        include_str!("../translations/errors_id.json"),
     ),
     (
         "it",
-        include_str!("../../../docs/translations/errors_it.json"),
+        include_str!("../translations/errors_it.json"),
     ),
     (
         "ja",
-        include_str!("../../../docs/translations/errors_ja.json"),
+        include_str!("../translations/errors_ja.json"),
     ),
     (
         "ko",
-        include_str!("../../../docs/translations/errors_ko.json"),
+        include_str!("../translations/errors_ko.json"),
     ),
     (
         "ku",
-        include_str!("../../../docs/translations/errors_ku.json"),
+        include_str!("../translations/errors_ku.json"),
     ),
     (
         "pl",
-        include_str!("../../../docs/translations/errors_pl.json"),
+        include_str!("../translations/errors_pl.json"),
     ),
     (
         "pt-br",
-        include_str!("../../../docs/translations/errors_pt-BR.json"),
+        include_str!("../translations/errors_pt-BR.json"),
     ),
     (
         "ru",
-        include_str!("../../../docs/translations/errors_ru.json"),
+        include_str!("../translations/errors_ru.json"),
     ),
     (
         "sr",
-        include_str!("../../../docs/translations/errors_sr.json"),
+        include_str!("../translations/errors_sr.json"),
     ),
     (
         "th",
-        include_str!("../../../docs/translations/errors_th.json"),
+        include_str!("../translations/errors_th.json"),
     ),
     (
         "tr",
-        include_str!("../../../docs/translations/errors_tr.json"),
+        include_str!("../translations/errors_tr.json"),
     ),
     (
         "vi",
-        include_str!("../../../docs/translations/errors_vi.json"),
+        include_str!("../translations/errors_vi.json"),
     ),
     (
         "zh-cn",
-        include_str!("../../../docs/translations/errors_zh-CN.json"),
+        include_str!("../translations/errors_zh-CN.json"),
     ),
 ];
 

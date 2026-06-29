@@ -1,8 +1,6 @@
 //! Tests for ResourceSchema, ResourceMetadata, CachedResource, ResourceContent.
 
-use hudhudscript_resources::{
-    CachedResource, ResourceContent, ResourceMetadata, ResourceSchema,
-};
+use hudhudscript_resources::{CachedResource, ResourceContent, ResourceMetadata, ResourceSchema};
 use std::time::{Duration, SystemTime};
 
 fn make_metadata(uri: &str, name: &str) -> ResourceMetadata {

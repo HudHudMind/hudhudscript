@@ -57,10 +57,8 @@ impl crate::vm::VM {
                     .read_line(&mut line)
                     .map_err(|e| compile_codes::runtime_error(format!("confirm error: {}", e)))?;
                 let answer = line.trim().to_lowercase();
-                self.registers[255] = Value16::bool_(matches!(
-                    answer.as_str(),
-                    "y" | "yes" | "evet" | "e"
-                ));
+                self.registers[255] =
+                    Value16::bool_(matches!(answer.as_str(), "y" | "yes" | "evet" | "e"));
                 Ok(true)
             }
 
@@ -201,11 +199,9 @@ impl crate::vm::VM {
                 }
                 if codes.is_empty() {
                     self.registers[255] = Value16::string(text);
-
                 } else {
                     let result = format!("\x1b[{}m{}\x1b[0m", codes.join(";"), text);
                     self.registers[255] = Value16::string(result);
-
                 }
                 Ok(true)
             }

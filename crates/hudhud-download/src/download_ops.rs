@@ -94,7 +94,7 @@ pub fn download_file(args: &[Value16]) -> HudHudResult<Value16> {
         ))
     })?;
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("size".to_string(), Value16::number(bytes.len() as f64));
     result.insert("path".to_string(), Value16::string(output_path));
     result.insert(
@@ -162,14 +162,14 @@ pub fn download_file_with_progress(args: &[Value16]) -> HudHudResult<Value16> {
             0.0
         };
 
-        let mut evt = HashMap::new();
+        let mut evt = hudhudscript_bytecode::ObjMap::default();
         evt.insert("downloaded".to_string(), Value16::number(downloaded as f64));
         evt.insert("total".to_string(), Value16::number(total_size as f64));
         evt.insert("percent".to_string(), Value16::number(percent));
         progress_events.push(Value16::object(evt));
     }
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("size".to_string(), Value16::number(downloaded as f64));
     result.insert("path".to_string(), Value16::string(output_path));
     result.insert(
@@ -210,7 +210,7 @@ pub fn download_resume(args: &[Value16]) -> HudHudResult<Value16> {
         .unwrap_or(0);
 
     if existing_size > 0 && existing_size >= total_size && total_size > 0 {
-        let mut result = HashMap::new();
+        let mut result = hudhudscript_bytecode::ObjMap::default();
         result.insert("size".to_string(), Value16::number(existing_size as f64));
         result.insert("path".to_string(), Value16::string(output_path));
         result.insert(
@@ -278,7 +278,7 @@ pub fn download_resume(args: &[Value16]) -> HudHudResult<Value16> {
         .map(|m| m.len())
         .unwrap_or(0);
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("size".to_string(), Value16::number(final_size as f64));
     result.insert("path".to_string(), Value16::string(output_path));
     result.insert(
@@ -319,7 +319,7 @@ pub fn download_head(args: &[Value16]) -> HudHudResult<Value16> {
         .unwrap_or("")
         .to_string();
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert(
         "content_length".to_string(),
         Value16::number(content_length),

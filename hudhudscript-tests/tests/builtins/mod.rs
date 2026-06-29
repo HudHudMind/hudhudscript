@@ -1,12 +1,14 @@
-mod test;
-mod test_archive;
+mod coverage_test;
 mod input_test;
 mod multilingual_print_test;
+mod test;
+mod test_archive;
 mod test_codesign;
 mod test_collections;
 mod test_crypto;
 mod test_daemon;
 mod test_datetime;
+mod test_datetime_from_millis;
 mod test_encoding;
 mod test_env_os;
 mod test_event_bus;

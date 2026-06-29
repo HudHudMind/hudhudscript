@@ -1,0 +1,51 @@
+// HudHudScript — GCD and LCM
+// Euclidean algorithm and number theory utilities
+
+// Greatest Common Divisor (Euclidean algorithm)
+fn gcd(a, b) {
+    a = abs_gcd(a);
+    b = abs_gcd(b);
+    while (b != 0) {
+        let temp = b;
+        b = a % b;
+        a = temp;
+    }
+    return a;
+}
+
+fn abs_gcd(x) {
+    if (x < 0) {
+        return -x;
+    }
+    return x;
+}
+
+print(gcd(48, 18));
+print(gcd(56, 98));
+print(gcd(101, 103));
+
+// Least Common Multiple
+fn lcm(a, b) {
+    if (a == 0 || b == 0) {
+        return 0;
+    }
+    return (a * b) / gcd(a, b);
+}
+
+print(lcm(4, 6));
+print(lcm(12, 15));
+
+// GCD of three numbers
+fn gcd3(a, b, c) {
+    return gcd(gcd(a, b), c);
+}
+
+print(gcd3(12, 18, 24));
+
+// Are coprime?
+fn is_coprime(a, b) {
+    return gcd(a, b) == 1;
+}
+
+print(is_coprime(14, 15));
+print(is_coprime(14, 21));

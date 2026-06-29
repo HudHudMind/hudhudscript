@@ -1,0 +1,142 @@
+// DeepSeek Provider Test
+// Set DEEPSEEK_API_KEY environment variable before running
+
+// Test 1: Basic Chat
+agent deepseek_chat {
+    provider: "deepseek"
+    model: "deepseek-chat"
+    
+    action ask(question) {
+        let response = this.call({
+            prompt: question,
+            temperature: 0.7,
+            max_tokens: 200
+        })
+        
+        return {
+            answer: response.content,
+            tokens: response.tokens_used,
+            model: response.model
+        }
+    }
+}
+
+print("=== Test 1: Basic Chat ===")
+let result1 = deepseek_chat.ask("What is the capital of Turkey?")
+print("Question: What is the capital of Turkey?")
+print("Answer:", result1.answer)
+print("Tokens used:", result1.tokens)
+print("Model:", result1.model)
+print("")
+
+// Test 2: Code Generation
+agent deepseek_coder {
+    provider: "deepseek"
+    model: "deepseek-coder"
+    
+    action generate_code(description) {
+        let response = this.call({
+            prompt: description,
+            temperature: 0.3,
+            max_tokens: 500
+        })
+        
+        return response.content
+    }
+}
+
+print("=== Test 2: Code Generation ===")
+let code = deepseek_coder.generate_code(
+    "Write a Python function to calculate factorial"
+)
+print("Generated code:")
+print(code)
+print("")
+
+// Test 3: Multi-turn Conversation
+agent deepseek_assistant {
+    provider: "deepseek"
+    model: "deepseek-chat"
+    
+    action chat(messages) {
+        let conversation = ""
+        for (let msg in messages) {
+            conversation = conversation + msg + "\n"
+        }
+        
+        let response = this.call({
+            prompt: conversation,
+            temperature: 0.8,
+            max_tokens: 300
+        })
+        
+        return response.content
+    }
+}
+
+print("=== Test 3: Multi-turn Conversation ===")
+let conversation = [
+    "User: Hello! I'm learning Rust.",
+    "Assistant: That's great! Rust is a powerful systems programming language.",
+    "User: Can you explain ownership in simple terms?"
+]
+let answer = deepseek_assistant.chat(conversation)
+print("Conversation:")
+for (let msg in conversation) {
+    print(msg)
+}
+print("Assistant:", answer)
+print("")
+
+// Test 4: Comparison with Temperature
+agent deepseek_creative {
+    provider: "deepseek"
+    model: "deepseek-chat"
+}
+
+print("=== Test 4: Temperature Comparison ===")
+
+// Low temperature (more focused)
+let focused = deepseek_creative.call({
+    prompt: "Write a haiku about programming",
+    temperature: 0.2,
+    max_tokens: 100
+})
+print("Low temperature (0.2):")
+print(focused.content)
+print("")
+
+// High temperature (more creative)
+let creative = deepseek_creative.call({
+    prompt: "Write a haiku about programming",
+    temperature: 1.0,
+    max_tokens: 100
+})
+print("High temperature (1.0):")
+print(creative.content)
+print("")
+
+// Test 5: Token Usage Analysis
+print("=== Test 5: Token Usage Analysis ===")
+let prompts = [
+    "Hi",
+    "What is artificial intelligence?",
+    "Explain quantum computing in detail with examples and applications"
+]
+
+for (let prompt in prompts) {
+    let response = deepseek_chat.call({
+        prompt: prompt,
+        temperature: 0.7,
+        max_tokens: 200
+    })
+    
+    print("Prompt:", prompt)
+    print("Prompt tokens:", response.prompt_tokens)
+    print("Completion tokens:", response.completion_tokens)
+    print("Total tokens:", response.tokens_used)
+    print("---")
+}
+
+print("")
+print("✅ All DeepSeek tests completed!")

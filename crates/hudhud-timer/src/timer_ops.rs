@@ -177,7 +177,7 @@ pub fn shared_clear_timer(args: &[Value16], context: &str) -> HudHudResult<Value
 }
 
 fn build_descriptor(ty: &str, id: u64, ms: u64, status_key: &str, has_callback: bool) -> Value16 {
-    let mut obj: HashMap<String, Value16> = HashMap::new();
+    let mut obj: hudhudscript_bytecode::ObjMap = hudhudscript_bytecode::ObjMap::default();
     obj.insert("id".to_string(), Value16::number(id as f64));
     obj.insert("type".to_string(), Value16::string(ty.to_string()));
     obj.insert("ms".to_string(), Value16::number(ms as f64));

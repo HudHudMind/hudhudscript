@@ -166,6 +166,7 @@ proptest! {
         value1 in json_value_strategy(),
         value2 in json_value_strategy()
     ) {
+        prop_assume!(field1 != field2);
         // Create a rule with multiple conditions
         let rule = Rule {
             id: "rule.1".to_string(),

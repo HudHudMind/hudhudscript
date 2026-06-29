@@ -1,0 +1,35 @@
+function knapsack(weights, values, n, capacity) {
+    let dp = [];
+    for (let i = 0; i <= n; i = i + 1) {
+        let row = [];
+        for (let w = 0; w <= capacity; w = w + 1) {
+            row.push(0);
+        }
+        dp.push(row);
+    }
+
+    for (let i = 1; i <= n; i = i + 1) {
+        for (let w = 1; w <= capacity; w = w + 1) {
+            if (weights[i - 1] <= w) {
+                let include = values[i - 1] + dp[i - 1][w - weights[i - 1]];
+                let exclude = dp[i - 1][w];
+                if (include > exclude) {
+                    dp[i][w] = include;
+                } else {
+                    dp[i][w] = exclude;
+                }
+            } else {
+                dp[i][w] = dp[i - 1][w];
+            }
+        }
+    }
+    return dp[n][capacity];
+}
+
+let weights = [];
+let values = [];
+for (let i = 0; i < 50; i = i + 1) {
+    weights.push(i + 1);
+    values.push((i + 1) * 2);
+}
+print(knapsack(weights, values, 50, 100));

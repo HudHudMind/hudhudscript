@@ -1,0 +1,185 @@
+// ============================================================================
+// RAG Customer Support Bot — HudHudScript v0.4.2
+// Issue #227: Retrieval-Augmented Generation for Customer Support
+//
+// Demonstrates dual vector stores (FAQ + tickets) for customer support.
+// Uses only syntax supported by the current parser.
+//
+// Aspirational features (tracked in v0.4.x roadmap):
+//   - record declarations (typed structs)
+//   - recall...top N where { filter }
+//   - remember...with { metadata }
+//   - typed state annotations
+//   - memory bindings inside subjects
+//   - rule...when...intends
+//   - forbid with "reason"
+// ============================================================================
+
+// ============================================================
+// 1. Providers
+// ============================================================
+
+provider support_llm {
+    type: "anthropic",
+    model: "claude-3-haiku",
+    api_key: "sk-ant-your-key",
+    max_tokens: 1024,
+    temperature: 0.3
+}
+
+// ============================================================
+// 2. Vector Stores — FAQ and ticket history
+// ============================================================
+
+store faq_knowledge {
+    backend: "hnsw",
+    dimensions: 1536,
+    distance: "cosine"
+}
+
+store ticket_history {
+    backend: "hnsw",
+    dimensions: 1536,
+    distance: "cosine"
+}
+
+// ============================================================
+// 3. Enums
+// ============================================================
+
+enum TicketPriority {
+    Low,
+    Medium,
+    High,
+    Critical
+}
+
+enum TicketStatus {
+    Open,
+    InProgress,
+    Escalated,
+    Resolved,
+    Closed
+}
+
+// ============================================================
+// 4. Roles
+// ============================================================
+
+role SupportRole {
+    can respond,
+    can escalate,
+    can detect_language
+}
+
+// ============================================================
+// 5. Subjects
+// ============================================================
+
+subject SupportBot has SupportRole {
+    state tickets_resolved: 0,
+    state tickets_escalated: 0,
+    state escalation_threshold: 0.60
+}
+
+subject HumanAgent {
+    state queue_size: 0,
+    state expertise: "general",
+    can resolve,
+    can respond
+}
+
+// ============================================================
+// 6. Relations
+// ============================================================
+
+relation SupportBot <-> HumanAgent {
+    escalation_count: 0,
+    resolution_rate: 0.0
+}
+
+// ============================================================
+// 7. Events and Effects
+// ============================================================
+
+event TicketResolved {
+    resolver: Subject,
+    ticket_id: Text
+}
+
+event TicketEscalated {
+    bot: Subject,
+    agent: Subject,
+    reason: Text
+}
+
+effect on TicketResolved {
+    print("Ticket resolved.");
+}
+
+effect on TicketEscalated {
+    print("Ticket escalated to human agent.");
+}
+
+// ============================================================
+// 8. FAQ Knowledge Ingestion
+// ============================================================
+
+print("=== FAQ Ingestion ===");
+
+remember "To reset your password: go to Settings > Security > Reset Password." in faq_knowledge;
+remember "Refund policy: Full refund within 30 days of purchase." in faq_knowledge;
+remember "Shipping takes 3-5 business days for domestic orders." in faq_knowledge;
+remember "To cancel your subscription: go to Account > Subscriptions > Cancel." in faq_knowledge;
+remember "Two-factor authentication: Settings > Security > 2FA." in faq_knowledge;
+remember "API rate limits: Free 100/hr, Pro 1000/hr, Enterprise unlimited." in faq_knowledge;
+
+// Turkish FAQ
+remember "Sifre sifirlama: Ayarlar > Guvenlik > Sifre Sifirla." in faq_knowledge;
+remember "Iade politikasi: 30 gun icinde tam iade." in faq_knowledge;
+
+print("Ingested 8 FAQ entries (6 EN, 2 TR).");
+
+// ============================================================
+// 9. Ticket History Ingestion
+// ============================================================
+
+remember "Ticket 1042: Login issue after password reset. Fixed by clearing cache." in ticket_history;
+remember "Ticket 1187: Double charge on subscription. Refund issued." in ticket_history;
+remember "Ticket 1203: International shipment stuck in customs. Resolved with logistics partner." in ticket_history;
+remember "Ticket 1298: API 429 errors on Pro tier. Rate limiter not updated after upgrade." in ticket_history;
+
+print("Ingested 4 ticket history entries.");
+
+// ============================================================
+// 10. Support Query Pipeline
+// ============================================================
+
+print("=== Support Query Pipeline ===");
+
+let question = "I was charged twice on my credit card";
+print("Customer question: " + question);
+
+// Search FAQ
+recall question from faq_knowledge;
+print("Searched FAQ knowledge base.");
+
+// Search ticket history
+recall question from ticket_history;
+print("Searched ticket history.");
+
+// Multi-language query
+let turkish_q = "Sifremi nasil sifirlarim?";
+recall turkish_q from faq_knowledge;
+print("Turkish query: " + turkish_q);
+print("Searched FAQ for Turkish answer.");
+
+// ============================================================
+// 11. Summary
+// ============================================================
+
+print("=== Support RAG Summary ===");
+print("FAQ entries: 8 (6 EN, 2 TR)");
+print("Ticket history: 4 entries");
+print("2 queries processed");
+print("Customer Support RAG demo complete.");

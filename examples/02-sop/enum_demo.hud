@@ -1,0 +1,59 @@
+// ═══════════════════════════════════════════════════════════
+// Enum — HudHudScript Enum Tanimlama ve Kullanim
+// ═══════════════════════════════════════════════════════════
+
+// --- Enum tanimi ---
+enum Renk {
+    Kirmizi,
+    Yesil,
+    Mavi
+}
+
+enum Sekil {
+    Daire(yaricap),
+    Dikdortgen(genislik, yukseklik),
+    Nokta
+}
+
+enum Islem {
+    Topla(a, b),
+    Cikar(a, b),
+    Carp(a, b),
+    Bol(a, b)
+}
+
+// --- Enum kullanimi (match) ---
+let renk = Renk::Kirmizi
+
+match (renk) {
+    Renk::Kirmizi { print("Kirmizi secildi") }
+    Renk::Yesil   { print("Yesil secildi") }
+    Renk::Mavi    { print("Mavi secildi") }
+}
+
+// --- Parametreli enum ---
+let s = Sekil::Dikdortgen(10, 5)
+
+match (s) {
+    Sekil::Daire(r) {
+        let alan = 3 * r * r
+        print("Daire alani: " + alan)
+    }
+    Sekil::Dikdortgen(w, h) {
+        let alan = w * h
+        print("Dikdortgen alani: " + alan)
+    }
+    Sekil::Nokta {
+        print("Nokta — alan yok")
+    }
+}
+
+// --- Enum ile islem ---
+let islem = Islem::Topla(3, 7)
+
+match (islem) {
+    Islem::Topla(a, b)  { print("Toplam: " + (a + b)) }
+    Islem::Cikar(a, b)  { print("Fark: " + (a - b)) }
+    Islem::Carp(a, b)   { print("Carpim: " + (a * b)) }
+    Islem::Bol(a, b)    { print("Bolum: " + (a / b)) }
+}

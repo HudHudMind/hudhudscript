@@ -1,6 +1,6 @@
 use crate::{
-    ClassData, DataData, DynamicData, DynamicKind, DynamicObject, FunctionData, GeneratorState16,
-    InstanceData, PromiseState16, Repr, ReprTag, ResourceRef, ToolRef,
+    gc, ClassData, DataData, DynamicData, DynamicKind, DynamicObject, FunctionData,
+    GeneratorState16, InstanceData, ObjMap, PromiseState16, Repr, ReprTag, ResourceRef, ToolRef,
 };
 use parking_lot::Mutex;
 use std::sync::{Arc, OnceLock};
@@ -57,11 +57,21 @@ impl Value16 {
                 return Value16(repr);
             }
         }
-        let obj = Box::new(DynamicObject {
-            kind: DynamicKind::String,
-            data: DynamicData::String(s),
-        });
-        Value16(Repr::new_dynamic(Box::into_raw(obj) as *const ()))
+        gc::alloc(DynamicKind::String, DynamicData::String(s))
+    }
+
+    /// Create a String value from a &str WITHOUT intermediate heap allocation.
+    /// Short strings (≤15 bytes) are stored inline directly from the slice.
+    /// Long strings fall through to GC heap (single allocation, no double-copy).
+    /// P0.3 fix: eliminates `s.into()` allocation for hot-path string methods.
+    #[inline]
+    pub fn string_from_str(s: &str) -> Self {
+        if s.len() <= 15 {
+            if let Some(repr) = Repr::new_inline_string(s) {
+                return Value16(repr);
+            }
+        }
+        gc::alloc(DynamicKind::String, DynamicData::String(s.to_string()))
     }
 
     /// Return a cached single-byte ASCII string (0–127) without heap allocation.
@@ -71,11 +81,31 @@ impl Value16 {
         let cache = ASCII_CHAR_CACHE.get_or_init(|| {
             let mut arr = [Value16::null(); 128];
             for i in 0..128u8 {
-                arr[i as usize] = Value16::string((i as char).to_string());
+                arr[i as usize] = Value16::string_from_str(&(i as char).to_string());
             }
             arr
         });
         cache[b as usize]
+    }
+
+    /// Create a BigInt value. If the value fits in i64, store as Int (fast path).
+    /// ISSUE-4: Allocate BigInt on GC heap WITHOUT demotion check.
+    /// Use ONLY when the result is known to be too large for i64
+    /// (e.g., BigInt×BigInt, BigInt+BigInt). Saves 18M to_i64 calls
+    /// in fib_iterative/fib_memo.
+    #[inline]
+    pub fn bigint_no_demote(v: num_bigint::BigInt) -> Self {
+        gc::alloc(DynamicKind::BigInt, DynamicData::BigInt(v))
+    }
+
+    /// Allocate BigInt with demotion check (small values → Int).
+    #[inline]
+    pub fn bigint(v: num_bigint::BigInt) -> Self {
+        use num_traits::ToPrimitive;
+        if let Some(i) = v.to_i64() {
+            return Value16::int(i);
+        }
+        gc::alloc(DynamicKind::BigInt, DynamicData::BigInt(v))
     }
 
     // ── Type Tests ───────────────────────────────────────────────────
@@ -148,15 +178,48 @@ impl Value16 {
         self.0.tag() == ReprTag::Dynamic
     }
 
+    /// True if the value is a heap-allocated Function.
+    #[inline(always)]
+    pub fn is_function(&self) -> bool {
+        if self.0.tag() != ReprTag::Dynamic {
+            return false;
+        }
+        if let Some(ptr) = self.0.as_ptr() {
+            let obj = unsafe { &*(ptr as *const crate::DynamicObject) };
+            matches!(obj.kind, crate::DynamicKind::Function)
+        } else {
+            false
+        }
+    }
+
+    /// Return the raw pointer identity of this function value (O(1)).
+    /// Returns 0 for non-function values. Used by Call Inline Cache
+    /// to detect cache hits without type/arity checks.
+    #[inline(always)]
+    pub fn get_func_ptr(&self) -> usize {
+        if self.0.tag() != ReprTag::Dynamic {
+            return 0;
+        }
+        self.0.as_ptr().map(|p| p as usize).unwrap_or(0)
+    }
+
     // ── Extractors ──────────────────────────────────────────────────
 
     #[inline(always)]
     pub fn as_number(&self) -> Option<f64> {
+        if let Some(b) = self.as_bigint() {
+            use num_traits::ToPrimitive;
+            return b.to_f64();
+        }
         self.0.as_number()
     }
 
     #[inline(always)]
     pub fn as_int(&self) -> Option<i64> {
+        if let Some(b) = self.as_bigint() {
+            use num_traits::ToPrimitive;
+            return b.to_i64();
+        }
         self.0.as_int()
     }
 
@@ -168,141 +231,93 @@ impl Value16 {
     /// Create an Array value (heap allocated via DynamicObject).
     #[inline]
     pub fn array(items: Vec<Value16>) -> Self {
-        let obj = Box::new(DynamicObject {
-            kind: DynamicKind::Array,
-            data: DynamicData::Array(items),
-        });
-        Value16(Repr::new_dynamic(Box::into_raw(obj) as *const ()))
+        gc::alloc(DynamicKind::Array, DynamicData::Array(items))
     }
 
     /// Create an Object value (heap allocated via DynamicObject).
+    /// Accepts any iterable of `(K, Value16)` pairs where `K: Into<SymId>`
+    /// (both `String` and `SymId` work) and materialises an `ObjMap` internally.
     #[inline]
-    pub fn object(map: std::collections::HashMap<String, Value16>) -> Self {
-        let obj = Box::new(DynamicObject {
-            kind: DynamicKind::Object,
-            data: DynamicData::Object(map),
-        });
-        Value16(Repr::new_dynamic(Box::into_raw(obj) as *const ()))
+    pub fn object<I, K>(items: I) -> Self
+    where
+        I: IntoIterator<Item = (K, Value16)>,
+        K: Into<crate::sym::SymId>,
+    {
+        gc::alloc(DynamicKind::Object, DynamicData::Object(
+            items.into_iter().map(|(k, v)| (k.into(), v)).collect::<ObjMap>()
+        ))
     }
 
     /// Create a Function value (heap allocated via DynamicObject).
     #[inline]
     pub fn function(func: FunctionData) -> Self {
-        let obj = Box::new(DynamicObject {
-            kind: DynamicKind::Function,
-            data: DynamicData::Function(func),
-        });
-        Value16(Repr::new_dynamic(Box::into_raw(obj) as *const ()))
+        gc::alloc(DynamicKind::Function, DynamicData::Function(func))
     }
 
     /// Create an Instance value (heap allocated via DynamicObject).
     #[inline]
     pub fn instance(inst: InstanceData) -> Self {
-        let obj = Box::new(DynamicObject {
-            kind: DynamicKind::Instance,
-            data: DynamicData::Instance(inst),
-        });
-        Value16(Repr::new_dynamic(Box::into_raw(obj) as *const ()))
+        gc::alloc(DynamicKind::Instance, DynamicData::Instance(inst))
     }
 
     /// Create a Promise value (heap allocated via DynamicObject).
     #[inline]
     pub fn promise(p: PromiseState16) -> Self {
-        let obj = Box::new(DynamicObject {
-            kind: DynamicKind::Promise,
-            data: DynamicData::Promise(p),
-        });
-        Value16(Repr::new_dynamic(Box::into_raw(obj) as *const ()))
+        gc::alloc(DynamicKind::Promise, DynamicData::Promise(p))
     }
 
     /// Create a Class value (heap allocated via DynamicObject).
     #[inline]
     pub fn class(c: ClassData) -> Self {
-        let obj = Box::new(DynamicObject {
-            kind: DynamicKind::Class,
-            data: DynamicData::Class(c),
-        });
-        Value16(Repr::new_dynamic(Box::into_raw(obj) as *const ()))
+        gc::alloc(DynamicKind::Class, DynamicData::Class(c))
     }
 
     /// Create a Data value (heap allocated via DynamicObject).
     #[inline]
     pub fn data(d: DataData) -> Self {
-        let obj = Box::new(DynamicObject {
-            kind: DynamicKind::Data,
-            data: DynamicData::Data(d),
-        });
-        Value16(Repr::new_dynamic(Box::into_raw(obj) as *const ()))
+        gc::alloc(DynamicKind::Data, DynamicData::Data(d))
     }
 
     /// Create a Set value (heap allocated via DynamicObject).
     #[inline]
     pub fn set(items: Vec<Value16>) -> Self {
-        let obj = Box::new(DynamicObject {
-            kind: DynamicKind::Set,
-            data: DynamicData::Set(items),
-        });
-        Value16(Repr::new_dynamic(Box::into_raw(obj) as *const ()))
+        gc::alloc(DynamicKind::Set, DynamicData::Set(items))
     }
 
     /// Create a Map value (heap allocated via DynamicObject).
     #[inline]
     pub fn map(pairs: Vec<(Value16, Value16)>) -> Self {
-        let obj = Box::new(DynamicObject {
-            kind: DynamicKind::Map,
-            data: DynamicData::Map(pairs),
-        });
-        Value16(Repr::new_dynamic(Box::into_raw(obj) as *const ()))
+        gc::alloc(DynamicKind::Map, DynamicData::Map(pairs))
     }
 
     /// Create a Generator value (heap allocated via DynamicObject).
     #[inline]
     pub fn generator(state: Arc<Mutex<GeneratorState16>>) -> Self {
-        let obj = Box::new(DynamicObject {
-            kind: DynamicKind::Generator,
-            data: DynamicData::Generator(state),
-        });
-        Value16(Repr::new_dynamic(Box::into_raw(obj) as *const ()))
+        gc::alloc(DynamicKind::Generator, DynamicData::Generator(state))
     }
 
     /// Create a Tool value (heap allocated via DynamicObject).
     #[inline]
     pub fn tool(t: ToolRef) -> Self {
-        let obj = Box::new(DynamicObject {
-            kind: DynamicKind::Tool,
-            data: DynamicData::Tool(Box::new(t)),
-        });
-        Value16(Repr::new_dynamic(Box::into_raw(obj) as *const ()))
+        gc::alloc(DynamicKind::Tool, DynamicData::Tool(Box::new(t)))
     }
 
     /// Create a Resource value (heap allocated via DynamicObject).
     #[inline]
     pub fn resource(r: ResourceRef) -> Self {
-        let obj = Box::new(DynamicObject {
-            kind: DynamicKind::Resource,
-            data: DynamicData::Resource(Box::new(r)),
-        });
-        Value16(Repr::new_dynamic(Box::into_raw(obj) as *const ()))
+        gc::alloc(DynamicKind::Resource, DynamicData::Resource(Box::new(r)))
     }
 
     /// Create an Option value (heap allocated via DynamicObject).
     #[inline]
     pub fn option(v: Option<Value16>) -> Self {
-        let obj = Box::new(DynamicObject {
-            kind: DynamicKind::Option,
-            data: DynamicData::Option(v.map(Box::new)),
-        });
-        Value16(Repr::new_dynamic(Box::into_raw(obj) as *const ()))
+        gc::alloc(DynamicKind::Option, DynamicData::Option(v.map(Box::new)))
     }
 
     /// Create a Result value (heap allocated via DynamicObject).
     #[inline]
     pub fn result(r: Result<Value16, String>) -> Self {
-        let obj = Box::new(DynamicObject {
-            kind: DynamicKind::Result,
-            data: DynamicData::Result(r.map(Box::new)),
-        });
-        Value16(Repr::new_dynamic(Box::into_raw(obj) as *const ()))
+        gc::alloc(DynamicKind::Result, DynamicData::Result(r.map(Box::new)))
     }
 
     #[inline(always)]

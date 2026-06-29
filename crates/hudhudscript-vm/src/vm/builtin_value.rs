@@ -223,7 +223,7 @@ impl crate::vm::VM {
 
     // ── env lookup ──────────────────────────────────────────────────
 
-    pub(crate) fn env_lookup(key: &str) -> Value16 {
+    pub(crate) fn env_lookup(&self, key: &str) -> Value16 {
         // Check environment variable first
         if let Ok(val) = std::env::var(key) {
             return Value16::string(val);

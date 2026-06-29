@@ -1,0 +1,14 @@
+[package]
+name = "hudhud-web-session"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+hudhudscript-bytecode = { path = "../hudhudscript-bytecode" }
+hudhudscript-errors = { path = "../hudhudscript-errors" }
+hmac = "0.12"
+sha2 = "0.10"
+base64 = "0.22"

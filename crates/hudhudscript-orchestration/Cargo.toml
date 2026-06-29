@@ -12,6 +12,7 @@ hudhudscript-tools = { path = "../hudhudscript-tools" }
 hudhudscript-resources = { path = "../hudhudscript-resources" }
 hudhudscript-cybernetics = { path = "../hudhudscript-cybernetics" }
 hudhudscript-text-stream = { path = "../hudhudscript-text-stream" }
+hudhudscript-bytecode = { path = "../hudhudscript-bytecode" }
 tokio = { workspace = true, features = ["full"] }
 thiserror.workspace = true
 serde.workspace = true

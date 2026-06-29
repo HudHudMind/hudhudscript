@@ -73,7 +73,7 @@ pub fn config_load(args: &[Value16]) -> HudHudResult<Value16> {
         Err(_) => format!("~/.config/hudhud/plugins/{}.toml", plugin_name),
     };
 
-    let mut config: HashMap<String, Value16> = HashMap::new();
+    let mut config: hudhudscript_bytecode::ObjMap = hudhudscript_bytecode::ObjMap::default();
 
     if let Ok(content) = std::fs::read_to_string(&system_path) {
         if let Ok(parsed) = content.parse::<toml::Table>() {
@@ -114,7 +114,7 @@ pub fn toml_to_value(v: &toml::Value) -> Value16 {
         toml::Value::Boolean(b) => Value16::bool_(*b),
         toml::Value::Array(arr) => Value16::array(arr.iter().map(|x| toml_to_value(x)).collect()),
         toml::Value::Table(tbl) => {
-            let mut map = HashMap::new();
+            let mut map = hudhudscript_bytecode::ObjMap::default();
             for (k, v) in tbl {
                 map.insert(k.clone(), toml_to_value(v));
             }
@@ -147,8 +147,8 @@ pub fn value_to_toml(v: &Value16) -> toml::Value {
     if let Some(obj) = v.as_object() {
         let mut tbl = toml::map::Map::new();
         for (k, v) in obj {
-            if !k.starts_with("__") {
-                tbl.insert(k.clone(), value_to_toml(v));
+            if !k.to_string().starts_with("__") {
+                tbl.insert(k.to_string(), value_to_toml(v));
             }
         }
         return toml::Value::Table(tbl);
@@ -216,10 +216,10 @@ pub fn config_save(args: &[Value16]) -> HudHudResult<Value16> {
 
     let mut toml_table = toml::map::Map::new();
     for (k, v) in config {
-        if k.starts_with("__") {
+        if k.to_string().starts_with("__") {
             continue;
         }
-        toml_table.insert(k.clone(), value_to_toml(v));
+        toml_table.insert(k.to_string(), value_to_toml(v));
     }
     let content = toml::to_string_pretty(&toml::Value::Table(toml_table))
         .map_err(|e| runtime_error(format!("PluginConfig.save: serialize error: {}", e)))?;
@@ -230,7 +230,7 @@ pub fn config_save(args: &[Value16]) -> HudHudResult<Value16> {
     std::fs::write(&path, content)
         .map_err(|e| runtime_error(format!("PluginConfig.save: write error: {}", e)))?;
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("saved".to_string(), Value16::bool_(true));
     result.insert("path".to_string(), Value16::string(path));
     Ok(Value16::object(result))
@@ -268,7 +268,7 @@ pub fn config_watch(args: &[Value16]) -> HudHudResult<Value16> {
         })
         .unwrap_or_else(|| "unknown".to_string());
 
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("watching".to_string(), Value16::bool_(true));
     result.insert("path".to_string(), Value16::string(path));
     Ok(Value16::object(result))
@@ -295,7 +295,7 @@ pub fn config_paths(args: &[Value16]) -> HudHudResult<Value16> {
         Ok(home) => format!("{}/.config/hudhud/plugins/{}.toml", home, plugin_name),
         Err(_) => format!("~/.config/hudhud/plugins/{}.toml", plugin_name),
     };
-    let mut result = HashMap::new();
+    let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("system".to_string(), Value16::string(system_path));
     result.insert("user".to_string(), Value16::string(user_path));
     Ok(Value16::object(result))

@@ -1,0 +1,20 @@
+// Sample 06: times(3) + until(counter >= 2) modes
+let counter = 0
+
+loop T mode: times(3) {
+  step s {
+    counter = counter + 1
+    gate G { when true -> continue else -> fail }
+  }
+}
+
+run loop T
+
+loop U mode: until(counter >= 5) {
+  step s {
+    counter = counter + 1
+    gate G { when true -> continue else -> fail }
+  }
+}
+
+run loop U

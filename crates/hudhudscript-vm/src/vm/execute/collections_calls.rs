@@ -16,7 +16,6 @@ impl VM {
 
         match instr {
             // IndexFast removed — compiler now emits Index (register-based)
-
             Instruction::Jump(offset) => {
                 // Relative jump: target = ip + offset (signed add).
                 // Audit v3 Finding 4.2.
@@ -60,11 +59,15 @@ impl VM {
             }
 
             // Call removed — replaced by Call. exec_call still used by Call/TailCall/CallSpread
-
-            Instruction::TailCall { func_reg: _, first_arg_reg, arg_count } => {
+            Instruction::TailCall {
+                func_reg: _,
+                first_arg_reg,
+                arg_count,
+            } => {
                 let n = *arg_count as usize;
                 self.args_scratch.clear();
-                self.args_scratch.extend((0..n).map(|i| self.registers[*first_arg_reg as usize + i]));
+                self.args_scratch
+                    .extend((0..n).map(|i| self.registers[*first_arg_reg as usize + i]));
                 let args = std::mem::take(&mut self.args_scratch);
                 self.tco_args = Some(args);
                 return Ok(StepAction::TailCall);
@@ -96,9 +99,11 @@ impl VM {
                 }
                 return Ok(StepAction::Call {
                     func_sym: *name_sym,
+                    function_idx: u32::MAX,
                     arg_count: argc,
                     first_arg,
                     dst: 255,
+                    ip,
                 });
             }
             Instruction::MethodCallSpread(_) => {

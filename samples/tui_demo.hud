@@ -1,7 +1,7 @@
 // TUI Demo — Command Buffer Pattern (TUI.md fix)
 // Widget'lar önce queue'lanır, tui.draw() hepsini tek frame'de çizer.
 
-import tui
+use tui
 
 tui.init()
 

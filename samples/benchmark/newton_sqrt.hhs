@@ -1,0 +1,18 @@
+function sqrt_newton(n) {
+    if (n < 0) { return 0; }
+    if (n == 0) { return 0; }
+    let x = n;
+    let prev = 0;
+    for (let i = 0; i < 20; i = i + 1) {
+        prev = x;
+        x = (x + n / x) / 2;
+        if (x == prev) { i = 20; }
+    }
+    return x;
+}
+
+let sum = 0.5 - 0.5;
+for (let i = 1; i <= 100; i = i + 1) {
+    sum = sum + sqrt_newton(i);
+}
+print(sum);

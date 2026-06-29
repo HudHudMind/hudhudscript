@@ -30,6 +30,62 @@ pub enum McpTransportKind {
     Sse,
 }
 
+/// MCP-41: Validate SSE URL for SSRF protection.
+/// - Only http/https schemes allowed.
+/// - http only with explicit allowlist or localhost.
+/// - Blocks private/metadata IPs.
+pub fn validate_sse_url(
+    server_name: &str,
+    url: &str,
+    allow_insecure_http: bool,
+) -> Result<(), String> {
+    let lower = url.to_lowercase();
+    let is_https = lower.starts_with("https://");
+    let is_http = lower.starts_with("http://");
+    if !is_https && !is_http {
+        return Err(format!(
+            "MCP server '{}': SSE URL must use http:// or https://, got: {}",
+            server_name, url
+        ));
+    }
+    // MCP-41: http only allowed with explicit opt-in (localhost or allowlist).
+    if is_http && !allow_insecure_http {
+        return Err(format!(
+            "MCP server '{}': http:// URLs require explicit allow_insecure_http (use https:// or enable insecure HTTP)",
+            server_name
+        ));
+    }
+    // Block common SSRF targets.
+    let blocked_hosts = [
+        "localhost",
+        "127.0.0.1",
+        "0.0.0.0",
+        "[::1]",
+        "10.",
+        "172.16.",
+        "192.168.",                 // private IPv4
+        "169.254.",                 // link-local
+        "metadata.google.internal", // GCP
+        "169.254.169.254",          // AWS
+    ];
+    let host_part = if is_https {
+        lower.strip_prefix("https://").unwrap()
+    } else {
+        lower.strip_prefix("http://").unwrap()
+    };
+    let host = host_part.split('/').next().unwrap_or("");
+    let host = host.split(':').next().unwrap_or(host);
+    for blocked in &blocked_hosts {
+        if host == *blocked || host.starts_with(blocked) {
+            return Err(format!(
+                "MCP server '{}': SSE URL host '{}' is blocked for SSRF protection",
+                server_name, host
+            ));
+        }
+    }
+    Ok(())
+}
+
 /// Create, initialize, and wire up an `McpClient` from a script-level
 /// `mcp server` declaration (Kural 7).
 ///
@@ -58,47 +114,36 @@ pub fn create_mcp_client_from_config(
 ) -> Result<Arc<McpClient>, String> {
     let transport_config = match transport {
         McpTransportKind::Stdio => {
-            let cmd = command.unwrap_or("echo").to_string();
-            TransportConfig::stdio(cmd, args.to_vec())
+            let cmd = command.ok_or_else(|| {
+                format!(
+                    "MCP server '{}': stdio transport requires 'command' field",
+                    name
+                )
+            })?;
+            TransportConfig::stdio(cmd.to_string(), args.to_vec())
         }
         McpTransportKind::Sse => {
-            let u = url.unwrap_or("http://localhost:8080").to_string();
-            TransportConfig::sse(u)
+            let u = url.ok_or_else(|| {
+                format!("MCP server '{}': SSE transport requires 'url' field", name)
+            })?;
+            // MCP-41: SSRF protection — validate SSE URL (http only with allowlist).
+            validate_sse_url(name, u, false)?;
+            TransportConfig::sse(u.to_string())
         }
     };
 
-    // Bridge async client creation into sync context (same pattern the
-    // dispatcher uses in `dispatch_mcp_tool_call`).
-    let client_fut = async move {
-        McpClient::new(transport_config)
+    // MCP-11: Single-source lifecycle — use connect_initialized helper.
+    // Default 5s initialize timeout; bridges async into sync context.
+    let connect_fut = async move {
+        McpClient::connect_initialized(transport_config, std::time::Duration::from_secs(5))
             .await
-            .map(Arc::new)
             .map_err(|e| e.to_string())
     };
-    let client = match tokio::runtime::Handle::try_current() {
-        Ok(handle) => tokio::task::block_in_place(|| handle.block_on(client_fut)),
-        Err(_) => futures::executor::block_on(client_fut),
+    match tokio::runtime::Handle::try_current() {
+        Ok(handle) => tokio::task::block_in_place(|| handle.block_on(connect_fut)),
+        Err(_) => futures::executor::block_on(connect_fut),
     }
-    .map_err(|e| format!("Failed to create MCP client for '{}': {}", name, e))?;
-
-    // Best-effort initialize + start the response-handler task. Matches
-    // the interpreter's `execute_mcp_server_decl` behaviour (initialize
-    // can fail if the downstream server process has not booted yet; we
-    // still register the client so later calls can retry).
-    {
-        let client_clone = client.clone();
-        let init_fut = async move {
-            if client_clone.initialize().await.is_ok() {
-                client_clone.start_response_handler().await;
-            }
-        };
-        match tokio::runtime::Handle::try_current() {
-            Ok(handle) => tokio::task::block_in_place(|| handle.block_on(init_fut)),
-            Err(_) => futures::executor::block_on(init_fut),
-        }
-    }
-
-    Ok(client)
+    .map_err(|e| format!("Failed to connect MCP client '{}': {}", name, e))
 }
 
 /// Runtime-provided hooks needed to execute an MCP tool call.
@@ -219,14 +264,14 @@ fn content_to_value(content: &Content) -> SharedResult<Value16> {
     match content {
         Content::Text { text } => Ok(Value16::string(text.clone())),
         Content::Image { data, mime_type } => {
-            let mut obj = HashMap::new();
+            let mut obj = hudhudscript_bytecode::ObjMap::default();
             obj.insert("type".to_string(), Value16::string("image".to_string()));
             obj.insert("data".to_string(), Value16::string(data.clone()));
             obj.insert("mimeType".to_string(), Value16::string(mime_type.clone()));
             Ok(Value16::object(obj))
         }
         Content::Resource { resource } => {
-            let mut obj = HashMap::new();
+            let mut obj = hudhudscript_bytecode::ObjMap::default();
             obj.insert("type".to_string(), Value16::string("resource".to_string()));
             obj.insert("uri".to_string(), Value16::string(resource.uri.clone()));
             Ok(Value16::object(obj))

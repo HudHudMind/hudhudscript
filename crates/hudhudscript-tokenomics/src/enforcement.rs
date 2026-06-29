@@ -168,6 +168,11 @@ impl BudgetEnforcer {
         &self.alerts
     }
 
+    /// Drain and return all pending alerts.
+    pub fn drain_alerts(&mut self) -> Vec<Alert> {
+        std::mem::take(&mut self.alerts)
+    }
+
     pub fn usage_summary(&self) -> UsageSummary {
         UsageSummary {
             daily_usage: self.daily_usage,
@@ -215,15 +220,32 @@ impl BudgetEnforcer {
             BudgetHealth::Healthy => return,
         };
 
+        let msg = format!(
+            "Budget health: {:?} (daily {:.0}%, monthly {:.0}%)",
+            health,
+            self.daily_pct() * 100.0,
+            self.monthly_pct() * 100.0
+        );
+
+        match action {
+            AlertAction::Log => {
+                eprintln!("tokenomics alert: {}", msg);
+            }
+            AlertAction::Notify => {
+                eprintln!("tokenomics alert (notify): {}", msg);
+            }
+            AlertAction::Pause => {
+                eprintln!("tokenomics alert (pause): {}", msg);
+            }
+            AlertAction::Block => {
+                eprintln!("tokenomics alert (block): {}", msg);
+            }
+        }
+
         self.alerts.push(Alert {
             level: health,
             action,
-            message: format!(
-                "Budget health: {:?} (daily {:.0}%, monthly {:.0}%)",
-                health,
-                self.daily_pct() * 100.0,
-                self.monthly_pct() * 100.0
-            ),
+            message: msg,
             timestamp: Utc::now(),
             budget_usage_pct: self.daily_pct(),
         });

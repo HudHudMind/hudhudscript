@@ -105,7 +105,7 @@ pub fn fw_status(_args: &[Value16]) -> HudHudResult<Value16> {
         }
     }
 
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     obj.insert("active".to_string(), Value16::bool_(active));
     obj.insert(
         "rules_count".to_string(),
@@ -181,7 +181,7 @@ pub fn fw_rules(_args: &[Value16]) -> HudHudResult<Value16> {
             String::from("Anywhere")
         };
 
-        let mut rule = HashMap::new();
+        let mut rule = hudhudscript_bytecode::ObjMap::default();
         rule.insert("number".to_string(), Value16::number(number));
         rule.insert("action".to_string(), Value16::string(action));
         rule.insert("direction".to_string(), Value16::string(direction));
@@ -288,7 +288,7 @@ fn run_cmd_result(cmd: &mut Command, op: &str) -> HudHudResult<Value16> {
     } else {
         String::from_utf8_lossy(&output.stderr).trim().to_string()
     };
-    let mut obj = HashMap::new();
+    let mut obj = hudhudscript_bytecode::ObjMap::default();
     obj.insert("ok".to_string(), Value16::bool_(ok));
     obj.insert("message".to_string(), Value16::string(msg));
     Ok(Value16::object(obj))

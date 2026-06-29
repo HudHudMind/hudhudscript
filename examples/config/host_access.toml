@@ -1,0 +1,60 @@
+# Host Access Policy Örnekleri
+# Bu dosya, hudhud.toml [host_access] bölümü için kullanılabilecek
+# örnek profilleri içerir. İhtiyaca göre birini seçip kendi
+# hudhud.toml'unuza kopyalayabilirsiniz.
+
+# ═══════════════════════════════════════════════════════════════════
+# Profil 1: Sert web profili — hiçbir host erişimi yok
+# ═══════════════════════════════════════════════════════════════════
+# [host_access]
+# default = "deny"
+
+# ═══════════════════════════════════════════════════════════════════
+# Profil 2: Kontrollü CLI profili — çoğu erişime izin, kritikleri engelle
+# ═══════════════════════════════════════════════════════════════════
+[host_access]
+default = "allow"
+
+[host_access.env]
+default = "allow"
+deny = [
+    "AWS_SECRET_ACCESS_KEY",
+    "AWS_ACCESS_KEY_ID",
+    "GITHUB_TOKEN",
+    "DOCKER_PASSWORD",
+    "SSH_AUTH_SOCK",
+]
+
+[host_access.exec]
+default = "allow"
+deny = [
+    "rm",
+    "dd",
+    "mkfs",
+    "fdisk",
+    "shutdown",
+    "reboot",
+    "sudo",
+]
+max_processes = 50
+
+# ═══════════════════════════════════════════════════════════════════
+# Profil 3: Dar web profili — sadece rg gibi güvenli komutlara izin
+# ═══════════════════════════════════════════════════════════════════
+# [host_access]
+# default = "deny"
+#
+# [host_access.env]
+# default = "deny"
+# allow = ["DEEPSEEK_API_KEY", "OPENAI_API_KEY"]
+#
+# [host_access.exec]
+# default = "deny"
+# allow = ["rg"]
+# deny = ["git", "bash", "sh", "zsh", "sudo"]
+# max_processes = 4
+#
+# [host_access.modules]
+# default = "deny"
+# http = "allow"
+# process = "allow"

@@ -87,7 +87,7 @@ pub fn pdf_info(args: &[Value16]) -> HudHudResult<Value16> {
     }
 
     let text = String::from_utf8_lossy(&output.stdout);
-    let mut info: HashMap<String, Value16> = HashMap::new();
+    let mut info: hudhudscript_bytecode::ObjMap = hudhudscript_bytecode::ObjMap::default();
     for line in text.lines() {
         if let Some((key, value)) = line.split_once(':') {
             let key = key.trim();
