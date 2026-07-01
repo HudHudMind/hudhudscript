@@ -330,8 +330,8 @@ name = "stm"
 path = "tests/stm/mod.rs"
 
 [[test]]
-name = "examples"
-path = "tests/examples/mod.rs"
+name = "samples"
+path = "tests/samples/mod.rs"
 
 [[test]]
 name = "exception"

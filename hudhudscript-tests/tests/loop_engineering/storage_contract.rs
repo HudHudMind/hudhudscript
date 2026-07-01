@@ -8,7 +8,7 @@ fn storage_guard_path() -> PathBuf {
     let parent = manifest_dir
         .parent()
         .expect("test crate must have a parent directory");
-    let relative = Path::new("examples/09-loop-engineering/05_shared_storage_guard.hud");
+    let relative = Path::new("samples/09-loop-engineering/05_shared_storage_guard.hud");
     let candidates = [
         parent.join("hudhud-script").join(relative),
         parent.join(relative),

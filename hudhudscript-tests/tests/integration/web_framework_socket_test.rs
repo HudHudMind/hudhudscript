@@ -73,7 +73,7 @@ fn test_socket_render_file() {
     let examples_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap()
-        .join("examples/06-web/templates/index.html");
+        .join("samples/06-web/templates/index.html");
     let tmpl_path = examples_dir.to_str().unwrap();
 
     let script = format!(

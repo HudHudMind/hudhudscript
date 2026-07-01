@@ -6,7 +6,7 @@ use std::fs;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Read source file
-    let source_path = "examples/arabic_working.hudhud";
+    let source_path = "samples/hello.hud";
     let source = fs::read_to_string(source_path)?;
 
     println!("📖 Reading: {}", source_path);
@@ -44,7 +44,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!();
 
     // Save to .hudb file
-    let output_path = "examples/arabic_working.hudb";
+    let output_path = "samples/hello.hudb";
     let bytes = bytecode.to_bytes()?;
     fs::write(output_path, &bytes)?;
 

@@ -324,7 +324,7 @@ fn mode_once_done_returns_success() {
 
 #[test]
 fn sample_06_times_until_modes() {
-    let vm = compile_and_execute(include_str!("../../../hudhud-script/examples/09-loop-engineering/06_times_until.hud"));
+    let vm = compile_and_execute(include_str!("../../../samples/09-loop-engineering/06_times_until.hud"));
     let obj = result_obj(&vm);
     // times(3) ran, then until(counter>=5) ran counter from 3 to 5
     assert_eq!(required_vm_int(&vm, "counter"), 5);
@@ -333,7 +333,7 @@ fn sample_06_times_until_modes() {
 
 #[test]
 fn sample_07_chain_fail_short_circuits() {
-    let obj = result_obj(&compile_and_execute(include_str!("../../../hudhud-script/examples/09-loop-engineering/07_chain_fail_short.hud")));
+    let obj = result_obj(&compile_and_execute(include_str!("../../../samples/09-loop-engineering/07_chain_fail_short.hud")));
     // validate fails → publish never runs → no published marker
     assert_eq!(required_bool(&obj, "success"), false);
     assert_eq!(required_str(&obj, "status"), String::from("failed"));
@@ -342,13 +342,13 @@ fn sample_07_chain_fail_short_circuits() {
 
 #[test]
 fn sample_08_retry_bounded_escalates() {
-    let obj = result_obj(&compile_and_execute(include_str!("../../../hudhud-script/examples/09-loop-engineering/08_retry_bounded.hud")));
+    let obj = result_obj(&compile_and_execute(include_str!("../../../samples/09-loop-engineering/08_retry_bounded.hud")));
     assert_eq!(required_str(&obj, "status"), String::from("escalated"));
 }
 
 #[test]
 fn sample_09_step_transition_skips_s2() {
-    let obj = result_obj(&compile_and_execute(include_str!("../../../hudhud-script/examples/09-loop-engineering/09_step_transition.hud")));
+    let obj = result_obj(&compile_and_execute(include_str!("../../../samples/09-loop-engineering/09_step_transition.hud")));
     assert_eq!(optional_bool(&obj, "s2_ran"), None);
     assert_eq!(required_bool(&obj, "s3_ran"), true);
     assert_eq!(required_bool(&obj, "success"), true);
@@ -356,7 +356,7 @@ fn sample_09_step_transition_skips_s2() {
 
 #[test]
 fn sample_10_until_exact_stop() {
-    let vm = compile_and_execute(include_str!("../../../hudhud-script/examples/09-loop-engineering/10_until_exact.hud"));
+    let vm = compile_and_execute(include_str!("../../../samples/09-loop-engineering/10_until_exact.hud"));
     assert_eq!(required_vm_int(&vm, "counter"), 3);
     let obj = result_obj(&vm);
     assert_eq!(required_bool(&obj, "success"), true);

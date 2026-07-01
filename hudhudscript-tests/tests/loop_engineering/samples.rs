@@ -5,7 +5,14 @@ use hudhudscript_vm::VM;
 use std::fs;
 
 fn sample_path(name: &str) -> String {
-    format!("/home/onur/HudHudMind/hudhud-script/examples/09-loop-engineering/{}", name)
+    let manifest_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let workspace_root = manifest_dir.parent().expect("manifest dir has no parent");
+    workspace_root
+        .join("samples")
+        .join("09-loop-engineering")
+        .join(name)
+        .to_string_lossy()
+        .into_owned()
 }
 
 fn compile_sample(path: &str) -> hudhudscript_bytecode::Bytecode {

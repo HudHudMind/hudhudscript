@@ -1,20 +1,20 @@
-/// Test that ALL example files in examples/ directory parse successfully
+/// Test that ALL sample files in samples/ directory parse successfully
 use hudhudscript_parser::parse;
 use std::fs;
 use std::path::Path;
 
-fn collect_example_files(dir: &Path) -> Vec<std::path::PathBuf> {
+fn collect_sample_files(dir: &Path) -> Vec<std::path::PathBuf> {
     let mut files = Vec::new();
     if let Ok(entries) = fs::read_dir(dir) {
         for entry in entries.flatten() {
             let path = entry.path();
             if path.is_dir() {
-                // Skip _wip directory — contains aspirational examples with
+                // Skip _wip directory — contains aspirational samples with
                 // syntax not yet supported by the parser
                 if path.file_name().map(|n| n == "_wip" || n == "_archive").unwrap_or(false) {
                     continue;
                 }
-                files.extend(collect_example_files(&path));
+                files.extend(collect_sample_files(&path));
             } else if let Some(ext) = path.extension() {
                 if ext == "hud" || ext == "hudhud" {
                     files.push(path);
@@ -27,25 +27,22 @@ fn collect_example_files(dir: &Path) -> Vec<std::path::PathBuf> {
 }
 
 #[test]
-fn all_examples_parse_successfully() {
-    // Find examples dir — could be at workspace root or relative
-    // CWD is hudhud-script-tests/ (separate repo, workspace member)
-    // examples/ is in the parent hudhud-script repo
+fn all_samples_parse_successfully() {
+    // Find samples dir — could be at workspace root or relative
     let possible_paths = [
-        Path::new("../hudhud-script/examples"),
-        Path::new("../examples"),
-        Path::new("examples"),
+        Path::new("../samples"),
+        Path::new("samples"),
     ];
 
-    let examples_dir = possible_paths
+    let samples_dir = possible_paths
         .iter()
         .find(|p| p.exists())
-        .expect("examples/ directory not found");
+        .expect("samples/ directory not found");
 
-    let files = collect_example_files(examples_dir);
+    let files = collect_sample_files(samples_dir);
     assert!(
         !files.is_empty(),
-        "No .hud/.hudhud files found in examples/"
+        "No .hud/.hudhud files found in samples/"
     );
 
     let mut pass = 0;
@@ -90,5 +87,5 @@ fn all_examples_parse_successfully() {
         );
     }
 
-    eprintln!("All {} examples parsed successfully", pass);
+    eprintln!("All {} samples parsed successfully", pass);
 }

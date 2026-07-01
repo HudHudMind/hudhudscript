@@ -1,4 +1,0 @@
-// Simple Template String Test
-
-var name = "Ali";
-var greeting = `Hello, ${name}!`;

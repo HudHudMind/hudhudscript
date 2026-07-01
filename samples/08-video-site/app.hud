@@ -1,0 +1,78 @@
+// ── AI Video Sitesi ────────────────────────────────────────────────────
+// HudHudScript + DeepSeek AI + jQuery frontend.
+
+provider DeepSeek {
+    type: "deepseek"
+    model: "deepseek-chat"
+    api_key: env("DEEPSEEK_API_KEY")
+    temperature: 0.7
+}
+
+fn get_videos() {
+    return [
+        { id: "dQw4w9WgXcQ", title: "Rick Astley - Never Gonna Give You Up", category: "Müzik", desc: "", tags: "" },
+        { id: "jNQXAC9IVRw", title: "Me at the zoo", category: "Tarih", desc: "", tags: "" },
+        { id: "9bZkp7q19f0", title: "PSY - Gangnam Style", category: "Müzik", desc: "", tags: "" },
+        { id: "kJQP7kiw5Fk", title: "Despacito", category: "Müzik", desc: "", tags: "" },
+        { id: "JGwWNGJdvx8", title: "Ed Sheeran - Shape of You", category: "Müzik", desc: "", tags: "" },
+        { id: "RgKAFK5djSk", title: "Wiz Khalifa - See You Again", category: "Film", desc: "", tags: "" }
+    ];
+}
+
+fn enrich_videos(vids) {
+    var result = [];
+    var i = 0;
+    while (i < vids.length) {
+        var v = vids[i];
+        var desc = v.desc;
+        var tags = v.tags;
+        if (desc == "" || desc == null) {
+            desc = clean_text(DeepSeek.call({ prompt: "1-2 cümle Türkçe açıklama: " + v.title }).content);
+            tags = clean_text(DeepSeek.call({ prompt: "SADECE 3-5 etiket, virgülle ayrılmış, küçük harf, tırnak kullanma: " + v.title }).content);
+        }
+        result.push({ id: v.id, title: v.title, category: v.category, desc: desc, tags: tags });
+        i = i + 1;
+    }
+    return result;
+}
+
+fn clean_text(s) {
+    var r = s.replace("\"", "");
+    r = r.replace("\n", " ");
+    r = r.replace("\r", "");
+    return r;
+}
+
+fn serve_app(opts) {
+    var role = Web.run(opts);
+    if (role.role == "master") { return role; }
+    var app = Web.serve({ host: opts.host, port: opts.port, reuse_port: true });
+    while (true) {
+        var req = Web.accept(app);
+        Web.respond(req, dispatch_route(req));
+    }
+}
+
+fn dispatch_route(req) {
+    var path = req.path;
+    var method = req.method;
+
+    if (method == "GET" && Web.route_match("/", path)) {
+        return Web.render_file("samples/08-video-site/index.html", { title: "AI Video" });
+    }
+
+    if (method == "GET" && Web.route_match("/api/videos", path)) {
+        var vids = get_videos();
+        vids = enrich_videos(vids);
+        return Web.json(vids);
+    }
+
+    if (method == "GET" && Web.route_match("/static/*", path)) {
+        var rel = path.slice(8);
+        return Web.static(req, "samples/08-video-site/static", rel);
+    }
+
+    return Web.html("404", 404);
+}
+
+serve_app({ script: "samples/08-video-site/app.hud", host: "127.0.0.1", port: 8081, workers: 2 });

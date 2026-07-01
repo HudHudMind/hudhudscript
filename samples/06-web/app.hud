@@ -1,0 +1,84 @@
+// ── HudHud Web Framework Example App ──────────────────────────────────
+// Demonstrates Web.serve/accept/respond, template rendering,
+// static files, sessions, and JSON APIs.
+// NOTE: HudHudScript's `var`-assigned arrow functions cannot reference
+// other `var` functions. `function` declarations support mutual recursion
+// but cannot access `var` variables. Therefore, a Flask-style routing DSL
+// is not currently possible — routes are dispatched inline.
+
+function serve_app(opts) {
+    var role = Web.run(opts);
+    if (role.role == "master") {
+        return role;
+    }
+
+    var app = Web.serve({
+        host: opts.host,
+        port: opts.port,
+        reuse_port: true
+    });
+
+    while (true) {
+        var req = Web.accept(app);
+        var resp = dispatch_route(req, opts);
+        Web.respond(req, resp);
+    }
+}
+
+function dispatch_route(req, opts) {
+    var path = req.path;
+    var method = req.method;
+
+    // Route: GET /
+    if (method == "GET" && Web.route_match("/", path)) {
+        var ctx = {
+            title: "Merhaba Dünya",
+            message: "HudHud Web Framework'e hoş geldiniz!"
+        };
+        return Web.render_file("samples/06-web/templates/index.html", ctx);
+    }
+
+    // Route: GET /profil
+    if (method == "GET" && Web.route_match("/profil", path)) {
+        var user = {
+            name: "Onur",
+            admin: true,
+            items: [
+                { title: "Elma", count: 3 },
+                { title: "Armut", count: 5 }
+            ]
+        };
+        var ctx = {
+            title: "Profil",
+            user: user
+        };
+        return Web.render_file("samples/06-web/templates/profil.html", ctx);
+    }
+
+    // Route: GET /api/hello
+    if (method == "GET" && Web.route_match("/api/hello", path)) {
+        return Web.json({ message: "Merhaba API!", time: 1234567890 });
+    }
+
+    // Route: GET /redirect-test
+    if (method == "GET" && Web.route_match("/redirect-test", path)) {
+        return Web.redirect("/");
+    }
+
+    // Route: GET /static/*
+    if (method == "GET" && Web.route_match("/static/*", path)) {
+        // Strip /static/ prefix to get relative file path
+        var prefix_len = 7;  // length of "/static"
+        var rel = path.slice(prefix_len);
+        return Web.static(req, "samples/06-web/static", rel);
+    }
+
+    return Web.html("Not Found", 404);
+}
+
+serve_app({
+    script: "samples/06-web/app.hud",
+    host: "127.0.0.1",
+    port: 8080,
+    workers: 1
+});
