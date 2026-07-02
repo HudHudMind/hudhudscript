@@ -39,8 +39,11 @@ The goal is simple: let people model automation, AI systems, and authority flows
 | Governance primitives | `role`, `council`, `community`, `constitution`, and `law` express authority, policy, membership, and voting directly. |
 | SOP support | Subject-Oriented Programming concepts like `role`, `subject`, `effect`, and `view` are first-class modeling tools. |
 | Runtime ecosystem | Compiler, VM, formatter, LSP, debugger, package/runtime crates, Python bindings, and plugin-facing standard library crates live in one workspace. |
+| UI & Web Integration | Built-in Terminal UI (TUI) capabilities and comprehensive web/HTTP server operations for interactive and networked applications. |
 
-HudHudScript is not only a benchmark runner. It is intended as a practical scripting layer for AI products, local automation, agent systems, simulations, governance experiments, and embeddable domain runtimes.
+HudHudScript is an AI-native, multilingual programming language that natively supports OOP, SOP (Subject-Oriented Programming), and Loop Engineering. With built-in constructs like MCP tooling, swarms, and councils, it serves as a powerful orchestration layer for AI products, local automation, agent systems, simulations, governance experiments, and embeddable domain runtimes.
+
+By introducing AI-native paradigms, HudHudScript offers developers a unique and modern programming experience compared to traditional scripting languages. It provides native ways to model intelligent logic, orchestrate autonomous units, and govern software behaviors. For rigorous performance evaluations of this architecture, our comprehensive benchmark suites are publicly available at [HudHudMind/hudhudscript-benchmarks](https://github.com/HudHudMind/hudhudscript-benchmarks).
 
 ---
 
@@ -230,6 +233,13 @@ hudhud --help
 - `effect` and `view` behavior composition
 - `council`, `community`, `constitution`, `law` policy governance modeling
 - Relation and rule systems for trust, influence, and authority graphs
+
+### UI & Web Integration
+
+- Built-in Terminal UI (TUI) components for interactive CLI applications
+- Built-in web server capabilities
+- HTTP client and server operations
+- HTML templating and dynamic view evaluation
 
 ### Runtime Tooling
 
