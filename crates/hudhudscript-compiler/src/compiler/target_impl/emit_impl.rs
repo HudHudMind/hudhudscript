@@ -49,6 +49,17 @@ impl Compiler {
     pub fn patch_loop_payload_end(&mut self, idx: u32, end: u32) {
         self.bytecode.patch_loop_end(idx, end);
     }
+    pub fn patch_loop_payload_start(&mut self, idx: u32, start: u32) {
+        self.bytecode.patch_loop_start(idx, start);
+    }
+    // C6: char-dispatch table registration.
+    pub fn add_char_dispatch_table(&mut self, table: Vec<i16>) -> u16 {
+        let idx = self.bytecode.add_char_dispatch_table(table);
+        idx
+    }
+    pub fn patch_char_dispatch_table(&mut self, idx: u16, table: Vec<i16>) {
+        self.bytecode.patch_char_dispatch_table(idx, table)
+    }
     // CROSS-2a: declaration-payload registration for the Compiler.
     pub fn add_enum_decl_payload(&mut self, payload: hudhudscript_bytecode::EnumDeclPayload) -> u32 {
         self.bytecode.add_enum_decl_payload(payload)

@@ -4,6 +4,8 @@
 //! management commands (install, add, remove, update, search, publish, audit).
 
 // P7.2 — swap the system allocator for mimalloc (same as hudhud/hudi/hudc).
+// G0: allow sysalloc-profile feature for heaptrack/valgrind.
+#[cfg(not(feature = "sysalloc-profile"))]
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
@@ -196,7 +198,10 @@ fn run(cli: Cli) -> std::result::Result<(), String> {
             let ast =
                 hudhudscript_parser::parse(&source).map_err(|e| format!("Parse error: {}", e))?;
 
+            let canonical_script = std::fs::canonicalize(&entry).unwrap_or(entry.clone());
+            let module_base = canonical_script.parent().unwrap_or(std::path::Path::new(".")).to_path_buf();
             let mut compiler = hudhudscript_compiler::Compiler::new();
+            compiler.set_module_base_dir(module_base.clone());
             let bytecode = compiler
                 .compile(&ast)
                 .map_err(|e| format!("Compile error: {}", e))?;

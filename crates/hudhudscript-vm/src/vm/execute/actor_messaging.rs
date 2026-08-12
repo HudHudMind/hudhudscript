@@ -82,10 +82,9 @@ impl VM {
                         let mailbox = self.actor_mailboxes.get(&id).ok_or_else(|| {
                             compile_codes::runtime_error(format!("Actor not found: {}", id))
                         })?;
-                        mailbox
-                            .try_recv()
-                            .map(|m| m.payload)
-                            .ok_or_else(|| compile_codes::runtime_error("Receive: mailbox is empty"))?
+                        mailbox.try_recv().map(|m| m.payload).ok_or_else(|| {
+                            compile_codes::runtime_error("Receive: mailbox is empty")
+                        })?
                     }
                     None => {
                         return Err(compile_codes::runtime_error(format!(

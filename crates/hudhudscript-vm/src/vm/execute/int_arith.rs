@@ -14,127 +14,31 @@ impl VM {
         let _ip_ref = &mut *ctx.ip_ref;
         match instr {
             Instruction::IntAdd { dst, src1, src2 } => {
-                let (t1, p1) = self.registers[*src1 as usize].split_tag();
-                let (t2, p2) = self.registers[*src2 as usize].split_tag();
-                self.registers[*dst as usize] = match (t1, t2) {
-                    (ReprTag::Int, ReprTag::Int) => {
-                        Value16::int((p1 as i64).wrapping_add(p2 as i64))
-                    }
-                    (ReprTag::Number, ReprTag::Number) => {
-                        Value16::number(f64::from_bits(p1) + f64::from_bits(p2))
-                    }
-                    (ReprTag::Int, ReprTag::Number) => {
-                        Value16::number(p1 as i64 as f64 + f64::from_bits(p2))
-                    }
-                    (ReprTag::Number, ReprTag::Int) => {
-                        Value16::number(f64::from_bits(p1) + p2 as i64 as f64)
-                    }
-                    _ => {
-                        let a = &self.registers[*src1 as usize];
-                        let b = &self.registers[*src2 as usize];
-                        if let (Some(a), Some(b)) = (a.as_string(), b.as_string()) {
-                            Value16::string(a + &b)
-                        } else {
-                            return Err(Self::runtime_error_with_pos(
-                                "IntAdd: operands not numeric/string",
-                                bytecode,
-                                ip,
-                            ));
-                        }
-                    }
-                };
+                let a = self.registers[*src1 as usize];
+                let b = self.registers[*src2 as usize];
+                self.registers[*dst as usize] = crate::vm::math_fast_paths::do_int_add(a, b).map_err(|e| compile_codes::runtime_error(format!("{}", e)))?;
             }
             Instruction::IntSub { dst, src1, src2 } => {
-                let (t1, p1) = self.registers[*src1 as usize].split_tag();
-                let (t2, p2) = self.registers[*src2 as usize].split_tag();
-                self.registers[*dst as usize] = match (t1, t2) {
-                    (ReprTag::Int, ReprTag::Int) => {
-                        Value16::int((p1 as i64).wrapping_sub(p2 as i64))
-                    }
-                    (ReprTag::Number, ReprTag::Number) => {
-                        Value16::number(f64::from_bits(p1) - f64::from_bits(p2))
-                    }
-                    (ReprTag::Int, ReprTag::Number) => {
-                        Value16::number(p1 as i64 as f64 - f64::from_bits(p2))
-                    }
-                    (ReprTag::Number, ReprTag::Int) => {
-                        Value16::number(f64::from_bits(p1) - p2 as i64 as f64)
-                    }
-                    _ => {
-                        return Err(Self::runtime_error_with_pos(
-                            "IntSub: operands not numeric",
-                            bytecode,
-                            ip,
-                        ))
-                    }
-                };
+                let a = self.registers[*src1 as usize];
+                let b = self.registers[*src2 as usize];
+                self.registers[*dst as usize] = crate::vm::math_fast_paths::do_int_sub(a, b).map_err(|e| compile_codes::runtime_error(format!("{}", e)))?;
             }
             Instruction::IntMul { dst, src1, src2 } => {
-                let (t1, p1) = self.registers[*src1 as usize].split_tag();
-                let (t2, p2) = self.registers[*src2 as usize].split_tag();
-                self.registers[*dst as usize] = match (t1, t2) {
-                    (ReprTag::Int, ReprTag::Int) => {
-                        Value16::int((p1 as i64).wrapping_mul(p2 as i64))
-                    }
-                    (ReprTag::Number, ReprTag::Number) => {
-                        Value16::number(f64::from_bits(p1) * f64::from_bits(p2))
-                    }
-                    (ReprTag::Int, ReprTag::Number) => {
-                        Value16::number(p1 as i64 as f64 * f64::from_bits(p2))
-                    }
-                    (ReprTag::Number, ReprTag::Int) => {
-                        Value16::number(f64::from_bits(p1) * p2 as i64 as f64)
-                    }
-                    _ => {
-                        return Err(Self::runtime_error_with_pos(
-                            "IntMul: operands not numeric",
-                            bytecode,
-                            ip,
-                        ))
-                    }
-                };
+                let a = self.registers[*src1 as usize];
+                let b = self.registers[*src2 as usize];
+                self.registers[*dst as usize] = crate::vm::math_fast_paths::do_int_mul(a, b).map_err(|e| compile_codes::runtime_error(format!("{}", e)))?;
             }
             Instruction::IntAddI { dst, src, imm } => {
-                let (tag, payload) = self.registers[*src as usize].split_tag();
-                self.registers[*dst as usize] = match tag {
-                    ReprTag::Int => Value16::int((payload as i64).wrapping_add(*imm as i64)),
-                    ReprTag::Number => Value16::number(f64::from_bits(payload) + (*imm as f64)),
-                    _ => {
-                        return Err(Self::runtime_error_with_pos(
-                            "IntAddI: src not numeric",
-                            bytecode,
-                            ip,
-                        ))
-                    }
-                };
+                let a = self.registers[*src as usize];
+                self.registers[*dst as usize] = crate::vm::math_fast_paths::do_int_add_i(a, *imm as i64).map_err(|e| compile_codes::runtime_error(format!("{}", e)))?;
             }
             Instruction::IntSubI { dst, src, imm } => {
-                let (tag, payload) = self.registers[*src as usize].split_tag();
-                self.registers[*dst as usize] = match tag {
-                    ReprTag::Int => Value16::int((payload as i64).wrapping_sub(*imm as i64)),
-                    ReprTag::Number => Value16::number(f64::from_bits(payload) - (*imm as f64)),
-                    _ => {
-                        return Err(Self::runtime_error_with_pos(
-                            "IntSubI: src not numeric",
-                            bytecode,
-                            ip,
-                        ))
-                    }
-                };
+                let a = self.registers[*src as usize];
+                self.registers[*dst as usize] = crate::vm::math_fast_paths::do_int_sub_i(a, *imm as i64).map_err(|e| compile_codes::runtime_error(format!("{}", e)))?;
             }
             Instruction::IntMulI { dst, src, imm } => {
-                let (tag, payload) = self.registers[*src as usize].split_tag();
-                self.registers[*dst as usize] = match tag {
-                    ReprTag::Int => Value16::int((payload as i64).wrapping_mul(*imm as i64)),
-                    ReprTag::Number => Value16::number(f64::from_bits(payload) * (*imm as f64)),
-                    _ => {
-                        return Err(Self::runtime_error_with_pos(
-                            "IntMulI: src not numeric",
-                            bytecode,
-                            ip,
-                        ))
-                    }
-                };
+                let a = self.registers[*src as usize];
+                self.registers[*dst as usize] = crate::vm::math_fast_paths::do_int_mul_i(a, *imm as i64).map_err(|e| compile_codes::runtime_error(format!("{}", e)))?;
             }
             Instruction::IntDivI { dst, src, imm } => {
                 if *imm == 0 {
@@ -146,8 +50,28 @@ impl VM {
                 }
                 let (tag, payload) = self.registers[*src as usize].split_tag();
                 self.registers[*dst as usize] = match tag {
-                    ReprTag::Int => Value16::int((payload as i64) / (*imm as i64)),
+                    ReprTag::Int => match (payload as i64).checked_div(*imm as i64) {
+                        Some(q) => Value16::int(q),
+                        None => Value16::bigint(
+                            num_bigint::BigInt::from(payload as i64) / num_bigint::BigInt::from(*imm as i64),
+                        ),
+                    },
                     ReprTag::Number => Value16::number(f64::from_bits(payload) / (*imm as f64)),
+                    ReprTag::Dynamic => {
+                        let sv = self.registers[*src as usize];
+                        let iv = Value16::int(*imm as i64);
+                        match crate::vm::bigint_arith::bigint_div(sv, iv) {
+                            Ok(val) => val,
+                            Err(e) => {
+                                let msg = if e.0 == 399 {
+                                    "IntDivI: division by zero"
+                                } else {
+                                    "IntDivI: src not numeric"
+                                };
+                                return Err(Self::runtime_error_with_pos(msg, bytecode, ip))
+                            }
+                        }
+                    }
                     _ => {
                         return Err(Self::runtime_error_with_pos(
                             "IntDivI: src not numeric",
@@ -167,8 +91,26 @@ impl VM {
                 }
                 let (tag, payload) = self.registers[*src as usize].split_tag();
                 self.registers[*dst as usize] = match tag {
-                    ReprTag::Int => Value16::int((payload as i64) % (*imm as i64)),
+                    ReprTag::Int => match (payload as i64).checked_rem(*imm as i64) {
+                        Some(r) => Value16::int(r),
+                        None => Value16::int(0),
+                    },
                     ReprTag::Number => Value16::number(f64::from_bits(payload) % (*imm as f64)),
+                    ReprTag::Dynamic => {
+                        let sv = self.registers[*src as usize];
+                        let iv = Value16::int(*imm as i64);
+                        match crate::vm::bigint_arith::bigint_mod(sv, iv) {
+                            Ok(val) => val,
+                            Err(e) => {
+                                let msg = if e.0 == 399 {
+                                    "IntModI: modulo by zero"
+                                } else {
+                                    "IntModI: src not numeric"
+                                };
+                                return Err(Self::runtime_error_with_pos(msg, bytecode, ip))
+                            }
+                        }
+                    }
                     _ => {
                         return Err(Self::runtime_error_with_pos(
                             "IntModI: src not numeric",

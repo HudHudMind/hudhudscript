@@ -5,6 +5,7 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
+readme.workspace = true
 description = "HudHudScript CLI — MCP-based orchestration language with UI, deploy, agent, and governance support"
 
 [[bin]]
@@ -37,6 +38,7 @@ default = ["governance", "mcp", "rag", "mimalloc"]
 governance = ["dep:hudhudscript-governance", "dep:hudhudscript-rules"]
 mcp = ["dep:hudhudscript-mcp"]
 rag = ["dep:hudhudscript-rag"]
+telemetry = ["hudhudscript-vm/telemetry"]
 tokenomics = ["dep:hudhudscript-tokenomics"]
 minimal = []
 # Use the system allocator instead of mimalloc so heaptrack/valgrind can
@@ -60,6 +62,7 @@ hudhudscript-ui-bridge = { path = "../hudhudscript-ui-bridge" }
 hudhudscript-deploy-core = { path = "../hudhudscript-deploy-core" }
 hudhudscript-debug = { path = "../hudhudscript-debug" }
 hudhudscript-types = { path = "../hudhudscript-types" }
+hudhudscript-modules = { path = "../hudhudscript-modules" }
 
 # Optional domain crates behind feature flags
 hudhudscript-mcp = { path = "../hudhudscript-mcp", optional = true }

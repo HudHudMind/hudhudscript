@@ -1,7 +1,8 @@
 #[test]
 fn test_scratch() {
     use hudhudscript_bytecode::{Instruction, Value16};
-    use hudhudscript_compiler::{Compiler, VM};
+    use hudhudscript_compiler::Compiler;
+    use hudhudscript_vm::VM;
     use hudhudscript_parser::parse;
 
     let src = r#"

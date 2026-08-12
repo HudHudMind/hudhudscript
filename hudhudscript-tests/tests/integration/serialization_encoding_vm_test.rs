@@ -1,22 +1,21 @@
 //! VM parity tests for v0.4.38 Batch 1: Serialization & Encoding
 
 use hudhudscript_bytecode::Value16;
-use hudhudscript_compiler::{Compiler, VM};
+use hudhudscript_compiler::Compiler;
 use hudhudscript_parser::parse;
+use hudhudscript_vm::VM;
 
-fn vm_run_and_get(code: &str, var: &str) -> hudhudscript_bytecode::Value16 {
+fn vm_run_and_get(code: &str, var: &str) -> (hudhudscript_vm::VM, hudhudscript_bytecode::Value16) {
     let ast = parse(code).expect("parse failed");
     let mut compiler = Compiler::new();
     let bytecode = compiler.compile(&ast).expect("compile failed");
     let mut vm = VM::new();
     vm.execute(&bytecode).expect("VM execution failed");
-    vm.get_variable(var)
-        .cloned()
-        .map(|v| v)
-        .unwrap_or_else(|| panic!("variable '{}' not found", var))
+    let val = vm.get_variable(var).cloned().map(|v| v).unwrap_or_else(|| panic!("variable \'{}\' not found", var));
+    (vm, val)
 }
 
-fn assert_string(val: hudhudscript_bytecode::Value16, expected: &str) {
+fn assert_string((_vm, val): (hudhudscript_vm::VM, hudhudscript_bytecode::Value16), expected: &str) {
     if let Some(s) = val.as_string() {
         assert_eq!(s, expected, "Expected '{}', got '{}'", expected, s)
     } else {
@@ -24,7 +23,7 @@ fn assert_string(val: hudhudscript_bytecode::Value16, expected: &str) {
     }
 }
 
-fn unwrap_string(val: hudhudscript_bytecode::Value16) -> String {
+fn unwrap_string((_vm, val): (hudhudscript_vm::VM, hudhudscript_bytecode::Value16)) -> String {
     if let Some(s) = val.as_string() {
         s
     } else {

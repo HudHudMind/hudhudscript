@@ -47,64 +47,57 @@ impl VM {
             );
         }
 
-        // Push a new scope_cells map for the function's upvalues.
+        // G5-slotvec: push scope_cells with slot-vector (cells + sym_ids for legacy lookups).
         let has_captures =
             !chunk.captures.is_empty() || closure_captures.map_or(false, |c| !c.is_empty());
         if has_captures {
-            self.push_scope_cells();
+            let num = chunk.captures.len();
+            // sym_ids: Arc<[u32]> shared from chunk — single ref-count bump, no clone
+            let sym_ids: Arc<[u32]> = chunk.capture_sym_ids.clone().into();
+            self.push_scope_cells(num, sym_ids);
         }
 
-        // PERF-1 (2026-04-17): params bind EXCLUSIVELY via slot-based
-        // register arena + sym_to_slot (populated below).
-        // if a param isn't covered by `chunk.local_names`, that's a compiler
-        // bug caught by parity tests.
-        //
-        // Previously: HashMap<String, Value>::insert was unconditional for
-        // every param on every call — perf hotspot for fib(30) (6.43% CPU on
-        // hash+insert + triggered first-allocation of the scope HashMap, i.e.
-        // ~4% of total mi_page_malloc). With this change, the scope HashMap
-        // stays empty for function params; no insert, no alloc, no string
-        // hashing. pop_scope drops an empty HashMap at zero cost.
-
-        // Upvalue cell install (Issue #1078 — interpreter parity):
-        // Each captured name carries an `Arc<RwLock<Value>>` cell.  We
-        // install the cell into the new function's `scope_cells` sidecar
-        // so that every `LoadVar` / `StoreVar` for that name routes
-        // through the cell via `get_var_cloned` / `set_var`.  Globals
-        // stay untouched (reads are cell-first).
-        //
-        // Because the cell is the canonical storage, both `c1()` and
-        // `c2()` from independent `counter()` calls see THEIR OWN cell,
-        // and mutations persist across calls — matching the interpreter's
-        // `Arc<Environment>` capture exactly.
-        for capture_name in chunk.captures.iter() {
+        // G5-slotvec: install capture cells by slot index (no hash, no sym lookup).
+        let capture_slots = chunk.capture_slots.as_slice();
+        for (i, capture_name) in chunk.captures.iter().enumerate() {
+            let sym_id = *chunk.capture_sym_ids.get(i).unwrap_or_else(|| {
+                panic!(
+                    "Compiler invariant violation: capture_sym_ids missing for '{}' (index {} out of {})",
+                    capture_name, i, chunk.capture_sym_ids.len()
+                );
+            });
+            let slot = capture_slots.get(i).copied().unwrap_or(i as u8);
             let cell = if let Some(cell) = closure_captures.and_then(|c| c.get(capture_name)) {
                 Arc::clone(cell)
             } else if let Some(parent_cell) = self.find_cell_excluding_top(capture_name) {
-                // Fallback: a cell already exists in an outer scope (rare:
-                // typically means the closure was loaded via a path that
-                // didn't populate `closure_captures`, e.g. stray LoadConst).
                 parent_cell
+            } else if sym_id != 0 {
+                if let Some(v) = self.get_var_cloned_by_sym(sym_id) {
+                    Arc::new(parking_lot::RwLock::new(v))
+                } else {
+                    continue;
+                }
             } else if let Some(v) = self.get_var_cloned(capture_name) {
-                // Last-resort fallback: wrap the current live value.
                 Arc::new(parking_lot::RwLock::new(v))
             } else {
                 continue;
             };
-            self.install_cell(capture_name.clone(), cell);
+            self.install_cell_by_slot(slot, cell);
         }
-        // Also install any captures that the caller passed in but which
-        // aren't in `chunk.captures` (covers legacy/mixed bytecode paths).
+        // G5-slotvec: legacy captures not in chunk.captures — install via linear sym_id scan.
         if let Some(captures) = closure_captures {
             for (cap_name, cap_cell) in captures {
-                if !chunk.captures.contains(cap_name)
-                    && !self
+                if !chunk.captures.contains(cap_name) {
+                    let sym = hudhudscript_bytecode::interner::intern(cap_name).0;
+                    let already_installed = self
                         .scope_cells
                         .last()
-                        .map(|c| c.contains_key(cap_name))
-                        .unwrap_or(false)
-                {
-                    self.install_cell(cap_name.clone(), Arc::clone(cap_cell));
+                        .map(|(_, sym_ids)| sym_ids.iter().any(|&s| s == sym))
+                        .unwrap_or(false);
+                    if !already_installed {
+                        // Legacy: no slot available, skip — these captures are
+                        // only present in old .hudb bytecode, not new compilations.
+                    }
                 }
             }
         }
@@ -139,12 +132,18 @@ impl VM {
         // PERF0011: Unified chunk cache — single lookup for sym + packed.
         let cache_key = chunk.instructions.as_ptr() as usize;
         let cc = if self.chunk_cache_last_key == cache_key {
+            #[cfg(feature = "telemetry")]
+            { self.telemetry.chunk_cache_hit += 1; }
             Arc::clone(self.chunk_cache_last_val.as_ref().unwrap())
         } else if let Some(cc) = self.chunk_cache.get(&cache_key) {
+            #[cfg(feature = "telemetry")]
+            { self.telemetry.chunk_cache_hit += 1; }
             self.chunk_cache_last_key = cache_key;
             self.chunk_cache_last_val = Some(Arc::clone(cc));
             Arc::clone(cc)
         } else {
+            #[cfg(feature = "telemetry")]
+            { self.telemetry.chunk_cache_miss += 1; }
             let mut built: Vec<(u32, usize, Option<usize>)> =
                 Vec::with_capacity(chunk.local_names.len());
             let mut max_sym: u32 = 0;
@@ -217,13 +216,19 @@ impl VM {
                             let local_idx = slot as usize;
                             if local_idx < self.registers.len() {
                                 let val = self.registers[local_idx];
-                                if !self
+                                let sym_in_scope = self
                                     .scope_cells
                                     .last()
-                                    .map_or(false, |c| c.contains_key(cap_name))
-                                {
+                                    .map_or(false, |(_, sym_ids)| {
+                                        sym_ids.iter().any(|&s| s == sym_id)
+                                    });
+                                if !sym_in_scope {
                                     let cell = std::sync::Arc::new(parking_lot::RwLock::new(val));
-                                    self.install_cell(cap_name.clone(), cell);
+                                    if let Some((_, sym_ids)) = self.scope_cells.last() {
+                                        if let Some(slot_idx) = sym_ids.iter().position(|&s| s == sym_id) {
+                                            self.scope_cells.last_mut().unwrap().0[slot_idx] = Some(cell);
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -318,9 +323,15 @@ impl VM {
         self.frame_stack.reserve(64);
         let mut returned = false;
         let result = 'outer: loop {
-            // Early exit: all frames we own have been popped.
-            if self.frame_stack.len() <= stop_depth {
+            // BUG1: Don't exit when pending_flow::Throw has been re-stashed
+            // for cross-frame dispatch. Let execute_instructions process it.
+            if self.frame_stack.len() <= stop_depth && self.pending_flow.is_none() {
                 break 'outer Ok(());
+            }
+            // If we have frames but pending_flow is set, continue to dispatch.
+            if self.frame_stack.len() <= stop_depth {
+                // Only the root frame left — let execute_instructions handle
+                // pending_flow (catch or error).
             }
             let frame_idx = self.frame_stack.len().saturating_sub(1);
             let (instructions, constants, packed_slice, chunk_sp, mut ip, dst) = {
@@ -364,7 +375,9 @@ impl VM {
             ) {
                 Ok(hit_return) => {
                     self.frame_stack[frame_idx].ip = ip;
-                    if let Some((func_sym, function_idx, arg_count, first_arg, dst, call_ip)) = self.pending_call.take() {
+                    if let Some((func_sym, function_idx, arg_count, first_arg, dst, call_ip)) =
+                        self.pending_call.take()
+                    {
                         let frame_count_before = self.frame_stack.len();
                         let is_super = self.pending_super_call;
                         self.pending_super_call = false;
@@ -386,7 +399,15 @@ impl VM {
                             }
                             &arr[..n]
                         };
-                        self.exec_call(func_sym, function_idx, arg_count, first_arg, dst, bytecode, 0)?;
+                        self.exec_call(
+                            func_sym,
+                            function_idx,
+                            arg_count,
+                            first_arg,
+                            dst,
+                            bytecode,
+                            0,
+                        )?;
                         if is_super {
                             if let Some(frame) = self.frame_stack.last_mut() {
                                 frame.class_context = true;
@@ -405,6 +426,22 @@ impl VM {
                             break 'outer Ok(());
                         }
                         self.registers[dst as usize] = val;
+                    } else if let Some(crate::vm::PendingFlow::Throw(thrown)) = self.pending_flow.take() {
+                        // BUG1: a throw propagated. If there are outer frames,
+                        // pop the current (throwing) frame, re-stash, and let
+                        // the outer frame dispatch it. Otherwise, surface error.
+                        if self.frame_stack.len() > stop_depth + 1 {
+                            let frame = self.frame_stack.pop().unwrap();
+                            self.teardown_frame(frame);
+                            self.pending_flow = Some(crate::vm::PendingFlow::Throw(thrown));
+                        } else {
+                            return Err(compile_codes::runtime_error(format!(
+                                "Uncaught exception: {}",
+                                crate::vm::exception_value::exception_field_str(
+                                    &*thrown, "description"
+                                )
+                            )));
+                        }
                     } else {
                         break 'outer Ok(());
                     }

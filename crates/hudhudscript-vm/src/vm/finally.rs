@@ -46,7 +46,7 @@ impl VM {
     /// thrown value and jump to the finally IP so the finally body runs
     /// before the exception propagates upwards.
     pub(crate) fn route_throw_through_finally(&mut self, thrown: Value16) -> Option<usize> {
-        let (finally_ip, _iter_depth, _loop_depth) = self.finally_frames.pop()?;
+        let &(finally_ip, _iter_depth, _loop_depth) = self.finally_frames.last()?;
         self.pending_flow = Some(PendingFlow::Throw(Box::new(thrown)));
         Some(finally_ip)
     }
@@ -72,9 +72,24 @@ impl VM {
     #[inline]
     pub(crate) fn handle_return_finally(&mut self) -> Option<usize> {
         if self.finally_frames.is_empty() {
+            // A `return` executed *inside* a finally body: the frame was
+            // already popped when control was routed here, so there is nothing
+            // left to jump to. Per try/finally semantics this return supersedes
+            // whatever was pending — a thrown value included:
+            //
+            //   try { throw "err" } finally { return 2 }   → 2, not "err"
+            //   try { return 1 }    finally { return 2 }   → 2, not 1
+            //
+            // Recording it as the pending flow is what makes that happen:
+            // `exec_end_finally` acts on `pending_flow`, and leaving the old
+            // `Throw` in place re-raised the discarded exception instead.
+            if self.pending_flow.is_some() {
+                let return_val = self.last_return;
+                self.pending_flow = Some(PendingFlow::Return(Box::new(return_val)));
+            }
             return None;
         }
-        let (finally_ip, _id, _ld) = self.finally_frames.pop()?;
+        let &(finally_ip, _id, _ld) = self.finally_frames.last()?;
         // E2: the loop driver already stashed the return value in
         // last_return; save it so FinallyExit can restore it.
         let return_val = self.last_return;
@@ -233,7 +248,7 @@ impl VM {
         };
         let method = bytecode.resolve_symbol(method_sym.0);
         self.last_instance_mutation = None;
-        let result = self.call_method_on_value(&receiver, &method, args, bytecode)?;
+        let result = self.call_method_on_value(&receiver, &method, method_sym, args, bytecode)?;
         self.registers[255] = result;
 
         Ok(())

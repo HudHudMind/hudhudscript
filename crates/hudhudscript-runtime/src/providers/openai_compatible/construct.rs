@@ -44,9 +44,13 @@ impl OpenAICompatibleProvider {
         name: &str,
         api_key: String,
         model_override: Option<String>,
+        timeout_secs: Option<u64>,
+        endpoint_override: Option<String>,
     ) -> Result<Self, ProviderError> {
         let defaults = get_provider_defaults(name)
             .ok_or_else(|| ProviderError::InvalidConfig(format!("Unknown provider: {}", name)))?;
+
+        let base_url = endpoint_override.unwrap_or_else(|| defaults.base_url.to_string());
 
         let config = ProviderConfig {
             provider_type: defaults.provider_type,
@@ -56,12 +60,13 @@ impl OpenAICompatibleProvider {
             temperature: Some(0.7),
             max_tokens: Some(4096),
             budget: None,
+            timeout_secs,
             extra: std::collections::HashMap::new(),
         };
 
         Ok(Self {
             config,
-            base_url: defaults.base_url.to_string(),
+            base_url,
             client: shared_http_client()?,
             token_tracker: Arc::new(RwLock::new(TokenTracker::new())),
         })

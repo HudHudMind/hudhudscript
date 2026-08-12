@@ -46,7 +46,8 @@ pub enum Instruction {
     LoopBegin(u32),
     LoopEnd,
     Spawn {
-        payload_idx: u16,
+        /// B3: subject name SymId (not payload index — immune to table shifts)
+        name_sym: u32,
         first_arg: u8,
         arg_count: u8,
     },
@@ -118,7 +119,6 @@ pub enum Instruction {
         payload_idx: u16,
         src: u8,
     },
-    WriteBackReceiver(SymId),
     DestructArray(u16, bool),
     DestructObject(u32),
     Remember {
@@ -242,6 +242,12 @@ pub enum Instruction {
         reg: u8,
         imm: i16,
         offset: i16,
+    },
+    /// C6: byte-indexed character dispatch for if-else-if chains of
+    /// single-character string equality comparisons.
+    CharDispatch {
+        src: u8,
+        table_idx: u16,
     },
     /// Fast return from constant: LoadConst + Return fusion.
     ReturnConst {
@@ -439,6 +445,16 @@ pub enum Instruction {
         sym: u16,
         const_idx: u16,
     },
+    /// G5-slotvec: load closure cell by slot index (no sym lookup, no hash).
+    LoadClosureSlot {
+        dst: u8,
+        slot: u8,
+    },
+    /// G5-slotvec: store to closure cell by slot index.
+    StoreClosureSlot {
+        src: u8,
+        slot: u8,
+    },
     DeclGlobal {
         src: u8,
         sym: u16,
@@ -492,6 +508,12 @@ pub enum Instruction {
         val: u8,
         prop_sym: u16,
     },
+    /// T6.3: In-place insert for object literals — no clone, alias-safe.
+    ObjLitSet {
+        obj: u8,
+        val: u8,
+        prop_sym: u16,
+    },
     IndexAssign {
         obj: u8,
         idx: u8,
@@ -541,4 +563,50 @@ pub enum Instruction {
         a: u8,
         b: u8,
     },
+    /// G4: genel cmp+branch packed formu — IntCmpRRJumpIfFalse'un
+    /// payload-tablolu hâli (alanlar u32 packed'e sığmadığı için src1/src2/
+    /// target `CmpJumpPayload`'da yaşar; `op` packed arg1'e girer).
+    /// Optimizer sonu dönüşümüyle üretilir; Lt/Le'ye özel eski
+    /// IntLt/LeRRJumpPacked ikilisinin 6-op'lu tek genellemesi.
+    /// BYTECODE_VERSION 22'de eklendi (enum kuyruğu — eski .hudb'ler
+    /// etkilenmez).
+    IntCmpRRJumpPacked {
+        op: u8,
+        payload_idx: u16,
+    },
+    /// G8: Math.sin(x) intrinsic — MethodCall yerine tek komut (P5/NumSqrt
+    /// deseninin sin eşi). Math gölgelenmediyse derleyici emit eder.
+    /// BYTECODE_VERSION 22 (aynı yayın döngüsü, enum kuyruğu).
+    NumSin {
+        dst: u8,
+        src: u8,
+    },
+    /// G8: Math.cos(x) intrinsic — NumSin'in eşi.
+    NumCos {
+        dst: u8,
+        src: u8,
+    },
+    // ── G12: unboxed float slot ailesi (exp/unboxed-float) ──────────
+    // Sıcak döngüde float-KANITLI yereller Value16 register'ı yerine
+    // VM'in `f_slots: [f64; 64]` dosyasında yaşar; aradaki tüm aritmetik
+    // tag'siz f64 üstünde koşar. Döngü sınırlarında FLoadNum/FStoreNum
+    // kutu-aç/kutula. BYTECODE_VERSION 22 (aynı yayın döngüsü, kuyruk).
+    /// Value16 reg → f64 slot (Int/Number kabul; değilse runtime hata —
+    /// derleyici tip-kanıtı olmadan emit ETMEZ, hata=derleyici bug'ı).
+    FLoadNum { fslot: u8, src: u8 },
+    /// f64 slot → Value16 reg (Number olarak kutula).
+    FStoreNum { dst: u8, fslot: u8 },
+    /// f_slots[d] = f_slots[a] ⊕ f_slots[b] — tag'siz.
+    FAdd { d: u8, a: u8, b: u8 },
+    FSub { d: u8, a: u8, b: u8 },
+    FMul { d: u8, a: u8, b: u8 },
+    FDiv { d: u8, a: u8, b: u8 },
+    /// f_slots[d] = f_slots[s].sin() vb.
+    FSin { d: u8, s: u8 },
+    FCos { d: u8, s: u8 },
+    FSqrt { d: u8, s: u8 },
+    /// f_slots[d] = f_slots[s] — slot-içi kopya (let x = y deseni).
+    FMove { d: u8, s: u8 },
+    /// f_slots[d] = sabit (numeric_constants havuzundan).
+    FConst { d: u8, const_idx: u16 },
 }

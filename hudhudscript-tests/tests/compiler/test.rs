@@ -1,7 +1,8 @@
 //! Compiler tests for enhanced features
 
-use hudhudscript_compiler::{Compiler, VM};
+use hudhudscript_compiler::Compiler;
 use hudhudscript_parser::parse;
+use hudhudscript_vm::VM;
 
 #[test]
 fn test_compile_while_loop() {

@@ -20,7 +20,8 @@ async fn test_provider_registry_basic() {
         temperature: Some(0.7),
         max_tokens: Some(2000),
         budget: Some(TokenBudget::default()),
-        extra: HashMap::new(),
+        timeout_secs: None,
+            extra: HashMap::new(),
     };
 
     // Create provider
@@ -65,6 +66,7 @@ async fn test_multiple_providers() {
             temperature: Some(0.7),
             max_tokens: Some(2000),
             budget: None,
+            timeout_secs: None,
             extra: HashMap::new(),
         };
 
@@ -100,7 +102,8 @@ async fn test_provider_unregister() {
         temperature: Some(0.7),
         max_tokens: Some(2000),
         budget: None,
-        extra: HashMap::new(),
+            timeout_secs: None,
+            extra: HashMap::new(),
     };
 
     let provider = std::sync::Arc::new(OpenAIProvider::new(config).unwrap());
@@ -129,7 +132,8 @@ async fn test_token_budget_enforcement() {
             max_tokens_per_day: 10000,
             alert_threshold: 0.8,
         }),
-        extra: HashMap::new(),
+        timeout_secs: None,
+            extra: HashMap::new(),
     };
 
     let provider = OpenAIProvider::new(config).unwrap();
@@ -183,7 +187,8 @@ async fn test_mnemonic_optimization() {
         temperature: Some(0.7),
         max_tokens: Some(2000),
         budget: None,
-        extra: HashMap::new(),
+            timeout_secs: None,
+            extra: HashMap::new(),
     };
 
     let provider = OpenAIProvider::new(config).unwrap();
@@ -206,6 +211,7 @@ async fn test_mnemonic_optimization() {
         max_tokens: None,
         mnemonics: Some(mnemonics),
         optimize: true,
+        timeout_secs: None,
         tools: None,
     };
 
@@ -227,7 +233,8 @@ async fn test_provider_info() {
         temperature: Some(0.7),
         max_tokens: Some(2000),
         budget: None,
-        extra: HashMap::new(),
+            timeout_secs: None,
+            extra: HashMap::new(),
     };
 
     let provider = OpenAIProvider::new(config).unwrap();
@@ -248,7 +255,8 @@ async fn test_usage_stats() {
         temperature: Some(0.7),
         max_tokens: Some(2000),
         budget: None,
-        extra: HashMap::new(),
+            timeout_secs: None,
+            extra: HashMap::new(),
     };
 
     let provider = OpenAIProvider::new(config).unwrap();
@@ -286,7 +294,8 @@ fn test_provider_config_validation() {
         temperature: Some(0.7),
         max_tokens: Some(2000),
         budget: None,
-        extra: HashMap::new(),
+            timeout_secs: None,
+            extra: HashMap::new(),
     };
 
     let result = OpenAIProvider::new(config);
@@ -301,7 +310,8 @@ fn test_provider_config_validation() {
         temperature: Some(0.7),
         max_tokens: Some(2000),
         budget: None,
-        extra: HashMap::new(),
+            timeout_secs: None,
+            extra: HashMap::new(),
     };
 
     let result = OpenAIProvider::new(config);
@@ -322,7 +332,8 @@ fn test_provider_config_validation() {
         temperature: Some(0.7),
         max_tokens: Some(2000),
         budget: None,
-        extra: HashMap::new(),
+            timeout_secs: None,
+            extra: HashMap::new(),
     };
 
     let result = OpenAIProvider::new(config);
@@ -343,7 +354,8 @@ async fn test_concurrent_provider_access() {
         temperature: Some(0.7),
         max_tokens: Some(2000),
         budget: None,
-        extra: HashMap::new(),
+            timeout_secs: None,
+            extra: HashMap::new(),
     };
 
     let provider = std::sync::Arc::new(OpenAIProvider::new(config).unwrap());
@@ -390,7 +402,8 @@ async fn test_provider_registry_clone() {
         temperature: Some(0.7),
         max_tokens: Some(2000),
         budget: None,
-        extra: HashMap::new(),
+            timeout_secs: None,
+            extra: HashMap::new(),
     };
 
     let provider = std::sync::Arc::new(OpenAIProvider::new(config).unwrap());
@@ -412,7 +425,8 @@ async fn test_provider_registry_clone() {
         temperature: Some(0.7),
         max_tokens: Some(2000),
         budget: None,
-        extra: HashMap::new(),
+            timeout_secs: None,
+            extra: HashMap::new(),
     };
 
     let provider2 = std::sync::Arc::new(OpenAIProvider::new(config2).unwrap());

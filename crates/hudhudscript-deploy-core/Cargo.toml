@@ -5,6 +5,7 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
+readme.workspace = true
 description = "HudHudScript Deploy Core — deployment IR, pipeline definitions, and adapter trait"
 
 [dependencies]

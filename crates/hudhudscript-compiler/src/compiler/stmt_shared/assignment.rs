@@ -12,6 +12,10 @@ pub(super) fn compile_assignment(
         if name == "Math" {
             target.ct_set_math_reassigned();
         }
+        // G12: f-loop bağlamında aday atama → f-domain (register yazılmaz).
+        if crate::compiler::floop::compile_assign(target, name, value)? {
+            return Ok(());
+        }
         // ISSUE-2e-1: a top-level symbol assigned inside a function/closure body
         // must be marked shared even if it is never read, because the runtime
         // fallback for non-local assignment is StoreGlobal.
@@ -24,7 +28,7 @@ if let Some(chain) = chain_opt {
     let mut regs = crate::compiler::regalloc::RegAlloc::new_with_base(target.ct_next_local_reg()).expect("out of register zones");
     let dst = regs.alloc(target.ct_current_ip(), target.ct_current_ip() + 255).expect("out of registers");
     if let Some(local_reg) = target.ct_local_reg(name) {
-        target.ct_emit(Instruction::Move { dst, src: local_reg });
+        target.emit_move(dst, local_reg );
     } else {
         let sym = target.ct_intern(name);
         target.ct_emit(Instruction::LoadGlobal { dst, sym: sym as u16 });
@@ -38,7 +42,7 @@ if let Some(chain) = chain_opt {
         if target.ct_is_const_local(name) {
             return Err(compile_codes::generic(format!("Cannot assign to constant variable '{}'", name)));
         }
-        target.ct_emit(Instruction::Move { dst: local_reg, src: dst });
+        target.emit_move(local_reg, dst );
         if target.ct_is_top_level() && target.ct_is_shared_top_level(name) {
             let sym = target.ct_intern(name);
             target.ct_emit(Instruction::StoreGlobal { src: dst, sym: sym as u16 });
@@ -109,7 +113,7 @@ if let Some(chain) = chain_opt {
         if target.ct_is_const_local(name) {
             return Err(compile_codes::generic(format!("Cannot assign to constant variable '{}'", name)));
         }
-        target.ct_emit(Instruction::Move { dst: local_reg, src: reg });
+        target.emit_move(local_reg, reg );
         if target.ct_is_top_level() && target.ct_is_shared_top_level(name) {
             let sym = target.ct_intern(name);
             target.ct_emit(Instruction::StoreGlobal { src: reg, sym: sym as u16 });
@@ -138,7 +142,7 @@ let dst = crate::compiler::regalloc::temp_reg();
 target.ct_emit(Instruction::SetProperty { dst, obj: obj_reg, val: val_reg, prop_sym: prop_sym.0 as u16 });
 if let Some(root_name) = root_var_name(object) {
     if let Some(local_reg) = target.ct_local_reg(&root_name) {
-        target.ct_emit(Instruction::Move { dst: local_reg, src: dst });
+        target.emit_move(local_reg, dst );
     } else {
         let sym = target.ct_intern(&root_name);
         target.ct_emit(Instruction::StoreGlobal { src: dst, sym: sym as u16 });
@@ -178,7 +182,7 @@ if let Expr::Identifier(ref arr_name, _) = &**object {
         );
         target.ct_emit(Instruction::IndexAssign { obj: arr_reg, idx: idx_reg, val: val_reg });
         if let Some(local_reg) = target.ct_local_reg(arr_name) {
-            target.ct_emit(Instruction::Move { dst: local_reg, src: arr_reg });
+            target.emit_move(local_reg, arr_reg );
         } else {
             let sym = target.ct_intern(arr_name);
             target.ct_emit(Instruction::StoreGlobal { src: arr_reg, sym: sym as u16 });
@@ -197,7 +201,7 @@ if let Expr::Identifier(ref arr_name, _) = &**object {
     );
     target.ct_emit(Instruction::IndexAssign { obj: obj_reg, idx: idx_reg, val: val_reg });
     if let Some(local_reg) = target.ct_local_reg(&root) {
-        target.ct_emit(Instruction::Move { dst: local_reg, src: obj_reg });
+        target.emit_move(local_reg, obj_reg );
     } else {
         let sym = target.ct_intern(&root);
         target.ct_emit(Instruction::StoreGlobal { src: obj_reg, sym: sym as u16 });

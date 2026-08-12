@@ -1,6 +1,6 @@
-use hudhudscript_parser::parse;
 use hudhudscript_compiler::compiler::decl::loop_engine::validate_loop_structure;
 use hudhudscript_compiler::compiler::Compiler;
+use hudhudscript_parser::parse;
 
 #[test]
 fn parse_and_validate_loop() {

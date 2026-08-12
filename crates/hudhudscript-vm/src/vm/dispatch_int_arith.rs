@@ -1,7 +1,7 @@
 //! V2-B0: Int arithmetic packed handlers extracted from dispatch_general.rs.
 
 use crate::vm::dense_ops::*;
-use crate::vm::index_helpers::{numeric_index_i64, index_i64_to_usize};
+use crate::vm::index_helpers::{index_i64_to_usize, numeric_index_i64};
 use crate::vm::PackedResult;
 use hudhudscript_bytecode::error::{compile_codes, CompileResult};
 use hudhudscript_bytecode::{Bytecode, ReprTag, Value16};
@@ -17,58 +17,39 @@ pub(crate) fn dispatch_int_arithmetic(
                 let i = ((arg2 >> 8) as i8) as i64;
                 let d = arg1 as usize;
                 let a = vm.registers[s];
-                let (tag, payload) = a.split_tag();
-                vm.registers[d] = match tag {
-                    ReprTag::Int => {
-                        if let Some(v) = (payload as i64).checked_add(i) { Value16::int(v) }
-                        else { crate::vm::bigint_arith::int_add(a, Value16::int(i)).map_err(|code| crate::vm::VM::runtime_error_with_pos(&code.to_string(), bytecode, ip))? }
-                    }
-                    ReprTag::Number => Value16::number(f64::from_bits(payload) + i as f64),
-                    _ => crate::vm::bigint_arith::int_add(a, Value16::int(i)).map_err(|code| crate::vm::VM::runtime_error_with_pos(&code.to_string(), bytecode, ip))?,
-                };
+                vm.registers[d] = crate::vm::math_fast_paths::do_int_add_i(a, i).map_err(|e| compile_codes::runtime_error(format!("{}", e)))?;
                 Ok(PackedResult::Advance)
-
             }
             D_INT_MUL_RI => {
                 let s = (arg2 & 0xFF) as usize;
                 let i = ((arg2 >> 8) as i8) as i64;
                 let d = arg1 as usize;
                 let a = vm.registers[s];
-                let (tag, payload) = a.split_tag();
-                vm.registers[d] = match tag {
-                    ReprTag::Int => {
-                        if let Some(v) = (payload as i64).checked_mul(i) { Value16::int(v) }
-                        else { crate::vm::bigint_arith::int_mul(a, Value16::int(i)).map_err(|code| crate::vm::VM::runtime_error_with_pos(&code.to_string(), bytecode, ip))? }
-                    }
-                    ReprTag::Number => Value16::number(f64::from_bits(payload) * i as f64),
-                    _ => crate::vm::bigint_arith::int_mul(a, Value16::int(i)).map_err(|code| crate::vm::VM::runtime_error_with_pos(&code.to_string(), bytecode, ip))?,
-                };
+                vm.registers[d] = crate::vm::math_fast_paths::do_int_mul_i(a, i).map_err(|e| compile_codes::runtime_error(format!("{}", e)))?;
                 Ok(PackedResult::Advance)
-
             }
             D_INT_SUB_RI => {
                 let s = (arg2 & 0xFF) as usize;
                 let i = ((arg2 >> 8) as i8) as i64;
                 let d = arg1 as usize;
                 let a = vm.registers[s];
-                let (tag, payload) = a.split_tag();
-                vm.registers[d] = match tag {
-                    ReprTag::Int => {
-                        if let Some(v) = (payload as i64).checked_sub(i) { Value16::int(v) }
-                        else { crate::vm::bigint_arith::int_sub(a, Value16::int(i)).map_err(|code| crate::vm::VM::runtime_error_with_pos(&code.to_string(), bytecode, ip))? }
-                    }
-                    ReprTag::Number => Value16::number(f64::from_bits(payload) - i as f64),
-                    _ => crate::vm::bigint_arith::int_sub(a, Value16::int(i)).map_err(|code| crate::vm::VM::runtime_error_with_pos(&code.to_string(), bytecode, ip))?,
-                };
+                vm.registers[d] = crate::vm::math_fast_paths::do_int_sub_i(a, i).map_err(|e| compile_codes::runtime_error(format!("{}", e)))?;
                 Ok(PackedResult::Advance)
-
             }
             D_NEG_R => {
                 let src = arg2 as usize;
                 let dst = arg1 as usize;
                 let val = vm.registers[src];
-                if let Some(n) = val.as_int() {
-                    vm.registers[dst] = Value16::int(n.wrapping_neg());
+                // G3.1: split_tag to distinguish Int from BigInt at same value
+                let (tag, payload) = val.split_tag();
+                if tag == ReprTag::Int {
+                    let n = payload as i64;
+                    match n.checked_neg() {
+                        Some(v) => vm.registers[dst] = Value16::int(v),
+                        None => vm.registers[dst] = Value16::bigint(-num_bigint::BigInt::from(n)),
+                    }
+                } else if let Some(b) = val.as_bigint() {
+                    vm.registers[dst] = Value16::bigint(-b);
                 } else if let Some(n) = val.as_number() {
                     vm.registers[dst] = Value16::number(-n);
                 } else {
@@ -83,16 +64,8 @@ pub(crate) fn dispatch_int_arithmetic(
             D_NOT_R => {
                 let src = arg2 as usize;
                 let dst = arg1 as usize;
-                let val = vm.registers[src];
-                if let Some(b) = val.as_bool() {
-                    vm.registers[dst] = Value16::bool_(!b);
-                } else {
-                    return Err(crate::vm::VM::runtime_error_with_pos(
-                        "Not: expected Bool",
-                        bytecode,
-                        ip,
-                    ));
-                }
+                // G4 fix: match unpacked Not semantics — is_truthy() for all types
+                vm.registers[dst] = Value16::bool_(!vm.registers[src].is_truthy());
                 Ok(PackedResult::Advance)
             }
             D_ARRAY_PUSH_RRR => {
@@ -139,7 +112,7 @@ pub(crate) fn dispatch_int_arithmetic(
                     }
                     vm.registers[dst] = arr[i];
                     return Ok(PackedResult::Advance);
-                } else if let Some(s) = obj.as_string() {
+                } else if let Some(s) = obj.as_str() {
                     let i = numeric_index_i64(idx)
                         .and_then(index_i64_to_usize)
                         .ok_or_else(|| {
@@ -153,7 +126,7 @@ pub(crate) fn dispatch_int_arithmetic(
                         if b < 0x80 {
                             vm.registers[dst] = Value16::string_ascii(b);
                         } else {
-                            let ch = if let Some(cached) = vm.str_chars_cache.get(s.as_str()) {
+                            let ch = if let Some(cached) = vm.str_chars_cache.get(s) {
                                 cached.get(i).cloned()
                             } else {
                                 let chars: Vec<char> = s.chars().collect();
@@ -217,7 +190,7 @@ pub(crate) fn dispatch_int_arithmetic(
                 let idx_reg = (arg2 & 0xFF) as usize;
                 let dst = arg1 as usize;
                 let obj = vm.registers[obj_reg];
-                let s = obj.as_string().ok_or_else(|| {
+                let s = obj.as_str().ok_or_else(|| {
                     crate::vm::VM::runtime_error_with_pos(
                         "IndexStringAscii: expected string",
                         bytecode,
@@ -237,7 +210,7 @@ pub(crate) fn dispatch_int_arithmetic(
                     if b < 0x80 {
                         vm.registers[dst] = Value16::string_ascii(b);
                     } else {
-                        let ch = if let Some(cached) = vm.str_chars_cache.get(s.as_str()) {
+                    let ch = if let Some(cached) = vm.str_chars_cache.get(s) {
                             cached.get(i).cloned()
                         } else {
                             let chars: Vec<char> = s.chars().collect();
@@ -279,6 +252,10 @@ pub(crate) fn dispatch_int_arithmetic(
                             )
                         })?;
                     if i >= arr.len() {
+                        if i >= 268_435_456 {
+                            return Err(crate::vm::VM::runtime_error_with_pos(
+                                format!("Array index too large: {}", i), bytecode, ip));
+                        }
                         arr.resize(i + 1, Value16::null());
                     }
                     arr[i] = val;
@@ -318,8 +295,8 @@ pub(crate) fn dispatch_int_arithmetic(
                     vm.registers[haystack].as_str(),
                     vm.registers[needle].as_str(),
                 ) {
-                    let idx = s.find(pat).map(|i| i as f64).unwrap_or(-1.0);
-                    vm.registers[dst] = Value16::number(idx);
+                    let idx = s.find(pat).map(|i| i as i64).unwrap_or(-1);
+                    vm.registers[dst] = Value16::int(idx);
                     Ok(PackedResult::Advance)
                 } else {
                     Ok(PackedResult::Fallthrough)
@@ -347,21 +324,12 @@ pub(crate) fn dispatch_int_arithmetic(
                 let d = arg1 as usize;
                 let a = vm.registers[s1];
                 let b = vm.registers[s2];
-                // P0-B: sequential if-let instead of tuple-match. Int,Int is
-                // the common hot case → branches well-predicted by the CPU.
-                vm.registers[d] = if let (Some(x), Some(y)) = (a.as_int_fast(), b.as_int_fast()) {
-                    if let Some(v) = x.checked_add(y) { Value16::int(v) }
-                    else { crate::vm::bigint_arith::int_add(a, b).map_err(|code| crate::vm::VM::runtime_error_with_pos(&code.to_string(), bytecode, ip))? }
-                } else if let (Some(x), Some(y)) = (a.as_number_fast(), b.as_number_fast()) {
-                    Value16::number(x + y)
-                } else {
-                    if let (Some(av), Some(bv)) = (a.as_string(), b.as_string()) { Value16::string(av + &bv) }
-                    else if let Some(av) = a.as_string() { Value16::string(av + &vm.value_to_string_inner(&b)) }
-                    else if let Some(bv) = b.as_string() { Value16::string(vm.value_to_string_inner(&a) + &bv) }
-                    else { crate::vm::bigint_arith::int_add(a, b).map_err(|code| crate::vm::VM::runtime_error_with_pos(&code.to_string(), bytecode, ip))? }
-                };
+                vm.registers[d] = crate::vm::math_fast_paths::do_int_add(a, b).map_err(|e| compile_codes::runtime_error(format!("{}", e)))?;
+                // GATE-2 onarımı: 56efe60f1 do_int_* imzasından &mut VM'i
+                // çıkarınca promotion sayımı bu koldan düşmüştü; sayım artık
+                // dispatch sitesinde (telemetry'siz build'de no-op inline).
+                vm.record_bigint_promotion(a, b, vm.registers[d]);
                 Ok(PackedResult::Advance)
-
             }
             D_INT_SUB_RR => {
                 let s1 = ((arg2 >> 8) & 0xFF) as usize;
@@ -369,16 +337,9 @@ pub(crate) fn dispatch_int_arithmetic(
                 let d = arg1 as usize;
                 let a = vm.registers[s1];
                 let b = vm.registers[s2];
-                vm.registers[d] = if let (Some(x), Some(y)) = (a.as_int_fast(), b.as_int_fast()) {
-                    if let Some(v) = x.checked_sub(y) { Value16::int(v) }
-                    else { crate::vm::bigint_arith::int_sub(a, b).map_err(|code| crate::vm::VM::runtime_error_with_pos(&code.to_string(), bytecode, ip))? }
-                } else if let (Some(x), Some(y)) = (a.as_number_fast(), b.as_number_fast()) {
-                    Value16::number(x - y)
-                } else {
-                    crate::vm::bigint_arith::int_sub(a, b).map_err(|code| crate::vm::VM::runtime_error_with_pos(&code.to_string(), bytecode, ip))?
-                };
+                vm.registers[d] = crate::vm::math_fast_paths::do_int_sub(a, b).map_err(|e| compile_codes::runtime_error(format!("{}", e)))?;
+                vm.record_bigint_promotion(a, b, vm.registers[d]);
                 Ok(PackedResult::Advance)
-
             }
             D_INT_MUL_RR => {
                 let s1 = ((arg2 >> 8) & 0xFF) as usize;
@@ -386,16 +347,9 @@ pub(crate) fn dispatch_int_arithmetic(
                 let d = arg1 as usize;
                 let a = vm.registers[s1];
                 let b = vm.registers[s2];
-                vm.registers[d] = if let (Some(x), Some(y)) = (a.as_int_fast(), b.as_int_fast()) {
-                    if let Some(v) = x.checked_mul(y) { Value16::int(v) }
-                    else { crate::vm::bigint_arith::int_mul(a, b).map_err(|code| crate::vm::VM::runtime_error_with_pos(&code.to_string(), bytecode, ip))? }
-                } else if let (Some(x), Some(y)) = (a.as_number_fast(), b.as_number_fast()) {
-                    Value16::number(x * y)
-                } else {
-                    crate::vm::bigint_arith::int_mul(a, b).map_err(|code| crate::vm::VM::runtime_error_with_pos(&code.to_string(), bytecode, ip))?
-                };
+                vm.registers[d] = crate::vm::math_fast_paths::do_int_mul(a, b).map_err(|e| compile_codes::runtime_error(format!("{}", e)))?;
+                vm.record_bigint_promotion(a, b, vm.registers[d]);
                 Ok(PackedResult::Advance)
-
             }
             D_INT_MOD_I => {
                 let s = (arg2 >> 8) as usize;
@@ -406,12 +360,30 @@ pub(crate) fn dispatch_int_arithmetic(
                     ReprTag::Int => {
                         let a = payload as i64;
                         if i == 0 { return Err(crate::vm::VM::runtime_error_with_pos("Modulo by zero", bytecode, ip)); }
-                        Value16::int(a % i)
+                        match a.checked_rem(i) {
+                            Some(r) => Value16::int(r),
+                            None => Value16::int(0),
+                        }
                     }
                     ReprTag::Number => {
                         let a = f64::from_bits(payload);
                         if i == 0 { return Err(crate::vm::VM::runtime_error_with_pos("Modulo by zero", bytecode, ip)); }
                         Value16::number(a % i as f64)
+                    }
+                    ReprTag::Dynamic => {
+                        let sv = vm.registers[s];
+                        let iv = Value16::int(i);
+                        match crate::vm::bigint_arith::bigint_mod(sv, iv) {
+                            Ok(val) => val,
+                            Err(e) => {
+                                let msg = if e.0 == 399 {
+                                    "IntModI: modulo by zero"
+                                } else {
+                                    "IntModI: src not numeric"
+                                };
+                                return Err(crate::vm::VM::runtime_error_with_pos(msg, bytecode, ip))
+                            }
+                        }
                     }
                     _ => return Err(crate::vm::VM::runtime_error_with_pos("IntModI: src not numeric", bytecode, ip)),
                 };
@@ -444,6 +416,21 @@ pub(crate) fn dispatch_int_arithmetic(
                             _ => unreachable!(),
                         }
                     }
+                    ReprTag::Dynamic => {
+                        let v = vm.registers[s];
+                        if let Some(a) = v.to_bigint_value() {
+                            let b = num_bigint::BigInt::from(i);
+                            match dense {
+                                D_INT_CMP_LT_I => a < b,
+                                D_INT_CMP_LE_I => a <= b,
+                                D_INT_CMP_EQ_I => a == b,
+                                D_INT_CMP_NE_I => a != b,
+                                _ => unreachable!(),
+                            }
+                        } else {
+                            return Err(crate::vm::VM::runtime_error_with_pos("IntCmpI: src not numeric", bytecode, ip));
+                        }
+                    }
                     _ => return Err(crate::vm::VM::runtime_error_with_pos("IntCmpI: src not numeric", bytecode, ip)),
                 };
                 vm.registers[d] = Value16::bool_(result);
@@ -451,5 +438,46 @@ pub(crate) fn dispatch_int_arithmetic(
             }
 
         _ => unreachable!(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::vm::dense_ops::D_INT_MUL_RR;
+    use hudhudscript_bytecode::{Bytecode, ReprTag, Value16};
+
+    /// Prove that D_INT_MUL_RR overflow is counted as BigInt promotion.
+    #[test]
+    fn packed_int_mul_rr_overflow_counts_promotion() {
+        let mut vm = crate::vm::VM::new();
+
+        // Values that overflow i64 when multiplied: 3037000500 * 3037000500
+        let a = Value16::int(3037000500i64);
+        let b = Value16::int(3037000500i64);
+        let a_reg = 0u8;
+        let b_reg = 1u8;
+        let d_reg = 2u8;
+        vm.registers[a_reg as usize] = a;
+        vm.registers[b_reg as usize] = b;
+
+        // arg2 encodes (a_reg << 8) | b_reg
+        let arg2: u16 = ((a_reg as u16) << 8) | (b_reg as u16);
+
+        let bc = Bytecode::new();
+        let result = dispatch_int_arithmetic(&mut vm, D_INT_MUL_RR, d_reg, arg2, &bc, 0);
+        assert!(result.is_ok());
+
+        let actual = vm.registers[d_reg as usize];
+        assert!(actual.is_bigint(),
+            "overflow mul must be BigInt, got {:?}", actual);
+
+        #[cfg(feature = "telemetry")]
+        {
+            let snap = vm.telemetry_snapshot();
+            assert!(snap.bigint_promotion > 0,
+                "packed D_INT_MUL_RR overflow must count promotion, got {}",
+                snap.bigint_promotion);
+        }
     }
 }

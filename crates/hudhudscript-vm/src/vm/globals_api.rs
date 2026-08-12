@@ -33,8 +33,18 @@ impl VM {
     /// now only globals remain.)
     pub(crate) fn remove_var(&mut self, name: &str) {
         if let Some(sym) = hudhudscript_bytecode::interner::try_resolve_id(name) {
-            self.globals.remove(&SymbolId(sym));
+            self.remove_var_by_sym(sym);
         }
+    }
+
+    /// Remove a global by SymId — zero allocation.
+    pub(crate) fn remove_var_by_sym(&mut self, sym: u32) {
+        // T5.2: remove this = reset to empty object (old prelude semantigi).
+        if sym == self.this_sym {
+            self.cur_this = Value16::object(hudhudscript_bytecode::ObjMap::default());
+            return;
+        }
+        self.globals.remove(&SymbolId(sym));
     }
 
     /// Define a global variable by name (for external injection).
@@ -52,7 +62,7 @@ impl VM {
     /// parity. Use this from external callers (REPL `:vars`, test harness,
     /// Python FFI) so they don't have to re-clone themselves.
     pub fn get_variable_owned(&self, name: &str) -> Option<Value16> {
-        self.get_var(name).cloned()
+        self.get_variable(name).cloned()
     }
 
     /// Iterate over all globals. Used by REPL's `:vars` command after the

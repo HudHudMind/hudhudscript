@@ -5,6 +5,7 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
+readme.workspace = true
 description = "Unified exception type and catalog for HudHudScript — 1:1 parity with hudhudscript-errors"
 
 [dependencies]

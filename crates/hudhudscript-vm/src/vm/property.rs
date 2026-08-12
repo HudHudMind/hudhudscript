@@ -18,38 +18,45 @@ impl VM {
         obj: Value16,
         field_sym: &hudhudscript_bytecode::SymId,
     ) -> CompileResult<Value16> {
-        let field = hudhudscript_bytecode::interner::resolve(
-            hudhudscript_bytecode::interner::SymbolId(field_sym.0),
-        );
+        #[cfg(feature = "telemetry")]
+        { self.telemetry.property_lookup_count += 1; }
+        let sym = hudhudscript_bytecode::SymId(field_sym.0);
 
         // SOP: subject instance state read — always reads from live instance
         if let Some(inner) = obj.as_object() {
-            if inner.get("__type").and_then(|v| v.as_string()).as_deref()
+            if inner.get(&hudhudscript_bytecode::well_known::wk().type_).and_then(|v| v.as_string()).as_deref()
                 == Some("subject_instance")
             {
-                if let Some(instance_id) = inner.get("__instance_id").and_then(|v| v.as_string()) {
+                let field = hudhudscript_bytecode::interner::resolve(
+                    hudhudscript_bytecode::interner::SymbolId(sym.0));
+                if let Some(instance_id) = inner.get(&hudhudscript_bytecode::well_known::wk().instance_id).and_then(|v| v.as_string()) {
                     if let Some(inst) = self.subject_instances.get(&instance_id) {
-                        // SOP0008: if accessed via view ... as, check view state first
                         if let Some(view_name) =
-                            inner.get("__view_name").and_then(|v| v.as_string())
+                            inner.get(&hudhudscript_bytecode::well_known::wk().view_name).and_then(|v| v.as_string())
                         {
                             if let Some(view_state) = inst.views.get(&view_name) {
                                 if let Some(val) = view_state.get(&field) {
                                     return Ok(*val);
                                 }
                             }
-                        }
-                        if let Some(val) = inst.state.get(&field) {
-                            return Ok(*val);
-                        }
-                        // SOP0006: view state lookup
-                        for (_view_name, view_state) in &inst.views {
-                            if let Some(val) = view_state.get(&field) {
+                            if let Some(val) = inst.state.get(&field) {
                                 return Ok(*val);
+                            }
+                        } else {
+                            if let Some(val) = inst.state.get(&field) {
+                                return Ok(*val);
+                            }
+                            let mut view_names: Vec<_> = inst.views.keys().collect();
+                            view_names.sort();
+                            for view_name in view_names {
+                                if let Some(view_state) = inst.views.get(view_name) {
+                                    if let Some(val) = view_state.get(&field) {
+                                        return Ok(*val);
+                                    }
+                                }
                             }
                         }
                     } else {
-                        // SOP0005: despawned subject accessed
                         return Err(compile_codes::runtime_error(format!(
                             "Cannot access property '{}' on despawned subject '{}'",
                             field, instance_id
@@ -61,65 +68,68 @@ impl VM {
 
         // Fast path for .length on array/string — cached sym ID, no interner
         // lock + HashMap lookup + instance/object dispatch chain.
-        if field_sym.0 == self.length_sym_id {
+        if field_sym.0 == hudhudscript_bytecode::well_known::wk().length.0 {
             if let Some(arr) = obj.as_array() {
                 return Ok(Value16::int(arr.len() as i64));
-            } else if let Some(s) = obj.as_string() {
-                return Ok(Value16::int(s.len() as i64));
-            }
-        }
-
-        if hudhudscript_bytecode::interner::resolve_with(
-            hudhudscript_bytecode::interner::SymbolId(field_sym.0),
-            |field| field == "length",
-        ) {
-            if let Some(arr) = obj.as_array() {
-                return Ok(Value16::int(arr.len() as i64));
-            } else if let Some(s) = obj.as_string() {
-                return Ok(Value16::int(s.len() as i64));
+            } else if let Some(len) = obj.str_char_len() {
+                return Ok(Value16::int(len as i64));
             }
         }
 
         if let Some(inst) = obj.as_instance_data() {
-            if let Some(val) = inst.fields.get(&field).cloned() {
+            if let Some(val) = inst.fields.get(&sym).cloned() {
                 Ok(val)
-            } else if field.starts_with("__") {
+            } else if hudhudscript_bytecode::interner::resolve_with(
+                hudhudscript_bytecode::interner::SymbolId(sym.0),
+                |field| field.starts_with("__"))
+            {
                 Ok(Value16::null())
             } else {
                 Err(compile_codes::runtime_error(format!(
                     "Property '{}' not found on {} instance",
-                    field, inst.class_name
+                    hudhudscript_bytecode::interner::resolve(
+                        hudhudscript_bytecode::interner::SymbolId(sym.0)),
+                    inst.class_name
                 )))
             }
         } else if let Some(map) = obj.as_object() {
             // Issue #438: mcp.ServerName => return MCP server proxy object.
-            if map.get("__module").and_then(|v| v.as_string()).as_deref() == Some("mcp")
-                && !map.contains_key("__server")
-                && !field.starts_with("__")
-                && field != "call"
+            if map.get(&hudhudscript_bytecode::well_known::wk().module).and_then(|v| v.as_string()).as_deref() == Some("mcp")
+                && !map.get(&hudhudscript_bytecode::well_known::wk().server).is_some()
+                && !hudhudscript_bytecode::interner::resolve_with(
+                    hudhudscript_bytecode::interner::SymbolId(sym.0),
+                    |f| f.starts_with("__"))
+                && hudhudscript_bytecode::interner::resolve_with(
+                    hudhudscript_bytecode::interner::SymbolId(sym.0),
+                    |f| f != "call")
             {
+                let field = hudhudscript_bytecode::interner::resolve(
+                    hudhudscript_bytecode::interner::SymbolId(sym.0));
                 let mut proxy = hudhudscript_bytecode::ObjMap::default();
                 proxy.insert("__module".to_string(), Value16::string("mcp"));
                 proxy.insert("__server".to_string(), Value16::string(field.clone()));
                 return Ok(Value16::object(proxy));
             }
 
-            let is_env = map.get("__hudhud_env").and_then(|v| v.as_bool()) == Some(true);
+            let is_env = map.get(&hudhudscript_bytecode::well_known::wk().hudhud_env).and_then(|v| v.as_bool()) == Some(true);
 
             // ISSUE-9c: avoid cloning the whole object map on every property read.
             // Walk __parent__ chain using borrowed references only.
+            // Use SymId directly — ObjMap is SymId-keyed.
             let mut current: Option<&hudhudscript_bytecode::ObjMap> = Some(map);
             while let Some(m) = current {
-                if let Some(val) = m.get(&field) {
+                if let Some(val) = m.get(&sym) {
                     return Ok(*val);
                 }
+                let field = hudhudscript_bytecode::interner::resolve(hudhudscript_bytecode::interner::SymbolId(sym.0));
                 if field.starts_with("__") {
                     return Ok(Value16::null());
                 }
-                current = m.get("__parent__").and_then(|p| p.as_object());
+                current = m.get(&hudhudscript_bytecode::well_known::wk().parent).and_then(|p| p.as_object());
             }
 
             if is_env {
+                let field = hudhudscript_bytecode::interner::resolve(hudhudscript_bytecode::interner::SymbolId(sym.0));
                 if let Ok(live) = std::env::var(&field) {
                     return Ok(Value16::string(live));
                 }
@@ -128,9 +138,10 @@ impl VM {
 
             Err(compile_codes::runtime_error(format!(
                 "Property '{}' not found on object",
-                field
+                hudhudscript_bytecode::interner::resolve(hudhudscript_bytecode::interner::SymbolId(sym.0))
             )))
         } else {
+            let field = hudhudscript_bytecode::interner::resolve(hudhudscript_bytecode::interner::SymbolId(sym.0));
             match crate::vm::operations::helpers::eval_member_access(obj, &field) {
                 Ok(result) => Ok(result),
                 Err(e) => Err(compile_codes::runtime_error(e.to_string())),
@@ -143,17 +154,32 @@ impl VM {
     /// register slot; shared symbols live in globals (slot mirror kept until
     /// 2e.E).  Non-top-level names use function-local slots or globals.
     pub(crate) fn set_var(&mut self, name: &str, value: Value16) -> CompileResult<()> {
-        // K2-3: const reassignment guard (compile-time also rejects, but VM
-        // keeps a runtime safety net for external set_var callers).
-        let sym = hudhudscript_bytecode::interner::intern(name);
+        let sym_id = hudhudscript_bytecode::interner::intern(name).0;
+        self.set_var_by_sym(sym_id, name, value)
+    }
+
+    /// P3: `set_var` variant that accepts a pre-interned SymId + display name.
+    /// Avoids the `interner::intern()` call on the hot method dispatch path.
+    /// Contains the single canonical const-reassignment guard + writeback logic.
+    pub(crate) fn set_var_by_sym(
+        &mut self,
+        sym_id: u32,
+        name: &str,
+        value: Value16,
+    ) -> CompileResult<()> {
+        // T5.2: Inline `this` write — avoids FxHashMap insert.
+        if sym_id == self.this_sym {
+            self.cur_this = value;
+            return Ok(());
+        }
+        // K2-3: const reassignment guard (shared by both set_var paths)
+        let sym = hudhudscript_bytecode::interner::SymbolId(sym_id);
         if self.immutables.contains(&sym) && self.globals.contains_key(&sym) {
             return Err(compile_codes::runtime_error(format!(
                 "Cannot reassign to constant variable '{}'",
                 name
             )));
         }
-
-        let sym_id = sym.0;
         let (slot, is_shared) = self
             .main_slot_encoded(sym_id)
             .map(crate::vm::VM::main_slot_decode)
@@ -161,12 +187,7 @@ impl VM {
         let is_top_level = slot != usize::MAX;
         let is_main_only = is_top_level && !is_shared;
 
-        // Fast path: route through an existing upvalue cell when available.
-        // A top-level main-only function declaration can also be promoted to a
-        // cell; in that rare case keep the cell in sync and mirror to the slot.
-        // For shared top-level symbols, globals is the canonical home read by
-        // LoadGlobal, so we must mirror the cell write to globals too.
-        if let Some(cell) = self.find_cell(name) {
+        if let Some(cell) = self.find_cell_by_sym(sym_id) {
             *cell.write() = value;
             if is_main_only {
                 self.registers.set_absolute(slot, value);
@@ -183,8 +204,6 @@ impl VM {
 
         if is_top_level {
             if is_shared {
-                // ISSUE-2e-E: shared top-level symbols live in shared_globals_vec;
-                // mirror to HashMap for cold host/reflection consumers.
                 if let Some(encoded) = self.main_slot_encoded(sym_id) {
                     let idx = crate::vm::VM::main_slot_shared_index(encoded);
                     if idx < self.shared_globals_vec.len() {
@@ -197,41 +216,9 @@ impl VM {
                     self.globals.insert(sym, value);
                 }
             } else {
-                // ISSUE-2e-D/E: main-only top-level symbols live only in their
-                // absolute register slot.
                 self.registers.set_absolute(slot, value);
             }
         } else {
-            // S2.2c: non-top-level slot-first fast path. If the name has a slot
-            // allocated by the compiler, write to the relative register slot
-            // directly so subsequent register reads in the same frame see it.
-            if let Some(local_syms_ptr) = self.call_stack_local_syms.last() {
-                let local_syms = unsafe { &**local_syms_ptr };
-                if !local_syms.is_empty() {
-                    let cached = {
-                        let cache = self.name_sym_cache.borrow();
-                        cache.get(name).copied()
-                    };
-                    let resolved = cached.or_else(|| {
-                        hudhudscript_bytecode::interner::try_resolve_id(name).map(|id| {
-                            self.name_sym_cache
-                                .borrow_mut()
-                                .insert(name.to_string(), id);
-                            id
-                        })
-                    });
-                    if let Some(id) = resolved {
-                        if let Ok(idx) = local_syms.binary_search_by_key(&id, |(s, _, _)| *s) {
-                            let local_slot = local_syms[idx].1 as i32;
-                            if local_slot >= 0 {
-                                self.registers[local_slot as usize] = value;
-                                return Ok(());
-                            }
-                        }
-                    }
-                }
-            }
-            // No local slot: new or updated global binding.
             if let Some(existing) = self.globals.get_mut(&sym) {
                 *existing = value;
             } else {

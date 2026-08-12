@@ -5,6 +5,7 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
+readme.workspace = true
 description = "Bytecode format, instruction set, and value types for HudHudScript"
 
 [dependencies]
@@ -22,6 +23,13 @@ indexmap = { version = "2", features = ["serde"] }
 num-bigint = "0.4"
 num-traits = "0.2"
 sptr = "0.3.2"
+
+[features]
+# GC allocation/pause counters in `gc.rs` (take_telemetry_alloc_counts,
+# take_telemetry_gc_stats). Off by default so the counters cost nothing in a
+# normal build; the chain that turns them on is
+# hudhudscript-cli/telemetry → hudhudscript-vm/telemetry → here.
+telemetry = []
 
 [dev-dependencies]
 criterion = { workspace = true }

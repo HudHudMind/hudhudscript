@@ -19,7 +19,7 @@ impl Compiler {
             Value16::string(strategy.to_string()),
         );
         let idx = self.bytecode.add_constant(Value16::object(swarm_obj));
-        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_instr(Instruction::Move { dst: 255, src: tr }); }
+        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_move(255, tr ); }
         self.emit_decl_store("swarm", name, 255);
         Ok(())
     }
@@ -74,7 +74,7 @@ impl Compiler {
         );
         community_obj.insert("culture".to_string(), Value16::object(culture_obj));
         let idx = self.bytecode.add_constant(Value16::object(community_obj));
-        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_instr(Instruction::Move { dst: 255, src: tr }); }
+        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_move(255, tr ); }
         self.emit_decl_store("community", name, 255);
         Ok(())
     }

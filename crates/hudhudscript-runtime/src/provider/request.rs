@@ -28,6 +28,9 @@ pub struct LLMRequest {
 
     /// Tools available to the LLM (tool calling / function calling)
     pub tools: Option<Vec<ToolDefinition>>,
+
+    /// Request-specific timeout override
+    pub timeout_secs: Option<u64>,
 }
 
 /// A single tool call requested by the LLM

@@ -45,15 +45,15 @@ impl crate::vm::VM {
                 let haystack_v = haystack;
                 let needle_v = needle;
                 if let (Some(s), Some(n)) = (haystack_v.as_string(), needle_v.as_string()) {
-                    let idx = s.find(n.as_str()).map(|i| i as f64).unwrap_or(-1.0);
-                    self.registers[255] = Value16::number(idx);
+                    let idx = s.find(n.as_str()).map(|i| i as i64).unwrap_or(-1);
+                    self.registers[255] = Value16::int(idx);
                 } else if let Some(arr) = haystack_v.as_array() {
                     let idx = arr
                         .iter()
                         .position(|v| self.values_equal(v, &needle))
-                        .map(|i| i as f64)
-                        .unwrap_or(-1.0);
-                    self.registers[255] = Value16::number(idx);
+                        .map(|i| i as i64)
+                        .unwrap_or(-1);
+                    self.registers[255] = Value16::int(idx);
                 } else {
                     return Err(compile_codes::runtime_error(
                         "indexOf() requires string or array".to_string(),
@@ -237,35 +237,6 @@ impl crate::vm::VM {
                 Ok(true)
             }
 
-            "substring" => {
-                if !(2..=3).contains(&arg_count) {
-                    return Err(compile_codes::runtime_error(format!(
-                        "substring() expects 2-3 arguments, got {}",
-                        arg_count
-                    )));
-                }
-                let val = self.registers[first_arg as usize];
-                let start = self.pop_number(first_arg + 1)? as usize;
-                let end = if arg_count == 3 {
-                    Some(self.pop_number(first_arg + 2)? as usize)
-                } else {
-                    None
-                };
-                if let Some(s) = val.as_string() {
-                    let end = end.unwrap_or(s.len());
-                    let result: String = s
-                        .chars()
-                        .skip(start)
-                        .take(end.saturating_sub(start))
-                        .collect();
-                    self.registers[255] = Value16::string(result);
-                } else {
-                    return Err(compile_codes::runtime_error(
-                        "substring() requires a string".to_string(),
-                    ));
-                }
-                Ok(true)
-            }
             "length" => {
                 if arg_count != 1 {
                     return Err(compile_codes::runtime_error(format!(
@@ -275,8 +246,8 @@ impl crate::vm::VM {
                 }
                 let val = self.registers[first_arg as usize];
                 let val_v = val;
-                let length = if let Some(s) = val_v.as_string() {
-                    s.chars().count() as i64
+                let length = if let Some(len) = val.str_char_len() {
+                    len as i64
                 } else if let Some(arr) = val_v.as_array() {
                     arr.len() as i64
                 } else if let Some(obj) = val_v.as_object() {

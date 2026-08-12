@@ -18,7 +18,9 @@ fn run_global(src: &str, name: &str) -> i64 {
     let bc = compile(src);
     let mut vm = VM::new();
     vm.execute(&bc).expect("execute");
-    vm.get_variable(name).and_then(|v| v.as_int()).unwrap_or(-999)
+    vm.get_variable(name)
+        .and_then(|v| v.as_int())
+        .unwrap_or(-999)
 }
 
 // ── Test 1: fib semantic ─────────────────────────────────────
@@ -35,11 +37,7 @@ fn p3_fib_10_semantic_after_call_arg_move_elim() {
 fn p3_fib_bytecode_call_uses_arg_register_directly() {
     let src = "function fib(n) { if (n <= 1) { return n; } return fib(n - 1) + fib(n - 2); }";
     let bc = compile(src);
-    let fib = bc
-        .get_function("fib")
-        .unwrap()
-        .instructions
-        .clone();
+    let fib = bc.get_function("fib").unwrap().instructions.clone();
 
     let mut calls = 0;
     for (i, instr) in fib.iter().enumerate() {
@@ -95,11 +93,7 @@ fn p3_zero_arg_call_still_correct() {
 fn p3_fib_bytecode_fuses_both_recursive_sub_calls() {
     let src = "function fib(n) { if (n <= 1) { return n; } return fib(n - 1) + fib(n - 2); }";
     let bc = compile(src);
-    let fib = bc
-        .get_function("fib")
-        .unwrap()
-        .instructions
-        .clone();
+    let fib = bc.get_function("fib").unwrap().instructions.clone();
 
     let sub_call_count = fib
         .iter()
@@ -129,11 +123,7 @@ fn p3_fib_bytecode_fuses_both_recursive_sub_calls() {
 fn p3_fib_subcall_payload_keeps_distinct_arg_regs() {
     let src = "function fib(n) { if (n <= 1) { return n; } return fib(n - 1) + fib(n - 2); }";
     let bc = compile(src);
-    let fib = bc
-        .get_function("fib")
-        .unwrap()
-        .instructions
-        .clone();
+    let fib = bc.get_function("fib").unwrap().instructions.clone();
 
     let sub_call_indices: Vec<u32> = fib
         .iter()

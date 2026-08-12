@@ -165,8 +165,17 @@ pub struct McpToolDef {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct McpServerDecl {
     pub name: String,
+    /// NOT authoritative. The parser leaves this at its default for every
+    /// declaration (`transport: Stdio`, everything else `None`), so nothing
+    /// downstream may read it: synthesizing the emitted object from it is what
+    /// silently overrode a script's own `transport: "sse"` and made every
+    /// server stdio. `fields` below is the single source of truth; the VM
+    /// applies the defaults. Kept because it is part of the published AST
+    /// shape.
     pub config: ServerConfig,
-    /// Additional key-value fields (transport, command, etc.)
+    /// The key-value fields the author wrote in the declaration body
+    /// (`transport`, `command`, `args`, `url`, `auth`, …) — the single
+    /// authoritative source for codegen and formatting.
     #[serde(default)]
     pub fields: Vec<(String, crate::Expr)>,
     /// Tool definitions nested inside this MCP server block

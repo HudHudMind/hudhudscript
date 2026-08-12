@@ -68,8 +68,14 @@ pub fn parse_rule_decl(pair: Pair<Rule>) -> ParseResult<Stmt> {
                 }
             }
             "priority" => {
-                if let Expr::Literal(Literal::Number(n, _), _) = value {
-                    priority = n as u32;
+                if let Expr::Literal(lit, _) = value {
+                    let n = match lit {
+                        Literal::Number(n, _) => n as u32,
+                        Literal::Int(i) => i as u32,
+                        Literal::BigInt(s) => s.parse::<u32>().unwrap_or(0),
+                        _ => 0,
+                    };
+                    priority = n;
                 }
             }
             _ => {}

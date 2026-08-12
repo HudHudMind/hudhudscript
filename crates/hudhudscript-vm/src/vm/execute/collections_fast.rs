@@ -25,11 +25,16 @@ impl VM {
                 self.registers[*dst as usize] = Value16::array(arr);
             }
             Instruction::MakeObject { dst, count } => {
-                // Compiler always emits count=0 with SetProperty for each key-value.
-                // count>0 path removed — was a shadow accumulator bug.
-                let _n = *count as usize;
-                let properties = hudhudscript_bytecode::ObjMap::default();
+                let n = *count as usize;
+                let properties = hudhudscript_bytecode::ObjMap::with_capacity(n);
                 self.registers[*dst as usize] = Value16::object(properties);
+            }
+            Instruction::ObjLitSet { obj, val, prop_sym } => {
+                #[cfg(feature = "telemetry")] { self.telemetry.site_property_count += 1; }
+                let v = self.registers[*val as usize];
+                let mut obj_val = self.registers[*obj as usize];
+                obj_val.as_object_mut_unchecked()
+                    .insert(hudhudscript_bytecode::SymId(*prop_sym as u32), v);
             }
             Instruction::ArrayPush { dst, arr, val } => {
                 let v = self.registers[*val as usize];
@@ -61,42 +66,28 @@ impl VM {
             }
             // P2: fast path for array/string length and array pop
             Instruction::ArrayLen { dst, obj } => {
-                let arr = self.registers[*obj as usize]
-                    .as_array()
-                    .ok_or_else(|| {
-                        Self::runtime_error_with_pos(
-                            "ArrayLen: expected array",
-                            ctx.bytecode, ctx.ip,
-                        )
-                    })?;
+                let arr = self.registers[*obj as usize].as_array().ok_or_else(|| {
+                    Self::runtime_error_with_pos("ArrayLen: expected array", ctx.bytecode, ctx.ip)
+                })?;
                 self.registers[*dst as usize] = Value16::int(arr.len() as i64);
             }
             Instruction::StringLen { dst, obj } => {
-                let s = self.registers[*obj as usize]
-                    .as_string()
-                    .ok_or_else(|| {
-                        Self::runtime_error_with_pos(
-                            "StringLen: expected string",
-                            ctx.bytecode, ctx.ip,
-                        )
-                    })?;
+                let s = self.registers[*obj as usize].as_string().ok_or_else(|| {
+                    Self::runtime_error_with_pos("StringLen: expected string", ctx.bytecode, ctx.ip)
+                })?;
                 // P2a: use byte len to match existing GetProperty .length semantics
                 self.registers[*dst as usize] = Value16::int(s.len() as i64);
             }
             Instruction::ArrayPop { dst, obj } => {
                 let mut arr_val = self.registers[*obj as usize];
-                let vec = arr_val
-                    .as_array_mut()
-                    .ok_or_else(|| {
-                        Self::runtime_error_with_pos(
-                            "ArrayPop: expected array",
-                            ctx.bytecode, ctx.ip,
-                        )
-                    })?;
+                let vec = arr_val.as_array_mut().ok_or_else(|| {
+                    Self::runtime_error_with_pos("ArrayPop: expected array", ctx.bytecode, ctx.ip)
+                })?;
                 let val = vec.pop().ok_or_else(|| {
                     Self::runtime_error_with_pos(
                         "Cannot pop from empty array",
-                        ctx.bytecode, ctx.ip,
+                        ctx.bytecode,
+                        ctx.ip,
                     )
                 })?;
                 self.registers[*dst as usize] = val;
@@ -109,9 +100,15 @@ impl VM {
                 let product = crate::vm::bigint_arith::int_mul(a, b).map_err(|code| {
                     Self::runtime_error_with_pos(&code.to_string(), ctx.bytecode, ctx.ip)
                 })?;
-                let sum = crate::vm::bigint_arith::int_add(self.registers[*acc as usize], product).map_err(|code| {
-                    Self::runtime_error_with_pos(&code.to_string(), ctx.bytecode, ctx.ip)
-                })?;
+                #[cfg(feature = "telemetry")]
+                self.record_bigint_promotion(a, b, product);
+                let acc_val = self.registers[*acc as usize];
+                let sum = crate::vm::bigint_arith::int_add(acc_val, product)
+                    .map_err(|code| {
+                        Self::runtime_error_with_pos(&code.to_string(), ctx.bytecode, ctx.ip)
+                    })?;
+                #[cfg(feature = "telemetry")]
+                self.record_bigint_promotion(acc_val, product, sum);
                 self.registers[dst as usize] = sum;
             }
             _ => unreachable!("instruction routed to wrong execute helper"),

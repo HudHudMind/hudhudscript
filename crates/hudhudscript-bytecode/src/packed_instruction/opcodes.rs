@@ -50,8 +50,6 @@ pub(crate) const OP_INT_SUB_CALL_1: u8 = 111;
 pub(crate) const OP_INT_LE_JUMP_IF_FALSE: u8 = 112;
 pub(crate) const OP_INT_LT_JUMP_IF_FALSE: u8 = 117;
 pub(crate) const OP_INT_ADD_CALL_1: u8 = 113;
-pub(crate) const OP_INDEX_FAST_ISLOT: u8 = 115;
-pub(crate) const OP_INT_INCR_SLOT: u8 = 116;
 pub(crate) const OP_INT_EQ_RR: u8 = 0;
 pub(crate) const OP_INT_LT_RR: u8 = 1;
 pub(crate) const OP_INT_LE_RR: u8 = 2;
@@ -69,7 +67,11 @@ pub(crate) const OP_ARRAY_PUSH_RRR: u8 = 15;
 pub(crate) const OP_STRING_INDEX_OF_RRR: u8 = 16;
 pub(crate) const OP_STRING_CONTAINS_RRR: u8 = 17;
 pub(crate) const OP_STRCAT_MUT_RR: u8 = 18;
-pub(crate) const OP_STRING_CONCAT_RR: u8 = 19;
+// G-bakım (2026-08-12): 19 → 153. Eski değer OP_RETURN=19 ile ÇAKIŞIYORDU;
+// packed StringConcat yalnız chunk5'te D_RETURN arm'ı olmadığı için tesadüfen
+// Fallthrough'a düşüp doğru çalışıyordu (mayın). Packed kodlar runtime-türetilmiş
+// (prepack), wire'a yazılmaz — renumara güvenli.
+pub(crate) const OP_STRING_CONCAT_RR: u8 = 153;
 
 pub(crate) const OP_INT_ADD_RR: u8 = 118;
 pub(crate) const OP_INT_SUB_RR: u8 = 119;
@@ -110,4 +112,17 @@ pub(crate) const OP_INT_LE_RR_JUMP_P: u8 = 148;
 
 // P1b: specialized index packed opcodes
 pub(crate) const OP_INDEX_ARRAY_RRR: u8 = 149;
+pub(crate) const OP_INT_CMP_RR_JUMP_P: u8 = 151;
+// G12: unboxed float ailesi.
+pub(crate) const OP_F_LOAD_NUM: u8 = 154;
+pub(crate) const OP_F_STORE_NUM: u8 = 155;
+pub(crate) const OP_F_ADD: u8 = 156;
+pub(crate) const OP_F_SUB: u8 = 157;
+pub(crate) const OP_F_MUL: u8 = 158;
+pub(crate) const OP_F_DIV: u8 = 159;
+pub(crate) const OP_F_SIN: u8 = 160;
+pub(crate) const OP_F_COS: u8 = 161;
+pub(crate) const OP_F_SQRT: u8 = 162;
+pub(crate) const OP_F_CONST: u8 = 163;
+pub(crate) const OP_F_MOVE: u8 = 164;
 pub(crate) const OP_INDEX_STRING_ASCII_RRR: u8 = 150;

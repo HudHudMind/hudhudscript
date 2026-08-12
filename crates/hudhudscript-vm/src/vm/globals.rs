@@ -9,8 +9,7 @@ impl VM {
         // `this.call({...})` can dispatch through provider dispatch
         // (interpreter parity). Class / instance methods overwrite this
         // with the real receiver at method-call time and restore the
-        // previous value on return.
-        self.set_global("this", Value16::object(hudhudscript_bytecode::ObjMap::default()));
+        // previous value on return (T5.2: now stored in VM.cur_this field).
 
         // Math object with constants
         let mut math_obj = hudhudscript_bytecode::ObjMap::default();
@@ -22,7 +21,8 @@ impl VM {
         self.math_obj = Some(math_val);
 
         // JSON object (marker for method dispatch)
-        let json_obj = hudhudscript_bytecode::ObjMap::default();
+        let mut json_obj = hudhudscript_bytecode::ObjMap::default();
+        json_obj.insert("__module".to_string(), Value16::string("JSON".to_string()));
         let json_val = Value16::object(json_obj);
         self.set_global("JSON", json_val);
         self.json_obj = Some(json_val);
@@ -273,7 +273,6 @@ impl VM {
             Value16::string("McpServer".to_string()),
         );
         self.set_global("McpServer", Value16::object(mcp_server_obj));
-
 
         // HTTP Server module (v0.4.38 — #602)
         let mut server_obj = hudhudscript_bytecode::ObjMap::default();

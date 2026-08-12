@@ -107,11 +107,12 @@ members = [
 ]
 
 [workspace.package]
-version = "0.8.0"
+version = "0.8.219"
 edition = "2021"
 authors = ["Onur GÜZEL"]
 license = "MIT"
 repository = "https://github.com/HudHudMind/hudhudscript"
+readme = "README.md"
 
 [workspace.dependencies]
 # Common dependencies
@@ -185,7 +186,7 @@ hex = "0.4"
 
 [profile.release]
 opt-level = 3
-lto = "fat"
+lto = "thin"
 codegen-units = 1
 strip = false
 panic = "abort"

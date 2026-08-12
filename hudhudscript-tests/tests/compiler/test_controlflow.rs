@@ -1,12 +1,14 @@
 //! Compiler coverage tests: control flow, loops, switch, try-catch, match, classes
 
 use hudhudscript_bytecode::Value16;
-use hudhudscript_compiler::{Compiler, Instruction, VM};
+use hudhudscript_compiler::{Compiler, Instruction};
 use hudhudscript_parser::parse;
+use hudhudscript_vm::VM;
 
 /// Helper: parse, compile, execute, return VM
 fn run(source: &str) -> VM {
     let stmts = parse(source).expect("parse failed");
+    eprintln!("AST: {:#?}", stmts);
     let mut compiler = Compiler::new();
     let bytecode = compiler.compile(&stmts).expect("compile failed");
     let mut vm = VM::new();
@@ -17,6 +19,7 @@ fn run(source: &str) -> VM {
 /// Helper: parse and compile only, return bytecode
 fn compile_only(source: &str) -> hudhudscript_compiler::Bytecode {
     let stmts = parse(source).expect("parse failed");
+    eprintln!("AST: {:#?}", stmts);
     let mut compiler = Compiler::new();
     compiler.compile(&stmts).expect("compile failed")
 }
@@ -36,6 +39,7 @@ fn test_for_in_loop_array_iteration() {
     );
     eprintln!("switch bytecode: {:?}", bc.instructions);
     let vm = {
+        eprintln!("switch bytecode: {:#?}", bc.instructions);
         let mut vm = VM::new();
         vm.execute(&bc).unwrap();
         vm
@@ -61,6 +65,7 @@ fn test_for_c_style_loop() {
     );
     eprintln!("switch bytecode: {:?}", bc.instructions);
     let vm = {
+        eprintln!("switch bytecode: {:#?}", bc.instructions);
         let mut vm = VM::new();
         vm.execute(&bc).unwrap();
         vm
@@ -87,6 +92,7 @@ fn test_break_in_while_loop() {
     );
     eprintln!("switch bytecode: {:?}", bc.instructions);
     let vm = {
+        eprintln!("switch bytecode: {:#?}", bc.instructions);
         let mut vm = VM::new();
         vm.execute(&bc).unwrap();
         vm
@@ -143,6 +149,7 @@ fn test_switch_matches_case() {
     );
     eprintln!("switch bytecode: {:?}", bc.instructions);
     let vm = {
+        eprintln!("switch bytecode: {:#?}", bc.instructions);
         let mut vm = VM::new();
         vm.execute(&bc).unwrap();
         vm
@@ -167,12 +174,129 @@ fn test_switch_default_case() {
     "#,
     );
     eprintln!("switch bytecode: {:?}", bc.instructions);
+    eprintln!("switch bytecode: {:#?}", bc.instructions);
     let mut vm = VM::new();
     vm.execute(&bc).expect("execute failed");
     assert!(
         vm.get_variable("result").and_then(|v| v.as_number()) == Some(999.0),
         "switch should fall through to default: got {:?}",
         vm.get_variable("result")
+    );
+}
+
+#[test]
+fn test_switch_break_default() {
+    let bc = compile_only(
+        r#"
+        let job = 1;
+        let log = "";
+        switch (job) {
+            default:
+                log = "Unknown";
+                break;
+        }
+        let number = 100;
+        log = log + number;
+    "#,
+    );
+    eprintln!("switch bytecode: {:#?}", bc.instructions);
+    let mut vm = VM::new();
+    vm.execute(&bc).expect("execute failed");
+    assert_eq!(
+        vm.get_variable("log").and_then(|v| v.as_str()).as_deref(),
+        Some("Unknown100"),
+        "break in default should not stop execution after switch"
+    );
+}
+
+#[test]
+fn test_switch_break_case() {
+    let bc = compile_only(
+        r#"
+        let job = 1;
+        let log = "";
+        switch (job) {
+            case 1:
+                log = "Developer";
+                break;
+            default:
+                log = "Unknown";
+                break;
+        }
+        log = log + 100;
+    "#,
+    );
+    eprintln!("switch bytecode: {:#?}", bc.instructions);
+    let mut vm = VM::new();
+    vm.execute(&bc).expect("execute failed");
+    assert_eq!(
+        vm.get_variable("log").and_then(|v| v.as_str()).as_deref(),
+        Some("Developer100"),
+        "break in case should not stop execution after switch"
+    );
+}
+
+#[test]
+fn test_switch_nested_loop_break() {
+    let bc = compile_only(
+        r#"
+        let job = 1;
+        let i = 0;
+        let log = "";
+        switch (job) {
+            case 1:
+                while (i < 5) {
+                    i = i + 1;
+                    if (i == 3) {
+                        break;
+                    }
+                }
+                log = "" + i;
+                break;
+        }
+        log = log + "100";
+    "#,
+    );
+    eprintln!("switch bytecode: {:#?}", bc.instructions);
+    let mut vm = VM::new();
+    vm.execute(&bc).expect("execute failed");
+    assert_eq!(
+        vm.get_variable("log").and_then(|v| v.as_str()).as_deref(),
+        Some("3100"),
+        "break inside nested loop inside switch should only break the loop"
+    );
+}
+
+#[test]
+fn test_loop_nested_switch_break() {
+    let bc = compile_only(
+        r#"
+        let total = 0;
+        let i = 0;
+        while (i < 3) {
+            i = i + 1;
+            switch (i) {
+                case 2:
+                    break;
+                default:
+                    total = total + i;
+                    break;
+            }
+            total = total + 10;
+        }
+    "#,
+    );
+    eprintln!("switch bytecode: {:#?}", bc.instructions);
+    let mut vm = VM::new();
+    vm.execute(&bc).expect("execute failed");
+
+    // i=1: default runs (total = 1), then total = 1 + 10 = 11
+    // i=2: case 2 runs (break from switch), then total = 11 + 10 = 21
+    // i=3: default runs (total = 21 + 3 = 24), then total = 24 + 10 = 34
+    assert_eq!(
+        vm.get_variable("total").and_then(|v| v.as_number()),
+        Some(34.0),
+        "break inside switch inside loop should only break the switch"
     );
 }
 
@@ -192,6 +316,7 @@ fn test_try_catch_catches_throw() {
     );
     eprintln!("switch bytecode: {:?}", bc.instructions);
     let vm = {
+        eprintln!("switch bytecode: {:#?}", bc.instructions);
         let mut vm = VM::new();
         vm.execute(&bc).unwrap();
         vm
@@ -217,6 +342,7 @@ fn test_try_no_throw_skips_catch() {
     );
     eprintln!("switch bytecode: {:?}", bc.instructions);
     let vm = {
+        eprintln!("switch bytecode: {:#?}", bc.instructions);
         let mut vm = VM::new();
         vm.execute(&bc).unwrap();
         vm
@@ -244,6 +370,7 @@ fn test_try_catch_finally() {
     );
     eprintln!("switch bytecode: {:?}", bc.instructions);
     let vm = {
+        eprintln!("switch bytecode: {:#?}", bc.instructions);
         let mut vm = VM::new();
         vm.execute(&bc).unwrap();
         vm
@@ -267,6 +394,7 @@ fn test_template_string_interpolation() {
     );
     eprintln!("switch bytecode: {:?}", bc.instructions);
     let vm = {
+        eprintln!("switch bytecode: {:#?}", bc.instructions);
         let mut vm = VM::new();
         vm.execute(&bc).unwrap();
         vm
@@ -293,6 +421,7 @@ fn test_arrow_function_expression_body() {
     );
     eprintln!("switch bytecode: {:?}", bc.instructions);
     let vm = {
+        eprintln!("switch bytecode: {:#?}", bc.instructions);
         let mut vm = VM::new();
         vm.execute(&bc).unwrap();
         vm
@@ -314,6 +443,7 @@ fn test_arrow_function_block_body() {
     );
     eprintln!("switch bytecode: {:?}", bc.instructions);
     let vm = {
+        eprintln!("switch bytecode: {:#?}", bc.instructions);
         let mut vm = VM::new();
         vm.execute(&bc).unwrap();
         vm
@@ -394,6 +524,7 @@ fn test_function_return_without_value() {
     );
     eprintln!("switch bytecode: {:?}", bc.instructions);
     let vm = {
+        eprintln!("switch bytecode: {:#?}", bc.instructions);
         let mut vm = VM::new();
         vm.execute(&bc).unwrap();
         vm
@@ -417,6 +548,7 @@ fn test_if_without_else_false_condition() {
     );
     eprintln!("switch bytecode: {:?}", bc.instructions);
     let vm = {
+        eprintln!("switch bytecode: {:#?}", bc.instructions);
         let mut vm = VM::new();
         vm.execute(&bc).unwrap();
         vm
@@ -468,6 +600,7 @@ fn test_nested_function_definition() {
     );
     eprintln!("switch bytecode: {:?}", bc.instructions);
     let vm = {
+        eprintln!("switch bytecode: {:#?}", bc.instructions);
         let mut vm = VM::new();
         vm.execute(&bc).unwrap();
         vm

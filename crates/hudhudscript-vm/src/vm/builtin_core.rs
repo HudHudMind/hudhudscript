@@ -65,22 +65,22 @@ impl crate::vm::VM {
             if let Some(parent_name) = parent_value.as_string() {
                 // Get parent class from variables
                 if let Some(parent_class) = self.get_var_cloned(&parent_name) {
-                    // Check parent's vtable
+                    // Check parent's vtable (v4.3: packed int value).
                     if let Some(parent_cls) = parent_class.as_class_data() {
-                        if let Some(chunk_name) =
-                            parent_cls.vtable.get(method).and_then(|v| v.as_string())
+                        if let Some(packed) =
+                            parent_cls.vtable.get(method).and_then(|v| v.as_int())
                         {
-                            if let Some(chunk) =
-                                bytecode.get_function(&chunk_name)
-                            {
-                                return self.call_chunk(
-                                    &chunk,
-                                    &chunk.params,
-                                    &args,
-                                    bytecode,
-                                    &chunk_name,
-                                );
-                            }
+                            let idx = (packed >> 32) as u32;
+                            let chunk_sym = hudhudscript_bytecode::SymId(packed as u32);
+                            let chunk = bytecode.get_function_by_index(idx)
+                                .ok_or_else(|| crate::vm::builtin_method_dispatch::err_function_idx_missing(idx))?;
+                            return self.call_chunk(
+                                &chunk,
+                                &chunk.params,
+                                &args,
+                                bytecode,
+                                chunk_sym,
+                            );
                         }
                     }
                     // Recursively search further up the chain
@@ -111,8 +111,9 @@ impl crate::vm::VM {
     ) -> CompileResult<Vec<Value16>> {
         let limit = self.max_builtin_iter;
         let mut elements = Vec::new();
+        let next_sym = hudhudscript_bytecode::SymId(hudhudscript_bytecode::interner::intern("next").0);
         for _ in 0..limit {
-            let val = self.call_method_on_value(&receiver, "next", vec![], bytecode)?;
+            let val = self.call_method_on_value(&receiver, "next", next_sym, vec![], bytecode)?;
             if val.is_null() {
                 break;
             }

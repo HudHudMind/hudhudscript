@@ -13,14 +13,21 @@ fn compile(src: &str) -> hudhudscript_bytecode::Bytecode {
 }
 
 /// Helper: check if an instruction variant exists in top-level + function bodies.
-fn bytecode_has<F: Fn(&Instruction) -> bool>(bc: &hudhudscript_bytecode::Bytecode, pred: F) -> bool {
+fn bytecode_has<F: Fn(&Instruction) -> bool>(
+    bc: &hudhudscript_bytecode::Bytecode,
+    pred: F,
+) -> bool {
     for instr in &bc.instructions {
-        if pred(instr) { return true; }
+        if pred(instr) {
+            return true;
+        }
     }
     let funcs = bc.functions.borrow();
     for chunk in funcs.iter() {
         for instr in &chunk.instructions {
-            if pred(instr) { return true; }
+            if pred(instr) {
+                return true;
+            }
         }
     }
     false
@@ -41,7 +48,10 @@ fn index_assign_2d_fires_in_bytecode() {
     let src = "let m = [[1,2],[3,4]]; let i = 0; let j = 1; m[i][j] = 9;";
     let bc = compile(src);
     assert!(
-        bytecode_has(&bc, |instr| matches!(instr, Instruction::IndexAssign2D { .. })),
+        bytecode_has(&bc, |instr| matches!(
+            instr,
+            Instruction::IndexAssign2D { .. }
+        )),
         "IndexAssign2D should fire for m[i][j] = val"
     );
 }
@@ -51,7 +61,10 @@ fn int_mul_add_assign_fires_in_bytecode() {
     let src = "let acc = 0; let a = 3; let b = 4; acc = acc + a * b;";
     let bc = compile(src);
     assert!(
-        bytecode_has(&bc, |instr| matches!(instr, Instruction::IntMulAddAssign { .. })),
+        bytecode_has(&bc, |instr| matches!(
+            instr,
+            Instruction::IntMulAddAssign { .. }
+        )),
         "IntMulAddAssign should fire for acc = acc + a * b"
     );
 }
@@ -66,22 +79,24 @@ fn strcat3_fires_in_bytecode() {
     );
 }
 
-
-
 // ── CORRECTNESS tests ──────────────────────────────────────
 
 fn run_and_get(src: &str, var: &str) -> i64 {
     let bc = compile(src);
     let mut vm = VM::new();
     vm.execute(&bc).expect("execute");
-    vm.get_variable(var).and_then(|v| v.as_int()).unwrap_or(-999)
+    vm.get_variable(var)
+        .and_then(|v| v.as_int())
+        .unwrap_or(-999)
 }
 
 fn run_and_get_str(src: &str, var: &str) -> String {
     let bc = compile(src);
     let mut vm = VM::new();
     vm.execute(&bc).expect("execute");
-    vm.get_variable(var).and_then(|v| v.as_string()).unwrap_or_default()
+    vm.get_variable(var)
+        .and_then(|v| v.as_string())
+        .unwrap_or_default()
 }
 
 #[test]
@@ -121,7 +136,10 @@ fn array_push_int_const_fires_in_bytecode() {
     let src = "let arr = []; arr.push(5);";
     let bc = compile(src);
     assert!(
-        bytecode_has(&bc, |instr| matches!(instr, Instruction::ArrayPushIntConst { .. })),
+        bytecode_has(&bc, |instr| matches!(
+            instr,
+            Instruction::ArrayPushIntConst { .. }
+        )),
         "ArrayPushIntConst should fire for arr.push(5)"
     );
 }
@@ -137,7 +155,10 @@ fn array_push_const_fires_in_bytecode() {
     let src = "let arr = []; arr.push(\"x\");";
     let bc = compile(src);
     assert!(
-        bytecode_has(&bc, |instr| matches!(instr, Instruction::ArrayPushConst { .. })),
+        bytecode_has(&bc, |instr| matches!(
+            instr,
+            Instruction::ArrayPushConst { .. }
+        )),
         "ArrayPushConst should fire for arr.push(\"x\")"
     );
 }
@@ -148,6 +169,9 @@ fn array_push_const_correct_result() {
     let bc = compile(src);
     let mut vm = VM::new();
     vm.execute(&bc).expect("execute");
-    let v = vm.get_variable("r").and_then(|v| v.as_string()).unwrap_or_default();
+    let v = vm
+        .get_variable("r")
+        .and_then(|v| v.as_string())
+        .unwrap_or_default();
     assert_eq!(v, "x");
 }

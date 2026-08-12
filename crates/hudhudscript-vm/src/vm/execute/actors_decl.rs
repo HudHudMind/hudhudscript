@@ -12,8 +12,8 @@ impl VM {
         match instr {
             Instruction::DeclStore { .. } => self.step_actor_core(instr, ctx),
             Instruction::Spawn { .. }
-            | Instruction::Despawn { .. }
-            | Instruction::ViewAs { .. } => self.step_actor_spawn(instr, ctx),
+            | Instruction::Despawn { .. } => self.step_actor_spawn(instr, ctx),
+            Instruction::ViewAs { .. } => self.step_view_as(instr, ctx),
             Instruction::Send { .. } | Instruction::Receive { .. } => {
                 self.step_actor_messaging(instr, ctx)
             }

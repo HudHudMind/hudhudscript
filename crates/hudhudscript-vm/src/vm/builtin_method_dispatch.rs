@@ -29,29 +29,78 @@ use parking_lot::Mutex;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
+/// v4.3 cold-path error — outlined to avoid bloating the hot vtable unpack.
+#[cold] #[inline(never)]
+pub(crate) fn err_vtable_not_packed() -> hudhudscript_errors::Error {
+    compile_codes::runtime_error("Compiler invariant: vtable value not packed int".to_string())
+}
+
+#[cold] #[inline(never)]
+pub(crate) fn err_function_idx_missing(idx: u32) -> hudhudscript_errors::Error {
+    compile_codes::runtime_error(format!("Compiler invariant: function idx {} missing", idx))
+}
+
 impl crate::vm::VM {
+                            // set current class for this call (stack-only, T5.3).
+    /// All 5 copies of this pattern now call this single helper.
+    #[inline(always)]
+    pub(crate) fn with_this_context<F, R>(
+        &mut self,
+        receiver: &Value16,
+        class_name_sym: Option<hudhudscript_bytecode::SymId>,
+        f: F,
+    ) -> CompileResult<R>
+    where
+        F: FnOnce(&mut Self) -> CompileResult<R>,
+    {
+        let prev_this = self.get_var_cloned_by_sym(self.this_sym);
+        self.set_var_by_sym(self.this_sym, "this", receiver.clone())?;
+        if let Some(csym) = class_name_sym {
+            self.class_context_stack.push(csym);
+        }
+        let result = f(self);
+        if let Some(_) = class_name_sym {
+            self.class_context_stack.pop();
+        }
+        if let Some(mutated_this) = self.get_var_cloned_by_sym(self.this_sym) {
+            if mutated_this != *receiver {
+                self.last_instance_mutation = Some(Box::new(mutated_this));
+            }
+        }
+        match prev_this {
+            Some(old) => { self.set_var_by_sym(self.this_sym, "this", old)?; }
+            None => { self.remove_var_by_sym(self.this_sym); }
+        }
+        result
+    }
+
     pub(crate) fn call_method_on_value(
         &mut self,
         receiver: &Value16,
         method: &str,
+        method_sym: hudhudscript_bytecode::SymId,
         args: Vec<Value16>,
         bytecode: &Bytecode,
     ) -> CompileResult<Value16> {
         // SOP: ability dispatch on subject instances
         if let Some(inner) = receiver.as_object() {
-            if inner.get("__type").and_then(|v| v.as_string()).as_deref()
+            if inner.get(&hudhudscript_bytecode::well_known::wk().type_).and_then(|v| v.as_str())
                 == Some("subject_instance")
             {
                 let template = inner
-                    .get("__template")
+                    .get(&hudhudscript_bytecode::well_known::wk().template)
                     .and_then(|v| v.as_string())
                     .unwrap_or_default();
 
                 // P2: 2-entry polymorphic inline cache for ability dispatch.
-                let mut chunk_with_name: Option<(Arc<hudhudscript_bytecode::FunctionChunk>, String)> = None;
+                let mut chunk_with_name: Option<(
+                    Arc<hudhudscript_bytecode::FunctionChunk>,
+                    String,
+                )> = None;
                 for i in 0..2 {
-                    if let (Some((ref ct, ref cm, ref ck, ref cn)), ref age) = self.ability_cache[i] {
-                        if ct == &template && cm == method {
+                    if let (Some((ref ct, ref cm, ref ck, ref cn)), ref age) = self.ability_cache[i]
+                    {
+                        if ct == &template && *cm == method_sym {
                             self.ability_cache[i].1 = age.saturating_add(1);
                             chunk_with_name = Some((Arc::clone(ck), cn.clone()));
                             break;
@@ -59,15 +108,40 @@ impl crate::vm::VM {
                     }
                 }
                 if chunk_with_name.is_none() {
-                    let scoped_name = if !template.is_empty() { format!("ability::{}::{}", template, method) } else { String::new() };
+                    let scoped_name = if !template.is_empty() {
+                        format!("ability::{}::{}", template, method)
+                    } else {
+                        String::new()
+                    };
                     let unscoped_name = format!("ability::{}", method);
                     let funcs = bytecode.functions.borrow();
-                    let chunk = if !scoped_name.is_empty() { bytecode.get_function(&scoped_name) } else { None };
+                    let chunk = if !scoped_name.is_empty() {
+                        bytecode.get_function(&scoped_name)
+                    } else {
+                        None
+                    };
                     let chunk = chunk.or_else(|| bytecode.get_function(&unscoped_name));
-                    let cap_chunk_name = if !scoped_name.is_empty() && bytecode.has_function(&scoped_name) { scoped_name.clone() } else { unscoped_name.clone() };
+                    let cap_chunk_name =
+                        if !scoped_name.is_empty() && bytecode.has_function(&scoped_name) {
+                            scoped_name.clone()
+                        } else {
+                            unscoped_name.clone()
+                        };
                     if let Some(ref c) = chunk {
-                        let replace_idx = if self.ability_cache[0].1 <= self.ability_cache[1].1 { 0 } else { 1 };
-                        self.ability_cache[replace_idx] = (Some((template.clone(), method.to_string(), Arc::clone(c), cap_chunk_name.clone())), 0);
+                        let replace_idx = if self.ability_cache[0].1 <= self.ability_cache[1].1 {
+                            0
+                        } else {
+                            1
+                        };
+                        self.ability_cache[replace_idx] = (
+                            Some((
+                                template.clone(),
+                                method_sym,
+                                Arc::clone(c),
+                                cap_chunk_name.clone(),
+                            )),
+                            0,
+                        );
                     }
                     chunk_with_name = chunk.map(|c| (c, cap_chunk_name));
                 }
@@ -76,126 +150,150 @@ impl crate::vm::VM {
                     let params = chunk.params.clone();
                     let mut call_args = vec![*receiver];
                     call_args.extend(args);
-                    let result = self.call_chunk_with_captures(
-                        &chunk,
-                        &params,
-                        &call_args,
-                        bytecode,
-                        &cap_chunk_name,
-                        &HashMap::new(),
-                    )?;
 
                     // SOP0007: composition rule-aware view dispatch
+                    // Order invariant: before -> base -> combine(reducer) -> after.
+                    // If an override rule exists, base never runs and only the
+                    // override view's ability is returned.
                     let instance_id_str = inner
-                        .get("__instance_id")
+                        .get(&hudhudscript_bytecode::well_known::wk().instance_id)
                         .and_then(|v| v.as_string())
                         .unwrap_or_default();
                     let compose_key = format!("{}::{}", template, method);
                     let rules = self.composition_rules.get(&compose_key).cloned();
-                    if let Some(rules) = rules {
-                        for rule in &rules {
+
+                    // Separate rules by mode so we can enforce the fixed order.
+                    let mut before_subjects: Vec<String> = Vec::new();
+                    let mut after_subjects: Vec<String> = Vec::new();
+                    let mut combine_subjects: Vec<String> = Vec::new();
+                    let mut override_subject: Option<String> = None;
+
+                    if let Some(ref rules) = rules {
+                        for rule in rules {
                             match &rule.mode {
                                 crate::vm::sop_types::CompositionMode::Combine(subjects) => {
-                                    for view_name in subjects {
-                                        let view_ability =
-                                            format!("ability::{}::{}", view_name, method);
-                                        if let Some(vc) =
-                                            bytecode.get_function(&view_ability)
-                                        {
-                                            let vp = vc.params.clone();
-                                            let _ = self.call_chunk_with_captures(
-                                                &vc,
-                                                &vp,
-                                                &call_args,
-                                                bytecode,
-                                                &view_ability,
-                                                &HashMap::new(),
-                                            );
-                                        }
-                                    }
+                                    combine_subjects.extend(subjects.iter().cloned());
                                 }
                                 crate::vm::sop_types::CompositionMode::Override(subject) => {
-                                    let view_ability = format!("ability::{}::{}", subject, method);
-                                    if let Some(vc) =
-                                        bytecode.get_function(&view_ability)
-                                    {
-                                        let vp = vc.params.clone();
-                                        return self.call_chunk_with_captures(
-                                            &vc,
-                                            &vp,
-                                            &call_args,
-                                            bytecode,
-                                            &view_ability,
-                                            &HashMap::new(),
-                                        );
+                                    // Only the first override is honored; base never runs.
+                                    if override_subject.is_none() {
+                                        override_subject = Some(subject.clone());
                                     }
                                 }
                                 crate::vm::sop_types::CompositionMode::Before(subject) => {
-                                    let view_ability = format!("ability::{}::{}", subject, method);
-                                    if let Some(vc) =
-                                        bytecode.get_function(&view_ability)
-                                    {
-                                        let vp = vc.params.clone();
-                                        let _ = self.call_chunk_with_captures(
-                                            &vc,
-                                            &vp,
-                                            &call_args,
-                                            bytecode,
-                                            &view_ability,
-                                            &HashMap::new(),
-                                        );
-                                    }
+                                    before_subjects.push(subject.clone());
                                 }
                                 crate::vm::sop_types::CompositionMode::After(subject) => {
-                                    let view_ability = format!("ability::{}::{}", subject, method);
-                                    if let Some(vc) =
-                                        bytecode.get_function(&view_ability)
-                                    {
-                                        let vp = vc.params.clone();
-                                        let _ = self.call_chunk_with_captures(
-                                            &vc,
-                                            &vp,
-                                            &call_args,
-                                            bytecode,
-                                            &view_ability,
-                                            &HashMap::new(),
-                                        );
-                                    }
+                                    after_subjects.push(subject.clone());
                                 }
                             }
                         }
                     } else {
-                        // No composition rules: default combine-all
-                        let view_abilities: Vec<String> =
-                            if let Some(inst) = self.subject_instances.get(&instance_id_str) {
-                                inst.views
-                                    .keys()
-                                    .map(|view_name| format!("ability::{}::{}", view_name, method))
-                                    .collect()
-                            } else {
-                                Vec::new()
-                            };
-                        for view_ability in &view_abilities {
-                            if let Some(vc) = bytecode.get_function(view_ability)
-                            {
-                                let vp = vc.params.clone();
-                                let _ = self.call_chunk_with_captures(
-                                    &vc,
-                                    &vp,
-                                    &call_args,
-                                    bytecode,
-                                    view_ability,
-                                    &HashMap::new(),
-                                );
-                            }
+                        // No composition rules: default combine-all.
+                        if let Some(inst) = self.subject_instances.get(&instance_id_str) {
+                            combine_subjects.extend(inst.views.keys().cloned());
                         }
                     }
+
+                    // Override short-circuits everything (base does not run).
+                    if let Some(subject) = override_subject {
+                        let view_ability = format!("ability::{}::{}", subject, method);
+                        if let Some(vc) = bytecode.get_function(&view_ability) {
+                            let vp = vc.params.clone();
+                            return self.call_chunk_with_captures(
+                                &vc,
+                                &vp,
+                                &call_args,
+                                bytecode,
+                                hudhudscript_bytecode::SymId(hudhudscript_bytecode::interner::intern(&view_ability).0),
+                                &HashMap::new(),
+                            );
+                        }
+                    }
+
+                    // before hooks (run before base, errors propagate).
+                    for view_name in &before_subjects {
+                        let view_ability = format!("ability::{}::{}", view_name, method);
+                        if let Some(vc) = bytecode.get_function(&view_ability) {
+                            let vp = vc.params.clone();
+                            self.call_chunk_with_captures(
+                                &vc,
+                                &vp,
+                                &call_args,
+                                bytecode,
+                                hudhudscript_bytecode::SymId(hudhudscript_bytecode::interner::intern(&view_ability).0),
+                                &HashMap::new(),
+                            )?;
+                        }
+                    }
+
+                    // Base ability result.
+                    let mut result = self.call_chunk_with_captures(
+                        &chunk,
+                        &params,
+                        &call_args,
+                        bytecode,
+                        hudhudscript_bytecode::SymId(hudhudscript_bytecode::interner::intern(&cap_chunk_name).0),
+                        &HashMap::new(),
+                    )?;
+
+                    // combine reducer: default is "last result wins".
+                    fn default_combine_reducer(_acc: Value16, next: Value16) -> Value16 {
+                        next
+                    }
+                    for view_name in &combine_subjects {
+                        let view_ability = format!("ability::{}::{}", view_name, method);
+                        if let Some(vc) = bytecode.get_function(&view_ability) {
+                            let vp = vc.params.clone();
+                            let view_result = self.call_chunk_with_captures(
+                                &vc,
+                                &vp,
+                                &call_args,
+                                bytecode,
+                                hudhudscript_bytecode::SymId(hudhudscript_bytecode::interner::intern(&view_ability).0),
+                                &HashMap::new(),
+                            )?;
+                            result = default_combine_reducer(result, view_result);
+                        }
+                    }
+
+                    // after hooks (run after base, errors propagate).
+                    for view_name in &after_subjects {
+                        let view_ability = format!("ability::{}::{}", view_name, method);
+                        if let Some(vc) = bytecode.get_function(&view_ability) {
+                            let vp = vc.params.clone();
+                            self.call_chunk_with_captures(
+                                &vc,
+                                &vp,
+                                &call_args,
+                                bytecode,
+                                hudhudscript_bytecode::SymId(hudhudscript_bytecode::interner::intern(&view_ability).0),
+                                &HashMap::new(),
+                            )?;
+                        }
+                    }
+
+                    // B1: invoke registered effects after ability dispatch
+                    if let Some(effect_chunk_name) = self.effects.get(method).cloned() {
+                        if let Some(effect_chunk) = bytecode.get_function(&effect_chunk_name) {
+                            let effect_params = effect_chunk.params.clone();
+                            let _ = self.call_chunk_with_captures(
+                                &effect_chunk,
+                                &effect_params,
+                                &call_args,
+                                bytecode,
+                                hudhudscript_bytecode::SymId(hudhudscript_bytecode::interner::intern(&effect_chunk_name).0),
+                                &HashMap::new(),
+                            );
+                        }
+                    }
+
                     return Ok(result);
                 }
 
                 // SOP0006: base ability not found — try view-only dispatch
                 let instance_id_str = inner
-                    .get("__instance_id")
+                    .get(&hudhudscript_bytecode::well_known::wk().instance_id)
                     .and_then(|v| v.as_string())
                     .unwrap_or_default();
                 if let Some(inst) = self.subject_instances.get(&instance_id_str) {
@@ -210,7 +308,7 @@ impl crate::vm::VM {
                                 &vp,
                                 &call_args,
                                 bytecode,
-                                &view_ability,
+                                hudhudscript_bytecode::SymId(hudhudscript_bytecode::interner::intern(&view_ability).0),
                                 &HashMap::new(),
                             );
                         }
@@ -224,18 +322,25 @@ impl crate::vm::VM {
             if let Some(class_data) = inst.class.as_class_data() {
                 if let Some(method_val) = class_data
                     .vtable
-                    .get(method)
-                    .or_else(|| class_data.methods.get(method))
+                    .get(&method_sym)
+                    .or_else(|| class_data.methods.get(&method_sym))
                 {
-                    if let Some(chunk_name) = method_val.as_string() {
-                        if let Some(chunk) = bytecode.get_function(&chunk_name) {
-                            let class_name = inst.class_name.clone();
+                    // v4.3: unpack packed (idx<<32)|sym from vtable int value.
+                    let packed = method_val.as_int()
+                        .ok_or_else(err_vtable_not_packed)?;
+                    let idx = (packed >> 32) as u32;
+                    let chunk_sym = hudhudscript_bytecode::SymId(packed as u32);
+                    let chunk = bytecode.get_function_by_index(idx)
+                        .ok_or_else(|| err_function_idx_missing(idx))?;
+                            let class_name: &str = &inst.class_name;
+                            let class_name_sym = hudhudscript_bytecode::SymId(
+                                hudhudscript_bytecode::interner::intern(class_name).0);
                             // OOP0002: access modifier check
-                            if let Some(access) = class_data.method_access.get(method) {
+                            if let Some(access) = class_data.method_access.get(&method_sym) {
                                 if *access == 1 {
                                     // Private: only callable from same class
-                                    if self.class_context_stack.last().map(|c| c.as_str())
-                                        != Some(&class_name)
+                                    if self.class_context_stack.last().copied()
+                                        != Some(class_name_sym)
                                     {
                                         return Err(compile_codes::runtime_error(format!(
                                             "Cannot call private method '{}' on class '{}' from outside the class",
@@ -245,9 +350,11 @@ impl crate::vm::VM {
                                 } else if *access == 2 {
                                     // Protected: only callable from same class or subclass
                                     let current =
-                                        self.class_context_stack.last().map(|c| c.clone());
-                                    let allowed = current.as_deref() == Some(&class_name)
-                                        || self.is_subclass_of(current.as_deref(), &class_name);
+                                        self.class_context_stack.last().copied();
+                                    let current_str = current.map(|s| hudhudscript_bytecode::interner::resolve(
+                                        hudhudscript_bytecode::interner::SymbolId(s.0)));
+                                    let allowed = current == Some(class_name_sym)
+                                        || self.is_subclass_of(current_str.as_deref(), class_name);
                                     if !allowed {
                                         return Err(compile_codes::runtime_error(format!(
                                             "Cannot call protected method '{}' on class '{}' from unrelated class",
@@ -256,40 +363,13 @@ impl crate::vm::VM {
                                     }
                                 }
                             }
-                            let prev_this = self.get_var_cloned("this");
-                            let prev_class = self.get_var_cloned("__current_class");
-                            self.set_var("this", receiver.clone())?;
-                            self.set_var("__current_class", Value16::string(class_name.clone()))?;
-                            self.class_context_stack.push(class_name.clone());
-                            let result = self.call_chunk(
-                                &chunk,
-                                &chunk.params,
-                                &args,
-                                bytecode,
-                                &chunk_name,
+                            return self.with_this_context(
+                                receiver, Some(class_name_sym),
+                                |this| {
+                                    this.call_chunk(&chunk, &chunk.params, &args, bytecode, chunk_sym)
+                                },
                             );
-                            self.class_context_stack.pop();
-                            self.last_instance_mutation = self.get_var_cloned("this").map(Box::new);
-                            match prev_this {
-                                Some(old) => {
-                                    let _ = self.set_var("this", old);
-                                }
-                                None => {
-                                    self.remove_var("this");
-                                }
-                            }
-                            match prev_class {
-                                Some(old) => {
-                                    let _ = self.set_var("__current_class", old);
-                                }
-                                None => {
-                                    self.remove_var("__current_class");
-                                }
-                            }
-                            return result;
                         }
-                    }
-                }
             }
         }
         // Array
@@ -297,8 +377,9 @@ impl crate::vm::VM {
             return self.call_array_method(*receiver, method, args, bytecode);
         }
         // String
-        if let Some(s) = receiver.as_string() {
-            return self.call_string_method(s.as_str(), method, args.clone());
+        if let Some(s) = receiver.as_str() {
+            let is_ascii = receiver.is_dynamic_string_ascii();
+            return self.call_string_method(s, method, &args, is_ascii);
         }
         // Object (includes instances created via NewInstance as Object)
         if let Some(obj) = receiver.as_object() {
@@ -312,7 +393,7 @@ impl crate::vm::VM {
                 return self.call_json_method(method, args.clone());
             }
             // #928: Check registered modules
-            if let Some(module_name) = obj.get("__module").and_then(|v| v.as_string()) {
+            if let Some(module_name) = obj.get(&hudhudscript_bytecode::well_known::wk().module).and_then(|v| v.as_string()) {
                 if let Some(result) = self
                     .module_registry
                     .call(&module_name, method, args.clone())
@@ -322,40 +403,40 @@ impl crate::vm::VM {
             }
             // http module
             if obj
-                .get("__module")
-                .map_or(false, |v| v.as_string().as_deref() == Some("http"))
+                .get(&hudhudscript_bytecode::well_known::wk().module)
+                .map_or(false, |v| v.as_str() == Some("http"))
             {
                 let args_v: Vec<Value16> = args.iter().map(|v| *v).collect();
                 return self.call_http_method(method, args_v);
             }
             // file module
             if obj
-                .get("__module")
-                .map_or(false, |v| v.as_string().as_deref() == Some("file"))
+                .get(&hudhudscript_bytecode::well_known::wk().module)
+                .map_or(false, |v| v.as_str() == Some("file"))
             {
                 let args_v: Vec<Value16> = args.iter().map(|v| *v).collect();
                 return self.call_file_method(method, args_v);
             }
             // Promise object
             if obj
-                .get("__module")
-                .map_or(false, |v| v.as_string().as_deref() == Some("Promise"))
+                .get(&hudhudscript_bytecode::well_known::wk().module)
+                .map_or(false, |v| v.as_str() == Some("Promise"))
             {
                 let args_v: Vec<Value16> = args.iter().map(|v| *v).collect();
                 return self.call_promise_method(method, args_v);
             }
             // linalg module
             if obj
-                .get("__module")
-                .map_or(false, |v| v.as_string().as_deref() == Some("linalg"))
+                .get(&hudhudscript_bytecode::well_known::wk().module)
+                .map_or(false, |v| v.as_str() == Some("linalg"))
             {
                 let args_v: Vec<Value16> = args.iter().map(|v| *v).collect();
                 return self.call_linalg_method(method, args_v);
             }
             // stats module
             if obj
-                .get("__module")
-                .map_or(false, |v| v.as_string().as_deref() == Some("stats"))
+                .get(&hudhudscript_bytecode::well_known::wk().module)
+                .map_or(false, |v| v.as_str() == Some("stats"))
             {
                 let args_v: Vec<Value16> = args.iter().map(|v| *v).collect();
                 return self.call_stats_method(method, args_v);
@@ -363,7 +444,7 @@ impl crate::vm::VM {
             // P3: lazy clone for remaining branches that need Vec<Value16>
             let args_v: Vec<Value16> = args.iter().map(|v| *v).collect();
             // Serialization modules
-            if let Some(module_name) = obj.get("__module").and_then(|v| v.as_string()) {
+            if let Some(module_name) = obj.get(&hudhudscript_bytecode::well_known::wk().module).and_then(|v| v.as_string()) {
                 match module_name.as_str() {
                     "TOML" => return self.call_toml_method(method, args.clone()),
                     "YAML" => return self.call_yaml_method(method, args_v.clone()),
@@ -501,26 +582,92 @@ impl crate::vm::VM {
             // AGENT0002: Agent dispatch — route method calls through agent's provider
             if let Some(agent_name) = obj.get("name").and_then(|v| v.as_string()) {
                 if self.agent_names.contains_key(&agent_name) {
+                    let action_name = format!("{}.{}", agent_name, method);
+                    let action_chunk = bytecode
+                        .action_registry
+                        .borrow()
+                        .get(action_name.as_str())
+                        .cloned();
+                    if let Some(action_chunk) = action_chunk {
+                        if action_chunk.params.len() != args.len() {
+                            return Err(compile_codes::runtime_error(format!(
+                                "Action {} expects {} arguments, got {}",
+                                action_name,
+                                action_chunk.params.len(),
+                                args.len()
+                            )));
+                        }
+
+                        let action_sym = hudhudscript_bytecode::SymId(hudhudscript_bytecode::interner::intern(&action_name).0);
+                        return self.with_this_context(receiver, None, |this| {
+                            if action_chunk.is_async {
+                                Ok(this.spawn_async_chunk(
+                                    Arc::clone(&action_chunk),
+                                    &action_chunk.params,
+                                    &args,
+                                    bytecode,
+                                    &action_name,
+                                    None,
+                                ))
+                            } else {
+                                this.call_chunk(
+                                    &action_chunk,
+                                    &action_chunk.params,
+                                    &args,
+                                    bytecode,
+                                    action_sym,
+                                )
+                            }
+                        });
+                    }
+
                     // Look up provider from agent's "provider" field
-                    let provider_name = obj.get("provider").and_then(|v| v.as_string());
-                    let prov_obj = provider_name.and_then(|pn| self.get_var_cloned(&pn));
-                    if let Some(mut prov_obj) = prov_obj {
-                        // Agent-level model override
-                        if let Some(model) = obj.get("model").and_then(|v| v.as_string()) {
-                            if let Some(prov_map) = prov_obj.as_object() {
-                                let mut merged = prov_map.clone();
-                                merged.insert(
-                                    "model".to_string(),
-                                    Value16::string(model.to_string()),
-                                );
-                                prov_obj = Value16::object(merged);
+                    let provider_value = obj.get("provider");
+                    let mut prov_obj = None;
+
+                    if let Some(pv) = provider_value {
+                        if pv.is_object() {
+                            prov_obj = Some(pv.clone());
+                        } else if let Some(pn) = pv.as_string() {
+                            // Backward compatibility
+                            prov_obj = self.get_var_cloned(&pn);
+                            if prov_obj.is_none() && pn.contains('.') {
+                                let parts: Vec<&str> = pn.split('.').collect();
+                                if let Some(mut current) = self.get_var_cloned(parts[0]) {
+                                    let mut resolved = true;
+                                    for part in &parts[1..] {
+                                        if let Some(obj) = current.as_object() {
+                                            if let Some(next) = obj.get(*part) {
+                                                current = next.clone();
+                                            } else {
+                                                resolved = false;
+                                                break;
+                                            }
+                                        } else {
+                                            resolved = false;
+                                            break;
+                                        }
+                                    }
+                                    if resolved && current.is_object() {
+                                        prov_obj = Some(current);
+                                    }
+                                }
                             }
                         }
+                    }
+
+                    if prov_obj.is_none() {
+                        return Err(compile_codes::runtime_error(
+                            format!("Agent '{}' provider did not resolve: provider field is {}", agent_name, provider_value.unwrap_or(&Value16::null())),
+                        ));
+                    }
+
+                    if prov_obj.is_some() {
                         // Agent.call() → route to provider.call()
                         if method == "call" || method == "stream" {
                             let config = args_v.into_iter().next().unwrap_or(Value16::null());
                             let prev = self.dispatch_provider_receiver.take();
-                            self.dispatch_provider_receiver = Some(prov_obj);
+                            self.dispatch_provider_receiver = Some(receiver.clone());
                             let result = dispatch_provider_call(self, &config);
                             self.dispatch_provider_receiver = prev;
                             return result;
@@ -533,7 +680,7 @@ impl crate::vm::VM {
                         let mut config = hudhudscript_bytecode::ObjMap::default();
                         config.insert("prompt".to_string(), Value16::string(prompt));
                         let prev = self.dispatch_provider_receiver.take();
-                        self.dispatch_provider_receiver = Some(prov_obj);
+                        self.dispatch_provider_receiver = Some(receiver.clone());
                         let result = dispatch_provider_call(self, &Value16::object(config));
                         self.dispatch_provider_receiver = prev;
                         return result;
@@ -542,8 +689,8 @@ impl crate::vm::VM {
             }
             // Provider / LLM dispatch
             let is_mcp = obj
-                .get("__module")
-                .map_or(false, |v| v.as_string().as_deref() == Some("mcp"));
+                .get(&hudhudscript_bytecode::well_known::wk().module)
+                .map_or(false, |v| v.as_str() == Some("mcp"));
             if (method == "call" || method == "stream") && !is_mcp {
                 let config = args.into_iter().next().unwrap_or(Value16::null());
                 // PROVIDER0002: set receiver so provider_get_provider can build from it
@@ -555,8 +702,8 @@ impl crate::vm::VM {
             }
             // MCP proxy dispatch
             if obj
-                .get("__module")
-                .map_or(false, |v| v.as_string().as_deref() == Some("mcp"))
+                .get(&hudhudscript_bytecode::well_known::wk().module)
+                .map_or(false, |v| v.as_str() == Some("mcp"))
             {
                 if let Some(server_name) = obj.get("__server").and_then(|v| v.as_string()) {
                     let server_name = server_name.to_string();
@@ -582,34 +729,21 @@ impl crate::vm::VM {
                 }
             }
             // Class methods (chunk name lookup)
-            if let Some(chunk_name) = obj.get(method).and_then(|v| v.as_string()) {
-                if let Some(chunk) = bytecode
-                    .get_function(chunk_name.as_str())
-                {
-                    let prev_this = self.get_var_cloned("this");
-                    self.set_var("this", receiver.clone())?;
-                    let result = self.call_chunk(
-                        &chunk,
-                        &chunk.params,
-                        &args,
-                        bytecode,
-                        chunk_name.as_str(),
-                    );
-                    self.last_instance_mutation = self.get_var_cloned("this").map(Box::new);
-                    match prev_this {
-                        Some(old) => {
-                            let _ = self.set_var("this", old);
-                        }
-                        None => {
-                            self.remove_var("this");
-                        }
-                    }
-                    return result;
+            if let Some(chunk_name) = obj.get(&method_sym).and_then(|v| v.as_string()) {
+                if let Some(chunk) = bytecode.get_function(chunk_name.as_str()) {
+                    let func_sym = hudhudscript_bytecode::SymId(hudhudscript_bytecode::interner::intern(&chunk_name).0);
+                    return self.with_this_context(receiver, None, |this| {
+                        this.call_chunk(&chunk, &chunk.params, &args, bytecode, func_sym)
+                    });
                 }
             }
+            // Property holding a function value — module namespace functions
+            if let Some(f) = Self::property_function_value(obj.get(&method_sym)) {
+                return self.call_property_function(receiver, f, args, bytecode);
+            }
             // Property access fallback
-            match method {
-                "keys" => {
+            match crate::vm::builtin_method::lookup_method(method_sym) {
+                Some(crate::vm::builtin_method::BuiltinMethod::Keys) => {
                     let mut ks: Vec<Value16> =
                         obj.keys().map(|k| Value16::string(k.to_string())).collect();
                     ks.sort_by(|a, b| {
@@ -619,14 +753,17 @@ impl crate::vm::VM {
                     });
                     Ok(Value16::array(ks))
                 }
-                "values" => {
-                    let mut pairs: Vec<(String, Value16)> = obj.iter().map(|(k, v)| (k.to_string(), v.clone())).collect();
+                Some(crate::vm::builtin_method::BuiltinMethod::Values) => {
+                    let mut pairs: Vec<(String, Value16)> = obj
+                        .iter()
+                        .map(|(k, v)| (k.to_string(), v.clone()))
+                        .collect();
                     pairs.sort_by_key(|(k, _)| k.clone());
                     Ok(Value16::array(
                         pairs.into_iter().map(|(_, v)| v.clone()).collect(),
                     ))
                 }
-                "length" => Ok(Value16::int(obj.len() as i64)),
+                Some(crate::vm::builtin_method::BuiltinMethod::Length) => Ok(Value16::int(obj.len() as i64)),
                 _ => Err(compile_codes::runtime_error(format!(
                     "Unknown method '{}' on object",
                     method
@@ -638,62 +775,38 @@ impl crate::vm::VM {
             let class = &inst.class;
             // O(1) vtable method dispatch
             if let Some(parent_cls) = class.as_class_data() {
-                if let Some(chunk_name) = parent_cls.vtable.get(method).and_then(|v| v.as_string())
+                if let Some(packed) = parent_cls.vtable.get(&method_sym).and_then(|v| v.as_int())
                 {
-                    if let Some(chunk) = bytecode.get_function(&chunk_name) {
-                        let prev_this = self.get_var_cloned("this");
-                        let prev_class = self.get_var_cloned("__current_class");
-                        self.set_var("this", receiver.clone())?;
-                        self.set_var("__current_class", Value16::string(class_name.clone()))?;
-                        self.class_context_stack.push(class_name.clone());
-                        let result =
-                            self.call_chunk(&chunk, &chunk.params, &args, bytecode, &chunk_name);
-                        self.class_context_stack.pop();
-                        self.last_instance_mutation = self.get_var_cloned("this").map(Box::new);
-                        match prev_this {
-                            Some(old) => {
-                                let _ = self.set_var("this", old);
-                            }
-                            None => {
-                                self.remove_var("this");
-                            }
-                        }
-                        match prev_class {
-                            Some(old) => {
-                                let _ = self.set_var("__current_class", old);
-                            }
-                            None => {
-                                self.remove_var("__current_class");
-                            }
-                        }
-                        return result;
+                    let idx = (packed >> 32) as u32;
+                    let chunk_sym = hudhudscript_bytecode::SymId(packed as u32);
+                    let chunk = bytecode.get_function_by_index(idx)
+                        .ok_or_else(|| err_function_idx_missing(idx))?;
+                    let cn_sym = hudhudscript_bytecode::SymId(hudhudscript_bytecode::interner::intern(class_name).0);
+                    return self.with_this_context(
+                        receiver,
+                        Some(cn_sym),
+                        |this| {
+                            this.call_chunk(&chunk, &chunk.params, &args, bytecode, chunk_sym)
+                            },
+                        );
                     }
-                }
             }
             // Fallback: look up method in instance fields
-            if let Some(chunk_name) = fields.get(method).and_then(|v| v.as_string()) {
+            if let Some(chunk_name) = fields.get(&method_sym).and_then(|v| v.as_string()) {
                 if let Some(chunk) = bytecode.get_function(&chunk_name) {
-                    let prev_this = self.get_var_cloned("this");
-                    self.set_var("this", receiver.clone())?;
-                    let result =
-                        self.call_chunk(&chunk, &chunk.params, &args, bytecode, &chunk_name);
-                    self.last_instance_mutation = self.get_var_cloned("this").map(Box::new);
-                    match prev_this {
-                        Some(old) => {
-                            let _ = self.set_var("this", old);
-                        }
-                        None => {
-                            self.remove_var("this");
-                        }
-                    }
-                    return result;
+                    let func_sym = hudhudscript_bytecode::SymId(hudhudscript_bytecode::interner::intern(&chunk_name).0);
+                    return self.with_this_context(receiver, None, |this| {
+                        this.call_chunk(&chunk, &chunk.params, &args, bytecode, func_sym)
+                    });
                 }
             }
             // Property access fallback
-            match method {
-                "keys" => {
-                    let mut ks: Vec<Value16> =
-                        fields.keys().map(|k| Value16::string(k.to_string())).collect();
+            match crate::vm::builtin_method::lookup_method(method_sym) {
+                Some(crate::vm::builtin_method::BuiltinMethod::Keys) => {
+                    let mut ks: Vec<Value16> = fields
+                        .keys()
+                        .map(|k| Value16::string(k.to_string()))
+                        .collect();
                     ks.sort_by(|a, b| {
                         let sa = a.as_string().unwrap_or_default();
                         let sb = b.as_string().unwrap_or_default();
@@ -701,14 +814,17 @@ impl crate::vm::VM {
                     });
                     Ok(Value16::array(ks))
                 }
-                "values" => {
-                    let mut pairs: Vec<(String, Value16)> = fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect();
+                Some(crate::vm::builtin_method::BuiltinMethod::Values) => {
+                    let mut pairs: Vec<(String, Value16)> = fields
+                        .iter()
+                        .map(|(k, v)| (k.to_string(), v.clone()))
+                        .collect();
                     pairs.sort_by_key(|(k, _)| k.clone());
                     Ok(Value16::array(
                         pairs.into_iter().map(|(_, v)| v.clone()).collect(),
                     ))
                 }
-                "length" => Ok(Value16::int(fields.len() as i64)),
+                Some(crate::vm::builtin_method::BuiltinMethod::Length) => Ok(Value16::int(fields.len() as i64)),
                 _ => Err(compile_codes::runtime_error(format!(
                     "Unknown method '{}' on instance of {}",
                     method, class_name
@@ -790,11 +906,11 @@ impl crate::vm::VM {
         } else {
             // SOP0003: for subject instances, include role/ability info in error
             let detail = if let Some(inner) = receiver.as_object() {
-                if inner.get("__type").and_then(|v| v.as_string()).as_deref()
+                if inner.get(&hudhudscript_bytecode::well_known::wk().type_).and_then(|v| v.as_str())
                     == Some("subject_instance")
                 {
                     let template = inner
-                        .get("__template")
+                        .get(&hudhudscript_bytecode::well_known::wk().template)
                         .and_then(|v| v.as_string())
                         .unwrap_or_default();
                     let instance_id = inner

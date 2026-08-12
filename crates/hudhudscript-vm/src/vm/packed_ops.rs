@@ -4,10 +4,6 @@ pub const OP_RETURN: u8 = 19;
 pub const OP_JUMP: u8 = 20;
 pub const OP_JUMP_IF_FALSE: u8 = 21;
 pub const OP_JUMP_IF_TRUE: u8 = 22;
-pub const OP_LOAD_VAR: u8 = 23;
-pub const OP_STORE_VAR: u8 = 24;
-pub const OP_DECL_VAR: u8 = 25;
-pub const OP_STORE_CONST: u8 = 26;
 pub const OP_INDEX: u8 = 29;
 pub const OP_BREAK: u8 = 30;
 pub const OP_CONTINUE: u8 = 31;
@@ -24,9 +20,6 @@ pub const OP_SPREAD_INTO_ARRAY: u8 = 41;
 pub const OP_SPREAD_INTO_OBJECT: u8 = 42;
 pub const OP_POP_FINALLY: u8 = 43;
 pub const OP_LOAD_NUM_CONST: u8 = 69;
-pub const OP_LOAD_LOCAL: u8 = 76;
-pub const OP_STORE_LOCAL: u8 = 77;
-pub const OP_DECL_LOCAL: u8 = 78;
 pub const OP_MAKE_ARRAY: u8 = 80;
 pub const OP_MAKE_OBJECT: u8 = 81;
 pub const OP_LOAD_INT_CONST: u8 = 88;
@@ -55,8 +48,6 @@ pub const OP_INT_SUB_CALL_1: u8 = 111;
 pub const OP_INT_LE_JUMP_IF_FALSE: u8 = 112;
 pub const OP_INT_LT_JUMP_IF_FALSE: u8 = 117;
 pub const OP_INT_ADD_CALL_1: u8 = 113;
-pub const OP_INDEX_FAST_ISLOT: u8 = 115;
-pub const OP_INT_INCR_SLOT: u8 = 116;
 pub const OP_INT_SUB_LOCAL_I: u8 = 114;
 pub const OP_INT_ADD_LOCAL_I: u8 = 127;
 pub const OP_INT_EQ_RR: u8 = 0;
@@ -112,3 +103,26 @@ pub const OP_INT_LE_RR_JUMP_P: u8 = 148;
 // P1b: specialized index packed opcodes — must match bytecode opcodes.rs
 pub const OP_INDEX_ARRAY_RRR: u8 = 149;
 pub const OP_INDEX_STRING_ASCII_RRR: u8 = 150;
+// G4: genel cmp+branch (op arg1'de, CmpJumpPayload indeksi arg2'de).
+pub const OP_INT_CMP_RR_JUMP_P: u8 = 151;
+// G12: unboxed float ailesi.
+pub const OP_F_LOAD_NUM: u8 = 154;
+pub const OP_F_STORE_NUM: u8 = 155;
+pub const OP_F_ADD: u8 = 156;
+pub const OP_F_SUB: u8 = 157;
+pub const OP_F_MUL: u8 = 158;
+pub const OP_F_DIV: u8 = 159;
+pub const OP_F_SIN: u8 = 160;
+pub const OP_F_COS: u8 = 161;
+pub const OP_F_SQRT: u8 = 162;
+pub const OP_F_CONST: u8 = 163;
+pub const OP_F_MOVE: u8 = 164;
+
+/// G2: Map dense opcode to static name for telemetry.
+/// G2.3 (Kural 7): isim kaynagi TEK — dense_ops macro'sundan turetilir
+/// (const adindan stringify!). Elle tutulan match tablosu silindi;
+/// eksik isim = "unknown" drift'i bir daha olusamaz.
+#[cfg(feature = "telemetry")]
+pub fn dense_name(dense: u8) -> &'static str {
+    crate::vm::dense_ops::dense_const_name(dense)
+}

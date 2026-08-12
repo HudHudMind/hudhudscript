@@ -52,7 +52,8 @@ async fn test_register_provider_to_runtime() {
             max_tokens_per_day: 100000,
             alert_threshold: 0.8,
         }),
-        extra: std::collections::HashMap::new(),
+        timeout_secs: None,
+            extra: std::collections::HashMap::new(),
     };
 
     let provider = Arc::new(OpenAIProvider::new(config).unwrap());
@@ -88,7 +89,8 @@ async fn test_agent_with_provider() {
         temperature: Some(0.7),
         max_tokens: Some(4000),
         budget: Some(TokenBudget::default()),
-        extra: std::collections::HashMap::new(),
+        timeout_secs: None,
+            extra: std::collections::HashMap::new(),
     };
 
     let provider = Arc::new(OpenAIProvider::new(config).unwrap());
@@ -129,7 +131,8 @@ async fn test_multiple_agents_with_different_providers() {
         temperature: Some(0.7),
         max_tokens: Some(4000),
         budget: Some(TokenBudget::default()),
-        extra: std::collections::HashMap::new(),
+        timeout_secs: None,
+            extra: std::collections::HashMap::new(),
     };
 
     let openai_provider = Arc::new(OpenAIProvider::new(openai_config).unwrap());
@@ -146,7 +149,8 @@ async fn test_multiple_agents_with_different_providers() {
         temperature: Some(0.5),
         max_tokens: Some(2000),
         budget: Some(TokenBudget::default()),
-        extra: std::collections::HashMap::new(),
+        timeout_secs: None,
+            extra: std::collections::HashMap::new(),
     };
 
     let gpt35_provider = Arc::new(OpenAIProvider::new(gpt35_config).unwrap());
@@ -205,6 +209,7 @@ async fn test_provider_registry_operations() {
             temperature: Some(0.7),
             max_tokens: Some(4000),
             budget: Some(TokenBudget::default()),
+            timeout_secs: None,
             extra: std::collections::HashMap::new(),
         };
 
@@ -247,7 +252,8 @@ async fn test_provider_budget_configuration() {
             max_tokens_per_day: 50000,
             alert_threshold: 0.9,
         }),
-        extra: std::collections::HashMap::new(),
+        timeout_secs: None,
+            extra: std::collections::HashMap::new(),
     };
 
     let provider = Arc::new(OpenAIProvider::new(config).unwrap());

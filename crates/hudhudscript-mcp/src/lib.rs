@@ -24,8 +24,11 @@
 //!     let init_response = client.initialize().await?;
 //!     println!("Connected to: {}", init_response.server_info.name);
 //!     
-//!     // Start response handler
-//!     client.start_response_handler().await;
+//!     // Start response handler. `McpClient::new` already split the transport
+//!     // and kept the receive half, so use the compat entry point; the
+//!     // `start_response_handler(recv)` form is for clients built with
+//!     // `from_transport`, where the caller owns that half.
+//!     client.start_response_handler_compat().await;
 //!     
 //!     // List available tools
 //!     let tools = client.list_tools(None).await?;

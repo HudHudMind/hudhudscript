@@ -103,8 +103,7 @@ impl crate::vm::VM {
                 }
             }
 
-            // Variable ops — handled via register-based load/store/declare
-            D_LOAD_VAR | D_STORE_VAR | D_DECL_VAR => Ok(PackedResult::Fallthrough),
+            // IndexFast + IntIncrSlot — removed, no longer generated
 
             // ── PERF-36 constant loads on fast dispatch ─────────────
             D_LOAD_NUM_CONST => {
@@ -113,20 +112,13 @@ impl crate::vm::VM {
                 self.registers[255] = Value16::number(n);
                 Ok(PackedResult::Advance)
             }
-            // A3b: integer-pool load on the fast-dispatch path.  Matches
-            // LoadNumConst's hot-path shape — critical because the
-            // compiler routes every integer-valued numeric literal
-            // through here (fib's `n - 1` / `n - 2` literals before
-            // I6 fusion steals them into NumSubISlot).
             D_LOAD_INT_CONST => {
                 let idx = arg2 as usize;
                 let v = bytecode.get_int_constant(idx);
                 self.registers[255] = Value16::int(v);
                 Ok(PackedResult::Advance)
             }
-            // IndexFast + IntIncrSlot — fall through to unpacked
-            D_INDEX_FAST_ISLOT => Ok(PackedResult::Fallthrough),
-            D_INT_INCR_SLOT => Ok(PackedResult::Fallthrough),
+
             D_INT_SUB_LOCAL_I | D_INT_ADD_LOCAL_I => {
                 let dst = arg1 as usize;
                 let payload = bytecode.get_super_instr_payload(arg2 as u32);
@@ -135,12 +127,25 @@ impl crate::vm::VM {
                 self.registers[dst] = match tag {
                     ReprTag::Int => {
                         let a = p as i64;
+                        let imm = payload.imm as i64;
                         let r = if dense == D_INT_SUB_LOCAL_I {
-                            a.wrapping_sub(payload.imm as i64)
+                            a.checked_sub(imm)
                         } else {
-                            a.wrapping_add(payload.imm as i64)
+                            a.checked_add(imm)
                         };
-                        Value16::int(r)
+                        match r {
+                            Some(v) => Value16::int(v),
+                            None => {
+                                // G3.1: overflow → BigInt via bigint_arith
+                                if dense == D_INT_SUB_LOCAL_I {
+                                    crate::vm::bigint_arith::int_sub(Value16::int(a), Value16::int(imm))
+                                        .unwrap_or_else(|_| Value16::null())
+                                } else {
+                                    crate::vm::bigint_arith::int_add(Value16::int(a), Value16::int(imm))
+                                        .unwrap_or_else(|_| Value16::null())
+                                }
+                            }
+                        }
                     }
                     ReprTag::Number => {
                         let a = f64::from_bits(p);
@@ -209,10 +214,18 @@ impl crate::vm::VM {
                         }
                     }
                     _ => {
-                        // String/bool/null fallback — use safe type checks
-                        let v1 = &self.registers[src1];
-                        let v2 = &self.registers[src2];
-                        if let (Some(a), Some(b)) = (v1.as_str(), v2.as_str()) {
+                        // BigInt comparison
+                        let v1 = self.registers[src1];
+                        let v2 = self.registers[src2];
+                        if let (Some(a), Some(b)) = (v1.to_bigint_value(), v2.to_bigint_value()) {
+                            match dense {
+                                D_INT_EQ_RR => a == b,
+                                D_INT_LT_RR => a < b,
+                                D_INT_LE_RR => a <= b,
+                                D_INT_NE_RR => a != b,
+                                _ => unreachable!(),
+                            }
+                        } else if let (Some(a), Some(b)) = (v1.as_str(), v2.as_str()) {
                             match dense {
                                 D_INT_EQ_RR => a == b,
                                 D_INT_LT_RR => a < b,
@@ -236,10 +249,50 @@ impl crate::vm::VM {
                                 _ => false,
                             }
                         } else {
-                            match dense {
-                                D_INT_EQ_RR => false,
-                                D_INT_NE_RR => true,
-                                _ => false,
+                            // F3: Object/array equality — delegate to object_equality policy
+                            let (t1, t2) = (v1.split_tag().0, v2.split_tag().0);
+                            if t1 == ReprTag::Dynamic && t2 == ReprTag::Dynamic {
+                                match self.object_equality {
+                                    crate::vm::config_types::ObjectEquality::Identity => {
+                                        let p1 = v1.split_tag().1;
+                                        let p2 = v2.split_tag().1;
+                                        match dense {
+                                            D_INT_EQ_RR => p1 == p2,
+                                            D_INT_NE_RR => p1 != p2,
+                                            D_INT_LT_RR => p1 < p2,
+                                            D_INT_LE_RR => p1 <= p2,
+                                            _ => false,
+                                        }
+                                    }
+                                    crate::vm::config_types::ObjectEquality::Never => {
+                                        match dense {
+                                            D_INT_EQ_RR => false,
+                                            D_INT_NE_RR => true,
+                                            D_INT_LT_RR => false,
+                                            D_INT_LE_RR => false,
+                                            _ => false,
+                                        }
+                                    }
+                                    crate::vm::config_types::ObjectEquality::Deep => {
+                                        let eq = v1.values_equal(&v2);
+                                        match dense {
+                                            D_INT_EQ_RR => eq,
+                                            D_INT_NE_RR => !eq,
+                                            D_INT_LT_RR => false,
+                                            D_INT_LE_RR => false,
+                                            _ => false,
+                                        }
+                                    }
+                                }
+                            } else {
+                                // B8: non-Dynamic types — handle all comparison ops, not just EQ/NE
+                                match dense {
+                                    D_INT_EQ_RR => false,
+                                    D_INT_NE_RR => true,
+                                    D_INT_LT_RR => false,
+                                    D_INT_LE_RR => false,
+                                    _ => false,
+                                }
                             }
                         }
                     }
@@ -254,10 +307,30 @@ impl crate::vm::VM {
                 Ok(PackedResult::Advance)
             }
             // V2-B0: Delegated to dispatch_int_arith.rs
-            D_INT_ADD_RI | D_INT_MUL_RI | D_INT_SUB_RI | D_INT_ADD_RR | D_INT_SUB_RR
-            | D_INT_MUL_RR | D_INDEX_RRR | D_INDEX_ARRAY_RRR | D_INDEX_STRING_ASCII_RRR
+            D_INT_ADD_RI
+            | D_INT_MUL_RI
+            | D_INT_SUB_RI
+            | D_INT_ADD_RR
+            | D_INT_SUB_RR
+            | D_INT_MUL_RR
+            | D_INDEX_RRR
+            | D_INDEX_ARRAY_RRR
+            | D_INDEX_STRING_ASCII_RRR
             | D_INDEX_ASSIGN_RRR
-            | D_INT_MOD_I | D_INT_CMP_LT_I | D_INT_CMP_LE_I | D_INT_CMP_EQ_I | D_INT_CMP_NE_I => {
+            | D_INT_MOD_I
+            | D_INT_CMP_LT_I
+            | D_INT_CMP_LE_I
+            | D_INT_CMP_EQ_I
+            | D_INT_CMP_NE_I
+            // G4.2: connect previously-unreachable handlers
+            | D_NEG_R
+            | D_NOT_R
+            | D_ARRAY_PUSH_RRR
+            | D_STRCAT_RRR
+            | D_STRCAT_MUT_RR
+            | D_STRING_INDEX_OF_RRR
+            | D_STRING_CONTAINS_RRR
+            => {
                 return crate::vm::dispatch_int_arith::dispatch_int_arithmetic(
                     self, dense, arg1, arg2, bytecode, ip,
                 );
@@ -266,21 +339,36 @@ impl crate::vm::VM {
                 let src1 = ((arg2 >> 8) & 0xFF) as usize;
                 let src2 = (arg2 & 0xFF) as usize;
                 let dst = arg1 as usize;
-                let a_val = &self.registers[src1];
-                let b_val = &self.registers[src2];
-                debug_assert!(a_val.is_int() && b_val.is_int());
-                let a = a_val.as_int_unchecked();
-                let b = b_val.as_int_unchecked();
-                if b == 0 {
-                    return Err(Self::runtime_error_with_pos("Modulo by zero", bytecode, ip));
+                let a_val = self.registers[src1];
+                let b_val = self.registers[src2];
+                if a_val.is_int() && b_val.is_int() {
+                    let a = a_val.as_int_unchecked();
+                    let b = b_val.as_int_unchecked();
+                    if b == 0 {
+                        return Err(Self::runtime_error_with_pos("Modulo by zero", bytecode, ip));
+                    }
+                    self.registers[dst] = Value16::int(a % b);
+                } else if (a_val.is_number() || a_val.is_int()) && (b_val.is_number() || b_val.is_int()) {
+                    let a = a_val.as_number_fast().unwrap_or(0.0);
+                    let b = b_val.as_number_fast().unwrap_or(0.0);
+                    if b == 0.0 {
+                        return Err(Self::runtime_error_with_pos("Modulo by zero", bytecode, ip));
+                    }
+                    self.registers[dst] = Value16::number(a % b);
+                } else {
+                    let result = crate::vm::bigint_arith::bigint_mod(a_val, b_val)
+                        .map_err(|e| Self::runtime_error_with_pos(&format!("Modulo error: {:?}", e), bytecode, ip))?;
+                    self.registers[dst] = result;
                 }
-                self.registers[dst] = Value16::int(a % b);
                 Ok(PackedResult::Advance)
             }
             // Float register arithmetic — packed fast path
             // V2-B0: Delegated to dispatch_num_arith.rs
             D_NUM_ADD_RR | D_NUM_SUB_RR | D_NUM_MUL_RR | D_NUM_ADD_RI | D_NUM_SUB_RI
-            | D_NUM_MUL_RI => {
+            | D_NUM_MUL_RI
+            // G4.2: connect previously-unreachable num handlers
+            | D_NUM_DIV_RR | D_NUM_DIV_RI | D_NUM_MUL_ADD_ASSIGN
+            => {
                 return crate::vm::dispatch_num_arith::dispatch_num_arithmetic(
                     self, dense, arg1, arg2, bytecode, ip,
                 );
@@ -360,22 +448,43 @@ impl crate::vm::VM {
                 let (t2, p2) = self.registers[p.src2 as usize].split_tag();
                 let cond: bool = match (t1, t2) {
                     (ReprTag::Int, ReprTag::Int) => {
-                        let a = p1 as i64; let b = p2 as i64;
-                        if dense == D_INT_LT_RR_JUMP_P { a < b } else { a <= b }
+                        let a = p1 as i64;
+                        let b = p2 as i64;
+                        if dense == D_INT_LT_RR_JUMP_P {
+                            a < b
+                        } else {
+                            a <= b
+                        }
                     }
                     (ReprTag::Number, ReprTag::Number)
                     | (ReprTag::Int, ReprTag::Number)
                     | (ReprTag::Number, ReprTag::Int) => {
-                        let a = if t1 == ReprTag::Int { p1 as i64 as f64 } else { f64::from_bits(p1) };
-                        let b = if t2 == ReprTag::Int { p2 as i64 as f64 } else { f64::from_bits(p2) };
-                        if dense == D_INT_LT_RR_JUMP_P { a < b } else { a <= b }
+                        let a = if t1 == ReprTag::Int {
+                            p1 as i64 as f64
+                        } else {
+                            f64::from_bits(p1)
+                        };
+                        let b = if t2 == ReprTag::Int {
+                            p2 as i64 as f64
+                        } else {
+                            f64::from_bits(p2)
+                        };
+                        if dense == D_INT_LT_RR_JUMP_P {
+                            a < b
+                        } else {
+                            a <= b
+                        }
                     }
                     _ => {
-                        return Err(Self::runtime_error_with_pos(
-                            "CmpJump: operands not numeric",
-                            bytecode,
-                            ip,
-                        ));
+                        // BigInt comparison
+                        let v1 = self.registers[p.src1 as usize];
+                        let v2 = self.registers[p.src2 as usize];
+                        if let (Some(a), Some(b)) = (v1.to_bigint_value(), v2.to_bigint_value()) {
+                            if dense == D_INT_LT_RR_JUMP_P { a < b } else { a <= b }
+                        } else {
+                            return Err(Self::runtime_error_with_pos(
+                                "CmpJump: operands not numeric", bytecode, ip));
+                        }
                     }
                 };
                 if !cond {
@@ -384,6 +493,47 @@ impl crate::vm::VM {
                     Ok(PackedResult::Advance)
                 }
             }
+
+            // G4: genel cmp+branch — op arg1'de, payload indeksi arg2'de.
+            // Karşılaştırma çekirdeği TEK yerde (branch.rs::cmp_rr_generic);
+            // unpacked IntCmpRRJumpIfFalse ile birebir aynı semantik.
+            D_INT_CMP_RR_JUMP_P => {
+                let p = bytecode.cmp_jump_payloads[arg2 as usize];
+                let v1 = self.registers[p.src1 as usize];
+                let v2 = self.registers[p.src2 as usize];
+                let cond = crate::vm::execute::branch::cmp_rr_generic(v1, v2, arg1)
+                    .map_err(|m| Self::runtime_error_with_pos(m, bytecode, ip))?;
+                if !cond {
+                    Ok(PackedResult::Jump(p.target as usize))
+                } else {
+                    Ok(PackedResult::Advance)
+                }
+            }
+
+            // G12: unboxed float — tagsız f64 slot aritmetiği.
+            D_F_LOAD_NUM => {
+                let v = self.registers[arg2 as usize];
+                let n = if let Some(n) = v.as_number_fast() { n } else {
+                    return Err(Self::runtime_error_with_pos(
+                        "FLoadNum: src not numeric (compiler bug — tip kanıtsız emit)",
+                        bytecode, ip));
+                };
+                self.f_slots[arg1 as usize] = n;
+                Ok(PackedResult::Advance)
+            }
+            D_F_STORE_NUM => {
+                self.registers[arg1 as usize] = Value16::number(self.f_slots[arg2 as usize]);
+                Ok(PackedResult::Advance)
+            }
+            D_F_ADD => { self.f_slots[arg1 as usize] = self.f_slots[(arg2 >> 8) as usize] + self.f_slots[(arg2 & 0xFF) as usize]; Ok(PackedResult::Advance) }
+            D_F_SUB => { self.f_slots[arg1 as usize] = self.f_slots[(arg2 >> 8) as usize] - self.f_slots[(arg2 & 0xFF) as usize]; Ok(PackedResult::Advance) }
+            D_F_MUL => { self.f_slots[arg1 as usize] = self.f_slots[(arg2 >> 8) as usize] * self.f_slots[(arg2 & 0xFF) as usize]; Ok(PackedResult::Advance) }
+            D_F_DIV => { self.f_slots[arg1 as usize] = self.f_slots[(arg2 >> 8) as usize] / self.f_slots[(arg2 & 0xFF) as usize]; Ok(PackedResult::Advance) }
+            D_F_SIN => { self.f_slots[arg1 as usize] = self.f_slots[arg2 as usize].sin(); Ok(PackedResult::Advance) }
+            D_F_COS => { self.f_slots[arg1 as usize] = self.f_slots[arg2 as usize].cos(); Ok(PackedResult::Advance) }
+            D_F_SQRT => { self.f_slots[arg1 as usize] = self.f_slots[arg2 as usize].sqrt(); Ok(PackedResult::Advance) }
+            D_F_CONST => { self.f_slots[arg1 as usize] = bytecode.get_numeric_constant(arg2 as usize); Ok(PackedResult::Advance) }
+            D_F_MOVE => { self.f_slots[arg1 as usize] = self.f_slots[arg2 as usize]; Ok(PackedResult::Advance) }
 
             // All other packed opcodes — fall through to full match
             _ => Ok(PackedResult::Fallthrough),

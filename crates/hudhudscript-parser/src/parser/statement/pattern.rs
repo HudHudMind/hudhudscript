@@ -1,4 +1,6 @@
 use super::*;
+use crate::parser::converters::arabic_to_ascii;
+use crate::parser::expression::literals::number_literal_from_ascii;
 
 /// Parse Turkish herbir loop: herbir (liste içinde eleman) { }
 /// Reversed order compared to for-in: iterable comes first, then variable
@@ -296,7 +298,8 @@ pub(super) fn parse_match_pattern(pair: Pair<Rule>) -> ParseResult<MatchPattern>
                 .ok_or_else(|| parse_codes::invalid_syntax("Expected literal", span))?;
             let lit = match lit_pair.as_rule() {
                 Rule::number => {
-                    hudhudscript_ast::Literal::Number(lit_pair.as_str().parse().unwrap_or(0.0), false)
+                    let ascii = arabic_to_ascii(lit_pair.as_str());
+                    number_literal_from_ascii(&ascii)
                 }
                 Rule::string => hudhudscript_ast::Literal::String(
                     lit_pair

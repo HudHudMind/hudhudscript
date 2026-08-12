@@ -67,17 +67,29 @@ impl VM {
                 let arg_reg = sp.arg_reg as usize;
                 match numeric_slot(Some(&self.registers[slot_idx])) {
                     Some(NumericSlot::Int(a)) => {
-                        self.registers[arg_reg] = Value16::int(a.wrapping_sub(sp.imm as i64));
+                        self.registers[arg_reg] = match a.checked_sub(sp.imm as i64) {
+                            Some(r) => Value16::int(r),
+                            None => {
+                                #[cfg(feature = "telemetry")]
+                                {
+                                    self.telemetry.bigint_promotion += 1;
+                                    self.telemetry.bigint_alloc += 1;
+                                }
+                                let big = Value16::int(a);
+                                let imm_v = Value16::int(sp.imm as i64);
+                                crate::vm::bigint_arith::int_sub(big, imm_v)
+                                    .unwrap_or(Value16::int(0))
+                            }
+                        };
                     }
                     Some(NumericSlot::Num(a)) => {
                         self.registers[arg_reg] = Value16::number(a - sp.imm as f64);
                     }
                     None => {
-                        return Err(Self::runtime_error_with_pos(
-                            "IntSubCall1: expected Int or Number local",
-                            bytecode,
-                            ip,
-                        ))
+                        let val = self.registers[slot_idx];
+                        self.registers[arg_reg] = crate::vm::bigint_arith::int_sub(
+                            val, Value16::int(sp.imm as i64),
+                        ).unwrap_or(Value16::int(0));
                     }
                 }
                 let payload = bytecode.get_call_payload(sp.call_idx);
@@ -96,17 +108,29 @@ impl VM {
                 let arg_reg = sp.arg_reg as usize;
                 match numeric_slot(Some(&self.registers[slot_idx])) {
                     Some(NumericSlot::Int(a)) => {
-                        self.registers[arg_reg] = Value16::int(a.wrapping_add(sp.imm as i64));
+                        self.registers[arg_reg] = match a.checked_add(sp.imm as i64) {
+                            Some(r) => Value16::int(r),
+                            None => {
+                                #[cfg(feature = "telemetry")]
+                                {
+                                    self.telemetry.bigint_promotion += 1;
+                                    self.telemetry.bigint_alloc += 1;
+                                }
+                                let big = Value16::int(a);
+                                let imm_v = Value16::int(sp.imm as i64);
+                                crate::vm::bigint_arith::int_add(big, imm_v)
+                                    .unwrap_or(Value16::int(0))
+                            }
+                        };
                     }
                     Some(NumericSlot::Num(a)) => {
                         self.registers[arg_reg] = Value16::number(a + sp.imm as f64);
                     }
                     None => {
-                        return Err(Self::runtime_error_with_pos(
-                            "IntAddCall1: expected Int or Number local",
-                            bytecode,
-                            ip,
-                        ))
+                        let val = self.registers[slot_idx];
+                        self.registers[arg_reg] = crate::vm::bigint_arith::int_add(
+                            val, Value16::int(sp.imm as i64),
+                        ).unwrap_or(Value16::int(0));
                     }
                 }
                 let payload = bytecode.get_call_payload(sp.call_idx);

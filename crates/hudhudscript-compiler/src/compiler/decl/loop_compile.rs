@@ -213,33 +213,37 @@ impl Compiler {
                     step_ips.insert(sname.clone(), compiler.bytecode.instructions.len());
                     for stmt in body { compiler.compile_stmt(stmt)?; }
                     // Compile gate: inline gate takes precedence, else check AttachGate items
-                    let gates_to_compile: Vec<&StepGateAst> = if let Some(g) = gate { vec![g] }
-                        else { Vec::new() };
-                    if !gates_to_compile.is_empty() {
-                        for g in &gates_to_compile {
-                            for branch in &g.branches {
-                                let cr = { let mut ra = RegAlloc::new_with_base(compiler.next_local_reg)?; crate::compiler::expr::compile_reg::compile_expr_to_reg(compiler, &branch.cond, &mut ra) };
-                                let jmp_ip = compiler.bytecode.instructions.len();
-                                compiler.ct_emit(Instruction::JumpIfFalse { src: cr, offset: 0 });
-                                emit_gate_target(compiler, &branch.target, result_reg, &step_ips, &loop_payloads, sname, &mut step_fixups, &ss, &st, next_name, local_times_n.is_some() || local_until_expr.is_some() || local_is_cyclic || local_is_until_converged)?;
-                                let next_ip = compiler.bytecode.instructions.len();
-                                compiler.bytecode.instructions[jmp_ip] = Instruction::JumpIfFalse { src: cr, offset: jump_off_i16(jmp_ip, next_ip)? };
-                            }
-                            emit_gate_target(compiler, &g.else_target, result_reg, &step_ips, &loop_payloads, sname, &mut step_fixups, &ss, &st, next_name, local_times_n.is_some() || local_until_expr.is_some() || local_is_cyclic || local_is_until_converged)?;
+                    let mut has_gate = false;
+                    if let Some(g) = gate {
+                        has_gate = true;
+                        for branch in &g.branches {
+                            let cr = { let mut ra = RegAlloc::new_with_base(compiler.next_local_reg)?; crate::compiler::expr::compile_reg::compile_expr_to_reg(compiler, &branch.cond, &mut ra) };
+                            let jmp_ip = compiler.bytecode.instructions.len();
+                            compiler.ct_emit(Instruction::JumpIfFalse { src: cr, offset: 0 });
+                            emit_gate_target(compiler, &branch.target, result_reg, &step_ips, &loop_payloads, sname, &mut step_fixups, &ss, &st, next_name, local_times_n.is_some() || local_until_expr.is_some() || local_is_cyclic || local_is_until_converged)?;
+                            let next_ip = compiler.bytecode.instructions.len();
+                            compiler.bytecode.instructions[jmp_ip] = Instruction::JumpIfFalse { src: cr, offset: jump_off_i16(jmp_ip, next_ip)? };
                         }
-                    } else if let Some(attached) = attach_gates.remove(sname.as_str()) {
-                        // FAZ G: compile AttachGate items for this step
-                        for (branches, else_target) in &attached {
-                            for branch in branches {
-                                let cr = { let mut ra = RegAlloc::new_with_base(compiler.next_local_reg)?; crate::compiler::expr::compile_reg::compile_expr_to_reg(compiler, &branch.cond, &mut ra) };
-                                let jmp_ip = compiler.bytecode.instructions.len();
-                                compiler.ct_emit(Instruction::JumpIfFalse { src: cr, offset: 0 });
-                                emit_gate_target(compiler, &branch.target, result_reg, &step_ips, &loop_payloads, sname, &mut step_fixups, &ss, &st, next_name, local_times_n.is_some() || local_until_expr.is_some() || local_is_cyclic || local_is_until_converged)?;
-                                let next_ip = compiler.bytecode.instructions.len();
-                                compiler.bytecode.instructions[jmp_ip] = Instruction::JumpIfFalse { src: cr, offset: jump_off_i16(jmp_ip, next_ip)? };
-                            }
-                            emit_gate_target(compiler, else_target, result_reg, &step_ips, &loop_payloads, sname, &mut step_fixups, &ss, &st, next_name, local_times_n.is_some() || local_until_expr.is_some() || local_is_cyclic || local_is_until_converged)?;
+                        emit_gate_target(compiler, &g.else_target, result_reg, &step_ips, &loop_payloads, sname, &mut step_fixups, &ss, &st, next_name, local_times_n.is_some() || local_until_expr.is_some() || local_is_cyclic || local_is_until_converged)?;
+                    }
+
+                    if let Some(attached) = attach_gates.remove(sname.as_str()) {
+                        if has_gate {
+                            return Err(compile_codes::generic(format!("step '{}' already has an inline gate; attach gate is not allowed", sname)));
                         }
+                        if attached.len() > 1 {
+                            return Err(compile_codes::generic(format!("step '{}' cannot have more than one attached gate", sname)));
+                        }
+                        let (branches, else_target) = &attached[0];
+                        for branch in branches {
+                            let cr = { let mut ra = RegAlloc::new_with_base(compiler.next_local_reg)?; crate::compiler::expr::compile_reg::compile_expr_to_reg(compiler, &branch.cond, &mut ra) };
+                            let jmp_ip = compiler.bytecode.instructions.len();
+                            compiler.ct_emit(Instruction::JumpIfFalse { src: cr, offset: 0 });
+                            emit_gate_target(compiler, &branch.target, result_reg, &step_ips, &loop_payloads, sname, &mut step_fixups, &ss, &st, next_name, local_times_n.is_some() || local_until_expr.is_some() || local_is_cyclic || local_is_until_converged)?;
+                            let next_ip = compiler.bytecode.instructions.len();
+                            compiler.bytecode.instructions[jmp_ip] = Instruction::JumpIfFalse { src: cr, offset: jump_off_i16(jmp_ip, next_ip)? };
+                        }
+                        emit_gate_target(compiler, else_target, result_reg, &step_ips, &loop_payloads, sname, &mut step_fixups, &ss, &st, next_name, local_times_n.is_some() || local_until_expr.is_some() || local_is_cyclic || local_is_until_converged)?;
                     }
                     compiler.end_scope();
                 }}
@@ -261,7 +265,7 @@ impl Compiler {
             }
             // R1: cyclic/until_converged backedge to first step (or times/until header if present)
             if (local_is_cyclic || local_is_until_converged) && times_state.is_none() && until_state.is_none() {
-                let first_step_ip = step_ips.values().next().copied().unwrap_or(compiler.bytecode.instructions.len());
+                let first_step_ip = step_names.first().and_then(|sn| step_ips.get(sn)).copied().unwrap_or(compiler.bytecode.instructions.len());
                 let after_body = compiler.bytecode.instructions.len();
                 compiler.ct_emit(Instruction::Jump(jump_off(after_body, first_step_ip)));
             }
@@ -395,7 +399,8 @@ fn emit_gate_target(
             compiler.ct_emit(Instruction::JumpIfTrue { src: bound_reg, offset: 0 });
             // Not exceeded: jump to step
             if let Some(&ip) = step_ips.get(current_step) {
-                compiler.ct_emit(Instruction::Jump(jump_off(compiler.bytecode.instructions.len() - 1, ip) + 1));
+                let site_ip = compiler.bytecode.instructions.len();
+                compiler.ct_emit(Instruction::Jump(jump_off(site_ip, ip)));
             }
             // Exceeded: escalate
             let esc_ip = compiler.bytecode.instructions.len();
@@ -418,10 +423,10 @@ fn emit_gate_target(
             // FAZ F: pass step index as entry selector
             if let Some(&pi) = loop_payloads.get(ln) {
                 // Look up step index from the target loop's step names
-                let step_idx = compiler.loop_step_names.get(ln)
-                    .and_then(|names| names.iter().position(|n| n == sn))
-                    .map(|i| i as u8)
-                    .unwrap_or(0);
+                let step_idx = match compiler.loop_step_names.get(ln).and_then(|names| names.iter().position(|n| n == sn)) {
+                    Some(idx) => idx as u8,
+                    None => return Err(compile_codes::generic(format!("gate target: loop '{}' has no step '{}'", ln, sn))),
+                };
                 // P0: always emit selector, even for step 0
                 let idx_reg = compiler.next_local_reg; compiler.next_local_reg += 1;
                 let ci = compiler.ct_emit_int_const(step_idx as i64) as u16;

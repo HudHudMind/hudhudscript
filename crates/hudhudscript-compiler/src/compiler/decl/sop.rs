@@ -159,7 +159,7 @@ impl Compiler {
         }
 
         let idx = self.bytecode.add_constant(Value16::object(subject_obj));
-        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_instr(Instruction::Move { dst: 255, src: tr }); }
+        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_move(255, tr ); }
         self.emit_decl_store("subject", name, 255);
 
         // Compile ability definitions inside subject body as subject-scoped chunks
@@ -201,7 +201,7 @@ impl Compiler {
             role_obj.insert(key.clone(), val);
         }
         let idx = self.bytecode.add_constant(Value16::object(role_obj));
-        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_instr(Instruction::Move { dst: 255, src: tr }); }
+        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_move(255, tr ); }
         self.emit_decl_store("role", name, 255);
         Ok(())
     }
@@ -232,7 +232,7 @@ impl Compiler {
             rel_obj.insert(key.clone(), val);
         }
         let idx = self.bytecode.add_constant(Value16::object(rel_obj));
-        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_instr(Instruction::Move { dst: 255, src: tr }); }
+        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_move(255, tr ); }
         self.emit_decl_store("relation", &rel_name, 255);
         Ok(())
     }
@@ -265,6 +265,7 @@ impl Compiler {
             name: chunk_name.clone(),
             params: params.to_vec(),
             chunk_name: chunk_name.clone(),
+                chunk_sym: hudhudscript_bytecode::interner::intern(&chunk_name.clone()).0,
             captures: Default::default(),
         });
 
@@ -273,7 +274,7 @@ impl Compiler {
         effect_obj.insert("event".to_string(), Value16::string(event_name.to_string()));
         effect_obj.insert("handler".to_string(), func_val.clone());
         let idx = self.bytecode.add_constant(Value16::object(effect_obj));
-        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_instr(Instruction::Move { dst: 255, src: tr }); }
+        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_move(255, tr ); }
         let effect_store_name = format!("effect_on_{}", event_name);
         self.emit_decl_store("effect", &effect_store_name, 255);
         Ok(())
@@ -332,7 +333,7 @@ impl Compiler {
         }
         compose_obj.insert("field_rules".to_string(), Value16::array(field_rules_arr));
         let idx = self.bytecode.add_constant(Value16::object(compose_obj));
-        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_instr(Instruction::Move { dst: 255, src: tr }); }
+        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_move(255, tr ); }
         self.emit_decl_store("compose", base_subject, 255);
         Ok(())
     }

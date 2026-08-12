@@ -24,7 +24,7 @@ impl Compiler {
             );
         }
         let idx = self.bytecode.add_constant(Value16::object(store_obj));
-        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_instr(Instruction::Move { dst: 255, src: tr }); }
+        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_move(255, tr ); }
         self.emit_decl_store("store", name, 255);
         Ok(())
     }

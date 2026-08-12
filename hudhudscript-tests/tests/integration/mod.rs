@@ -58,6 +58,7 @@ mod serialization_encoding_test;
 mod serialization_encoding_vm_test;
 mod serialization_integration_test;
 mod sop_multilang_test;
+mod stale_hudb_test;
 mod stdlib_basics_test;
 mod stdlib_basics_vm_test;
 mod template_arrow_test;
@@ -66,3 +67,11 @@ mod test_test_inline;
 mod test_unary;
 mod web_framework_socket_test;
 mod web_framework_vm_test;
+
+// A global lock to serialize EventBus tests to prevent parallel race conditions
+// since EventBus uses a process-global OnceLock<Mutex<EventBusState>>.
+pub static EVENT_BUS_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+mod m3_persona_swarm_council_test;
+mod nested_provider_import_agent_call_test;
+mod provider_system_context_test;
+mod provider_agent_timeout_test;

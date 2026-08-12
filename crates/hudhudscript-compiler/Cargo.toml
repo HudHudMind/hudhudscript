@@ -5,16 +5,17 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
+readme.workspace = true
 
 [dependencies]
 hudhudscript-ast = { path = "../hudhudscript-ast" }
 hudhudscript-parser = { path = "../hudhudscript-parser" }
-hudhudscript-vm = { path = "../hudhudscript-vm" }
 hudhudscript-errors = { path = "../hudhudscript-errors" }
 hudhudscript-debug = { path = "../hudhudscript-debug" }
 hudhudscript-bytecode = { path = "../hudhudscript-bytecode" }
 serde = { workspace = true, features = ["rc"] }
 serde_json = { workspace = true }
+num-bigint = "0.4"
 # postcard: sole production wire encoding (PERF-49, Audit v3 Finding 15.1).
 # Used by `serialize.rs` for `.hudc` payload encode/decode.
 postcard = { version = "1.0", features = ["use-std"] }
@@ -22,3 +23,4 @@ rustc-hash = { workspace = true }
 
 [dev-dependencies]
 mimalloc = { version = "0.1", default-features = false }
+hudhudscript-vm = { path = "../hudhudscript-vm" }

@@ -2,10 +2,10 @@
 
 #[cfg(test)]
 mod tests {
+    use hudhudscript_bytecode::error::CompileResult;
     use hudhudscript_compiler::Compiler;
     use hudhudscript_parser::parse;
     use hudhudscript_vm::VM;
-    use hudhudscript_bytecode::error::CompileResult;
 
     fn run(src: &str) -> Result<String, String> {
         let ast = parse(src).map_err(|e| format!("parse: {}", e))?;

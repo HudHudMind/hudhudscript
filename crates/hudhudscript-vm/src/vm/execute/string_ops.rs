@@ -24,9 +24,14 @@ impl VM {
                 let vb = self.registers[*b as usize];
                 let vc = self.registers[*c as usize];
                 let ab = hudhudscript_bytecode::shared_value::shared_add(&va, &vb)?;
-                self.registers[*dst as usize] = hudhudscript_bytecode::shared_value::shared_add(&ab, &vc)?;
+                self.registers[*dst as usize] =
+                    hudhudscript_bytecode::shared_value::shared_add(&ab, &vc)?;
             }
-            Instruction::StringConcat { regs_start, count, dst } => {
+            Instruction::StringConcat {
+                regs_start,
+                count,
+                dst,
+            } => {
                 let count = *count as usize;
                 let start = *regs_start as usize;
                 let mut total_len = 0;
@@ -60,7 +65,12 @@ impl VM {
                 let r = self.registers[*src2 as usize];
                 let dst_ref = &mut self.registers[*dst as usize];
                 if let (Some(s), Some(r_str)) = (dst_ref.as_string_mut(), r.as_str()) {
+                    let was_ascii = r_str.is_ascii();
                     s.push_str(r_str);
+                    // P4: downgrade StringAscii→String if appended non-ASCII.
+                    if !was_ascii {
+                        dst_ref.downgrade_string_ascii();
+                    }
                 } else {
                     let l = *dst_ref;
                     *dst_ref = hudhudscript_bytecode::shared_value::shared_add(&l, &r)?;
@@ -73,8 +83,8 @@ impl VM {
             } => {
                 let s = self.registers[*haystack as usize].as_str_unchecked();
                 let pat = self.registers[*needle as usize].as_str_unchecked();
-                let idx = s.find(pat).map(|i| i as f64).unwrap_or(-1.0);
-                self.registers[*dst as usize] = Value16::number(idx);
+                let idx = s.find(pat).map(|i| i as i64).unwrap_or(-1);
+                self.registers[*dst as usize] = Value16::int(idx);
             }
             Instruction::StringContains {
                 dst,
@@ -85,7 +95,12 @@ impl VM {
                 let pat = self.registers[*needle as usize].as_str_unchecked();
                 self.registers[*dst as usize] = Value16::boolean(s.contains(pat));
             }
-            Instruction::StrCharEqRR { dst, src_s, src_i, src_j } => {
+            Instruction::StrCharEqRR {
+                dst,
+                src_s,
+                src_i,
+                src_j,
+            } => {
                 let s_val = self.registers[*src_s as usize];
                 let i_val = self.registers[*src_i as usize];
                 let j_val = self.registers[*src_j as usize];
@@ -96,7 +111,11 @@ impl VM {
                 let result = if let (Some(s), Some(i), Some(j)) = (s_val.as_str(), ni, nj) {
                     let bytes = s.as_bytes();
                     // ASCII byte fast path
-                    if i < bytes.len() && j < bytes.len() && bytes[i].is_ascii() && bytes[j].is_ascii() {
+                    if i < bytes.len()
+                        && j < bytes.len()
+                        && bytes[i].is_ascii()
+                        && bytes[j].is_ascii()
+                    {
                         bytes[i] == bytes[j]
                     } else {
                         let ci = s.chars().nth(i);

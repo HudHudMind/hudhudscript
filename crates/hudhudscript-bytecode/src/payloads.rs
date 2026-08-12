@@ -58,6 +58,8 @@ pub struct TraitCheckPayload {
 pub struct LoadModulePayload {
     pub path: String,
     pub alias: Option<SymId>,
+    #[serde(default)]
+    pub base_dir: Option<String>,
 }
 
 /// Payload for `Instruction::DefineFunction(u32)` (CROSS-2a).
@@ -222,6 +224,15 @@ pub struct FunctionChunk {
     /// Names of variables captured from the enclosing scope (closures / arrow functions)
     #[serde(default)]
     pub captures: Vec<String>,
+    /// P4: pre-interned SymId for each capture name (same order as captures).
+    /// Populated during compilation; used by the VM trampoline to avoid
+    /// string interning on every closure call.
+    #[serde(default)]
+    pub capture_sym_ids: Vec<u32>,
+    /// G5-slotvec: slot index for each capture (0..N-1, same order as captures).
+    /// Populated at compile time; used by LoadClosureSlot/StoreClosureSlot.
+    #[serde(default)]
+    pub capture_slots: Vec<u8>,
     /// Whether this function is async
     #[serde(default)]
     pub is_async: bool,
@@ -318,6 +329,14 @@ impl FunctionChunk {
         self.source_positions.push(None);
     }
 
+    /// G5.2: push a Move instruction, skipping self-moves (dst == src).
+    #[inline]
+    pub fn push_move(&mut self, dst: u8, src: u8) {
+        if dst != src {
+            self.push_instr(Instruction::Move { dst, src });
+        }
+    }
+
     /// Pad `source_positions` to match `instructions.len()` —
     /// post-compile normalization helper. See
     /// [`Bytecode::pad_source_positions`] for rationale.
@@ -352,6 +371,9 @@ pub struct FunctionData {
     pub params: Vec<String>,
     /// Index into Bytecode::functions
     pub chunk_name: String,
+    /// Pre-resolved SymId for chunk_name (avoids runtime interner::intern)
+    #[serde(default)]
+    pub chunk_sym: u32,
     /// Captured variables from enclosing scopes (closures / arrow functions).
     /// Stored as shared upvalue cells (`Arc<RwLock<Value16>>`) — Lua 5.2+ /
     /// interpreter-parity semantics (Issue #1078, Kural 2).
@@ -372,7 +394,7 @@ pub struct ClassData {
     pub vtable: ObjMap,
     /// Per-method access flags: 0=Public, 1=Private, 2=Protected
     #[serde(default)]
-    pub method_access: std::collections::HashMap<String, u8>,
+    pub method_access: std::collections::HashMap<crate::SymId, u8>,
     /// OOP0004: whether this class is abstract
     #[serde(default)]
     pub is_abstract: bool,

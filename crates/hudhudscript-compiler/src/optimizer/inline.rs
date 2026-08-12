@@ -86,7 +86,7 @@ pub fn inline_small_functions(
                 | Instruction::IntMulReturn { .. } | Instruction::IntCmpIReturn { .. } = ci
             {
                 // For fused returns, the result is implicitly in a fixed register.
-                // For now, skip these — they need special handling.
+                // Skip these because they require special handling.
                 i += 1;
                 ret_src = None; // skip this candidate
                 break;

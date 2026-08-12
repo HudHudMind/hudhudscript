@@ -115,6 +115,10 @@ impl VM {
 
         self.call_stack_local_syms.push(local_syms_ptr);
 
+        // BUG1: plain functions also need to save the caller's try/finally
+        // state so that cross-frame throw can restore it when unwinding.
+        let saved_fin = self.save_finally_state();
+
         self.frame_stack.push(CallFrame {
             chunk_ptr: chunk as *const FunctionChunk,
             packed: packed_ptr,
@@ -123,7 +127,7 @@ impl VM {
             dst,
             reg_base: 0,
             reg_size,
-            saved_finally: None,
+            saved_finally: saved_fin,
             has_captures: false,
             debugger_pushed: false,
             call_depth: self.call_depth,

@@ -146,23 +146,19 @@ c;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 4. int / int = Number (float) behaviour
+// 4. int / int = Int (integer division) behaviour
 // ─────────────────────────────────────────────────────────────────────────────
 
 #[test]
-fn int_div_int_produces_number() {
+fn int_div_int_produces_int() {
     let vm = run(r#"let x = 5 / 2; x;"#).expect("execution failed");
     let x = vm.get_variable("x").expect("x not found");
-    assert!(
-        x.is_number(),
-        "5 / 2 must produce Number (float), got {:?}",
-        x
-    );
-    assert!((x.as_number().unwrap() - 2.5).abs() < 1e-10);
+    assert!(x.is_int(), "5 / 2 must produce Int, got {:?}", x);
+    assert_eq!(x.as_int(), Some(2));
 }
 
 #[test]
-fn int_div_int_chain_produces_number() {
+fn int_div_int_chain_produces_int() {
     let vm = run(r#"
 let current = 10;
 current = current / 2;
@@ -170,12 +166,8 @@ current;
 "#)
     .expect("execution failed");
     let current = vm.get_variable("current").expect("current not found");
-    assert!(
-        current.is_number(),
-        "10 / 2 must produce Number, got {:?}",
-        current
-    );
-    assert!((current.as_number().unwrap() - 5.0).abs() < 1e-10);
+    assert!(current.is_int(), "10 / 2 must produce Int, got {:?}", current);
+    assert_eq!(current.as_int(), Some(5));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

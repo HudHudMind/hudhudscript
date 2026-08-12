@@ -14,8 +14,9 @@
 ///   regression that turns the error into a (wrong) success still
 ///   trips an assertion.
 use hudhudscript_bytecode::Value16;
-use hudhudscript_compiler::{Compiler, VM};
+use hudhudscript_compiler::Compiler;
 use hudhudscript_parser::parse;
+use hudhudscript_vm::VM;
 
 // ── Harness (VM-only) ───────────────────────────────────────────────────────
 //
@@ -52,8 +53,21 @@ fn vm_to_string(v: &Value16) -> String {
     } else if let Some(map) = v.as_object() {
         let mut pairs: Vec<String> = map
             .iter()
-            .filter(|(k, _)| !hudhudscript_bytecode::interner::resolve(hudhudscript_bytecode::interner::SymbolId(k.0)).starts_with("__"))
-            .map(|(k, v)| format!("{}: {}", hudhudscript_bytecode::interner::resolve(hudhudscript_bytecode::interner::SymbolId(k.0)), vm_to_string(v)))
+            .filter(|(k, _)| {
+                !hudhudscript_bytecode::interner::resolve(
+                    hudhudscript_bytecode::interner::SymbolId(k.0),
+                )
+                .starts_with("__")
+            })
+            .map(|(k, v)| {
+                format!(
+                    "{}: {}",
+                    hudhudscript_bytecode::interner::resolve(
+                        hudhudscript_bytecode::interner::SymbolId(k.0)
+                    ),
+                    vm_to_string(v)
+                )
+            })
             .collect();
         pairs.sort();
         format!("{{{}}}", pairs.join(", "))

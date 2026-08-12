@@ -186,7 +186,7 @@ fn test_compile_enum_declaration() {
 }
 
 #[test]
-    #[ignore] // pre-existing issue
+#[ignore] // pre-existing issue
 fn test_compile_agent_declaration() {
     let result = compile_source("agent Worker { async start() { } }");
     assert!(result.is_ok(), "Should compile agent declaration");

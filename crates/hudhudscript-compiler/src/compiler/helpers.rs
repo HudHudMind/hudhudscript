@@ -86,7 +86,8 @@ pub(super) fn expr_to_rule_string(expr: &Expr) -> String {
                 format!("{}", n)
             }
         }
-        Expr::Literal(Literal::Number(n, _), _) => format!("{}", n),
+        Expr::Literal(Literal::Int(i), _) => format!("{}", i),
+        Expr::Literal(Literal::BigInt(s), _) => s.clone(),
         Expr::Literal(Literal::Boolean(b), _) => b.to_string(),
         Expr::Literal(Literal::Null, _) => "null".to_string(),
         Expr::Identifier(name, _) => name.clone(),
@@ -152,5 +153,53 @@ pub(super) fn decompose_add_chain<'a>(expr: &'a Expr, name: &str) -> Option<Vec<
         Some(out)
     } else {
         None
+    }
+}
+
+/// C3 helper: returns true if the statement tree contains a `break` or
+/// `continue` that targets the immediately enclosing loop.  Nested loops
+/// are a boundary, but switch is NOT a boundary for `continue` — a
+/// `continue` inside a switch still targets the enclosing loop.
+/// A plain `break` inside a switch targets the switch, so it is ignored.
+pub(crate) fn body_contains_loop_exit(body: &hudhudscript_ast::Stmt) -> bool {
+    body_contains_loop_exit_impl(body, false)
+}
+
+fn body_contains_loop_exit_impl(body: &hudhudscript_ast::Stmt, in_switch: bool) -> bool {
+    use hudhudscript_ast::Stmt;
+    match body {
+        Stmt::Break { .. } => !in_switch,
+        Stmt::Continue { .. } => true,
+        Stmt::Block { statements, .. } => {
+            statements.iter().any(|s| body_contains_loop_exit_impl(s, in_switch))
+        }
+        Stmt::If { then_branch, else_branch, .. } => {
+            body_contains_loop_exit_impl(then_branch, in_switch)
+                || else_branch.as_ref().map_or(false, |e| body_contains_loop_exit_impl(e, in_switch))
+        }
+        Stmt::While { .. }
+        | Stmt::For { .. }
+        | Stmt::ForCStyle { .. }
+        | Stmt::ForRange { .. } => {
+            // Inner loop forms its own break/continue-target boundary.
+            false
+        }
+        Stmt::Switch { cases, default, .. } => {
+            // Inside a switch, `break` exits the switch — not the loop.
+            // But `continue` inside a switch still targets the loop.
+            let case_has_continue = cases.iter().any(|c| {
+                c.body.iter().any(|s| body_contains_loop_exit_impl(s, true))
+            });
+            let default_has_continue = default
+                .as_ref()
+                .map_or(false, |stmts| stmts.iter().any(|s| body_contains_loop_exit_impl(s, true)));
+            case_has_continue || default_has_continue
+        }
+        Stmt::Try { try_block, catch_clause, finally_block, .. } => {
+            body_contains_loop_exit_impl(try_block, in_switch)
+                || catch_clause.as_ref().map_or(false, |c| body_contains_loop_exit_impl(&c.body, in_switch))
+                || finally_block.as_ref().map_or(false, |b| body_contains_loop_exit_impl(b, in_switch))
+        }
+        _ => false,
     }
 }

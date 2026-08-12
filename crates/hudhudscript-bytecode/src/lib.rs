@@ -16,6 +16,7 @@ pub mod interner;
 pub mod objmap;
 pub mod packed_instruction;
 pub mod payloads;
+pub mod privileged_ops;
 pub mod registry;
 pub mod repr;
 pub mod shared_value;
@@ -28,6 +29,7 @@ pub mod value16_shared;
 pub mod value16_utils;
 pub mod value_dto;
 pub mod version;
+pub mod well_known;
 
 pub use bytecode_struct::Bytecode;
 pub use dynamic::{DynamicData, DynamicKind, DynamicObject};

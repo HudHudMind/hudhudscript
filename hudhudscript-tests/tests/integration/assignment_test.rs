@@ -145,7 +145,7 @@ fn test_array_index_out_of_bounds() {
 }
 
 #[test]
-    #[ignore] // pre-existing issue
+#[ignore] // pre-existing issue
 fn test_member_assignment_on_non_object() {
     let code = r#"
         let num = 42;

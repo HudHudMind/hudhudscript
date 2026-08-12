@@ -26,11 +26,12 @@ fn test_enum_operations() {
 
 #[test]
 fn test_spawn_operations() {
-    let mut bytecode = Bytecode::new();
     let sym = SymId(intern("Worker").0);
-    let payload = bytecode.add_call_payload(sym, 0) as u16;
+    // B3 (d7b25b92e): Spawn carries the subject-name SymId directly instead of a
+    // call-payload index, so it is immune to payload-table shifts. The payload
+    // this test used to build is no longer part of the instruction.
     let _instr = Instruction::Spawn {
-        payload_idx: payload as u16,
+        name_sym: sym.0,
         first_arg: 0,
         arg_count: 0,
     };

@@ -175,6 +175,7 @@ fn provider_config_minimal() {
         temperature: None,
         max_tokens: None,
         budget: None,
+        timeout_secs: None,
         extra: HashMap::new(),
     };
     assert_eq!(cfg.model, "gpt-4");
@@ -191,6 +192,7 @@ fn provider_config_with_all_fields() {
         temperature: Some(0.7),
         max_tokens: Some(4096),
         budget: Some(TokenBudget::default()),
+        timeout_secs: None,
         extra: {
             let mut m = HashMap::new();
             m.insert("version".to_string(), json!("2024-01-01"));
@@ -213,6 +215,7 @@ fn provider_config_serde_roundtrip() {
         temperature: Some(0.5),
         max_tokens: Some(2048),
         budget: None,
+        timeout_secs: None,
         extra: HashMap::new(),
     };
     let json = serde_json::to_string(&cfg).unwrap();
@@ -231,6 +234,7 @@ fn provider_config_clone() {
         temperature: None,
         max_tokens: None,
         budget: None,
+        timeout_secs: None,
         extra: HashMap::new(),
     };
     let cloned = cfg.clone();
@@ -430,6 +434,7 @@ fn llm_request_minimal() {
         mnemonics: None,
         optimize: false,
         tools: None,
+        timeout_secs: None,
     };
     assert_eq!(req.prompt, "Hello");
     assert!(!req.optimize);
@@ -453,6 +458,7 @@ fn llm_request_full() {
             description: "A calculator".to_string(),
             parameters: json!({"type": "object"}),
         }]),
+        timeout_secs: None,
     };
     assert!(req.optimize);
     assert!(req.tools.as_ref().unwrap().len() == 1);
@@ -469,6 +475,7 @@ fn llm_request_serde_roundtrip() {
         mnemonics: None,
         optimize: false,
         tools: None,
+        timeout_secs: None,
     };
     let json = serde_json::to_string(&req).unwrap();
     let back: LLMRequest = serde_json::from_str(&json).unwrap();

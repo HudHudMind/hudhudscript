@@ -30,7 +30,9 @@ fn b5_horner_semantic() {
         let y = horner_test([1,2,3], 10);
     "#;
     let vm = compile_and_run(src);
-    let val = vm.get_global("y").and_then(|v| v.as_int().or_else(|| v.as_number().map(|n| n as i64)));
+    let val = vm
+        .get_global("y")
+        .and_then(|v| v.as_int().or_else(|| v.as_number().map(|n| n as i64)));
     assert_eq!(
         val,
         Some(321),
@@ -48,7 +50,9 @@ fn b5_simple_add_semantic() {
         let c = a + b;
     "#;
     let vm = compile_and_run(src);
-    let val = vm.get_global("c").and_then(|v| v.as_int().or_else(|| v.as_number().map(|n| n as i64)));
+    let val = vm
+        .get_global("c")
+        .and_then(|v| v.as_int().or_else(|| v.as_number().map(|n| n as i64)));
     assert_eq!(val, Some(30), "a + b should be 30, got {:?}", val);
 }
 
@@ -61,6 +65,8 @@ fn b5_index_semantic() {
         let x = arr[i];
     "#;
     let vm = compile_and_run(src);
-    let val = vm.get_global("x").and_then(|v| v.as_int().or_else(|| v.as_number().map(|n| n as i64)));
+    let val = vm
+        .get_global("x")
+        .and_then(|v| v.as_int().or_else(|| v.as_number().map(|n| n as i64)));
     assert_eq!(val, Some(5), "arr[1] should be 5, got {:?}", val);
 }

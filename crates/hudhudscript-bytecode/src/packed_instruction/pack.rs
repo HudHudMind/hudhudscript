@@ -66,8 +66,8 @@ pub fn pack(instr: &Instruction) -> Option<u32> {
         // --- Slot-based super-instructions ---
         Instruction::IntLeJumpIfFalse(idx) => Some(encode(OP_INT_LE_JUMP_IF_FALSE, 0, u16::try_from(*idx).ok()?)),
         Instruction::IntLtJumpIfFalse(idx) => Some(encode(OP_INT_LT_JUMP_IF_FALSE, 0, u16::try_from(*idx).ok()?)),
-        Instruction::IntSubCall1(idx) => Some(encode(OP_INT_SUB_CALL_1, 0, u16::try_from(*idx).ok()?)),
-        Instruction::IntAddCall1(idx) => Some(encode(OP_INT_ADD_CALL_1, 0, u16::try_from(*idx).ok()?)),
+        Instruction::IntSubCall1(_idx) => None,
+        Instruction::IntAddCall1(_idx) => None,
 
         // --- IndexFast/IndexAssignFast removed → use Index/IndexAssign ---
 
@@ -109,10 +109,28 @@ pub fn pack(instr: &Instruction) -> Option<u32> {
         Instruction::NumMulAddIndexed { .. } => None, // unpacked (4 regs, no room in 32-bit packed)
         Instruction::StrCharEqRR { .. } => None, // unpacked (4 regs)
         Instruction::IntLtRRJumpPacked(idx) => Some(encode(OP_INT_LT_RR_JUMP_P, 0, u16::try_from(*idx).ok()?)),
+        // G4: genel cmp+branch — op arg1'de, payload indeksi arg2'de.
+        Instruction::IntCmpRRJumpPacked { op, payload_idx } => {
+            Some(encode(OP_INT_CMP_RR_JUMP_P, *op, *payload_idx))
+        }
+        // G12: unboxed float ailesi.
+        Instruction::FLoadNum { fslot, src } => Some(encode(OP_F_LOAD_NUM, *fslot, *src as u16)),
+        Instruction::FStoreNum { dst, fslot } => Some(encode(OP_F_STORE_NUM, *dst, *fslot as u16)),
+        Instruction::FAdd { d, a, b } => Some(encode(OP_F_ADD, *d, ((*a as u16) << 8) | *b as u16)),
+        Instruction::FSub { d, a, b } => Some(encode(OP_F_SUB, *d, ((*a as u16) << 8) | *b as u16)),
+        Instruction::FMul { d, a, b } => Some(encode(OP_F_MUL, *d, ((*a as u16) << 8) | *b as u16)),
+        Instruction::FDiv { d, a, b } => Some(encode(OP_F_DIV, *d, ((*a as u16) << 8) | *b as u16)),
+        Instruction::FSin { d, s } => Some(encode(OP_F_SIN, *d, *s as u16)),
+        Instruction::FCos { d, s } => Some(encode(OP_F_COS, *d, *s as u16)),
+        Instruction::FSqrt { d, s } => Some(encode(OP_F_SQRT, *d, *s as u16)),
+        Instruction::FConst { d, const_idx } => Some(encode(OP_F_CONST, *d, *const_idx)),
+        Instruction::FMove { d, s } => Some(encode(OP_F_MOVE, *d, *s as u16)),
         Instruction::IntLeRRJumpPacked(idx) => Some(encode(OP_INT_LE_RR_JUMP_P, 0, u16::try_from(*idx).ok()?)),
         Instruction::IntCmp { dst, src1, src2, op } => match *op {
             0 => Some(encode(OP_INT_LT_RR, *dst, ((*src1 as u16) << 8) | (*src2 as u16))),
             1 => Some(encode(OP_INT_LE_RR, *dst, ((*src1 as u16) << 8) | (*src2 as u16))),
+            2 => Some(encode(OP_INT_LT_RR, *dst, ((*src2 as u16) << 8) | (*src1 as u16))), // GT = swapped LT
+            3 => Some(encode(OP_INT_LE_RR, *dst, ((*src2 as u16) << 8) | (*src1 as u16))), // GE = swapped LE
             4 => Some(encode(OP_INT_EQ_RR, *dst, ((*src1 as u16) << 8) | (*src2 as u16))),
             5 => Some(encode(OP_INT_NE_RR, *dst, ((*src1 as u16) << 8) | (*src2 as u16))),
             _ => None,
@@ -193,10 +211,6 @@ pub fn pack(instr: &Instruction) -> Option<u32> {
             let imm_i8 = i8::try_from(*imm).ok()?;
             Some(encode(OP_NUM_DIV_RI, *dst, ((imm_i8 as u8 as u16) << 8) | (*src as u16)))
         }
-
-        Instruction::IntLtRRJumpPacked(..) | Instruction::IntLeRRJumpPacked(..) => {
-            None // already packed by the variants above
-        }
         // --- Complex instructions → unpacked ---
         Instruction::EnumDecl(..)
         | Instruction::DeclStore { .. }
@@ -205,7 +219,6 @@ pub fn pack(instr: &Instruction) -> Option<u32> {
         | Instruction::LoadModule(..) | Instruction::DefineFunction(..)
         | Instruction::ClassStaticDecl(..)
         | Instruction::DestructObject(..)
-        | Instruction::WriteBackReceiver(..)
         | Instruction::TailCall { .. }
         | Instruction::ForIn { .. }
         | Instruction::IterNext { .. }
@@ -229,12 +242,9 @@ pub fn pack(instr: &Instruction) -> Option<u32> {
         | Instruction::DeclGlobal { .. }
         | Instruction::StoreConst { .. }
         | Instruction::SetProperty { .. }
+        | Instruction::ObjLitSet { .. }
         | Instruction::GetProperty { .. }
-        | Instruction::StringIndexOf { .. }
-        | Instruction::StringContains { .. }
-        | Instruction::IntDivI { .. }
-        | Instruction::IntModI { .. }
-        | Instruction::IntModCmpI { .. }
+        | Instruction::CharDispatch { .. }
         | Instruction::IntCmpIJumpIfFalse { .. }
         | Instruction::IntCmpIJumpIfTrue { .. }
         | Instruction::IntCmpRRJumpIfFalse { .. }
@@ -263,6 +273,8 @@ pub fn pack(instr: &Instruction) -> Option<u32> {
         | Instruction::ArrayPop { .. }
         // P5: NumSqrt not packable (uses f64 math, complex)
         | Instruction::NumSqrt { .. }
+        | Instruction::NumSin { .. }
+        | Instruction::NumCos { .. }
         | Instruction::Index2D { .. }
         | Instruction::IndexAssign2D { .. }
         | Instruction::IndexAssignArray { .. }
@@ -274,5 +286,8 @@ pub fn pack(instr: &Instruction) -> Option<u32> {
         | Instruction::FloatMul { .. }
         | Instruction::IntMulMod { .. }
         | Instruction::IntMulModI { .. } => None,
+        // G5-slotvec: unpacked dispatch (Commit 3 will add packed)
+        | Instruction::LoadClosureSlot { .. }
+        | Instruction::StoreClosureSlot { .. } => None,
     }
 }

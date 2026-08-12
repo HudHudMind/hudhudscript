@@ -10,7 +10,8 @@ fn loop_decl_creates_function_chunk() {
     let mut compiler = Compiler::default();
     let bytecode = compiler.compile(&stmts).expect("compile");
     let bc_ref = &bytecode;
-    let chunk = bc_ref.get_function("__loop::first_loop")
+    let chunk = bc_ref
+        .get_function("__loop::first_loop")
         .expect("__loop::first_loop FunctionChunk must exist");
     // Proof: bytecode is NOT empty — emits MakeObject + Return
     assert!(
@@ -35,7 +36,8 @@ fn chain_decl_creates_function_chunk() {
     let bytecode = compiler.compile(&stmts).expect("compile");
 
     let bc_ref = &bytecode;
-    let _chunk = bc_ref.get_function("__chain::ci")
+    let _chunk = bc_ref
+        .get_function("__chain::ci")
         .expect("__chain::ci FunctionChunk must exist");
 }
 
@@ -70,10 +72,7 @@ fn chain_with_nested_loops_compiles_both() {
     let mut compiler = Compiler::default();
     let bytecode = compiler.compile(&stmts).expect("compile");
     let bc_ref = &bytecode;
-    assert!(
-        bc_ref.has_function("__chain::ci"),
-        "chain chunk must exist"
-    );
+    assert!(bc_ref.has_function("__chain::ci"), "chain chunk must exist");
     assert!(
         bc_ref.has_function("__loop::l1"),
         "nested loop l1 must be compiled"
@@ -92,7 +91,9 @@ fn times_mode_loop_has_constants() {
     let mut compiler = Compiler::default();
     let bytecode = compiler.compile(&stmts).expect("compile");
     let bc_ref = &bytecode;
-    let chunk = bc_ref.get_function("__loop::t").expect("loop chunk must exist");
+    let chunk = bc_ref
+        .get_function("__loop::t")
+        .expect("loop chunk must exist");
     assert!(!chunk.instructions.is_empty());
 }
 
@@ -103,7 +104,8 @@ fn step_body_compiles_to_function_chunk() {
     let mut compiler = Compiler::default();
     let bytecode = compiler.compile(&stmts).expect("compile");
     let bc_ref = &bytecode;
-    let loop_chunk = bc_ref.get_function("__loop::real_loop")
+    let loop_chunk = bc_ref
+        .get_function("__loop::real_loop")
         .expect("loop chunk must exist");
     assert!(
         !loop_chunk.instructions.is_empty(),

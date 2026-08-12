@@ -16,10 +16,19 @@ fn b5_horner_direct_reg_bytecode() {
     let mut has_fma = false;
 
     for instr in instrs {
-        if let Instruction::NumMulAddIndexed { acc: _a, mul, arr, idx: _i } = instr {
+        if let Instruction::NumMulAddIndexed {
+            acc: _a,
+            mul,
+            arr,
+            idx: _i,
+        } = instr
+        {
             has_fma = true;
             assert_eq!(*mul, x_reg, "NumMulAddIndexed mul must be x register");
-            assert_eq!(*arr, coeffs_reg, "NumMulAddIndexed arr must be coeffs register");
+            assert_eq!(
+                *arr, coeffs_reg,
+                "NumMulAddIndexed arr must be coeffs register"
+            );
         }
     }
     assert!(has_fma, "NumMulAddIndexed not found");

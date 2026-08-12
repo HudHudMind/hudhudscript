@@ -149,12 +149,19 @@ impl TypeInference {
             }
 
             (Type::Object(props1), Type::Object(props2)) => {
-                // Structural subtyping: props1 must be a subset of props2
+                if props1.len() != props2.len() {
+                    return Err(format!(
+                        "Object property count mismatch: {} vs {}",
+                        props1.len(),
+                        props2.len()
+                    ));
+                }
+
                 for (key, ty1) in props1 {
-                    if let Some(ty2) = props2.get(key) {
-                        self.unify(ty1, ty2)?;
-                    }
-                    // Missing property is OK (width subtyping)
+                    let ty2 = props2
+                        .get(key)
+                        .ok_or_else(|| format!("Missing object property: {}", key))?;
+                    self.unify(ty1, ty2)?;
                 }
                 Ok(())
             }

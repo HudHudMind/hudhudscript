@@ -1,7 +1,8 @@
 // Tests for generics (#658) and traits/interfaces (#659) — compiler/VM
 
 use hudhudscript_ast::*;
-use hudhudscript_compiler::{Compiler, VM};
+use hudhudscript_compiler::Compiler;
+use hudhudscript_vm::VM;
 
 fn dummy_span() -> Span {
     Span::new(Position::new(1, 1, 0), Position::new(1, 1, 0))

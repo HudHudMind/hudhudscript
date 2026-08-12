@@ -66,10 +66,14 @@ impl Provider for OpenAICompatibleProvider {
         ) || is_local_url(&url);
         let api_key = self.resolve_api_key(no_auth)?;
 
+        let timeout_secs = request.timeout_secs.or(self.config.timeout_secs).unwrap_or(crate::provider::types::DEFAULT_PROVIDER_TIMEOUT_SECS);
+        let timeout_duration = std::time::Duration::from_secs(timeout_secs);
+
         let build_req = || {
             let mut req = self
                 .client
                 .post(&url)
+                .timeout(timeout_duration)
                 .header("Content-Type", "application/json")
                 .json(&api_request);
             if let Some(ref key) = api_key {
@@ -191,10 +195,14 @@ impl Provider for OpenAICompatibleProvider {
         ) || is_local_url(&url);
         let api_key = self.resolve_api_key(no_auth)?;
 
+        let timeout_secs = self.config.timeout_secs.unwrap_or(crate::provider::types::DEFAULT_PROVIDER_TIMEOUT_SECS);
+        let timeout_duration = std::time::Duration::from_secs(timeout_secs);
+
         let build_req = || {
             let mut req = self
                 .client
                 .get(&url)
+                .timeout(timeout_duration)
                 .header("Content-Type", "application/json");
             if let Some(ref key) = api_key {
                 req = req.header("Authorization", format!("Bearer {}", key));
@@ -291,9 +299,13 @@ impl Provider for OpenAICompatibleProvider {
         ) || is_local_url(&url);
         let api_key = self.resolve_api_key(no_auth)?;
 
+        let timeout_secs = request.timeout_secs.or(self.config.timeout_secs).unwrap_or(crate::provider::types::DEFAULT_PROVIDER_TIMEOUT_SECS);
+        let timeout_duration = std::time::Duration::from_secs(timeout_secs);
+
         let mut req = self
             .client
             .post(&url)
+            .timeout(timeout_duration)
             .header("Content-Type", "application/json")
             .header("Accept", "text/event-stream")
             .json(&api_request);

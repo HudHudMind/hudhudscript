@@ -64,6 +64,11 @@ impl VM {
                             .get("__of_subject")
                             .and_then(|v| v.as_string())
                             .map(|s| s.to_string());
+                        let intents = obj
+                            .get("intents")
+                            .and_then(|v| v.as_array())
+                            .map(|arr| arr.iter().filter_map(|v| v.as_string()).collect())
+                            .unwrap_or_default();
                         self.subject_templates.insert(
                             name.clone(),
                             crate::vm::sop_types::SubjectTemplate {
@@ -72,7 +77,7 @@ impl VM {
                                 roles,
                                 state_defaults,
                                 capabilities,
-                                intents: vec![],
+                                intents,
                             },
                         );
                     }
@@ -152,11 +157,16 @@ impl VM {
                                     if let Some(field_name) =
                                         fr.get("field").and_then(|v| v.as_string())
                                     {
-                                        let corr = match fr.get("mode").and_then(|v| v.as_string()).as_deref() {
+                                        let mode_opt = fr.get("mode").and_then(|v| v.as_string());
+                                        let corr = match mode_opt.as_deref() {
                                             Some("correspond") => crate::vm::sop_types::FieldCorrespondence::Correspond,
                                             _ => crate::vm::sop_types::FieldCorrespondence::Separate,
                                         };
                                         let key = format!("{}::state::{}", name, field_name);
+                                        let corr_str = match corr {
+                                            crate::vm::sop_types::FieldCorrespondence::Correspond => "correspond",
+                                            crate::vm::sop_types::FieldCorrespondence::Separate => "separate",
+                                        };
                                         self.field_correspondences.insert(key, corr);
                                     }
                                 }
@@ -214,9 +224,19 @@ impl VM {
                             Some(s) => s,
                             _ => "stdio".to_string(),
                         };
+                        // No silent fallback (Kural 7c): an unrecognised
+                        // transport used to be treated as stdio, which quietly
+                        // demanded `allow_process` and spawned a process for a
+                        // declaration that asked for something else.
                         let transport_kind = match transport_str.as_str() {
                             "sse" | "SSE" => McpTransportKind::Sse,
-                            _ => McpTransportKind::Stdio,
+                            "stdio" | "STDIO" => McpTransportKind::Stdio,
+                            other => {
+                                return Err(compile_codes::runtime_error(format!(
+                                    "mcp server '{}': unknown transport '{}' (expected \"stdio\" or \"sse\")",
+                                    name, other
+                                )));
+                            }
                         };
                         let command = match obj.get("command").and_then(|v| v.as_string()) {
                             Some(s) => Some(s),
@@ -289,6 +309,7 @@ impl VM {
                             command.as_deref(),
                             &args_vec,
                             url.as_deref(),
+                            self.allow_insecure_http,
                         ) {
                             Ok(client) => {
                                 self.register_mcp_client(name.clone(), client);
@@ -304,14 +325,24 @@ impl VM {
                 if kind == "provider" {
                     if let Some(obj) = fields.as_object() {
                         let mut merged = obj.clone();
-                        // 1. Toml'dan eksik field'ları doldur (script kazanır)
+                        // 1. Toml'dan eksik field'ları doldur
                         if let Some(toml_fields) = self.toml_providers.get(&name) {
                             for (k, v) in toml_fields {
+                                let is_timeout_key = k == "timeout" || k == "timeout_secs" || k == "timeout_seconds";
+                                if is_timeout_key && (merged.contains_key("timeout") || merged.contains_key("timeout_secs") || merged.contains_key("timeout_seconds")) {
+                                    continue;
+                                }
                                 merged.entry(k.clone()).or_insert_with(|| {
                                     if let Some(env_name) =
                                         v.strip_prefix("${").and_then(|s| s.strip_suffix("}"))
                                     {
                                         Value16::string(format!("__hudhud_env__:{}", env_name))
+                                    } else if is_timeout_key {
+                                        if let Ok(n) = v.parse::<f64>() {
+                                            Value16::number(n)
+                                        } else {
+                                            Value16::string(v.clone())
+                                        }
                                     } else {
                                         Value16::string(v.clone())
                                     }
@@ -330,6 +361,8 @@ impl VM {
                             }
                         }
                         fields = Value16::object(merged);
+                        let key = format!("{}:{}", kind, name);
+                        self.declarations.insert(key, fields.clone());
                     }
                 }
                 // AGENT0003: track agent names for dispatch

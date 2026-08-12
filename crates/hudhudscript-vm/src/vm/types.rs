@@ -45,12 +45,9 @@ pub(crate) enum NumericSlot {
 #[inline(always)]
 pub(crate) fn numeric_slot(v: Option<&Value16>) -> Option<NumericSlot> {
     let val = v?;
-    if let Some(i) = val.as_int() {
-        return Some(NumericSlot::Int(i));
-    }
-    if let Some(n) = val.as_number() {
-        return Some(NumericSlot::Num(n));
-    }
+    if let Some(b) = val.as_bigint() { return None; }
+    if let Some(i) = val.as_int() { return Some(NumericSlot::Int(i)); }
+    if let Some(n) = val.as_number() { return Some(NumericSlot::Num(n)); }
     None
 }
 

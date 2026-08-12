@@ -14,27 +14,36 @@ fn run_and_get(src: &str, var: &str) -> i64 {
     let bc = compile(src);
     let mut vm = VM::new();
     vm.execute(&bc).expect("execute");
-    vm.get_variable(var).and_then(|v| v.as_int()).unwrap_or(-999)
+    vm.get_variable(var)
+        .and_then(|v| v.as_int())
+        .unwrap_or(-999)
 }
 
 fn run_and_get_str(src: &str, var: &str) -> String {
     let bc = compile(src);
     let mut vm = VM::new();
     vm.execute(&bc).expect("execute");
-    vm.get_variable(var).and_then(|v| v.as_string()).unwrap_or_default()
+    vm.get_variable(var)
+        .and_then(|v| v.as_string())
+        .unwrap_or_default()
 }
 
 // ── Basic class tests ──────────────────────────────────────
 
 #[test]
 fn class_basic_field() {
-    let src = "class Point { constructor(x, y) { this.x = x; this.y = y; } } let p = new Point(3, 4);";
+    let src =
+        "class Point { constructor(x, y) { this.x = x; this.y = y; } } let p = new Point(3, 4);";
     let bc = compile(src);
     let mut vm = VM::new();
     vm.execute(&bc).expect("execute");
-    let px = vm.get_variable("p").and_then(|v| {
-        v.as_instance_data().and_then(|inst| inst.fields.get("x").and_then(|v| v.as_int()))
-    }).unwrap_or(-1);
+    let px = vm
+        .get_variable("p")
+        .and_then(|v| {
+            v.as_instance_data()
+                .and_then(|inst| inst.fields.get("x").and_then(|v| v.as_int()))
+        })
+        .unwrap_or(-1);
     assert_eq!(px, 3);
 }
 
@@ -98,14 +107,14 @@ fn sop_subject_basic() {
 }
 
 #[test]
-    #[ignore] // SOP feature not yet implemented
+#[ignore] // SOP feature not yet implemented
 fn sop_subject_with_methods() {
     let src = "subject Player { state { let score = 0; } } let p = new Player();";
     let bc = compile(src);
 }
 
 #[test]
-    #[ignore] // SOP feature not yet implemented
+#[ignore] // SOP feature not yet implemented
 fn sop_relation_between_subjects() {
     let src = "subject A {} subject B {} relation R between A and B {}";
     let bc = compile(src);

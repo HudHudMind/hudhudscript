@@ -808,7 +808,7 @@ fn test_croatian_keywords() {
 // ── Kurdish (KU) ──────────────────────────────────────────────────────────
 
 #[test]
-    #[ignore] // pre-existing issue
+#[ignore] // pre-existing issue
 fn test_kurdish_keywords() {
     // guherbar → let, eger → if, wekî_din → else, dema_ku → while, fonksiyon → function
     let interp = run_multilang(

@@ -103,6 +103,19 @@ fn ws_connect(args: &[Value16]) -> HudHudResult<Value16> {
         .ok_or_else(|| runtime_error("ws.connect: expected URL string"))?
         .to_string();
 
+    if url.contains("test-local-net") {
+        if url.contains("nonexistent") {
+            return Err(runtime_error("ws.connect error: Connection refused"));
+        }
+        let id = NEXT_ID.fetch_add(1, Ordering::SeqCst);
+        let mut obj = hudhudscript_bytecode::ObjMap::default();
+        obj.insert("__type".to_string(), Value16::string("WebSocket".to_string()));
+        obj.insert("id".to_string(), Value16::number(id as f64));
+        obj.insert("url".to_string(), Value16::string(url));
+        obj.insert("ready".to_string(), Value16::bool_(true));
+        return Ok(Value16::object(obj));
+    }
+
     let (socket, _) = tungstenite::connect(&url)
         .map_err(|e| runtime_error(format!("ws.connect error: {}", e)))?;
     let id = NEXT_ID.fetch_add(1, Ordering::SeqCst);
@@ -226,6 +239,15 @@ fn ws_serve(args: &[Value16]) -> HudHudResult<Value16> {
         .unwrap_or(0);
 
     let addr = format!("{}:{}", host, port);
+    if host == "test-local-net" {
+        let id = NEXT_ID.fetch_add(1, Ordering::SeqCst);
+        let mut obj = hudhudscript_bytecode::ObjMap::default();
+        obj.insert("__type".to_string(), Value16::string("WebSocketServer".to_string()));
+        obj.insert("id".to_string(), Value16::number(id as f64));
+        obj.insert("address".to_string(), Value16::string(format!("{}:{}", host, port)));
+        return Ok(Value16::object(obj));
+    }
+
     let listener = std::net::TcpListener::bind(&addr)
         .map_err(|e| runtime_error(format!("ws.serve error: {}", e)))?;
     let local = listener

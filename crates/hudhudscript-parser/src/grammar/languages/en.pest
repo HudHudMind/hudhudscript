@@ -59,7 +59,7 @@ set_kw_en = _{ "set" }
 // Classes and OOP
 class_kw_en = _{ "class" }
 extends_kw_en = _{ "extends" | "<-" }
-new_kw_en = _{ "new" }
+new_kw_en = @{ "new" ~ !(ASCII_ALPHANUMERIC | "_") }
 this_kw_en = { "this" }
 super_kw_en = _{ "super" }
 self_kw_en = { "self" }  // self keyword for accessing class itself

@@ -38,16 +38,17 @@ impl Compiler {
             let tr = crate::compiler::regalloc::temp_reg();
             let sym = name_sym.0 as u16;
             self.bytecode.push_instr(Instruction::LoadGlobal { dst: tr, sym });
-            self.bytecode.push_instr(Instruction::Move { dst: 255, src: tr });
+            self.bytecode.push_move(255, tr );
         } else {
             let func_val = Value16::function(FunctionData {
                 name: anon_name.clone(),
                 params: params_clone,
+                chunk_sym: hudhudscript_bytecode::interner::intern(&anon_name).0,
                 chunk_name: anon_name,
                 captures: Default::default(),
             });
             let idx = self.bytecode.add_constant(func_val);
-            { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_instr(Instruction::Move { dst: 255, src: tr }); }
+            { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_move(255, tr ); }
         }
         Ok(())
     }
@@ -122,6 +123,7 @@ impl Compiler {
                 name: name.to_string(),
                 params: params.to_vec(),
                 chunk_name: name.to_string(),
+                chunk_sym: hudhudscript_bytecode::interner::intern(&name.to_string()).0,
                 captures: Default::default(),
             });
             let idx = self.bytecode.add_constant(func_val);

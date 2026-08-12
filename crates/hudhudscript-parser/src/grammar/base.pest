@@ -547,7 +547,7 @@ when_branch = { when_kw ~ expression ~ "->" ~ gate_target }
 gate_decl = { gate_kw ~ identifier ~ "{" ~ when_branch* ~ (else_kw ~ "->" ~ gate_target) ~ "}" }
 step_decl = { step_kw ~ identifier ~ ("(" ~ (identifier ~ ("," ~ identifier)*)? ~ ")")? ~ "{" ~ statement* ~ gate_decl? ~ "}" }
 use_step = { use_kw ~ step_kw ~ identifier ~ (as_kw ~ identifier)? ~ ("(" ~ (expression ~ (comma ~ expression)*)? ~ ")")? }
-attach_gate = { attach_kw ~ gate_kw ~ identifier ~ to_kw ~ identifier }
+attach_gate = { attach_kw ~ gate_kw ~ identifier ~ to_kw ~ identifier ~ semicolon? }
 loop_item = { step_decl | use_step | attach_gate }
 loop_decl = { loop_kw ~ identifier ~ ("mode" ~ ":" ~ run_mode)? ~ goal_spec? ~ "{" ~ loop_item* ~ "}" }
 goal_pair = { identifier ~ ":" ~ expression }
@@ -562,8 +562,8 @@ chain_on_done = { on_done_kw ~ ":" ~ gate_target }
 chain_on_fail = { on_fail_kw ~ ":" ~ gate_target }
 chain_link = { loop_decl ~ chain_on_done? ~ chain_on_fail? }
 step_with_gate = { step_kw ~ identifier ~ ("with" ~ gate_kw ~ identifier)? }
-attach_step_decl = { attach_kw ~ step_with_gate ~ ("," ~ step_with_gate)* ~ to_kw ~ identifier }
-attach_loop_decl = { attach_kw ~ loop_kw ~ identifier ~ to_kw ~ chain_kw ~ identifier ~ (on_done_kw ~ ":" ~ gate_target)? ~ (on_fail_kw ~ ":" ~ gate_target)? }
+attach_step_decl = { attach_kw ~ step_with_gate ~ ("," ~ step_with_gate)* ~ to_kw ~ identifier ~ semicolon? }
+attach_loop_decl = { attach_kw ~ loop_kw ~ identifier ~ to_kw ~ chain_kw ~ identifier ~ (on_done_kw ~ ":" ~ gate_target)? ~ (on_fail_kw ~ ":" ~ gate_target)? ~ semicolon? }
 // or subject-scoped: on Knight.attack(self, target) { ... }
 ability_name = {
     identifier ~ ("." ~ identifier)?
@@ -592,8 +592,8 @@ combine_kw_sop = _{ "combine" }
 override_kw_sop = _{ "override" }
 before_kw = _{ "before" }
 after_kw = _{ "after" }
-correspond_kw = _{ "correspond" }
-separate_kw = _{ "separate" }
+correspond_kw = { "correspond" }
+separate_kw = { "separate" }
 // SOP statements: spawn, send, receive, require, perform
 spawn_stmt = {
     spawn_kw ~ identifier ~ ("(" ~ (expression ~ (comma ~ expression)*)? ~ ")")? ~ semicolon?

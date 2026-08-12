@@ -9,9 +9,12 @@ use std::collections::HashMap;
 /// Handles 25+ string methods: length, split, trim, toUpperCase, toLowerCase,
 /// indexOf, contains, replace, substring, slice, concat, startsWith, endsWith,
 /// trimStart, trimEnd, repeat, padStart, padEnd, match, matchAll, replaceRegex.
-pub fn call_string_method(s: &str, method: &str, args: &[Value16]) -> SharedResult<Value16> {
+pub fn call_string_method(s: &str, method: &str, args: &[Value16], is_ascii: bool) -> SharedResult<Value16> {
     match method {
-        "length" => Ok(Value16::int(s.chars().count() as i64)),
+        "length" => {
+            let len = if is_ascii { s.len() } else { s.chars().count() };
+            Ok(Value16::int(len as i64))
+        }
 
         "split" | "böl" | "ayır" => {
             let delimiter = args.first().and_then(|v| v.as_str()).unwrap_or(" ");
@@ -32,8 +35,8 @@ pub fn call_string_method(s: &str, method: &str, args: &[Value16]) -> SharedResu
 
         "indexOf" => {
             let needle = args.first().and_then(|v| v.as_str()).unwrap_or("");
-            let idx = s.find(needle).map(|i| i as f64).unwrap_or(-1.0);
-            Ok(Value16::number(idx))
+            let idx = s.find(needle).map(|i| i as i64).unwrap_or(-1);
+            Ok(Value16::int(idx))
         }
 
         "contains" => {
@@ -53,7 +56,13 @@ pub fn call_string_method(s: &str, method: &str, args: &[Value16]) -> SharedResu
                 .get(1)
                 .and_then(|v| v.as_number())
                 .map(|n| n as usize)
-                .unwrap_or(s.chars().count());
+                .unwrap_or_else(|| if is_ascii { s.len() } else { s.chars().count() });
+            // P4: O(1) byte slice for ASCII receivers (no per-call scan).
+            if is_ascii {
+                let start = start.min(s.len());
+                let end = end.min(s.len()).max(start);
+                return Ok(Value16::string_from_str(&s[start..end]));
+            }
             let result: String = s
                 .chars()
                 .skip(start)
@@ -130,7 +139,7 @@ pub fn call_string_method(s: &str, method: &str, args: &[Value16]) -> SharedResu
                 .and_then(|v| v.as_str())
                 .and_then(|s| s.chars().next())
                 .unwrap_or(' ');
-            let char_count = s.chars().count();
+            let char_count = if is_ascii { s.len() } else { s.chars().count() };
             if char_count >= target_len {
                 Ok(Value16::string(s.to_string()))
             } else {
@@ -156,7 +165,7 @@ pub fn call_string_method(s: &str, method: &str, args: &[Value16]) -> SharedResu
                 .and_then(|v| v.as_str())
                 .and_then(|s| s.chars().next())
                 .unwrap_or(' ');
-            let char_count = s.chars().count();
+            let char_count = if is_ascii { s.len() } else { s.chars().count() };
             if char_count >= target_len {
                 Ok(Value16::string(s.to_string()))
             } else {

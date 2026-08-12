@@ -11,7 +11,9 @@ fn run_get_last(src: &str) -> hudhudscript_bytecode::Value16 {
     let ast = parse(src).expect("parse failed");
     let mut interp = Interpreter::new();
     interp.execute(&ast).expect("execute failed");
-    interp.get_variable("__last_expr").unwrap_or(hudhudscript_bytecode::Value16::null())
+    interp
+        .get_variable("__last_expr")
+        .unwrap_or(hudhudscript_bytecode::Value16::null())
 }
 
 #[test]

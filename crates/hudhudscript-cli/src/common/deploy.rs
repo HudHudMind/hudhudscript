@@ -44,7 +44,15 @@ pub fn run_deploy_with_config(
 
     // Execute script via compile + VM (Issue #1006; Faz 4 migration).
     let config = load_hudhud_config_with_path(debug, config_path);
+    let canonical_script = fs::canonicalize(path)
+        .map_err(|e| CliError::Io(format!("Failed to resolve path: {}", e)))?;
+    let module_base = canonical_script
+        .parent()
+        .unwrap_or_else(|| Path::new("."))
+        .to_path_buf();
+
     let mut compiler = Compiler::new();
+    compiler.set_module_base_dir(module_base.clone());
     let bytecode = compiler.compile(&ast).map_err(|e| {
         let unified: hudhudscript_errors::Error = e;
         CliError::ParseCompile(unified.render_full())

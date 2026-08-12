@@ -17,7 +17,7 @@ impl CompileTarget for Compiler {
     ) -> CompileResult<Vec<usize>> {
         let r = crate::compiler::regalloc::temp_reg();
         self.last_match_reg = r;
-        self.bytecode.push_instr(Instruction::Move { dst: r, src: 255 });
+        self.bytecode.push_move(r, 255 );
         self.compile_match_pattern_bytecode(pattern, r)
     }
     fn ct_compile_destructure_pattern(
@@ -61,6 +61,9 @@ impl CompileTarget for Compiler {
     fn ct_emit_int_const(&mut self, val: i64) -> u32 {
         self.emit_int_const(val)
     }
+    /// B8: global snapshots (set before function body compilation)
+    fn ct_int_constants(&self) -> &[i64] { &self.global_int_constants }
+    fn ct_numeric_constants(&self) -> &[u64] { &self.global_numeric_constants }
     fn ct_intern(&mut self, name: &str) -> u32 {
         self.intern(name)
     }
@@ -73,11 +76,44 @@ impl CompileTarget for Compiler {
     fn ct_patch(&mut self, ip: usize, instr: Instruction) {
         self.patch(ip, instr)
     }
+    fn ct_push_break_target(&mut self, target: crate::compiler::target::BreakTarget) {
+        self.break_targets.push(target);
+    }
+    fn ct_pop_break_target(&mut self) -> crate::compiler::target::BreakTarget {
+        self.break_targets.pop().expect("pop without push")
+    }
+    fn ct_emit_break(&mut self) {
+        if let Some(mut target) = self.break_targets.pop() {
+            match &mut target {
+                crate::compiler::target::BreakTarget::Loop => {
+                    self.ct_emit(Instruction::Break);
+                }
+                crate::compiler::target::BreakTarget::Switch { jumps } => {
+                    let ip = self.ct_current_ip();
+                    self.ct_emit(Instruction::Jump(0));
+                    jumps.push(ip);
+                }
+            }
+            self.break_targets.push(target);
+        } else {
+            self.ct_emit(Instruction::Break);
+        }
+    }
+
     fn ct_add_loop_payload(&mut self, start: u32, end: u32) -> u32 {
         self.add_loop_payload(start, end)
     }
     fn ct_patch_loop_payload_end(&mut self, idx: u32, end: u32) {
         self.patch_loop_payload_end(idx, end)
+    }
+    fn ct_patch_loop_payload_start(&mut self, idx: u32, start: u32) {
+        self.patch_loop_payload_start(idx, start)
+    }
+    fn ct_add_char_dispatch_table(&mut self, table: Vec<i16>) -> u16 {
+        self.add_char_dispatch_table(table)
+    }
+    fn ct_replace_char_dispatch_table(&mut self, idx: u16, table: Vec<i16>) {
+        self.patch_char_dispatch_table(idx, table)
     }
     fn ct_add_enum_decl_payload(&mut self, payload: hudhudscript_bytecode::EnumDeclPayload) -> u32 {
         self.add_enum_decl_payload(payload)
@@ -89,7 +125,13 @@ impl CompileTarget for Compiler {
         self.add_trait_check_payload(payload)
     }
     fn ct_add_load_module_payload(&mut self, payload: hudhudscript_bytecode::LoadModulePayload) -> u32 {
-        self.add_load_module_payload(payload)
+        let idx = self.bytecode.load_module_payloads.len() as u32;
+        self.bytecode.load_module_payloads.push(payload);
+        idx
+    }
+
+    fn ct_module_base_dir(&self) -> Option<&std::path::Path> {
+        self.module_base_dir.as_deref()
     }
     fn ct_add_define_function_payload(&mut self, payload: hudhudscript_bytecode::DefineFunctionPayload) -> u32 {
         self.add_define_function_payload(payload)
@@ -258,6 +300,59 @@ impl CompileTarget for Compiler {
             Instruction::Jump(ref mut off) => *off = offset as i32,
             _ => {}
         }
+    }
+    // ── G12: f-loop bağlamı ──────────────────────────────────────────────
+    fn ct_floop_push(
+        &mut self,
+        slots: Vec<(String, u8)>,
+        consts: Vec<(u64, u8)>,
+        temp_base: u8,
+    ) {
+        self.floop_stack.push(crate::compiler::FloopCtx {
+            slots: slots.into_iter().collect(),
+            consts: consts.into_iter().collect(),
+            temp_next: temp_base,
+            temp_base,
+        });
+    }
+    fn ct_floop_pop(&mut self) {
+        self.floop_stack.pop();
+    }
+    fn ct_floop_slot(&self, name: &str) -> Option<u8> {
+        self.floop_stack.last()?.slots.get(name).copied()
+    }
+    fn ct_floop_const_slot(&self, bits: u64) -> Option<u8> {
+        self.floop_stack.last()?.consts.get(&bits).copied()
+    }
+    fn ct_floop_temp(&mut self) -> Option<u8> {
+        let ctx = self.floop_stack.last_mut()?;
+        if ctx.temp_next >= 64 {
+            return None;
+        }
+        let t = ctx.temp_next;
+        ctx.temp_next += 1;
+        Some(t)
+    }
+    fn ct_floop_temp_pop(&mut self) {
+        if let Some(ctx) = self.floop_stack.last_mut() {
+            if ctx.temp_next > ctx.temp_base {
+                ctx.temp_next -= 1;
+            }
+        }
+    }
+    fn ct_floop_captured(&self, name: &str) -> bool {
+        let local_captured = self.locals
+            .iter()
+            .rev()
+            .find(|l| l.name == name)
+            .map(|l| l.is_captured)
+            .unwrap_or(false);
+        local_captured
+            || self
+                .fn_ctx
+                .as_ref()
+                .map(|c| c.nested_captured.contains(name))
+                .unwrap_or(false)
     }
     fn ct_is_known_generator(&self, name: &str) -> bool {
         self.known_generators.contains(name)

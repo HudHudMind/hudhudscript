@@ -96,7 +96,7 @@ fn called_with_array_pop_uses_arraypop() {
 #[test]
 fn push_skip_wbr_for_typed_array() {
     let insns = compile_instructions("let a = [1,2]; a.push(3);");
-    // push on typed local array → ArrayPush/ArrayPushIntConst + no WriteBackReceiver
+    // push on typed local array → ArrayPush/ArrayPushIntConst
     let has_push = has_instruction(&insns, |i| {
         matches!(i, Instruction::ArrayPush { .. }
             | Instruction::ArrayPushIntConst { .. }
@@ -106,8 +106,9 @@ fn push_skip_wbr_for_typed_array() {
         has_push,
         "typed array push must emit ArrayPush variant"
     );
-    assert!(
-        !has_instruction(&insns, |i| matches!(i, Instruction::WriteBackReceiver(..))),
-        "typed array push must NOT emit WriteBackReceiver"
-    );
+    // The companion "must NOT emit WriteBackReceiver" assertion was dropped:
+    // REFSEM A1+A2 (6985f3879) removed the WriteBackReceiver variant from
+    // Instruction entirely, so nothing can emit it and the type system now
+    // guarantees what the assertion used to check. Keeping it only broke
+    // compilation of this target.
 }

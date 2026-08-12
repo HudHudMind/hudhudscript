@@ -5,6 +5,8 @@
 
 // P7.2 — swap the system allocator for mimalloc.  The `--run` path executes
 // bytecode via the VM, which also benefits from faster allocation.
+// G0: allow sysalloc-profile feature for heaptrack/valgrind.
+#[cfg(not(feature = "sysalloc-profile"))]
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
@@ -117,7 +119,15 @@ fn run(cli: &Cli) -> Result<(), HudcError> {
         println!("⚙️  Compiling to bytecode...");
     }
 
+    let canonical_script = fs::canonicalize(&cli.input)
+        .map_err(|e| HudcError::io(format!("Failed to resolve path: {}", e)))?;
+    let module_base = canonical_script
+        .parent()
+        .unwrap_or_else(|| std::path::Path::new("."))
+        .to_path_buf();
+
     let mut compiler = Compiler::new();
+    compiler.set_module_base_dir(module_base.clone());
     let bytecode = compiler
         .compile(&ast)
         .map_err(|e| HudcError::parse(format!("Compile error: {}", e)))?;

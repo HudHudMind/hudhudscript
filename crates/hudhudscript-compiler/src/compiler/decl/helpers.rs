@@ -18,13 +18,13 @@ impl Compiler {
         {
             let tr = crate::compiler::regalloc::temp_reg();
             self.bytecode.push_instr(Instruction::MakeObject { dst: tr, count: 0 });
-            self.bytecode.push_instr(Instruction::Move { dst: 255, src: tr });
+            self.bytecode.push_move(255, tr );
         }
         for (key, value) in fields {
             // Save current object (in reg 255) to a temp reg before
             // compile_expr overwrites reg 255.
             let obj_reg = crate::compiler::regalloc::temp_reg();
-            self.bytecode.push_instr(Instruction::Move { dst: obj_reg, src: 255 });
+            self.bytecode.push_move(obj_reg, 255 );
 
             self.compile_expr(value)?;
             // compile_expr stores result in register 255.
@@ -38,7 +38,7 @@ impl Compiler {
                 prop_sym: key_sym.0 as u16,
             });
             // Move updated object back to reg 255 for next iteration / DeclStore.
-            self.bytecode.push_instr(Instruction::Move { dst: 255, src: dst_reg });
+            self.bytecode.push_move(255, dst_reg );
         }
         self.emit_decl_store(kind, name, 255);
         Ok(())
@@ -57,7 +57,11 @@ impl Compiler {
         match expr {
             Expr::Literal(lit, _) => match lit {
                 Literal::Number(n, _) => Value16::number(*n),
-                Literal::Number(n, _) => Value16::number(*n),
+                Literal::Int(i) => Value16::int(*i),
+                Literal::BigInt(s) => {
+                    let big = s.parse::<num_bigint::BigInt>().expect("BigInt literal must be valid decimal");
+                    Value16::bigint(big)
+                }
                 Literal::String(s) => Value16::string(s.clone()),
                 Literal::Boolean(b) => Value16::bool_(*b),
                 Literal::Null => Value16::null(),

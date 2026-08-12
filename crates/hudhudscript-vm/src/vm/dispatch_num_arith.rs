@@ -1,7 +1,7 @@
 //! V2-B0: Num/float arithmetic packed handlers extracted from dispatch_general.rs.
 
 use crate::vm::dense_ops::*;
-use crate::vm::index_helpers::{numeric_index_i64, index_i64_to_usize};
+use crate::vm::index_helpers::{index_i64_to_usize, numeric_index_i64};
 use crate::vm::PackedResult;
 use hudhudscript_bytecode::error::{compile_codes, CompileResult};
 use hudhudscript_bytecode::{Bytecode, ReprTag, Value16};
@@ -11,6 +11,7 @@ pub(crate) fn dispatch_num_arithmetic(
     vm: &mut crate::vm::VM, dense: u8, arg1: u8, arg2: u16,
     bytecode: &Bytecode, ip: usize,
 ) -> CompileResult<PackedResult> {
+    let is_dynamic = |vm: &crate::vm::VM, reg: usize| vm.registers[reg].split_tag().0 == ReprTag::Dynamic;
     match dense {
             D_NUM_ADD_RR => {
                 let src1 = ((arg2 >> 8) & 0xFF) as usize;
@@ -18,16 +19,15 @@ pub(crate) fn dispatch_num_arithmetic(
                 let dst = arg1 as usize;
                 let (t1, p1) = vm.registers[src1].split_tag();
                 let (t2, p2) = vm.registers[src2].split_tag();
-                let a = if t1 == ReprTag::Int {
-                    p1 as i64 as f64
-                } else {
-                    f64::from_bits(p1)
-                };
-                let b = if t2 == ReprTag::Int {
-                    p2 as i64 as f64
-                } else {
-                    f64::from_bits(p2)
-                };
+                if t1 == ReprTag::Dynamic || t2 == ReprTag::Dynamic {
+                    return Err(crate::vm::VM::runtime_error_with_pos(
+                        "Cannot mix BigInt and Number",
+                        bytecode,
+                        ip,
+                    ));
+                }
+                let a = if t1 == ReprTag::Int { p1 as i64 as f64 } else { f64::from_bits(p1) };
+                let b = if t2 == ReprTag::Int { p2 as i64 as f64 } else { f64::from_bits(p2) };
                 vm.registers[dst] = Value16::number(a + b);
                 Ok(PackedResult::Advance)
             }
@@ -37,16 +37,15 @@ pub(crate) fn dispatch_num_arithmetic(
                 let dst = arg1 as usize;
                 let (t1, p1) = vm.registers[src1].split_tag();
                 let (t2, p2) = vm.registers[src2].split_tag();
-                let a = if t1 == ReprTag::Int {
-                    p1 as i64 as f64
-                } else {
-                    f64::from_bits(p1)
-                };
-                let b = if t2 == ReprTag::Int {
-                    p2 as i64 as f64
-                } else {
-                    f64::from_bits(p2)
-                };
+                if t1 == ReprTag::Dynamic || t2 == ReprTag::Dynamic {
+                    return Err(crate::vm::VM::runtime_error_with_pos(
+                        "Cannot mix BigInt and Number",
+                        bytecode,
+                        ip,
+                    ));
+                }
+                let a = if t1 == ReprTag::Int { p1 as i64 as f64 } else { f64::from_bits(p1) };
+                let b = if t2 == ReprTag::Int { p2 as i64 as f64 } else { f64::from_bits(p2) };
                 vm.registers[dst] = Value16::number(a - b);
                 Ok(PackedResult::Advance)
             }
@@ -56,16 +55,15 @@ pub(crate) fn dispatch_num_arithmetic(
                 let dst = arg1 as usize;
                 let (t1, p1) = vm.registers[src1].split_tag();
                 let (t2, p2) = vm.registers[src2].split_tag();
-                let a = if t1 == ReprTag::Int {
-                    p1 as i64 as f64
-                } else {
-                    f64::from_bits(p1)
-                };
-                let b = if t2 == ReprTag::Int {
-                    p2 as i64 as f64
-                } else {
-                    f64::from_bits(p2)
-                };
+                if t1 == ReprTag::Dynamic || t2 == ReprTag::Dynamic {
+                    return Err(crate::vm::VM::runtime_error_with_pos(
+                        "Cannot mix BigInt and Number",
+                        bytecode,
+                        ip,
+                    ));
+                }
+                let a = if t1 == ReprTag::Int { p1 as i64 as f64 } else { f64::from_bits(p1) };
+                let b = if t2 == ReprTag::Int { p2 as i64 as f64 } else { f64::from_bits(p2) };
                 vm.registers[dst] = Value16::number(a * b);
                 Ok(PackedResult::Advance)
             }
@@ -75,16 +73,15 @@ pub(crate) fn dispatch_num_arithmetic(
                 let dst = arg1 as usize;
                 let (t1, p1) = vm.registers[src1].split_tag();
                 let (t2, p2) = vm.registers[src2].split_tag();
-                let a = if t1 == ReprTag::Int {
-                    p1 as i64 as f64
-                } else {
-                    f64::from_bits(p1)
-                };
-                let b = if t2 == ReprTag::Int {
-                    p2 as i64 as f64
-                } else {
-                    f64::from_bits(p2)
-                };
+                if t1 == ReprTag::Dynamic || t2 == ReprTag::Dynamic {
+                    return Err(crate::vm::VM::runtime_error_with_pos(
+                        "Cannot mix BigInt and Number",
+                        bytecode,
+                        ip,
+                    ));
+                }
+                let a = if t1 == ReprTag::Int { p1 as i64 as f64 } else { f64::from_bits(p1) };
+                let b = if t2 == ReprTag::Int { p2 as i64 as f64 } else { f64::from_bits(p2) };
                 if b == 0.0 {
                     return Err(crate::vm::VM::runtime_error_with_pos(
                         "NumDiv: division by zero",
@@ -212,7 +209,7 @@ pub(crate) fn dispatch_num_arithmetic(
                 let (tb, pb) = mv.split_tag();
                 let (tc, pc) = av.split_tag();
                 let all_num = (ta == ReprTag::Int || ta == ReprTag::Number) && (tb == ReprTag::Int || tb == ReprTag::Number) && (tc == ReprTag::Int || tc == ReprTag::Number);
-                vm.registers[di] = if all_num {
+                let result = if all_num {
                     if ta == ReprTag::Number || tb == ReprTag::Number || tc == ReprTag::Number {
                         let a = if ta == ReprTag::Int { pa as i64 as f64 } else { f64::from_bits(pa) };
                         let b = if tb == ReprTag::Int { pb as i64 as f64 } else { f64::from_bits(pb) };
@@ -221,16 +218,36 @@ pub(crate) fn dispatch_num_arithmetic(
                     } else {
                         let a = pa as i64; let b = pb as i64; let c = pc as i64;
                         if let Some(prod) = a.checked_mul(b) {
-                            if let Some(sum) = prod.checked_add(c) { Value16::int(sum) } else { crate::vm::bigint_arith::int_mul(od, mv).and_then(|p| crate::vm::bigint_arith::int_add(p, av)).map_err(|code| compile_codes::runtime_error(code.to_string()))? }
-                        } else { crate::vm::bigint_arith::int_mul(od, mv).and_then(|p| crate::vm::bigint_arith::int_add(p, av)).map_err(|code| compile_codes::runtime_error(code.to_string()))? }
+                            if let Some(sum) = prod.checked_add(c) {
+                                Value16::int(sum)
+                            } else {
+                                let product = crate::vm::bigint_arith::int_mul(od, mv)
+                                    .map_err(|code| compile_codes::runtime_error(code.to_string()))?;
+                                vm.record_bigint_promotion(od, mv, product);
+                                let sum = crate::vm::bigint_arith::int_add(product, av)
+                                    .map_err(|code| compile_codes::runtime_error(code.to_string()))?;
+                                vm.record_bigint_promotion(product, av, sum);
+                                sum
+                            }
+                        } else {
+                            let product = crate::vm::bigint_arith::int_mul(od, mv)
+                                .map_err(|code| compile_codes::runtime_error(code.to_string()))?;
+                            vm.record_bigint_promotion(od, mv, product);
+                            let sum = crate::vm::bigint_arith::int_add(product, av)
+                                .map_err(|code| compile_codes::runtime_error(code.to_string()))?;
+                            vm.record_bigint_promotion(product, av, sum);
+                            sum
+                        }
                     }
                 } else {
-                    crate::vm::bigint_arith::int_mul(od, mv)
-                        .and_then(|p| crate::vm::bigint_arith::int_add(p, av))
+                    let product = crate::vm::bigint_arith::int_mul(od, mv)
+                        .map_err(|code| compile_codes::runtime_error(code.to_string()))?;
+                    vm.record_bigint_promotion(od, mv, product);
+                    crate::vm::bigint_arith::int_add(product, av)
                         .map_err(|code| compile_codes::runtime_error(code.to_string()))?
                 };
+                vm.registers[di] = result;
                 Ok(PackedResult::Advance)
-
             }
         _ => unreachable!(),
     }

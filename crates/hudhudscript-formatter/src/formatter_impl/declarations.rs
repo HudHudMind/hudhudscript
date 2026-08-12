@@ -262,58 +262,45 @@ impl Formatter {
             .join(", ")
     }
 
-    /// Format an MCP server declaration
-    pub(super) fn format_mcp_server(&self, indent: &str, decl: &McpServerDecl) -> String {
-        let mut output = format!("{}mcp server {} {{\n", indent, decl.name);
+    /// Format an MCP server declaration.
+    ///
+    /// Prints `decl.fields` and `decl.tools` — what the author actually wrote.
+    /// `decl.config` is deliberately not consulted: the parser leaves it at its
+    /// default for every declaration, so formatting from it printed
+    /// `transport: "stdio"` for every server regardless of the declared
+    /// transport and dropped the author's fields and tool definitions
+    /// altogether. It also emitted `mcp server <name>`, which the grammar
+    /// (`mcp_decl = mcp_kw ~ identifier ~ "{" …`) cannot parse back.
+    pub(super) fn format_mcp_server(&mut self, indent: &str, decl: &McpServerDecl) -> String {
+        let mut output = format!("{}mcp {} {{\n", indent, decl.name);
         let field_indent = format!("{}{}", indent, self.config.indent);
 
-        let transport_str = match decl.config.transport {
-            hudhudscript_ast::TransportType::Stdio => "stdio",
-            hudhudscript_ast::TransportType::SSE => "sse",
-        };
-        output.push_str(&format!(
-            "{}transport: \"{}\";\n",
-            field_indent, transport_str
-        ));
-
-        if let Some(ref cmd) = decl.config.command {
+        for (key, value) in &decl.fields {
             output.push_str(&format!(
-                "{}command: \"{}\";\n",
+                "{}{}: {};\n",
                 field_indent,
-                escape_string(cmd)
+                key,
+                self.format_expr(value)
             ));
         }
-        if !decl.config.args.is_empty() {
-            let args_str = decl
-                .config
-                .args
+
+        for tool in &decl.tools {
+            let params = tool
+                .params
                 .iter()
-                .map(|a| format!("\"{}\"", escape_string(a)))
+                .map(|(name, ty)| format!("{}: {}", name, ty))
                 .collect::<Vec<_>>()
                 .join(", ");
-            output.push_str(&format!("{}args: [{}];\n", field_indent, args_str));
-        }
-        if let Some(ref url) = decl.config.url {
             output.push_str(&format!(
-                "{}url: \"{}\";\n",
-                field_indent,
-                escape_string(url)
+                "{}tool {}({}) {{\n",
+                field_indent, tool.name, params
             ));
-        }
-        if let Some(ref auth) = decl.config.auth {
-            let auth_type_str = match auth.auth_type {
-                hudhudscript_ast::AuthType::Bearer => "bearer",
-                hudhudscript_ast::AuthType::Basic => "basic",
-                hudhudscript_ast::AuthType::ApiKey => "apikey",
-            };
-            output.push_str(&format!("{}auth: \"{}\";\n", field_indent, auth_type_str));
-            if let Some(ref token) = auth.token {
-                output.push_str(&format!(
-                    "{}token: \"{}\";\n",
-                    field_indent,
-                    escape_string(token)
-                ));
+            self.current_indent += 2;
+            for stmt in &tool.body {
+                output.push_str(&self.format_stmt(stmt));
             }
+            self.current_indent -= 2;
+            output.push_str(&format!("{}}}\n", field_indent));
         }
 
         output.push_str(&format!("{}}}\n", indent));

@@ -234,12 +234,17 @@ pub(super) fn parse_new_expr(pair: Pair<Rule>) -> ParseResult<Expr> {
     let span = pair_to_span(&pair);
     let mut inner = pair.into_inner();
 
-    // First child is the class name (identifier)
-    let class_name = inner
-        .next()
-        .ok_or_else(|| parse_codes::invalid_syntax("Expected class name after 'new'", span))?
-        .as_str()
-        .to_string();
+    // Skip the 'new' keyword token (new_kw_en is atomic so it appears as a child).
+    // The next child is the class name identifier.
+    let first = inner.next();
+    let class_name = if first.as_ref().map_or(false, |f| f.as_rule() == Rule::new_kw_en) {
+        inner.next()
+    } else {
+        first
+    }
+    .ok_or_else(|| parse_codes::invalid_syntax("Expected class name after 'new'", span))?
+    .as_str()
+    .to_string();
 
     // Remaining children are the arguments
     let mut args = Vec::new();

@@ -6,9 +6,7 @@ use std::fs;
 #[test]
 fn verify_intmodcmpi_in_bytecode() {
     let fixture_dir = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
-    for (name, file) in [
-        ("collatz", "collatz_conjecture.hhs"),
-    ] {
+    for (name, file) in [("collatz", "collatz_conjecture.hhs")] {
         let path = format!("{}/{}", fixture_dir, file);
         let src = fs::read_to_string(&path).unwrap();
         let ast = parse(&src).unwrap();

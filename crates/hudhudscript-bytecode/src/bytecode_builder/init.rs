@@ -21,6 +21,7 @@ impl Bytecode {
             int_index: rustc_hash::FxHashMap::default(),
             symbol_list_index: rustc_hash::FxHashMap::default(),
             loop_payloads: Vec::new(),
+            char_dispatch_tables: Vec::new(),
             enum_decl_payloads: Vec::new(),
             class_decl_payloads: Vec::new(),
             trait_check_payloads: Vec::new(),
@@ -49,6 +50,18 @@ impl Bytecode {
     pub fn get_function(&self, name: &str) -> Option<Arc<FunctionChunk>> {
         let idx = *self.function_names.borrow().get(name)?;
         self.functions.borrow().get(idx).cloned()
+    }
+
+    /// O(1) lookup by function index (v4.3 hot path).
+    #[inline]
+    pub fn get_function_by_index(&self, idx: u32) -> Option<Arc<FunctionChunk>> {
+        self.functions.borrow().get(idx as usize).cloned()
+    }
+
+    /// Get the function index for a name (v4.3: used once at ClassDecl).
+    #[inline]
+    pub fn get_function_idx(&self, name: &str) -> Option<u32> {
+        self.function_names.borrow().get(name).map(|&i| i as u32)
     }
 
     /// O(1) membership check.

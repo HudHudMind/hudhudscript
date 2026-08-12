@@ -64,8 +64,20 @@ pub fn dispatch(method: ScriptMethodId, args: &[Value16]) -> HudHudResult<Value1
 
 /// Main entry point (kept for backward compat).
 
+/// Guard + constructor for every `sudo` invocation in this module.
+///
+/// Privilege escalation is opt-in and off by default (see
+/// `hudhudscript_bytecode::privileged_ops`): `dispatch` takes no policy context,
+/// and unit tests call it directly, so without this guard `cargo test` really ran
+/// `sudo` against the developer's machine.
+#[inline]
+fn sudo_cmd(op: &str) -> HudHudResult<Command> {
+    hudhudscript_bytecode::privileged_ops::ensure_privileged_ops_allowed(op)?;
+    Ok(Command::new("sudo"))
+}
+
 pub fn fw_status(_args: &[Value16]) -> HudHudResult<Value16> {
-    let output = Command::new("sudo")
+    let output = sudo_cmd("firewall")?
         .args(["ufw", "status", "verbose"])
         .output()
         .map_err(|e| runtime_error(format!("firewall.status: {e}")))?;
@@ -123,7 +135,7 @@ pub fn fw_status(_args: &[Value16]) -> HudHudResult<Value16> {
 }
 
 pub fn fw_rules(_args: &[Value16]) -> HudHudResult<Value16> {
-    let output = Command::new("sudo")
+    let output = sudo_cmd("firewall")?
         .args(["ufw", "status", "numbered"])
         .output()
         .map_err(|e| runtime_error(format!("firewall.rules: {e}")))?;
@@ -197,7 +209,7 @@ pub fn fw_rules(_args: &[Value16]) -> HudHudResult<Value16> {
 pub fn fw_allow(args: &[Value16]) -> HudHudResult<Value16> {
     let spec = port_spec(args, "firewall.allow")?;
     run_cmd_result(
-        Command::new("sudo").args(["ufw", "allow", &spec]),
+        sudo_cmd("firewall")?.args(["ufw", "allow", &spec]),
         "firewall.allow",
     )
 }
@@ -205,7 +217,7 @@ pub fn fw_allow(args: &[Value16]) -> HudHudResult<Value16> {
 pub fn fw_deny(args: &[Value16]) -> HudHudResult<Value16> {
     let spec = port_spec(args, "firewall.deny")?;
     run_cmd_result(
-        Command::new("sudo").args(["ufw", "deny", &spec]),
+        sudo_cmd("firewall")?.args(["ufw", "deny", &spec]),
         "firewall.deny",
     )
 }
@@ -213,28 +225,28 @@ pub fn fw_deny(args: &[Value16]) -> HudHudResult<Value16> {
 pub fn fw_delete_rule(args: &[Value16]) -> HudHudResult<Value16> {
     let number = require_number(args, 0, "firewall.delete_rule")? as u64;
     run_cmd_result(
-        Command::new("sudo").args(["ufw", "--force", "delete", &number.to_string()]),
+        sudo_cmd("firewall")?.args(["ufw", "--force", "delete", &number.to_string()]),
         "firewall.delete_rule",
     )
 }
 
 pub fn fw_enable(_args: &[Value16]) -> HudHudResult<Value16> {
     run_cmd_result(
-        Command::new("sudo").args(["ufw", "--force", "enable"]),
+        sudo_cmd("firewall")?.args(["ufw", "--force", "enable"]),
         "firewall.enable",
     )
 }
 
 pub fn fw_disable(_args: &[Value16]) -> HudHudResult<Value16> {
     run_cmd_result(
-        Command::new("sudo").args(["ufw", "disable"]),
+        sudo_cmd("firewall")?.args(["ufw", "disable"]),
         "firewall.disable",
     )
 }
 
 pub fn fw_reset(_args: &[Value16]) -> HudHudResult<Value16> {
     run_cmd_result(
-        Command::new("sudo").args(["ufw", "reset", "--force"]),
+        sudo_cmd("firewall")?.args(["ufw", "reset", "--force"]),
         "firewall.reset",
     )
 }

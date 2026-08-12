@@ -38,56 +38,68 @@ impl VM {
                     )));
                 }
             };
-            let n = arg_count as usize;
-            let first = first_arg as usize;
-            let mut arr = [Value16::null(); 8];
-            let mut saved_scratch = Vec::new();
-            let args: &[Value16] = if n > 8 {
-                self.args_scratch.clear();
-                self.args_scratch
-                    .extend((0..n).map(|i| self.registers[first + i]));
-                saved_scratch = std::mem::take(&mut self.args_scratch);
-                &saved_scratch
+            if !chunk.captures.is_empty() {
+                // Captured functions need the runtime FunctionData value so the
+                // closure's captured cell map is passed into the frame.
             } else {
-                for i in 0..n {
-                    arr[i] = self.registers[first + i];
+                let n = arg_count as usize;
+                let first = first_arg as usize;
+                let mut arr = [Value16::null(); 8];
+                let mut saved_scratch = Vec::new();
+                let args: &[Value16] = if n > 8 {
+                    self.args_scratch.clear();
+                    self.args_scratch
+                        .extend((0..n).map(|i| self.registers[first + i]));
+                    saved_scratch = std::mem::take(&mut self.args_scratch);
+                    &saved_scratch
+                } else {
+                    for i in 0..n {
+                        arr[i] = self.registers[first + i];
+                    }
+                    &arr[..n]
+                };
+                if chunk.is_async {
+                    let name = bytecode.resolve_symbol(name_sym.0);
+                    let promise = self.spawn_async_chunk(
+                        Arc::clone(&chunk),
+                        &chunk.params,
+                        args,
+                        bytecode,
+                        &name,
+                        None,
+                    );
+                    self.registers[255] = promise;
+                } else if chunk.is_plain_function {
+                    // P1: fast path for plain recursive functions
+                    self.fast_call_push_frame(
+                        &chunk,
+                        &chunk.params,
+                        args,
+                        name_sym,
+                        first_arg,
+                        dst,
+                    )?;
+                } else {
+                    self.exec_call_push_frame(
+                        &chunk,
+                        &chunk.params,
+                        args,
+                        bytecode,
+                        name_sym,
+                        None,
+                        first_arg,
+                        dst,
+                    )?;
                 }
-                &arr[..n]
-            };
-            if chunk.is_async {
-                let name = bytecode.resolve_symbol(name_sym.0);
-                let promise = self.spawn_async_chunk(
-                    Arc::clone(&chunk),
-                    &chunk.params,
-                    args,
-                    bytecode,
-                    &name,
-                    None,
-                );
-                self.registers[255] = promise;
-            } else if chunk.is_plain_function {
-                // P1: fast path for plain recursive functions
-                self.fast_call_push_frame(&chunk, &chunk.params, args, name_sym, first_arg, dst)?;
-            } else {
-                self.exec_call_push_frame(
-                    &chunk,
-                    &chunk.params,
-                    args,
-                    bytecode,
-                    name_sym,
-                    None,
-                    first_arg,
-                    dst,
-                )?;
+                return Ok(());
             }
-            return Ok(());
         }
 
         // FAST PATH: call-cache hit — raw pointer, no atomic ops.
         let cached = self
             .call_cache
             .get(sym_id)
-            .and_then(|slot| slot.as_ref().map(|(ptr, params_ptr)| (*ptr, *params_ptr)));
+            .and_then(|slot| slot.as_ref().map(|(fd, cp, pp)| (*fd, *cp, *pp)));
 
         let n = arg_count as usize;
         let first = first_arg as usize;
@@ -109,28 +121,51 @@ impl VM {
         };
 
         // T2-7: Inline exec_call_inner logic — eliminates one Rust stack frame per call.
-        let result = if let Some((chunk_ptr, params_ptr)) = cached {
-            let chunk = unsafe { &*chunk_ptr };
-            let params = unsafe { &*params_ptr };
-            if chunk.is_async {
-                let arc_chunk = ManuallyDrop::new(unsafe { Arc::from_raw(chunk_ptr) });
-                let name = bytecode.resolve_symbol(name_sym.0);
-                let promise = self.spawn_async_chunk(
-                    Arc::clone(&*arc_chunk),
-                    params,
-                    args,
-                    bytecode,
-                    &name,
-                    None,
-                );
-                self.registers[255] = promise;
-            } else {
-                self.exec_call_push_frame(
-                    chunk, params, args, bytecode, name_sym, None, first_arg, dst,
-                )?;
+        let result = 'cache: {
+            // Try call-cache hit with validation guard.
+            if let Some((cached_fd, chunk_ptr, params_ptr)) = cached {
+                // P3: raw-pointer guard — skip guard if fd_ptr is null
+                // (e.g. method-call cache entries); otherwise compare pointers.
+                let guard_ok = if cached_fd.is_null() {
+                    true
+                } else {
+                    let func_val = self.get_var_cloned_by_sym(sym_id as u32);
+                    func_val
+                        .and_then(|v| v.as_function_data_ptr())
+                        .map(|fd_ptr| fd_ptr == cached_fd)
+                        .unwrap_or(false)
+                };
+                if guard_ok {
+                    #[cfg(feature = "telemetry")]
+                    { self.telemetry.call_cache_hit += 1; }
+                    let chunk = unsafe { &*chunk_ptr };
+                    let params = unsafe { &*params_ptr };
+                    if chunk.is_async {
+                        let arc_chunk = ManuallyDrop::new(unsafe { Arc::from_raw(chunk_ptr) });
+                        let name = bytecode.resolve_symbol(name_sym.0);
+                        let promise = self.spawn_async_chunk(
+                            Arc::clone(&*arc_chunk),
+                            params,
+                            args,
+                            bytecode,
+                            &name,
+                            None,
+                        );
+                        self.registers[255] = promise;
+                    } else {
+                        self.exec_call_push_frame(
+                            chunk, params, args, bytecode, name_sym, None, first_arg, dst,
+                        )?;
+                    }
+                    break 'cache Ok(());
+                } else {
+                    // Guard failed — invalidate cache entry, fall through.
+                    self.call_cache[sym_id] = None;
+                }
             }
-            Ok(())
-        } else {
+            // Slow path (fresh lookup or cache-invalidated)
+            #[cfg(feature = "telemetry")]
+            { self.telemetry.call_cache_miss += 1; }
             let name = bytecode.resolve_symbol(name_sym.0);
             if self.is_builtin(&name) {
                 self.call_builtin(&name, arg_count, first_arg, bytecode)?;
@@ -143,16 +178,15 @@ impl VM {
                         captures,
                         ..
                     } = func;
-                    if let Some(chunk) = bytecode
-                        .get_function(chunk_name.as_str())
-                    {
+                    if let Some(chunk) = bytecode.get_function(chunk_name.as_str()) {
                         if captures.is_empty() {
                             if self.call_cache.len() <= sym_id {
                                 self.call_cache.resize(sym_id + 1, None);
                             }
                             let params_box = Box::new(params.clone());
+                            let fd_ptr = func_val.as_function_data_ptr();
                             self.call_cache[sym_id] =
-                                Some((Arc::as_ptr(&chunk), Box::into_raw(params_box)));
+                                Some((fd_ptr.unwrap_or(std::ptr::null()), Arc::as_ptr(&chunk), Box::into_raw(params_box) as *const Vec<String>));
                         }
                         if chunk.is_async {
                             let promise = self.spawn_async_chunk(
@@ -363,11 +397,8 @@ impl VM {
         let current_class = self
             .class_context_stack
             .last()
-            .cloned()
-            .or_else(|| {
-                self.get_var("__current_class")
-                    .and_then(|v| v.as_string().map(|s| s.to_string()))
-            })
+            .map(|s| hudhudscript_bytecode::interner::resolve(
+                hudhudscript_bytecode::interner::SymbolId(s.0)))
             .ok_or_else(|| {
                 compile_codes::runtime_error("super used outside class context".to_string())
             })?;
@@ -383,10 +414,9 @@ impl VM {
             })?;
 
         let chunk_name = format!("{}::{}", parent_name, method_name);
-        if let Some(chunk) = bytecode
-            .get_function(chunk_name.as_str())
-        {
-            self.class_context_stack.push(parent_name.clone());
+        if let Some(chunk) = bytecode.get_function(chunk_name.as_str()) {
+            self.class_context_stack.push(hudhudscript_bytecode::SymId(
+                hudhudscript_bytecode::interner::intern(&parent_name).0));
             let func_sym = hudhudscript_bytecode::interner::intern(&chunk_name);
             self.exec_call_push_frame(
                 &chunk,

@@ -121,6 +121,8 @@ impl Compiler {
             Expr::Literal(Literal::String(_), _) => ExprType::Str,
             Expr::Literal(Literal::Number(_, true), _) => ExprType::Number,
             Expr::Literal(Literal::Number(_, false), _) => ExprType::Int,
+            Expr::Literal(Literal::Int(_), _) => ExprType::Int,
+            Expr::Literal(Literal::BigInt(_), _) => ExprType::Int,
             _ => ExprType::Unknown,
         }
     }

@@ -1,5 +1,12 @@
 use super::*;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum BreakTarget {
+    Loop,
+    Switch { jumps: Vec<usize> },
+}
+
+
 pub trait CompileTarget {
     // ── Instruction emission ─────────────────────────────────────────────
     /// Append an instruction to the output stream.
@@ -9,6 +16,14 @@ pub trait CompileTarget {
     /// Statement-boundary position info is then overwritten by
     /// [`ct_mark_stmt_pos`].
     fn ct_emit(&mut self, instr: Instruction);
+
+    /// G5.2: emit a Move instruction, skipping self-moves (dst == src).
+    /// All call sites that emit Move should use this instead of raw ct_emit.
+    fn emit_move(&mut self, dst: u8, src: u8) {
+        if dst != src {
+            self.ct_emit(Instruction::Move { dst, src });
+        }
+    }
     /// Add a constant to the pool and return its `u32` index (CROSS-2b).
     fn ct_emit_const(&mut self, val: Value16) -> u32;
     /// Add a numeric constant to the packed pool and return its `u32` index.
@@ -18,6 +33,9 @@ pub trait CompileTarget {
     /// its `u32` index (for `Instruction::LoadIntConst`).  Deduplicates
     /// exact `i64` matches.
     fn ct_emit_int_const(&mut self, val: i64) -> u32;
+    /// B8: global int/numeric constant snapshots (for inliner remap).
+    fn ct_int_constants(&self) -> &[i64] { &[] }
+    fn ct_numeric_constants(&self) -> &[u64] { &[] }
     /// Intern a symbol name and return its index (Issue #1032 P1).
     /// Used for variable/property names in LoadVar, StoreVar, DeclVar, etc.
     fn ct_intern(&mut self, name: &str) -> u32;
@@ -66,6 +84,14 @@ pub trait CompileTarget {
     /// Back-patch an instruction at the given position.
     fn ct_patch(&mut self, ip: usize, instr: Instruction);
 
+    /// Push a break target context (Loop or Switch).
+    fn ct_push_break_target(&mut self, target: BreakTarget);
+    /// Pop a break target context.
+    fn ct_pop_break_target(&mut self) -> BreakTarget;
+    /// Emit a break instruction or a jump depending on the nearest target.
+    fn ct_emit_break(&mut self);
+
+
     /// Register a loop header payload (CROSS-2b) and return the `u32`
     /// index for `Instruction::LoopBegin(idx)`.  The compiler emits
     /// `LoopBegin` with the returned index; `ct_patch_loop_payload_end`
@@ -76,6 +102,15 @@ pub trait CompileTarget {
     /// Used by While/C-style loops that know the exit IP only after
     /// the body has been emitted.
     fn ct_patch_loop_payload_end(&mut self, idx: u32, end: u32);
+
+    /// C3: Back-fill the `start` field of a loop payload. Used by ForCStyle
+    /// loops where `continue` must jump past the body to the update clause.
+    fn ct_patch_loop_payload_start(&mut self, idx: u32, start: u32);
+
+    /// C6: Register a 256-entry char-dispatch jump table and return its index.
+    fn ct_add_char_dispatch_table(&mut self, table: Vec<i16>) -> u16;
+    /// C6: Replace a previously registered char-dispatch jump table.
+    fn ct_replace_char_dispatch_table(&mut self, idx: u16, table: Vec<i16>);
 
     // ── CROSS-2a: externalised declaration-payload registration.
     // Instead of `Instruction::ClassDecl(Box<...>)` etc., the compiler
@@ -108,6 +143,7 @@ pub trait CompileTarget {
         &mut self,
         payload: hudhudscript_bytecode::LoadModulePayload,
     ) -> u32;
+    fn ct_module_base_dir(&self) -> Option<&std::path::Path>;
     /// Register a `DefineFunction` payload and return its pool index.
     /// Currently unemitted by the compiler (the explicit `DefineFunction`
     /// VM instruction is reserved for a later closure-hoisting pass);
@@ -306,4 +342,36 @@ pub trait CompileTarget {
     fn ct_set_match_reg(&mut self, _reg: u8) {}
     /// Patch only the offset of a JumpIfFalse at `ip`, preserving src.
     fn ct_patch_jump_offset(&mut self, ip: usize, offset: i16);
+
+    // ── G12: f-loop (unboxed float) bağlamı ─────────────────────────────
+    /// Aday tablosunu, hoist edilmiş sabit slotlarını ve geçici-slot
+    /// tabanını yığına iter (while girişi).
+    fn ct_floop_push(
+        &mut self,
+        _slots: Vec<(String, u8)>,
+        _consts: Vec<(u64, u8)>,
+        _temp_base: u8,
+    ) {
+    }
+    /// En üstteki f-loop bağlamını çıkarır (while çıkışı).
+    fn ct_floop_pop(&mut self) {}
+    /// `name` etkin bağlamda adaysa f-slot'unu döner.
+    fn ct_floop_slot(&self, _name: &str) -> Option<u8> {
+        None
+    }
+    /// Hoist edilmiş sabitin (f64 bit deseni) f-slot'unu döner.
+    fn ct_floop_const_slot(&self, _bits: u64) -> Option<u8> {
+        None
+    }
+    /// Geçici f-slot ayır (64 sınırı aşılırsa None — analiz bunu önler).
+    fn ct_floop_temp(&mut self) -> Option<u8> {
+        None
+    }
+    /// En son ayrılan geçici slot'u geri ver.
+    fn ct_floop_temp_pop(&mut self) {}
+    /// G12 kaçış kontrolü: isim bir kapama tarafından yakalanmış mı
+    /// (derlenmiş kapamalar dahil — Local.is_captured + nested_captured).
+    fn ct_floop_captured(&self, _name: &str) -> bool {
+        false
+    }
 }

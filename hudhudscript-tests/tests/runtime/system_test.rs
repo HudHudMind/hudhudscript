@@ -64,6 +64,12 @@ fn test_exec_run() {
 }
 
 #[test]
+#[should_panic(expected = "program 'definitely_missing_hudhud_binary' not found")]
+fn test_exec_run_missing_program() {
+    run_ok(r#"exec.run("definitely_missing_hudhud_binary");"#);
+}
+
+#[test]
 fn test_exec_lines() {
     let src = r#"var result = exec.lines("echo -e 'line1\nline2'");"#;
     let val = run(src);
@@ -77,7 +83,7 @@ fn test_exec_lines() {
 // ── Timer/Scheduler (#618) ─────────────────────────────────────────────
 
 #[test]
-    #[ignore]
+#[ignore]
 fn test_set_interval_returns_descriptor() {
     let src = r#"var result = setInterval(null, 100);"#;
     let val = run(src);
@@ -193,7 +199,9 @@ fn test_env_set_get() {
     policy.env.allow.insert("_HUDHUD_B9_TEST_".to_string());
     interp.vm.set_host_access_policy(policy);
     interp.eval_program(&ast).expect("execution failed");
-    let val = interp.get_variable("result").expect("variable 'result' not found");
+    let val = interp
+        .get_variable("result")
+        .expect("variable 'result' not found");
     assert_eq!(
         val,
         hudhudscript_bytecode::Value16::string("batch9value".to_string())

@@ -3,8 +3,9 @@
 /// These tests guard the fixes made to `crates/hudhudscript-vm/src/vm.rs`
 /// and must never be modified without user approval.
 use hudhudscript_bytecode::Value16;
-use hudhudscript_compiler::{Compiler, VM};
+use hudhudscript_compiler::Compiler;
 use hudhudscript_parser::parse;
+use hudhudscript_vm::VM;
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 

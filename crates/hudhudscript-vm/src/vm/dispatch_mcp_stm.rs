@@ -80,6 +80,72 @@ impl crate::vm::VM {
                 }
                 Ok(true)
             }
+            "remember" => {
+                // RAG store as a value-returning call: remember(content[, store])
+                // → the new entry's id. Delegates to `VM::rag_remember`, the
+                // same implementation `Instruction::Remember` uses (Kural 7).
+                if arg_count == 0 || arg_count > 2 {
+                    return Err(compile_codes::runtime_error(format!(
+                        "remember() expects 1 or 2 arguments (content[, store]), got {}",
+                        arg_count
+                    )));
+                }
+                let content = self.registers[first_arg as usize];
+                let store_key = if arg_count == 2 {
+                    let store = self.registers[first_arg as usize + 1];
+                    self.value_to_string(&store)
+                } else {
+                    "default".to_string()
+                };
+                let entry_id = self.rag_remember(content, &store_key)?;
+                self.registers[255] = Value16::string(entry_id);
+                Ok(true)
+            }
+            "forget" => {
+                // RAG delete as a value-returning call: forget(target[, store])
+                // → how many entries were removed. An empty target clears the
+                // store. Delegates to `VM::rag_forget`, the same implementation
+                // `Instruction::Forget` uses (Kural 7).
+                if arg_count == 0 || arg_count > 2 {
+                    return Err(compile_codes::runtime_error(format!(
+                        "forget() expects 1 or 2 arguments (target[, store]), got {}",
+                        arg_count
+                    )));
+                }
+                let target = self.registers[first_arg as usize];
+                let target_str = self.value_to_string(&target);
+                let store_key = if arg_count == 2 {
+                    let store = self.registers[first_arg as usize + 1];
+                    self.value_to_string(&store)
+                } else {
+                    "default".to_string()
+                };
+                let removed = self.rag_forget(&target_str, &store_key);
+                self.registers[255] = Value16::number(removed as f64);
+                Ok(true)
+            }
+            "recall" => {
+                // RAG recall as a value-returning call: recall(query[, store]).
+                // Delegates to `VM::rag_recall`, the same implementation
+                // `Instruction::Recall` uses (Kural 7 — one code path).
+                if arg_count == 0 || arg_count > 2 {
+                    return Err(compile_codes::runtime_error(format!(
+                        "recall() expects 1 or 2 arguments (query[, store]), got {}",
+                        arg_count
+                    )));
+                }
+                let query = self.registers[first_arg as usize];
+                let query_str = self.value_to_string(&query);
+                let store_key = if arg_count == 2 {
+                    let store = self.registers[first_arg as usize + 1];
+                    self.value_to_string(&store)
+                } else {
+                    "default".to_string()
+                };
+                let out = self.rag_recall(&query_str, &store_key);
+                self.registers[255] = out;
+                Ok(true)
+            }
             "mcp_call" => {
                 // Shared dispatch path (Kural 7). Argument order on the stack
                 // after the variadic push is: server, tool, [arguments].

@@ -33,14 +33,10 @@ pub fn browser_search(args: &[Value16]) -> HudHudResult<Value16> {
         return Ok(Value16::string(search_url));
     }
 
-    let status = Command::new("xdg-open").arg(&search_url).status();
-    match status {
-        Ok(s) if s.success() => Ok(Value16::string(search_url)),
+    let launcher = super::launcher::get_launcher();
+    match launcher.open(&search_url) {
         Ok(_) => Ok(Value16::string(search_url)),
-        Err(e) => Err(runtime_error(format!(
-            "browser.search: failed to launch xdg-open: {}",
-            e
-        ))),
+        Err(e) => Err(runtime_error(format!("browser.search: {}", e.0))),
     }
 }
 

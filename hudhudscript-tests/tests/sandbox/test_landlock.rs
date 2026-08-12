@@ -52,7 +52,7 @@ fn test_check_exec_allowed() {
 }
 
 #[test]
-    #[ignore = "process-global privileged syscall; unsafe in parallel test. Run: --ignored --test-threads=1"]
+#[ignore = "process-global privileged syscall; unsafe in parallel test. Run: --ignored --test-threads=1"]
 fn test_apply_succeeds() {
     let rs = LandlockRuleset::new();
     assert!(rs.apply().is_ok());

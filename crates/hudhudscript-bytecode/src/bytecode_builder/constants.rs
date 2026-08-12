@@ -124,6 +124,14 @@ impl Bytecode {
         self.source_positions.push(None);
     }
 
+    /// G5.2: push a Move instruction, skipping self-moves (dst == src).
+    #[inline]
+    pub fn push_move(&mut self, dst: u8, src: u8) {
+        if dst != src {
+            self.push_instr(Instruction::Move { dst, src });
+        }
+    }
+
     /// Pad `source_positions` with trailing `None`s up to the current
     /// length of `instructions`. Called by the compiler after all
     /// instructions have been emitted but before bytecode is returned,
@@ -361,13 +369,8 @@ impl Bytecode {
                         )));
                     }
                 }
-                Instruction::Spawn { payload_idx, .. } => {
-                    if (*payload_idx as usize) >= bc.call_payloads.len() {
-                        return Err(compile_codes::runtime_error(format!(
-                            "Invalid call_payload index {} at instruction {} in {}; pool size is {}",
-                            payload_idx, ip, label, bc.call_payloads.len()
-                        )));
-                    }
+                Instruction::Spawn { .. } => {
+                    // B3: name_sym is validated at runtime via resolve_symbol
                 }
                 Instruction::TailCall { .. }
                 | Instruction::MethodCall { .. }

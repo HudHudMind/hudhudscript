@@ -113,7 +113,15 @@ async fn test_this_call_with_mock_provider() {
     interpreter.set_provider_registry(registry);
 
     let result = interpreter.execute(&statements);
-    if result.is_err() { let msg = result.err().unwrap().to_string(); assert!(msg.contains("type") || msg.contains("provider"), "Unexpected: {}", msg); return; }
+    if result.is_err() {
+        let msg = result.err().unwrap().to_string();
+        assert!(
+            msg.contains("type") || msg.contains("provider"),
+            "Unexpected: {}",
+            msg
+        );
+        return;
+    }
 
     let result_var = interpreter.get_variable("result").unwrap();
     if let Some(obj) = result_var.as_object() {
@@ -161,7 +169,15 @@ async fn test_this_call_with_options() {
     interpreter.set_provider_registry(registry);
 
     let result = interpreter.execute(&statements);
-    if result.is_err() { let msg = result.err().unwrap().to_string(); assert!(msg.contains("type") || msg.contains("provider"), "Unexpected: {}", msg); return; }
+    if result.is_err() {
+        let msg = result.err().unwrap().to_string();
+        assert!(
+            msg.contains("type") || msg.contains("provider"),
+            "Unexpected: {}",
+            msg
+        );
+        return;
+    }
 
     let result_var = interpreter.get_variable("result").unwrap();
     if let Some(obj) = result_var.as_object() {
@@ -269,7 +285,15 @@ async fn test_this_call_in_function() {
     interpreter.set_provider_registry(registry);
 
     let result = interpreter.execute(&statements);
-    if result.is_err() { let msg = result.err().unwrap().to_string(); assert!(msg.contains("type") || msg.contains("provider"), "Unexpected: {}", msg); return; }
+    if result.is_err() {
+        let msg = result.err().unwrap().to_string();
+        assert!(
+            msg.contains("type") || msg.contains("provider"),
+            "Unexpected: {}",
+            msg
+        );
+        return;
+    }
 
     let output = interpreter.get_variable("output").unwrap();
     if let Some(obj) = output.as_object() {
@@ -309,7 +333,15 @@ async fn test_this_call_with_mnemonics() {
     interpreter.set_provider_registry(registry);
 
     let result = interpreter.execute(&statements);
-    if result.is_err() { let msg = result.err().unwrap().to_string(); assert!(msg.contains("type") || msg.contains("provider"), "Unexpected: {}", msg); return; }
+    if result.is_err() {
+        let msg = result.err().unwrap().to_string();
+        assert!(
+            msg.contains("type") || msg.contains("provider"),
+            "Unexpected: {}",
+            msg
+        );
+        return;
+    }
 
     let result_var = interpreter.get_variable("result").unwrap();
     if let Some(obj) = result_var.as_object() {
@@ -318,4 +350,129 @@ async fn test_this_call_with_mnemonics() {
     } else {
         panic!("Expected object response")
     }
+}
+
+#[test]
+fn test_agent_action_method_call() {
+    let source = r#"
+        agent MetinYazari {
+            provider: "mock-provider"
+            model: "mock-model"
+
+            action slogan_yaz(urun_adi) {
+                return urun_adi + " icin slogan";
+            }
+        }
+
+        let result = MetinYazari.slogan_yaz("Robot yapimi");
+    "#;
+
+    let statements = parse(source).expect("Failed to parse");
+    let mut interpreter = Interpreter::new();
+
+    // We don't even need a real provider for this test since it doesn't call it
+    let registry = Arc::new(ProviderRegistry::new());
+    interpreter.set_provider_registry(registry);
+
+    let result = interpreter.execute(&statements);
+    assert!(result.is_ok(), "Execution failed: {:?}", result.err());
+
+    let result_var = interpreter.get_variable("result").unwrap();
+    assert_eq!(result_var.as_string().unwrap(), "Robot yapimi icin slogan");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_agent_action_this_call() {
+    let source = r#"
+        provider MockAI {
+            type: "mock"
+        }
+        agent MetinYazari {
+            provider: MockAI
+            model: "mock-model"
+
+            action slogan_yaz(urun_adi) {
+                return this.call({ prompt: "Slogan: " + urun_adi });
+            }
+        }
+
+        let result = MetinYazari.slogan_yaz("Robot yapimi");
+    "#;
+
+    let statements = parse(source).expect("Failed to parse");
+    let mut interpreter = Interpreter::new();
+
+    let registry = Arc::new(ProviderRegistry::new());
+    let mock_provider = Arc::new(MockProvider::new(
+        "mock".to_string(),
+        "mock-model".to_string(),
+    ));
+    registry.register("mock".to_string(), mock_provider).await;
+    interpreter.set_provider_registry(registry);
+
+    let result = interpreter.execute(&statements);
+    assert!(result.is_ok(), "Execution failed: {:?}", result.err());
+
+    let result_var = interpreter.get_variable("result").unwrap();
+    if let Some(obj) = result_var.as_object() {
+        let content = obj.get("content").unwrap().as_str().unwrap();
+        assert!(
+            content.contains("Slogan: Robot yapimi"),
+            "Unexpected content: {}",
+            content
+        );
+    } else {
+        panic!("Expected object response");
+    }
+}
+
+#[test]
+fn test_agent_action_wrong_args() {
+    let source = r#"
+        agent A {
+            action one(x) { return x; }
+        }
+
+        let result = A.one();
+    "#;
+
+    let statements = parse(source).expect("Failed to parse");
+    let mut interpreter = Interpreter::new();
+
+    let result = interpreter.execute(&statements);
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert!(
+        err.to_string()
+            .contains("Action A.one expects 1 arguments, got 0"),
+        "Got: {}",
+        err.to_string()
+    );
+}
+
+#[test]
+fn test_agent_export_and_call() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let module_path = temp_dir.path().join("agents.hudhud");
+
+    std::fs::write(
+        &module_path,
+        "agent Helper { action help() { return \"Helping!\"; } }\nexport Helper",
+    )
+    .unwrap();
+
+    let script = format!(
+        "use \"{}\" as agents\nlet res = agents.Helper.help()",
+        module_path.to_str().unwrap().replace("\\", "\\\\")
+    );
+
+    let ast = parse(&script).expect("parse failed");
+    let mut compiler = hudhudscript_compiler::Compiler::new();
+    let bytecode = compiler.compile(&ast).expect("compile failed");
+
+    let mut vm = hudhudscript_vm::VM::new();
+    vm.execute(&bytecode).expect("execute failed");
+
+    let res = vm.get_variable("res").unwrap();
+    assert_eq!(res.as_string().unwrap(), "Helping!");
 }

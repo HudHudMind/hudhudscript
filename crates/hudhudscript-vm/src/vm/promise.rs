@@ -277,12 +277,13 @@ impl crate::vm::VM {
             task_vm.classes = classes_clone;
             task_vm.declarations = declarations_clone;
             // run attached chunk, capture result
+            let func_sym = hudhudscript_bytecode::SymId(hudhudscript_bytecode::interner::intern(&name_clone).0);
             let raw_result = task_vm.call_chunk_with_captures(
                 &chunk_arc,
                 &params_clone,
                 &args_clone,
                 &bytecode_clone,
-                &name_clone,
+                func_sym,
                 &captures_clone,
             );
             let detached = match raw_result {

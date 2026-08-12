@@ -3,6 +3,8 @@ impl Compiler {
     pub fn new() -> Self {
         Self {
             bytecode: Bytecode::new(),
+            global_int_constants: Vec::new(),
+            global_numeric_constants: Vec::new(),
             scope_depth: 0,
             in_top_level: true,
             top_level_names: HashSet::new(),
@@ -30,7 +32,14 @@ impl Compiler {
             step_registry: HashMap::new(),
             attach_step_queue: HashMap::new(),
             attach_loop_queue: HashMap::new(),
+            break_targets: Vec::new(),
+            floop_stack: Vec::new(),
+            module_base_dir: None,
         }
+    }
+
+    pub fn set_module_base_dir(&mut self, dir: std::path::PathBuf) {
+        self.module_base_dir = Some(dir);
     }
 
     /// Record a local variable declaration at the current scope depth.
@@ -38,8 +47,8 @@ impl Compiler {
     /// Skip special compound names (__index_assign:*) — these must use the
     /// slow path for array/object index-assignment handling.
     pub(super) fn declare_local(&mut self, name: &str, is_const: bool) -> CompileResult<()> {
-        if name.starts_with("__index_assign:") || name.starts_with("__") {
-            // Special VM-internal names: always slow path.
+        if name.starts_with("__index_assign:") {
+            // Special index-assignment names: always slow path.
             self.locals.push(Local {
                 name: name.to_string(),
                 depth: self.scope_depth,
@@ -50,6 +59,10 @@ impl Compiler {
                 known_type: crate::compiler::expr::ExprType::Unknown,
             });
         } else {
+            // G2.2b: don't re-declare duplicates — ct_local_reg would return wrong reg
+            if self.locals.iter().any(|l| l.name == name && l.reg.is_some()) {
+                return Ok(());
+            }
             let slot = self.local_slot_names.len() as u32;
             self.local_slot_names.push(name.to_string());
             let reg = self.next_local_reg;
@@ -95,6 +108,10 @@ impl Compiler {
     }
 
     pub fn compile(&mut self, statements: &[Stmt]) -> CompileResult<Bytecode> {
+        if let Err(errs) = crate::compiler::decl::loop_engine::validate_loop_semantics(statements) {
+            return Err(compile_codes::generic(errs.join("\n")));
+        }
+
         // ISSUE-2e-optimize: pre-scan AST to classify top-level names.
         self.precompute_shared_top_level(statements);
 
@@ -136,19 +153,37 @@ impl Compiler {
             .function_names.borrow().iter()
             .map(|(name, &idx)| (name.clone(), funcs_ref[idx].clone()))
             .collect();
+
+        // BUG4b: function loop payloads refer to function-local IPs and were
+        // already correctly set during per-function optimization. The main
+        // optimizer only rewrites main instructions, so adjusting function
+        // payloads by main instruction removals corrupts their IPs. Split
+        // out main-referenced payloads, optimize main, then merge back.
+        let mut isolation = crate::compiler::decl::function_optimizer::PayloadIsolation::new(
+            &bytecode.instructions,
+            std::mem::take(&mut lp),
+        );
+        isolation.rewrite_to_local(&mut bytecode.instructions);
+
         crate::optimizer::optimize_with_positions(
             &mut bytecode.instructions,
             &mut bytecode.constants,
             &mut bytecode.numeric_constants,
             &ic,
-            &mut lp,
+            isolation.local_mut(),
             &mut sip,
+            &mut bytecode.cmp_jump_payloads,
             &mut sp,
             crate::optimizer::OptimizationLevel::Basic,
             Some(&funcs_map),
             &cp,
+            // G5: locals bölgesi korunur (değişken evleri chunk-sonu canlı).
+            bytecode.main_local_count.min(255) as u8,
         );
         drop(funcs_ref);
+
+        // Restore function payloads and map main LoopBegin indices back to global.
+        lp = isolation.restore_global(&mut bytecode.instructions);
         bytecode.int_constants = ic;
         bytecode.source_positions = sp;
         bytecode.loop_payloads = lp;

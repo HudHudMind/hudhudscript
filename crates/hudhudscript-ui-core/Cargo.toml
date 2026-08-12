@@ -5,6 +5,7 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
+readme.workspace = true
 description = "HudHudScript UI Core — platform-agnostic widget tree, events, and protocol"
 
 [dependencies]

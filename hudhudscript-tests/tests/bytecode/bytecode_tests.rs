@@ -1,7 +1,6 @@
 use hudhudscript_bytecode::*;
 use parking_lot::{Mutex, RwLock};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 mod perf2_size_guard {
     use hudhudscript_bytecode::*;

@@ -11,7 +11,11 @@ impl VM {
     /// bytecode.resolve_symbol, which acquires the global interner RwLock
     /// on every invocation.  Cache miss → lock once; cache hit → no lock.
     #[inline]
-    pub(crate) fn resolve_symbol_cached(&mut self, sym_id: u32, bytecode: &hudhudscript_bytecode::Bytecode) -> String {
+    pub(crate) fn resolve_symbol_cached(
+        &mut self,
+        sym_id: u32,
+        bytecode: &hudhudscript_bytecode::Bytecode,
+    ) -> String {
         if let Some(cached) = self.sym_cache.get(&sym_id) {
             return cached.clone();
         }
@@ -20,39 +24,56 @@ impl VM {
         resolved
     }
 
-    pub(crate) fn push_scope_cells(&mut self) {
-        if let Some(mut map) = self.scope_cells_pool.pop() {
-            map.clear();
-            self.scope_cells.push(map);
+    pub(crate) fn push_scope_cells(&mut self, num_cells: usize, sym_ids: Arc<[u32]>) {
+        let cells: Box<[Option<Arc<parking_lot::RwLock<Value16>>>]> = if num_cells == 0 {
+            Box::new([])
         } else {
-            self.scope_cells.push(rustc_hash::FxHashMap::default());
-        }
+            // No Arc allocation per slot — None values are niche-optimized
+            let v: Vec<Option<Arc<parking_lot::RwLock<Value16>>>> = vec![None; num_cells];
+            v.into_boxed_slice()
+        };
+        self.scope_cells.push((cells, sym_ids));
     }
 
     pub(crate) fn pop_scope_cells(&mut self) {
-        if let Some(map) = self.scope_cells.pop() {
-            self.scope_cells_pool.push(map);
-        }
+        self.scope_cells.pop();
     }
 
     /// Install a shared upvalue cell for `name` into the top scope.
-    /// Future `get_var`/`set_var` of `name` route through this cell so the
-    /// variable stays live for closures that captured it.
-    ///
-    /// This mirrors the interpreter, where capturing a variable keeps the
-    /// `Arc<Environment>` alive; here we keep the single slot alive.
+    /// Uses sym_id→slot lookup (cold path, O(n) on sym_ids).
     pub(crate) fn install_cell(&mut self, name: String, cell: Arc<parking_lot::RwLock<Value16>>) {
-        if let Some(top) = self.scope_cells.last_mut() {
-            top.insert(name, cell);
+        let sym = hudhudscript_bytecode::interner::intern(&name).0;
+        if let Some((_, sym_ids)) = self.scope_cells.last() {
+            if let Some(slot) = sym_ids.iter().position(|&s| s == sym) {
+                self.scope_cells.last_mut().unwrap().0[slot] = Some(cell);
+            }
+        }
+    }
+
+    /// G5-slotvec: install cell at slot index (hot path, no hash).
+    pub(crate) fn install_cell_by_slot(&mut self, slot: u8, cell: Arc<parking_lot::RwLock<Value16>>) {
+        #[cfg(feature = "telemetry")]
+        { self.telemetry.scope_cell_lookup_count += 1; }
+        if let Some((cells, _)) = self.scope_cells.last_mut() {
+            cells[slot as usize] = Some(cell);
         }
     }
 
     /// Find an existing cell for `name` walking the scope chain top-down.
     /// Returns `None` if the variable is not currently promoted to a cell.
     pub(crate) fn find_cell(&self, name: &str) -> Option<Arc<parking_lot::RwLock<Value16>>> {
-        for cells in self.scope_cells.iter().rev() {
-            if let Some(cell) = cells.get(name) {
-                return Some(Arc::clone(cell));
+        let sym = hudhudscript_bytecode::interner::try_resolve_id(name)?;
+        self.find_cell_by_sym(sym)
+    }
+
+    /// G3A v2: find cell using pre-resolved SymId (legacy path — linear scan).
+    /// Hot path uses LoadClosureSlot{slot} which bypasses this entirely.
+    pub(crate) fn find_cell_by_sym(&self, sym: u32) -> Option<Arc<parking_lot::RwLock<Value16>>> {
+        for (cells, sym_ids) in self.scope_cells.iter().rev() {
+            if let Some(i) = sym_ids.iter().position(|&s| s == sym) {
+                if let Some(cell) = &cells[i] {
+                    return Some(Arc::clone(cell));
+                }
             }
         }
         None
@@ -65,12 +86,15 @@ impl VM {
         &self,
         name: &str,
     ) -> Option<Arc<parking_lot::RwLock<Value16>>> {
+        let sym = hudhudscript_bytecode::interner::try_resolve_id(name)?;
         if self.scope_cells.len() < 2 {
             return None;
         }
-        for cells in self.scope_cells[..self.scope_cells.len() - 1].iter().rev() {
-            if let Some(cell) = cells.get(name) {
-                return Some(Arc::clone(cell));
+        for (cells, sym_ids) in self.scope_cells[..self.scope_cells.len() - 1].iter().rev() {
+            if let Some(i) = sym_ids.iter().position(|&s| s == sym) {
+                if let Some(cell) = &cells[i] {
+                    return Some(Arc::clone(cell));
+                }
             }
         }
         None
@@ -119,33 +143,10 @@ impl VM {
                     if slot >= 0 {
                         let value = self.registers[slot as usize];
                         let cell = Arc::new(parking_lot::RwLock::new(value));
-                        if let Some(top) = self.scope_cells.last_mut() {
-                            top.insert(name.to_string(), Arc::clone(&cell));
-                        }
-                        return Some(cell);
-                    }
-                }
-            }
-        }
-        // Walk scope_cells from innermost to outermost.
-        for idx in (0..self.scope_cells.len()).rev() {
-            if let Some(cell) = self.scope_cells[idx].get(name) {
-                return Some(Arc::clone(cell));
-            }
-        }
-        // No cell found — if the name has a local slot, create a cell
-        // from the current live value and install it.
-        if let Some(local_syms_ptr) = self.call_stack_local_syms.last() {
-            let local_syms = unsafe { &**local_syms_ptr };
-            if !local_syms.is_empty() {
-                let sym_id = hudhudscript_bytecode::interner::intern(name).0;
-                if let Ok(idx) = local_syms.binary_search_by_key(&sym_id, |(s, _, _)| *s) {
-                    let slot = local_syms[idx].1 as i32;
-                    if slot >= 0 {
-                        let value = self.registers[slot as usize];
-                        let cell = Arc::new(parking_lot::RwLock::new(value));
-                        if let Some(top) = self.scope_cells.last_mut() {
-                            top.insert(name.to_string(), Arc::clone(&cell));
+                        if let Some((_, sym_ids)) = self.scope_cells.last() {
+                            if let Some(slot_idx) = sym_ids.iter().position(|&s| s == sym_id) {
+                                self.scope_cells.last_mut().unwrap().0[slot_idx] = Some(Arc::clone(&cell));
+                            }
                         }
                         return Some(cell);
                     }
@@ -193,6 +194,10 @@ impl VM {
     /// skip the RwLock entirely; shared reads skip the cell path (globals is
     /// canonical per 2e-E).
     pub(crate) fn get_var_cloned_by_sym(&self, sym_id: u32) -> Option<Value16> {
+        // T5.2: Inline `this` — avoids FxHashMap lookup.
+        if sym_id == self.this_sym {
+            return Some(self.cur_this);
+        }
         // Main-frame top-level hot path FIRST (no interner lock).
         if let Some(encoded) = self.main_slot_encoded(sym_id) {
             let (slot, is_shared) = crate::vm::VM::main_slot_decode(encoded);
@@ -210,18 +215,17 @@ impl VM {
                 if let Ok(idx) = local_syms.binary_search_by_key(&sym_id, |(s, _, _)| *s) {
                     let slot = local_syms[idx].1 as i32;
                     if slot >= 0 {
+                        if let Some(cell) = self.find_cell_by_sym(sym_id) {
+                            return Some(cell.read().clone());
+                        }
                         return Some(self.registers[slot as usize]);
                     }
                 }
             }
         }
-        // Cell path — COLD: needs interner.resolve (RwLock) to get the name.
-        // Only non-top-level symbols with upvalue cells reach this.
-        let name = hudhudscript_bytecode::interner::resolve(
-            hudhudscript_bytecode::interner::SymbolId(sym_id),
-        );
-        if !name.is_empty() {
-            if let Some(cell) = self.find_cell(&name) {
+        // Cell path — only if scope_cells is non-empty (closures with captures).
+        if !self.scope_cells.is_empty() {
+            if let Some(cell) = self.find_cell_by_sym(sym_id) {
                 return Some(cell.read().clone());
             }
         }
@@ -237,6 +241,10 @@ impl VM {
     /// Hot paths that need the effective cell value should call
     /// [`get_var_cloned`], which prefers any installed cell via [`find_cell`].
     pub(crate) fn get_var(&self, name: &str) -> Option<&Value16> {
+        // T5.2: inline this — avoid globals lookup.
+        if name == "this" {
+            return Some(&self.cur_this);
+        }
         // P0-A: post-execution path — when all call frames are torn down,
         // top-level main-only symbols still live in their absolute register
         // slot and shared top-level symbols live in globals (canonical home).
@@ -254,7 +262,9 @@ impl VM {
             }
             // Names outside main_local_slots may still be pure globals
             // (builtins injected by the host, etc.).
-            return self.globals.get(&hudhudscript_bytecode::interner::SymbolId(sym_id));
+            return self
+                .globals
+                .get(&hudhudscript_bytecode::interner::SymbolId(sym_id));
         }
         // Fast path: current frame's register-based locals.  This avoids the
         // clone + cell checks in get_var_cloned for the ack/collatz hot read
@@ -318,6 +328,10 @@ impl VM {
     /// The lookup is gated on non-empty local_syms so the main-script
     /// (global-scope) hot path avoids the interner Mutex lock.
     pub(crate) fn get_var_cloned(&self, name: &str) -> Option<Value16> {
+        // T5.2: inline this — avoid globals lookup.
+        if name == "this" {
+            return Some(self.cur_this);
+        }
         if let Some(cell) = self.find_cell(name) {
             return Some(cell.read().clone());
         }
@@ -335,7 +349,10 @@ impl VM {
                     return self.shared_globals_vec.get(idx).copied();
                 }
             }
-            return self.globals.get(&hudhudscript_bytecode::interner::SymbolId(sym_id)).cloned();
+            return self
+                .globals
+                .get(&hudhudscript_bytecode::interner::SymbolId(sym_id))
+                .cloned();
         }
         if let Some(local_syms_ptr) = self.call_stack_local_syms.last() {
             let local_syms = unsafe { &**local_syms_ptr };
@@ -376,6 +393,9 @@ impl VM {
                     {
                         let slot = local_syms[idx].1 as i32;
                         if slot >= 0 {
+                        if let Some(cell) = self.find_cell_by_sym(sym_id) {
+                            return Some(cell.read().clone());
+                        }
                             return Some(self.registers[slot as usize]);
                         }
                     }

@@ -32,12 +32,15 @@ use std::sync::OnceLock;
 impl VM {
     pub fn new() -> Self {
         let mut vm = Self {
+            #[cfg(feature = "telemetry")]
+            telemetry: Default::default(),
+            gc_heap: Box::new(hudhudscript_bytecode::gc::GcHeap::default()),
             last_return: Value16::null(),
             globals: rustc_hash::FxHashMap::with_capacity_and_hasher(100, Default::default()),
             shared_globals_vec: Vec::new(),
             scope_cells: Vec::new(),
-            scope_cells_pool: Vec::new(),
             locale: OutputLocale::Default,
+            object_equality: crate::vm::config_types::ObjectEquality::Identity,
             try_frames: Vec::new(),
             finally_frames: Vec::new(),
             pending_flow: None,
@@ -102,7 +105,9 @@ impl VM {
             max_mcp_servers: 128,
             max_builtin_iter: 10_000,
             default_stack_bytes: 8 * 1024 * 1024,
+            provider_timeout_secs: hudhudscript_runtime::provider::DEFAULT_PROVIDER_TIMEOUT_SECS,
             fuel_remaining: 0,
+            f_slots: [0.0; 64],
             sandbox: Some(Box::new(SandboxConfig {
                 allowed_paths: vec![],
                 allowed_hosts: vec![],
@@ -119,6 +124,7 @@ impl VM {
                     "reboot".into(),
                 ],
             })),
+            allow_insecure_http: false,
             host_access_policy: crate::vm::host_access::HostAccessPolicy::permissive(),
             tvars: hudhudscript_stm::TVarRegistry::new(),
             class_context_stack: Vec::new(),
@@ -166,6 +172,8 @@ impl VM {
             constant_root_chunks: rustc_hash::FxHashSet::default(),
             call_cache: Vec::with_capacity(64),
             ability_cache: [(None, 0), (None, 0)],
+            this_sym: hudhudscript_bytecode::interner::intern("this").0,
+            cur_this: Value16::object(hudhudscript_bytecode::ObjMap::default()),
         };
         vm.register_globals();
         vm

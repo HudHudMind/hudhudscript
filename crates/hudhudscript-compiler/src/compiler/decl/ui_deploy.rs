@@ -37,7 +37,7 @@ impl Compiler {
             ),
         );
         let const_idx = self.bytecode.add_constant(BcValue::object(obj));
-        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: const_idx as u16 }); self.bytecode.push_instr(Instruction::Move { dst: 255, src: tr }); }
+        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: const_idx as u16 }); self.bytecode.push_move(255, tr ); }
         self.emit_decl_store("ui", name, 255);
         Ok(())
     }

@@ -25,11 +25,11 @@ fn trace_values<'a>(
 }
 
 fn trace_scope_cells(
-    cells: &[FxHashMap<String, Arc<parking_lot::RwLock<Value16>>>],
+    cells: &[(Box<[Option<Arc<parking_lot::RwLock<Value16>>>]>, Arc<[u32]>)],
     gray: &mut Vec<*mut DynamicObject>,
 ) {
-    for scope in cells {
-        for cell in scope.values() {
+    for (slot_cells, _) in cells {
+        for cell in slot_cells.iter().flatten() {
             gc::trace_value(*cell.read(), gray);
         }
     }
@@ -84,12 +84,12 @@ fn trace_actor_mailbox(mailbox: &ActorMailbox<Value16>, gray: &mut Vec<*mut Dyna
 
 impl VM {
     pub(crate) fn trace_roots(&self, gray: &mut Vec<*mut DynamicObject>) {
-        trace_values(self.registers.arena().iter(), gray);
+        // G1.4.2: scan only active registers (0..base+frame_size), skip retired tail
+        trace_values(self.registers.active_range().iter(), gray);
         gc::trace_value(self.last_return, gray);
         trace_values(self.globals.values(), gray);
         trace_values(self.shared_globals_vec.iter(), gray);
         trace_scope_cells(&self.scope_cells, gray);
-        trace_scope_cells(&self.scope_cells_pool, gray);
         for (elements, _, _) in &self.iterators {
             trace_values(elements.iter(), gray);
         }

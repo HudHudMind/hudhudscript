@@ -3,6 +3,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+pub const DEFAULT_PROVIDER_TIMEOUT_SECS: u64 = 120;
+
 /// Provider type enumeration
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ProviderType {
@@ -55,6 +57,9 @@ pub struct ProviderConfig {
 
     /// Token budget configuration
     pub budget: Option<TokenBudget>,
+
+    /// Timeout in seconds
+    pub timeout_secs: Option<u64>,
 
     /// Extra provider-specific configuration
     pub extra: HashMap<String, serde_json::Value>,
@@ -110,4 +115,21 @@ pub struct ProviderInfo {
 
     /// Provider type
     pub provider_type: ProviderType,
+}
+
+#[cfg(test)]
+mod provider_timeout_tests {
+    use super::*;
+
+    fn get_effective_timeout(req: Option<u64>, cfg: Option<u64>) -> u64 {
+        req.or(cfg).unwrap_or(DEFAULT_PROVIDER_TIMEOUT_SECS)
+    }
+
+    #[test]
+    fn test_provider_timeout_effective_logic() {
+        assert_eq!(get_effective_timeout(Some(300), Some(120)), 300);
+        assert_eq!(get_effective_timeout(None, Some(300)), 300);
+        assert_eq!(get_effective_timeout(Some(180), None), 180);
+        assert_eq!(get_effective_timeout(None, None), DEFAULT_PROVIDER_TIMEOUT_SECS);
+    }
 }

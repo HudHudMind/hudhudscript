@@ -49,6 +49,18 @@ impl std::str::FromStr for ScriptMethodId {
 }
 
 /// Zero-cost enum dispatch.
+/// Guard + constructor for every `sudo` invocation in this module.
+///
+/// Privilege escalation is opt-in and off by default (see
+/// `hudhudscript_bytecode::privileged_ops`): `dispatch` takes no policy context,
+/// and unit tests call it directly, so without this guard `cargo test` really ran
+/// `sudo` against the developer's machine.
+#[inline]
+fn sudo_cmd(op: &str) -> HudHudResult<Command> {
+    hudhudscript_bytecode::privileged_ops::ensure_privileged_ops_allowed(op)?;
+    Ok(Command::new("sudo"))
+}
+
 pub fn dispatch(method: ScriptMethodId, args: &[Value16]) -> HudHudResult<Value16> {
     match method {
         ScriptMethodId::ListInstalled => apt_list_installed(args),
@@ -188,7 +200,7 @@ pub fn apt_info(args: &[Value16]) -> HudHudResult<Value16> {
 pub fn apt_install(args: &[Value16]) -> HudHudResult<Value16> {
     let package = require_str(args, 0, "apt.install")?.to_string();
     run_cmd_result(
-        Command::new("sudo").args(["apt-get", "install", "-y", &package]),
+        sudo_cmd("apt")?.args(["apt-get", "install", "-y", &package]),
         "apt.install",
     )
 }
@@ -196,14 +208,14 @@ pub fn apt_install(args: &[Value16]) -> HudHudResult<Value16> {
 pub fn apt_remove(args: &[Value16]) -> HudHudResult<Value16> {
     let package = require_str(args, 0, "apt.remove")?.to_string();
     run_cmd_result(
-        Command::new("sudo").args(["apt-get", "remove", "-y", &package]),
+        sudo_cmd("apt")?.args(["apt-get", "remove", "-y", &package]),
         "apt.remove",
     )
 }
 
 pub fn apt_update(_args: &[Value16]) -> HudHudResult<Value16> {
     run_cmd_result(
-        Command::new("sudo").args(["apt-get", "update"]),
+        sudo_cmd("apt")?.args(["apt-get", "update"]),
         "apt.update",
     )
 }
@@ -246,7 +258,7 @@ pub fn apt_upgradable(_args: &[Value16]) -> HudHudResult<Value16> {
 pub fn apt_add_repo(args: &[Value16]) -> HudHudResult<Value16> {
     let repo_line = require_str(args, 0, "apt.add_repo")?.to_string();
     run_cmd_result(
-        Command::new("sudo").args(["add-apt-repository", "-y", &repo_line]),
+        sudo_cmd("apt")?.args(["add-apt-repository", "-y", &repo_line]),
         "apt.add_repo",
     )
 }
@@ -279,7 +291,7 @@ pub fn apt_add_key(args: &[Value16]) -> HudHudResult<Value16> {
         return Ok(Value16::object(obj));
     }
 
-    let gpg = Command::new("sudo")
+    let gpg = sudo_cmd("apt")?
         .args(["gpg", "--dearmor", "-o", &keyring_path])
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())

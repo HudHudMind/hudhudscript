@@ -28,9 +28,15 @@ pub struct GcPin {
 pub fn pin(value: Value16) -> GcPin {
     let index = PINNED.with(|p| {
         let mut v = p.borrow_mut();
-        let idx = v.len();
-        v.push(value);
-        idx
+        // G1.4.3: reuse null tombstone slots to prevent unbounded Vec growth
+        if let Some(idx) = v.iter().position(|val| val.is_null()) {
+            v[idx] = value;
+            idx
+        } else {
+            let idx = v.len();
+            v.push(value);
+            idx
+        }
     });
     GcPin { index }
 }

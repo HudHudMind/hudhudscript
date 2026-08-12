@@ -238,7 +238,7 @@ fn test_effective_caps() {
     assert!(effective_capabilities().is_err());
 }
 #[test]
-    #[ignore = "process-global privileged syscall; unsafe in parallel test. Run: --ignored --test-threads=1"]
+#[ignore = "process-global privileged syscall; unsafe in parallel test. Run: --ignored --test-threads=1"]
 fn test_capability_apply() {
     assert!(CapabilitySet::new().apply().is_ok());
 }

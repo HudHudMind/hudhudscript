@@ -68,6 +68,15 @@ impl VM {
             .cloned()
     }
 
+    /// SOP: read the intents declared for a subject template.
+    /// Exposed for testability of A3.4.
+    pub fn subject_intents(&self, template_name: &str) -> Vec<String> {
+        self.subject_templates
+            .get(template_name)
+            .map(|t| t.intents.clone())
+            .unwrap_or_default()
+    }
+
     // ── Provider / LLM registry ─────────────────────────────────────────
 
     /// Set the maximum recursion / call depth.
@@ -105,14 +114,12 @@ impl VM {
         args: &[Value16],
         bytecode: &hudhudscript_bytecode::Bytecode,
     ) -> hudhudscript_bytecode::error::CompileResult<Value16> {
-        let chunk = bytecode
-            .get_function(func_name)
-            .ok_or_else(|| {
-                hudhudscript_bytecode::error::compile_codes::runtime_error(format!(
-                    "Function '{}' not found",
-                    func_name
-                ))
-            })?;
+        let chunk = bytecode.get_function(func_name).ok_or_else(|| {
+            hudhudscript_bytecode::error::compile_codes::runtime_error(format!(
+                "Function '{}' not found",
+                func_name
+            ))
+        })?;
         if chunk.params.len() != args.len() {
             return Err(hudhudscript_bytecode::error::compile_codes::runtime_error(
                 format!(
@@ -123,7 +130,7 @@ impl VM {
                 ),
             ));
         }
-        self.call_chunk(&chunk, &chunk.params, args, bytecode, func_name)?;
+        self.call_chunk(&chunk, &chunk.params, args, bytecode, hudhudscript_bytecode::SymId(hudhudscript_bytecode::interner::intern(func_name).0))?;
         Ok(self.registers[255])
     }
 
@@ -132,6 +139,25 @@ impl VM {
         if let Some(ref mut s) = self.sandbox {
             s.allow_network = true;
         }
+    }
+
+    /// Grant child-process spawning. Required by stdio MCP servers, which
+    /// launch the server as a subprocess; SSE servers need
+    /// [`VM::allow_network`] instead. The command allow/deny lists in
+    /// `SandboxConfig` still apply on top of this.
+    pub fn allow_process(&mut self) {
+        if let Some(ref mut s) = self.sandbox {
+            s.allow_process = true;
+        }
+    }
+
+    /// M2: `[runtime] allow_insecure_http` opt-in'i — SSE MCP için `http://`
+    /// URL'lerine ve loopback (localhost/127.0.0.1/[::1]) SSRF muafiyetine
+    /// izin verir. `allow_network`'ten kasıtlı olarak AYRI izin: biri ağ
+    /// erişimi, diğeri şifresiz http. Uzak/özel-ağ hedefleri bayraktan
+    /// bağımsız engelli kalır (`validate_sse_url`).
+    pub fn allow_insecure_http(&mut self) {
+        self.allow_insecure_http = true;
     }
 
     /// Set the runtime host-access policy (HOST-3).
@@ -151,27 +177,37 @@ impl VM {
         let mut results = Vec::new();
         for agent_name in agent_names {
             let agent_val = self.get_var_cloned(agent_name);
-            if let Some(agent_obj) = agent_val.and_then(|v| v.as_object().cloned()) {
-                if let Some(prov_name) = agent_obj.get("provider").and_then(|v| v.as_string()) {
-                    if let Some(prov_obj) = self.get_var_cloned(&prov_name) {
-                        let prev = self.dispatch_provider_receiver.take();
-                        self.dispatch_provider_receiver = Some(prov_obj);
-                        let mut config = hudhudscript_bytecode::ObjMap::default();
-                        config.insert(
-                            "prompt".to_string(),
-                            Value16::string(format!("Task: {}", task_str)),
-                        );
-                        let result = crate::vm::provider_dispatch::dispatch_provider_call(
-                            self,
-                            &Value16::object(config),
-                        );
-                        self.dispatch_provider_receiver = prev;
-                        results.push(Value16::string(format!(
-                            "{}: {}",
-                            agent_name,
-                            self.value_to_string(&result.unwrap_or_default())
-                        )));
-                    }
+            if let Some(agent_v) = agent_val {
+                // M3 (Kural 7 — tek şerit): receiver AGENT objesidir, provider
+                // değil. `Agent.call` ile aynı yol: provider_get_provider
+                // endpoint'i agent'ın `provider` alanından (isim VEYA obje)
+                // çözer, provider_build_system_context persona/rol'ü
+                // ([Agent Role]) aynı receiver'dan kurar. Eski kod receiver'a
+                // provider objesini koyduğu için persona council/swarm'da
+                // düşüyordu; ayrıca provider'ı yalnız string-isim olarak
+                // tanıyordu (obje-provider'lı agent swarm'da hiç çalışmıyordu).
+                let is_agent = agent_v
+                    .as_object()
+                    .map(|o| o.contains_key("provider"))
+                    .unwrap_or(false);
+                if is_agent {
+                    let prev = self.dispatch_provider_receiver.take();
+                    self.dispatch_provider_receiver = Some(agent_v);
+                    let mut config = hudhudscript_bytecode::ObjMap::default();
+                    config.insert(
+                        "prompt".to_string(),
+                        Value16::string(format!("Task: {}", task_str)),
+                    );
+                    let result = crate::vm::provider_dispatch::dispatch_provider_call(
+                        self,
+                        &Value16::object(config),
+                    );
+                    self.dispatch_provider_receiver = prev;
+                    results.push(Value16::string(format!(
+                        "{}: {}",
+                        agent_name,
+                        self.value_to_string(&result.unwrap_or_default())
+                    )));
                 }
             }
         }
@@ -292,46 +328,8 @@ impl VM {
         self.default_stack_bytes = bytes;
     }
 
-    pub(crate) fn format_call_stack(&self) -> String {
-        if self.call_stack_names.is_empty() {
-            return String::new();
-        }
-        let mut trace = String::from("\n  Call stack:");
-        for (i, sym) in self.call_stack_names.iter().rev().enumerate() {
-            if i >= 10 {
-                trace.push_str(&format!(
-                    "\n    ... and {} more frames",
-                    self.call_stack_names.len() - 10
-                ));
-                break;
-            }
-            // PERF-17: lazy resolve — only when formatting traces.
-            hudhudscript_bytecode::interner::resolve_with(
-                hudhudscript_bytecode::interner::SymbolId(sym.0),
-                |name| trace.push_str(&format!("\n    at {}()", name)),
-            );
-        }
-        trace
-    }
-
-    pub fn cancellation_token(&self) -> Arc<std::sync::atomic::AtomicBool> {
-        Arc::clone(&self.cancellation_token)
-    }
-
-    pub fn cancel(&self) {
-        self.cancellation_token
-            .store(true, std::sync::atomic::Ordering::Relaxed);
-    }
-
-    pub(crate) fn attach_call_stack(&self, mut err: CompileError) -> CompileError {
-        if !self.call_stack_names.is_empty() {
-            const STACK_MARKER: &str = "\n  Call stack:";
-            if !err.message.contains(STACK_MARKER) {
-                let stack = self.format_call_stack();
-                err.message = format!("{}{}", err.message, stack);
-            }
-        }
-        err
+    pub fn with_provider_timeout_secs(&mut self, secs: u64) {
+        self.provider_timeout_secs = secs;
     }
 
     /// Set the live provider that `this.call()` / `this.stream()` will use.

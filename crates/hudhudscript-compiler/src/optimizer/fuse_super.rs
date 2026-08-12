@@ -1,5 +1,6 @@
+use super::fuse_helpers::{instr_reads_reg, reg_dead_after, remove_fused_pair, try_fuse_arith_return};
 use super::fuse_super_extra::try_fuse_extra_pattern;
-use crate::optimizer::utils::adjust_jumps_after_remove;
+use crate::optimizer::utils::adjust_jumps_after_remove_full;
 use hudhudscript_bytecode::{CallPayload, Instruction, LoopPayload, SuperInstrPayload};
 
 pub fn fuse_super_instructions_with_positions(
@@ -11,6 +12,9 @@ pub fn fuse_super_instructions_with_positions(
 ) {
     let mut i = 0;
     while i + 1 < instructions.len() {
+        if try_fuse_arith_return(instructions, loop_payloads, source_positions, i) {
+            continue;
+        }
         match (&instructions[i], &instructions[i + 1]) {
             (
                 Instruction::IntMul { dst: t, src1, src2 },
@@ -22,11 +26,7 @@ pub fn fuse_super_instructions_with_positions(
                     src2: *src2,
                     src3: *mod_src2,
                 };
-                adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
-                instructions.remove(i + 1);
-                if i + 1 < source_positions.len() {
-                    source_positions.remove(i + 1);
-                }
+                remove_fused_pair(instructions, loop_payloads, source_positions, i);
                 continue;
             }
             (
@@ -39,11 +39,7 @@ pub fn fuse_super_instructions_with_positions(
                     src2: *src2,
                     imm: *imm,
                 };
-                adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
-                instructions.remove(i + 1);
-                if i + 1 < source_positions.len() {
-                    source_positions.remove(i + 1);
-                }
+                remove_fused_pair(instructions, loop_payloads, source_positions, i);
                 continue;
             }
             (
@@ -65,11 +61,7 @@ pub fn fuse_super_instructions_with_positions(
                     arg_reg: *first_arg,
                 });
                 instructions[i] = Instruction::IntSubCall1(super_idx);
-                adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
-                instructions.remove(i + 1);
-                if i + 1 < source_positions.len() {
-                    source_positions.remove(i + 1);
-                }
+                remove_fused_pair(instructions, loop_payloads, source_positions, i);
                 continue;
             }
             (
@@ -91,84 +83,10 @@ pub fn fuse_super_instructions_with_positions(
                     arg_reg: *first_arg,
                 });
                 instructions[i] = Instruction::IntAddCall1(super_idx);
-                adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
-                instructions.remove(i + 1);
-                if i + 1 < source_positions.len() {
-                    source_positions.remove(i + 1);
-                }
+                remove_fused_pair(instructions, loop_payloads, source_positions, i);
                 continue;
             }
-            (Instruction::IntAdd { dst, src1, src2 }, Instruction::Return { src })
-                if *dst == *src =>
-            {
-                instructions[i] = Instruction::IntAddReturn {
-                    src1: *src1,
-                    src2: *src2,
-                };
-                adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
-                instructions.remove(i + 1);
-                if i + 1 < source_positions.len() {
-                    source_positions.remove(i + 1);
-                }
-                continue;
-            }
-            (Instruction::IntSub { dst, src1, src2 }, Instruction::Return { src })
-                if *dst == *src =>
-            {
-                instructions[i] = Instruction::IntSubReturn {
-                    src1: *src1,
-                    src2: *src2,
-                };
-                adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
-                instructions.remove(i + 1);
-                if i + 1 < source_positions.len() {
-                    source_positions.remove(i + 1);
-                }
-                continue;
-            }
-            (Instruction::IntMul { dst, src1, src2 }, Instruction::Return { src })
-                if *dst == *src =>
-            {
-                instructions[i] = Instruction::IntMulReturn {
-                    src1: *src1,
-                    src2: *src2,
-                };
-                adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
-                instructions.remove(i + 1);
-                if i + 1 < source_positions.len() {
-                    source_positions.remove(i + 1);
-                }
-                continue;
-            }
-            (Instruction::IntDiv { dst, src1, src2 }, Instruction::Return { src })
-                if *dst == *src =>
-            {
-                instructions[i] = Instruction::IntDivReturn {
-                    src1: *src1,
-                    src2: *src2,
-                };
-                adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
-                instructions.remove(i + 1);
-                if i + 1 < source_positions.len() {
-                    source_positions.remove(i + 1);
-                }
-                continue;
-            }
-            (Instruction::IntCmpI { dst, src, imm, op }, Instruction::Return { src: ret_src })
-                if *dst == *ret_src =>
-            {
-                instructions[i] = Instruction::IntCmpIReturn {
-                    src: *src,
-                    imm: *imm,
-                    op: *op,
-                };
-                adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
-                instructions.remove(i + 1);
-                if i + 1 < source_positions.len() {
-                    source_positions.remove(i + 1);
-                }
-                continue;
-            }
+
             (
                 Instruction::NumMul { dst, src1, src2 },
                 Instruction::NumAdd {
@@ -182,11 +100,7 @@ pub fn fuse_super_instructions_with_positions(
                     mul: *src2,
                     add: *src2_2,
                 };
-                adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
-                instructions.remove(i + 1);
-                if i + 1 < source_positions.len() {
-                    source_positions.remove(i + 1);
-                }
+                remove_fused_pair(instructions, loop_payloads, source_positions, i);
                 continue;
             }
             // FloatMulAdd: NumMul { R1, R2, R3 } + NumAdd { R1, R1, R4 } → FloatMulAdd { R1, R2, R3, R4 }
@@ -204,11 +118,7 @@ pub fn fuse_super_instructions_with_positions(
                     mul2: *src2,
                     add: *src2_2,
                 };
-                adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
-                instructions.remove(i + 1);
-                if i + 1 < source_positions.len() {
-                    source_positions.remove(i + 1);
-                }
+                remove_fused_pair(instructions, loop_payloads, source_positions, i);
                 continue;
             }
             (
@@ -225,11 +135,7 @@ pub fn fuse_super_instructions_with_positions(
                     arr: *arr,
                     idx: *idx,
                 };
-                adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
-                instructions.remove(i + 1);
-                if i + 1 < source_positions.len() {
-                    source_positions.remove(i + 1);
-                }
+                remove_fused_pair(instructions, loop_payloads, source_positions, i);
                 continue;
             }
             // P4b: also match IndexArray (from type propagation)
@@ -247,11 +153,7 @@ pub fn fuse_super_instructions_with_positions(
                     arr: *arr,
                     idx: *idx,
                 };
-                adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
-                instructions.remove(i + 1);
-                if i + 1 < source_positions.len() {
-                    source_positions.remove(i + 1);
-                }
+                remove_fused_pair(instructions, loop_payloads, source_positions, i);
                 continue;
             }
             (
@@ -292,12 +194,12 @@ pub fn fuse_super_instructions_with_positions(
                             dst: dst_reg,
                             src: dst_reg,
                         };
-                        adjust_jumps_after_remove(instructions, loop_payloads, i + 2);
+                        adjust_jumps_after_remove_full(instructions, loop_payloads, &mut [], &mut [], i + 2);
                         instructions.remove(i + 2);
                     } else {
-                        adjust_jumps_after_remove(instructions, loop_payloads, i + 2);
+                        adjust_jumps_after_remove_full(instructions, loop_payloads, &mut [], &mut [], i + 2);
                         instructions.remove(i + 2);
-                        adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
+                        adjust_jumps_after_remove_full(instructions, loop_payloads, &mut [], &mut [], i + 1);
                         instructions.remove(i + 1);
                     }
                     if i + 2 < source_positions.len() {
@@ -320,18 +222,15 @@ pub fn fuse_super_instructions_with_positions(
                     src: jmp_src,
                     offset,
                 },
-            ) if *cmp_dst == *jmp_src => {
+            ) if *cmp_dst == *jmp_src
+                && reg_dead_after(instructions, loop_payloads, i + 2, *cmp_dst) => {
                 instructions[i] = Instruction::IntCmpIJumpIfFalse {
                     src: *src,
                     imm: *imm,
                     op: *op,
                     offset: offset.wrapping_add(1),
                 };
-                adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
-                instructions.remove(i + 1);
-                if i + 1 < source_positions.len() {
-                    source_positions.remove(i + 1);
-                }
+                remove_fused_pair(instructions, loop_payloads, source_positions, i);
                 continue;
             }
             (
@@ -345,18 +244,35 @@ pub fn fuse_super_instructions_with_positions(
                     src: jmp_src,
                     offset,
                 },
-            ) if *cmp_dst == *jmp_src => {
+            ) if *cmp_dst == *jmp_src
+                && reg_dead_after(instructions, loop_payloads, i + 2, *cmp_dst) => {
                 instructions[i] = Instruction::IntCmpRRJumpIfFalse {
                     src1: *src1,
                     src2: *src2,
                     op: *op,
                     offset: offset.wrapping_add(1),
                 };
-                adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
-                instructions.remove(i + 1);
-                if i + 1 < source_positions.len() {
-                    source_positions.remove(i + 1);
-                }
+                remove_fused_pair(instructions, loop_payloads, source_positions, i);
+                continue;
+            }
+            // G4: !x dalını çevir — Not + JumpIfFalse → JumpIfTrue.
+            // JumpIfFalse(!x) "!x falsy iken" = "x truthy iken" atlar ≡
+            // JumpIfTrue(x). `Not` is_truthy değilini yazar; JumpIfTrue
+            // is_truthy test eder — her değer tipinde birebir eşdeğer.
+            // Bigram kanıtı: NOT_R→JIF 33.3M aday (plan G4).
+            (
+                Instruction::Not { dst, src },
+                Instruction::JumpIfFalse {
+                    src: jmp_src,
+                    offset,
+                },
+            ) if *dst == *jmp_src
+                && reg_dead_after(instructions, loop_payloads, i + 2, *dst) => {
+                instructions[i] = Instruction::JumpIfTrue {
+                    src: *src,
+                    offset: offset.wrapping_add(1),
+                };
+                remove_fused_pair(instructions, loop_payloads, source_positions, i);
                 continue;
             }
             (Instruction::LoadConst { dst, const_idx }, Instruction::StoreGlobal { src, sym })
@@ -366,75 +282,103 @@ pub fn fuse_super_instructions_with_positions(
                     sym: *sym,
                     const_idx: *const_idx,
                 };
-                adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
-                instructions.remove(i + 1);
-                if i + 1 < source_positions.len() {
-                    source_positions.remove(i + 1);
-                }
+                remove_fused_pair(instructions, loop_payloads, source_positions, i);
                 continue;
             }
             (Instruction::LoopEnd, Instruction::IntAddI { dst, src, imm })
                 if *dst == *src && i + 2 < instructions.len() =>
             {
-                if let Instruction::Jump(offset) = &instructions[i + 2] {
-                    let new_offset = offset.wrapping_add(2);
-                    instructions[i] = Instruction::LoopEndIntAddIJump {
-                        reg: *dst,
-                        imm: *imm,
-                        offset: new_offset as i16,
-                    };
-                    adjust_jumps_after_remove(instructions, loop_payloads, i + 2);
-                    instructions.remove(i + 2);
-                    adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
-                    instructions.remove(i + 1);
-                    if i + 1 < source_positions.len() {
-                        source_positions.remove(i + 1);
+                // C3: ForCStyle `continue` backpatches payload.start to point to
+                // the IntAddI position (right after LoopEnd). Fusing would create
+                // LoopEndIntAddIJump, invalidate the continue target, and cause a
+                // header double-pop. Skip fusion for such loops.
+                let is_continue_target = loop_payloads.iter().any(|p| p.start == (i + 1) as u32);
+                if !is_continue_target {
+                    if let Instruction::Jump(offset) = &instructions[i + 2] {
+                        let new_offset = offset.wrapping_add(2);
+                        instructions[i] = Instruction::LoopEndIntAddIJump {
+                            reg: *dst,
+                            imm: *imm,
+                            offset: new_offset as i16,
+                        };
+                        adjust_jumps_after_remove_full(instructions, loop_payloads, &mut [], &mut [], i + 2);
+                        instructions.remove(i + 2);
+                        adjust_jumps_after_remove_full(instructions, loop_payloads, &mut [], &mut [], i + 1);
+                        instructions.remove(i + 1);
                         if i + 1 < source_positions.len() {
                             source_positions.remove(i + 1);
+                            if i + 1 < source_positions.len() {
+                                source_positions.remove(i + 1);
+                            }
                         }
+                        continue;
                     }
-                    continue;
                 }
             }
             (Instruction::IntAddI { dst, src, imm }, Instruction::Jump(offset)) if *dst == *src => {
+                // FAZ E: only fuse backward jumps (loop back-edges), not forward
+                // jumps (if-else skip-else) — forward fusions break loop counters.
+                if *offset >= 0 { i += 1; continue; }
+                // Also skip if any OTHER instruction jumps to this Jump (shared target).
+                let jump_pos = (i + 1) as i64;
+                let has_other_jumper = instructions.iter().enumerate().any(|(ip, instr)| {
+                    if ip == i { return false; }
+                    match instr {
+                        Instruction::Jump(o) => (ip as i64 + *o as i64) == jump_pos,
+                        Instruction::IntAddIJump { offset: o, .. }
+                        | Instruction::IntSubIJump { offset: o, .. }
+                        | Instruction::LoopEndIntAddIJump { offset: o, .. } => {
+                            (ip as i64 + *o as i64) == jump_pos
+                        }
+                        Instruction::JumpIfFalse { offset: o, .. }
+                        | Instruction::JumpIfTrue { offset: o, .. } => {
+                            (ip as i64 + *o as i64) == jump_pos
+                        }
+                        _ => false,
+                    }
+                });
+                if has_other_jumper { i += 1; continue; }
                 let new_offset = offset.wrapping_add(1);
                 instructions[i] = Instruction::IntAddIJump {
                     reg: *dst,
                     imm: *imm,
                     offset: new_offset as i16,
                 };
-                adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
-                instructions.remove(i + 1);
-                if i + 1 < source_positions.len() {
-                    source_positions.remove(i + 1);
-                }
-                continue;
-            }
-            (Instruction::LoadConst { dst, const_idx }, Instruction::Return { src })
-                if *dst == *src =>
-            {
-                instructions[i] = Instruction::ReturnConst {
-                    const_idx: *const_idx,
-                };
-                adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
-                instructions.remove(i + 1);
-                if i + 1 < source_positions.len() {
-                    source_positions.remove(i + 1);
-                }
+                remove_fused_pair(instructions, loop_payloads, source_positions, i);
                 continue;
             }
             (Instruction::IntSubI { dst, src, imm }, Instruction::Jump(offset)) if *dst == *src => {
+                // FAZ E: only fuse backward jumps (loop back-edges), not forward
+                // jumps (if-else skip-else) — forward fusions break loop counters.
+                if *offset >= 0 { i += 1; continue; }
+                // Also skip if any OTHER instruction jumps to this Jump. The Jump
+                // is a shared loop back-edge; fusing would cause the OTHER path
+                // (e.g., if-branch after its own c=c-1) to double-decrement.
+                let jump_pos = (i + 1) as i64;
+                let has_other_jumper = instructions.iter().enumerate().any(|(ip, instr)| {
+                    if ip == i { return false; }
+                    match instr {
+                        Instruction::Jump(o) => (ip as i64 + *o as i64) == jump_pos,
+                        Instruction::IntAddIJump { offset: o, .. }
+                        | Instruction::IntSubIJump { offset: o, .. }
+                        | Instruction::LoopEndIntAddIJump { offset: o, .. } => {
+                            (ip as i64 + *o as i64) == jump_pos
+                        }
+                        Instruction::JumpIfFalse { offset: o, .. }
+                        | Instruction::JumpIfTrue { offset: o, .. } => {
+                            (ip as i64 + *o as i64) == jump_pos
+                        }
+                        _ => false,
+                    }
+                });
+                if has_other_jumper { i += 1; continue; }
                 let new_offset = offset.wrapping_add(1);
                 instructions[i] = Instruction::IntSubIJump {
                     reg: *dst,
                     imm: *imm,
                     offset: new_offset as i16,
                 };
-                adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
-                instructions.remove(i + 1);
-                if i + 1 < source_positions.len() {
-                    source_positions.remove(i + 1);
-                }
+                remove_fused_pair(instructions, loop_payloads, source_positions, i);
                 continue;
             }
             (
@@ -448,18 +392,15 @@ pub fn fuse_super_instructions_with_positions(
                     src: jmp_src,
                     offset,
                 },
-            ) if *cmp_dst == *jmp_src => {
+            ) if *cmp_dst == *jmp_src
+                && reg_dead_after(instructions, loop_payloads, i + 2, *cmp_dst) => {
                 instructions[i] = Instruction::IntCmpIJumpIfTrue {
                     src: *src,
                     imm: *imm,
                     op: *op,
                     offset: offset.wrapping_add(1),
                 };
-                adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
-                instructions.remove(i + 1);
-                if i + 1 < source_positions.len() {
-                    source_positions.remove(i + 1);
-                }
+                remove_fused_pair(instructions, loop_payloads, source_positions, i);
                 continue;
             }
             _ => {

@@ -18,6 +18,15 @@ pub(crate) fn builtin_name_set() -> &'static rustc_hash::FxHashSet<&'static str>
         let put_aliases: &[&str] = crate::vm::builtin_aliases::PUT_ALIASES;
         let putf_aliases: &[&str] = crate::vm::builtin_aliases::PUTF_ALIASES;
         let other_builtins: &[&'static str] = &[
+            // RAG: the value-returning surfaces of the three memory keywords.
+            // The statement forms (`remember x in S;`, `recall "q" from S;`,
+            // `forget x from S;`) discard their results, so scripts that need
+            // the entry id / the hits / the removed count call these instead.
+            // Implementations: `VM::rag_remember` / `rag_recall` / `rag_forget`,
+            // each shared with the matching instruction.
+            "remember",
+            "recall",
+            "forget",
             "len",
             "uzunluk",
             "toml",

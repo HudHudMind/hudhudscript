@@ -72,7 +72,7 @@ impl crate::vm::VM {
                         &params,
                         &call_args,
                         bytecode,
-                        &chunk_name,
+                        hudhudscript_bytecode::SymId(hudhudscript_bytecode::interner::intern(&chunk_name).0),
                         &HashMap::new(),
                     )?;
                     // Merge result into response

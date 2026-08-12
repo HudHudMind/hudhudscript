@@ -1,8 +1,9 @@
 //! Batch 9: Runtime & System VM tests
 
 use hudhudscript_bytecode::Value16;
-use hudhudscript_compiler::{Compiler, VM};
+use hudhudscript_compiler::Compiler;
 use hudhudscript_parser::parse;
+use hudhudscript_vm::VM;
 
 fn vm_run(code: &str, var: &str) -> Value16 {
     let ast = parse(code).expect("parse failed");
@@ -139,7 +140,7 @@ fn test_vm_daemon_is_running() {
 // ── Timer/Scheduler (#618) ─────────────────────────────────────────────
 
 #[test]
-    #[ignore]
+#[ignore]
 fn test_vm_set_interval() {
     let val = vm_run(r#"var r = setInterval(null, 100);"#, "r");
     assert_obj_has_string(&val, "type", "interval");
@@ -193,7 +194,8 @@ fn test_vm_fs_mkdir_p() {
 #[test]
 fn test_vm_env_set_get() {
     use hudhudscript_vm::host_access::HostAccessPolicy;
-    let ast = parse(r#"Env.set("_VM_B9_", "vmval"); var r = Env.get("_VM_B9_");"#).expect("parse failed");
+    let ast =
+        parse(r#"Env.set("_VM_B9_", "vmval"); var r = Env.get("_VM_B9_");"#).expect("parse failed");
     let mut compiler = Compiler::new();
     let bytecode = compiler.compile(&ast).expect("compile failed");
     let mut vm = VM::new();
@@ -201,7 +203,10 @@ fn test_vm_env_set_get() {
     policy.env.allow.insert("_VM_B9_".to_string());
     vm.set_host_access_policy(policy);
     vm.execute(&bytecode).expect("VM execution failed");
-    let r = vm.get_variable("r").cloned().expect("variable 'r' not found");
+    let r = vm
+        .get_variable("r")
+        .cloned()
+        .expect("variable 'r' not found");
     assert_string(r, "vmval");
     std::env::remove_var("_VM_B9_");
 }

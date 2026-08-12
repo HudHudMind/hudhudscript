@@ -19,6 +19,14 @@ impl ObjMap {
         self.inner.len()
     }
 
+    /// P6: create with pre-allocated capacity for N properties.
+    #[inline]
+    pub fn with_capacity(cap: usize) -> Self {
+        Self {
+            inner: FxHashMap::with_capacity_and_hasher(cap, Default::default()),
+        }
+    }
+
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.inner.is_empty()

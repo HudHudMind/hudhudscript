@@ -42,7 +42,7 @@ impl Compiler {
             .collect();
         const_obj.insert("laws".to_string(), Value16::array(laws_array));
         let idx = self.bytecode.add_constant(Value16::object(const_obj));
-        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_instr(Instruction::Move { dst: 255, src: tr }); }
+        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_move(255, tr ); }
         self.emit_decl_store("constitution", name, 255);
         Ok(())
     }
@@ -75,7 +75,7 @@ impl Compiler {
             ),
         );
         let idx = self.bytecode.add_constant(Value16::object(law_obj));
-        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_instr(Instruction::Move { dst: 255, src: tr }); }
+        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_move(255, tr ); }
         self.emit_decl_store("law", name, 255);
         Ok(())
     }
@@ -112,7 +112,7 @@ impl Compiler {
             Value16::array(rules.iter().map(|r| Value16::string(r.clone())).collect()),
         );
         let idx = self.bytecode.add_constant(Value16::object(council_obj));
-        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_instr(Instruction::Move { dst: 255, src: tr }); }
+        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_move(255, tr ); }
         self.emit_decl_store("council", name, 255);
         Ok(())
     }
@@ -180,7 +180,7 @@ impl Compiler {
         rule_obj.insert("conditions".to_string(), Value16::array(conditions_array));
         rule_obj.insert("actions".to_string(), Value16::array(actions_array));
         let idx = self.bytecode.add_constant(Value16::object(rule_obj));
-        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_instr(Instruction::Move { dst: 255, src: tr }); }
+        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_move(255, tr ); }
         self.emit_decl_store("rule", name, 255);
         Ok(())
     }
@@ -227,7 +227,7 @@ impl Compiler {
             gov_obj.insert(key.clone(), val);
         }
         let idx = self.bytecode.add_constant(Value16::object(gov_obj));
-        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_instr(Instruction::Move { dst: 255, src: tr }); }
+        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_move(255, tr ); }
         self.emit_decl_store("governance", name, 255);
         Ok(())
     }

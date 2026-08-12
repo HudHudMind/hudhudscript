@@ -64,7 +64,10 @@ pub fn run_repl(debug: bool, load_file: Option<PathBuf>) -> Result<(), CliError>
         match fs::read_to_string(&load_path) {
             Ok(source) => match parse(&source) {
                 Ok(ast) => {
+                    let canonical_script = fs::canonicalize(&load_path).unwrap_or(load_path.clone());
+                    let module_base = canonical_script.parent().unwrap_or(Path::new(".")).to_path_buf();
                     let mut compiler = hudhudscript_compiler::Compiler::new();
+                    compiler.set_module_base_dir(module_base.clone());
                     match compiler.compile(&ast) {
                         Ok(bytecode) => match vm.execute(&bytecode) {
                             Ok(_) => println!("✓ Loaded successfully"),
@@ -205,7 +208,9 @@ pub fn execute_code(code: &str, vm: &mut hudhudscript_vm::VM, debug: bool) {
         println!("AST: {:#?}", &ast);
     }
 
+    let module_base = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
     let mut compiler = hudhudscript_compiler::Compiler::new();
+    compiler.set_module_base_dir(module_base);
     let bytecode = match compiler.compile(&ast) {
         Ok(b) => b,
         Err(e) => {

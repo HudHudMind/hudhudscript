@@ -98,11 +98,15 @@ pub fn parse_step_decl(pair: Pair<Rule>) -> ParseResult<Stmt> {
                 params.push(item.as_str().to_string());
             }
             Rule::block => {
-                let block_stmt = parse_block(item)?;
+                let block_stmt = parse_block(item.clone())?;
+                let block_span = pair_to_span(&item);
                 if let Stmt::Block { statements: stmts, .. } = block_stmt {
                     for s in stmts {
                         match s {
                             Stmt::Decl(Decl::Gate { name: gname, branches: gbranches, else_target: gelse, .. }) => {
+                                if gate.is_some() {
+                                    return Err(parse_codes::invalid_syntax(&format!("step '{}' cannot have more than one gate", name), block_span));
+                                }
                                 gate = Some(StepGateAst { name: gname, branches: gbranches, else_target: gelse });
                             }
                             other => body.push(other),
@@ -112,6 +116,7 @@ pub fn parse_step_decl(pair: Pair<Rule>) -> ParseResult<Stmt> {
             }
             Rule::gate_decl => {
                 // Parse inline gate
+                let item_span = pair_to_span(&item);
                 let stmt = parse_gate_decl(item)?;
                 if let Stmt::Decl(Decl::Gate {
                     name: gname,
@@ -120,6 +125,9 @@ pub fn parse_step_decl(pair: Pair<Rule>) -> ParseResult<Stmt> {
                     ..
                 }) = stmt
                 {
+                    if gate.is_some() {
+                        return Err(parse_codes::invalid_syntax(&format!("step '{}' cannot have more than one gate", name), item_span));
+                    }
                     gate = Some(StepGateAst {
                         name: gname,
                         branches: gbranches,
@@ -129,8 +137,12 @@ pub fn parse_step_decl(pair: Pair<Rule>) -> ParseResult<Stmt> {
             }
             Rule::statement => {
                 // Statement inside step body — parse and add to body (gates extracted separately)
+                let stmt_span = pair_to_span(&item);
                 if let Ok(Some(stmt)) = super::super::statement::parse_statement(item) {
                     if let Stmt::Decl(Decl::Gate { name: gname, branches: gbranches, else_target: gelse, .. }) = &stmt {
+                        if gate.is_some() {
+                            return Err(parse_codes::invalid_syntax(&format!("step '{}' cannot have more than one gate", name), stmt_span));
+                        }
                         gate = Some(StepGateAst { name: gname.clone(), branches: gbranches.clone(), else_target: gelse.clone() });
                     } else {
                         body.push(stmt);
@@ -184,7 +196,7 @@ pub fn parse_loop_decl(pair: Pair<Rule>) -> ParseResult<Stmt> {
                     }
                 }
                 if !metric_name.is_empty() {
-                    goal = Some(GoalSpecAst { metric: metric_name, target: target.unwrap_or(Expr::Literal(hudhudscript_ast::Literal::Number(0.0, false), span)) });
+                    goal = Some(GoalSpecAst { metric: metric_name, target: target.unwrap_or(Expr::Literal(hudhudscript_ast::Literal::Int(0), span)) });
                 }
             }
             _ => {

@@ -6,7 +6,7 @@ pub(super) fn compile_stmt_part2(
 ) -> CompileResult<()> {
     match stmt {
         Stmt::Break { .. } => {
-            target.ct_emit(Instruction::Break);
+            target.ct_emit_break();
         }
 
         Stmt::Continue { .. } => {
@@ -21,8 +21,10 @@ pub(super) fn compile_stmt_part2(
             ..
         } => {
             let r = crate::compiler::expr::compile_reg::compile_expr_to_reg(target, value, &mut RegAlloc::new_with_base(target.ct_next_local_reg())?);
-            target.ct_emit(Instruction::Move { dst: 255, src: r });
+            target.emit_move(255, r );
             let mut end_jumps: Vec<usize> = Vec::new();
+            target.ct_push_break_target(crate::compiler::target::BreakTarget::Switch { jumps: Vec::new() });
+
             for case in cases {
                 let case_reg = crate::compiler::expr::compile_reg::compile_expr_to_reg(target, &case.value, &mut RegAlloc::new_with_base(target.ct_next_local_reg())?);
                 let cmp_reg = crate::compiler::regalloc::temp_reg();
@@ -48,6 +50,12 @@ pub(super) fn compile_stmt_part2(
             for jmp in end_jumps {
                 target.ct_patch(jmp, Instruction::Jump(jump_off(jmp, end)));
             }
+            if let crate::compiler::target::BreakTarget::Switch { jumps } = target.ct_pop_break_target() {
+                for jmp in jumps {
+                    target.ct_patch(jmp, Instruction::Jump(jump_off(jmp, end)));
+                }
+            }
+
         }
 
         // Issue #244: try-catch-finally
@@ -201,7 +209,7 @@ pub(super) fn compile_stmt_part2(
         Stmt::Match { value, arms, .. } => {
             {
             let r = crate::compiler::expr::compile_reg::compile_expr_to_reg(target, value, &mut RegAlloc::new_with_base(target.ct_next_local_reg())?);
-            target.ct_emit(Instruction::Move { dst: 255, src: r });
+            target.emit_move(255, r );
             target.ct_set_match_reg(255);
         }
             let mut end_jumps: Vec<usize> = Vec::new();
@@ -222,7 +230,7 @@ pub(super) fn compile_stmt_part2(
                     let gr = crate::compiler::regalloc::temp_reg();
                     {
             let r = crate::compiler::expr::compile_reg::compile_expr_to_reg(target, guard_expr, &mut RegAlloc::new_with_base(target.ct_next_local_reg())?);
-            target.ct_emit(Instruction::Move { dst: gr, src: r });
+            target.emit_move(gr, r );
         }
                     let pos = target.ct_current_ip();
                     target.ct_emit(Instruction::JumpIfFalse { src: gr, offset: 0 });
@@ -273,6 +281,7 @@ pub(super) fn compile_stmt_part2(
             let idx = target.ct_add_load_module_payload(hudhudscript_bytecode::LoadModulePayload {
                 path: path.clone(),
                 alias: Some(alias_sym),
+                base_dir: target.ct_module_base_dir().map(|p| p.to_string_lossy().into_owned()),
             });
             target.ct_emit(Instruction::LoadModule(idx));
         }
@@ -294,6 +303,7 @@ pub(super) fn compile_stmt_part2(
                     target.ct_add_load_module_payload(hudhudscript_bytecode::LoadModulePayload {
                         path: module_path.clone(),
                         alias: Some(alias_sym),
+                        base_dir: target.ct_module_base_dir().map(|p| p.to_string_lossy().into_owned()),
                     });
                 target.ct_emit(Instruction::LoadModule(idx));
             }

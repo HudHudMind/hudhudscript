@@ -1,8 +1,7 @@
 //! P4 regression tests for fused integer multiply-modulo instructions.
 //!
 //! Verifies that the optimizer fuses `IntMul` + `IntMod` into `IntMulMod`
-//! and that `IntMulModI` computes `((a wrapping_mul b) % m)` correctly,
-//! matching the existing `IntMul` wrapping semantics.
+//! and that overflow promotes to BigInt (exact correctness, no wrapping).
 
 use hudhudscript_compiler::Compiler;
 use hudhudscript_parser::parse;
@@ -52,13 +51,15 @@ fn chained_mul_mod_stays_int() {
 }
 
 #[test]
-fn int_mulmod_overflow_wraps_like_intmul() {
+fn int_mulmod_overflow_promotes_to_bigint() {
     run(r#"
         let a = 4000000000;
         let b = 4000000000;
+        // a*b overflows i64: must promote to BigInt, not wrap.
+        // 4000000000 * 4000000000 = 16000000000000000000
+        // BigInt % 7: 16000000000000000000 % 7 = 2
         let r = (a * b) % 7;
-        // a*b overflows i64; product wraps exactly like IntMul, then % applies.
-        if (r != 0) { throw "wrapping mul-mod value wrong"; }
+        if (r != 2) { throw "BigInt mul-mod value wrong"; }
     "#)
     .unwrap();
 }

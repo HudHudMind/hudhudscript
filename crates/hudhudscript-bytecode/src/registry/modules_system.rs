@@ -34,13 +34,6 @@ pub const BUILTIN_MODULES_SYSTEM: &[BuiltinModule] = &[
                 return_type: "null",
             },
             BuiltinMember {
-                name: "sudo",
-                kind: MemberKind::Function,
-                description: "Run command with elevated privileges",
-                params: &[("cmd", "string")],
-                return_type: "object",
-            },
-            BuiltinMember {
                 name: "spawn",
                 kind: MemberKind::Function,
                 description: "Spawn a background process",

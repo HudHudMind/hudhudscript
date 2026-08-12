@@ -345,9 +345,19 @@ fn test_sse_url_http_allowed_when_opted_in() {
 }
 
 #[test]
-fn test_sse_url_blocks_localhost() {
-    assert!(validate_sse_url("test", "https://localhost:8080/mcp", true).is_err());
-    assert!(validate_sse_url("test", "https://127.0.0.1/mcp", true).is_err());
+fn test_sse_url_localhost_gated_by_insecure_flag() {
+    // M2 (OPUS_IS_PLANI kabulü ile davranış DEĞİŞTİ — eski ad:
+    // test_sse_url_blocks_localhost): bayrak KAPALIYKEN loopback engelli
+    // kalır (güvenlik varsayılanı)…
+    assert!(validate_sse_url("test", "https://localhost:8080/mcp", false).is_err());
+    assert!(validate_sse_url("test", "https://127.0.0.1/mcp", false).is_err());
+    // …bayrak AÇIKKEN loopback SSRF blokundan MUAF — yerel geliştirme
+    // geçidi (örn. http://localhost:11434 ollama) kasıtlı hedeftir.
+    assert!(validate_sse_url("test", "https://localhost:8080/mcp", true).is_ok());
+    assert!(validate_sse_url("test", "http://localhost:11434/api", true).is_ok());
+    assert!(validate_sse_url("test", "http://127.0.0.1:8080/", true).is_ok());
+    assert!(validate_sse_url("test", "http://[::1]:9000/", true).is_ok());
+    assert!(validate_sse_url("test", "http://0.0.0.0:8080/", true).is_ok());
 }
 
 #[test]

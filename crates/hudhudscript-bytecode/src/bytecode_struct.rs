@@ -116,6 +116,12 @@ pub struct Bytecode {
     #[serde(default)]
     pub loop_payloads: Vec<LoopPayload>,
 
+    /// C6: side table for `Instruction::CharDispatch { table_idx }`.
+    /// Each entry is a 256-entry jump table (Vec<i16>) mapping the
+    /// UTF-8 byte value of a single-character string to a relative IP offset.
+    #[serde(default)]
+    pub char_dispatch_tables: Vec<Vec<i16>>,
+
     // ── CROSS-2a: side-table pools for the 7 declaration-level variants
     // that previously boxed their payloads.  Moving these off the enum
     // drops the tag's alignment requirement from 8 B (`Box<T>` pointer)

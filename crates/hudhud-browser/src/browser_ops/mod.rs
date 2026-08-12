@@ -13,6 +13,7 @@ use hudhudscript_errors::{Error, ErrorCode, HudHudResult};
 mod bookmarks;
 mod helpers;
 mod history;
+mod launcher;
 mod search;
 mod system;
 mod tabs;
@@ -81,13 +82,9 @@ pub fn browser_open(args: &[Value16]) -> HudHudResult<Value16> {
         return Ok(Value16::bool_(true));
     }
 
-    let status = Command::new("xdg-open").arg(&url).status();
-    match status {
-        Ok(s) if s.success() => Ok(Value16::bool_(true)),
-        Ok(_) => Ok(Value16::bool_(false)),
-        Err(e) => Err(runtime_error(format!(
-            "browser.open: failed to launch xdg-open: {}",
-            e
-        ))),
+    let launcher = launcher::get_launcher();
+    match launcher.open(&url) {
+        Ok(_) => Ok(Value16::bool_(true)),
+        Err(e) => Err(runtime_error(format!("browser.open: {}", e.0))),
     }
 }

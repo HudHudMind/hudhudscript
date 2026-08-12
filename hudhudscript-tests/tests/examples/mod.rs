@@ -1,7 +1,7 @@
-//! CI validation for sample scripts.
+//! CI validation for example scripts.
 //!
-//! Walks `samples/` and ensures every `.hudhud` file parses without errors.
-//! This catches broken syntax in sample scripts before they reach users.
+//! Walks `examples/` and ensures every `.hudhud` file parses without errors.
+//! This catches broken syntax in example scripts before they reach users.
 
 use std::path::{Path, PathBuf};
 
@@ -13,7 +13,7 @@ fn collect_hudhud_files(dir: &Path) -> Vec<PathBuf> {
     if !dir.is_dir() {
         return files;
     }
-    for entry in std::fs::read_dir(dir).expect("failed to read samples dir") {
+    for entry in std::fs::read_dir(dir).expect("failed to read examples dir") {
         let entry = entry.expect("failed to read dir entry");
         let path = entry.path();
         if path.is_dir() {
@@ -34,20 +34,31 @@ fn collect_hudhud_files(dir: &Path) -> Vec<PathBuf> {
     files
 }
 
-/// Resolve the samples/ directory relative to the workspace root.
-fn samples_dir() -> PathBuf {
+/// Resolve the examples/ directory relative to the workspace root.
+fn examples_dir() -> PathBuf {
+    // hudhud-script-tests lives next to hudhud-script; examples/ is inside hudhud-script
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    // Go up one level from hudhud-script-tests to the parent, then into hudhud-script/examples
     let workspace_root = manifest_dir.parent().expect("manifest dir has no parent");
-    let samples = workspace_root.join("samples");
-    if samples.is_dir() {
-        return samples;
+    let examples = workspace_root.join("hudhud-script").join("examples");
+    if examples.is_dir() {
+        return examples;
     }
-    panic!("Cannot find samples/ directory at {}", samples.display());
+    // Fallback: workspace root IS hudhud-script (monorepo layout)
+    let examples_alt = workspace_root.join("examples");
+    if examples_alt.is_dir() {
+        return examples_alt;
+    }
+    panic!(
+        "Cannot find examples/ directory. Tried:\n  {}\n  {}",
+        examples.display(),
+        examples_alt.display()
+    );
 }
 
 #[test]
-fn all_samples_parse_successfully() {
-    let dir = samples_dir();
+fn all_examples_parse_successfully() {
+    let dir = examples_dir();
     let files = collect_hudhud_files(&dir);
 
     assert!(
@@ -69,7 +80,7 @@ fn all_samples_parse_successfully() {
 
     if !failures.is_empty() {
         let mut msg = format!(
-            "\n{} of {} sample files failed to parse:\n\n",
+            "\n{} of {} example files failed to parse:\n\n",
             failures.len(),
             files.len()
         );
@@ -85,7 +96,7 @@ fn all_samples_parse_successfully() {
     }
 
     eprintln!(
-        "OK: all {} sample files in {} parsed successfully",
+        "OK: all {} example files in {} parsed successfully",
         files.len(),
         dir.display()
     );

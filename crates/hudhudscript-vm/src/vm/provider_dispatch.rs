@@ -42,6 +42,9 @@ pub trait ProviderContext {
     /// Resolve tool definitions available to this agent.
     fn provider_resolve_tools(&self) -> Vec<ToolDefinition>;
 
+    /// Returns the system default timeout for provider calls.
+    fn provider_default_timeout(&self) -> u64;
+
     /// Get or construct the live provider instance.
     fn provider_get_provider(&self) -> SharedResult<Arc<dyn Provider>>;
 
@@ -74,6 +77,14 @@ pub trait ProviderContext {
     fn find_tool_handler(&self, _tool_name: &str) -> Option<Value16> {
         None
     }
+
+    /// Build the full system context (constitution + laws + agent role + call-site system prompt).
+    fn provider_build_system_context(
+        &self,
+        call_config: &ProviderCallConfig,
+    ) -> SharedResult<Option<String>> {
+        Ok(call_config.system_prompt.clone())
+    }
 }
 
 /// Flattened config for a single provider call.
@@ -83,6 +94,7 @@ pub struct ProviderCallConfig {
     pub system_prompt: Option<String>,
     pub temperature: Option<f64>,
     pub max_tokens: Option<usize>,
+    pub timeout_secs: Option<u64>,
 }
 
 // ── Single-call dispatch ────────────────────────────────────────────────────
@@ -148,10 +160,11 @@ where
 
         // Re-derive provider config for the follow-up (keep original temp/max_tokens)
         let orig_config = context.provider_extract_config(config)?;
-        let follow_up = build_follow_up_request(&orig_config, &follow_up_prompt, &tools);
+        let follow_up_system_prompt = context.provider_build_system_context(&orig_config)?;
+        let follow_up = build_follow_up_request(&orig_config, &follow_up_prompt, &tools, follow_up_system_prompt);
 
         let provider = context.provider_get_provider()?;
-        response = call_provider_async(provider, follow_up)?;
+        response = call_provider_async(provider, follow_up, context.provider_default_timeout())?;
         iteration += 1;
     }
 
@@ -172,44 +185,39 @@ where
     let tools = context.provider_resolve_tools();
     let provider = context.provider_get_provider()?;
 
+    let system_prompt = context.provider_build_system_context(&call_config)?;
+
     let request = LLMRequest {
         prompt: call_config.prompt,
-        system_prompt: call_config.system_prompt,
+        system_prompt,
         temperature: call_config.temperature,
         max_tokens: call_config.max_tokens,
         mnemonics: None,
         optimize: false,
         tools: if tools.is_empty() { None } else { Some(tools) },
+        timeout_secs: call_config.timeout_secs,
     };
 
-    call_provider_async(provider, request)
+    call_provider_async(provider, request, context.provider_default_timeout())
 }
-
-/// Async → sync bridge for provider calls.
-const PROVIDER_CALL_TIMEOUT_SECS: u64 = 120;
 
 fn call_provider_async(
     provider: Arc<dyn Provider>,
     request: LLMRequest,
+    default_timeout: u64,
 ) -> SharedResult<LLMResponse> {
-    let timeout_duration = std::time::Duration::from_secs(PROVIDER_CALL_TIMEOUT_SECS);
+    let timeout_secs = request.timeout_secs.unwrap_or(default_timeout);
+    let timeout_duration = std::time::Duration::from_secs(timeout_secs);
     let call_fut = async move {
         match tokio::time::timeout(timeout_duration, provider.call(request)).await {
             Ok(result) => result.map_err(|e| format!("{}", e)),
             Err(_) => Err(format!(
                 "Provider call timed out after {}s",
-                PROVIDER_CALL_TIMEOUT_SECS
+                timeout_secs
             )),
         }
     };
-    let result = match tokio::runtime::Handle::try_current() {
-        Ok(handle) => tokio::task::block_in_place(|| handle.block_on(call_fut)),
-        Err(_) => {
-            let rt = tokio::runtime::Runtime::new()
-                .map_err(|e| runtime_error(format!("Failed to create runtime: {}", e)))?;
-            rt.block_on(call_fut)
-        }
-    };
+    let result = crate::vm::provider::block_on_provider(call_fut);
     result.map_err(|e| runtime_error(format!("Provider call failed: {}", e)))
 }
 
@@ -248,10 +256,11 @@ fn build_follow_up_request(
     orig_config: &ProviderCallConfig,
     follow_up_prompt: &str,
     tools: &[ToolDefinition],
+    composed_system_prompt: Option<String>,
 ) -> LLMRequest {
     LLMRequest {
         prompt: follow_up_prompt.to_string(),
-        system_prompt: None,
+        system_prompt: composed_system_prompt,
         temperature: orig_config.temperature,
         max_tokens: orig_config.max_tokens,
         mnemonics: None,
@@ -261,6 +270,7 @@ fn build_follow_up_request(
         } else {
             Some(tools.to_vec())
         },
+        timeout_secs: orig_config.timeout_secs,
     }
 }
 
@@ -301,7 +311,8 @@ pub fn llm_response_to_value(response: &LLMResponse) -> Value16 {
         let calls: Vec<Value16> = tool_calls
             .iter()
             .map(|tc| {
-                let mut call_obj: hudhudscript_bytecode::ObjMap = hudhudscript_bytecode::ObjMap::default();
+                let mut call_obj: hudhudscript_bytecode::ObjMap =
+                    hudhudscript_bytecode::ObjMap::default();
                 call_obj.insert("id".to_string(), Value16::string(tc.id.clone()));
                 call_obj.insert("name".to_string(), Value16::string(tc.name.clone()));
                 call_obj.insert(
@@ -315,4 +326,33 @@ pub fn llm_response_to_value(response: &LLMResponse) -> Value16 {
     }
 
     Value16::object(obj)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_build_follow_up_request() {
+        let orig_config = ProviderCallConfig {
+            prompt: "original prompt".to_string(),
+            system_prompt: Some("original system".to_string()),
+            temperature: Some(0.5),
+            max_tokens: Some(100),
+            timeout_secs: Some(300),
+        };
+
+        let follow_up = build_follow_up_request(
+            &orig_config,
+            "new prompt",
+            &[],
+            Some("Role text".to_string()),
+        );
+
+        assert_eq!(follow_up.prompt, "new prompt");
+        assert_eq!(follow_up.system_prompt, Some("Role text".to_string()));
+        assert_eq!(follow_up.temperature, Some(0.5));
+        assert_eq!(follow_up.max_tokens, Some(100));
+        assert_eq!(follow_up.timeout_secs, Some(300));
+    }
 }

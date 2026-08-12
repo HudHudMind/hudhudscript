@@ -141,7 +141,7 @@ fn packed_complex_returns_none() {
     assert!(pack(&Instruction::DefineFunction(0)).is_none());
     assert!(pack(&Instruction::DestructObject(0)).is_none());
     assert!(pack(&Instruction::Spawn {
-        payload_idx: 5,
+        name_sym: 5,
         first_arg: 0,
         arg_count: 0
     })

@@ -2,6 +2,7 @@ use super::*;
 
 mod basic;
 mod function_context;
+pub(crate) mod function_optimizer;
 mod governance;
 mod helpers;
 mod protocol;

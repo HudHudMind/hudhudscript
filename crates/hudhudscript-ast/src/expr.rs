@@ -8,8 +8,12 @@ use serde::{Deserialize, Serialize};
 pub enum Literal {
     /// String literal: "hello"
     String(String),
-    /// Number literal: 42, 3.14
+    /// Float literal: 3.14, 2.0, 1.5
     Number(f64, bool),
+    /// Integer literal that fits in an i64: 42, -7
+    Int(i64),
+    /// Big integer literal stored as decimal string because it exceeds i64.
+    BigInt(String),
     /// Boolean literal: true, false
     Boolean(bool),
     /// Null literal

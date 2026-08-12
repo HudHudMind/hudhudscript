@@ -31,6 +31,7 @@ fn start_script_thread(script: &str) -> (Arc<AtomicBool>, thread::JoinHandle<()>
 }
 
 #[test]
+#[ignore = "requires HUDHUD_REAL_NETWORK_TESTS=1 and localhost bind permission"]
 fn test_socket_serve_and_respond() {
     let script = r#"
 var app = Web.serve({ host: "127.0.0.1", port: 19991, reuse_port: false });
@@ -68,12 +69,13 @@ Web.respond(req, resp);
 }
 
 #[test]
+#[ignore = "requires HUDHUD_REAL_NETWORK_TESTS=1 and localhost bind permission"]
 fn test_socket_render_file() {
     // Render template from file (extends/blocks) over real socket.
     let examples_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap()
-        .join("samples/06-web/templates/index.html");
+        .join("examples/06-web/templates/index.html");
     let tmpl_path = examples_dir.to_str().unwrap();
 
     let script = format!(
@@ -107,6 +109,7 @@ Web.respond(req, resp);
 }
 
 #[test]
+#[ignore = "requires HUDHUD_REAL_NETWORK_TESTS=1 and localhost bind permission"]
 fn test_socket_parallel_prefork() {
     // Prefork concurrency: 4 workers → parallel > sequential speed.
     let workspace_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))

@@ -97,6 +97,8 @@ impl VM {
             }
 
             Instruction::LoopBegin(idx) => {
+                #[cfg(feature = "telemetry")]
+                { self.telemetry.loop_begin_end_count += 1; }
                 // CROSS-2b: resolve payload from the side table.  The
                 // compiler is required to emit a valid index; out-of-bounds
                 // indicates a compiler bug (Kural 7c — no fallback).
@@ -105,6 +107,8 @@ impl VM {
                     .push((payload.start as usize, payload.end as usize));
             }
             Instruction::LoopEnd => {
+                #[cfg(feature = "telemetry")]
+                { self.telemetry.loop_begin_end_count += 1; }
                 self.loop_headers.pop();
             }
 
@@ -333,27 +337,35 @@ impl VM {
                 }
                 if let Some((catch_ip, iter_depth, loop_depth)) = self.try_frames.pop() {
                     // Restore iterator depth and loop header depth.
-                    // Stack depth no longer needed (register-based VM).
-                    // Unwind iterators and loop headers
                     self.iterators.truncate(iter_depth);
                     self.iterator_generators.truncate(iter_depth);
                     self.loop_headers.truncate(loop_depth);
 
                     self.registers[255] = thrown;
 
-                    if catch_ip > instructions.len() {
-                        return Err(compile_codes::runtime_error(format!(
-                            "Jump target out of bounds: {}",
-                            catch_ip
-                        )));
+                    if catch_ip >= instructions.len() {
+                        // BUG1: catch target belongs to an enclosing caller chunk.
+                        // We cannot jump there from this chunk. Instead, treat this
+                        // as a cross-frame abrupt completion: stash the thrown value,
+                        // set ip past the end of this chunk, and let the frame loop
+                        // pop the current frame and re-dispatch the pending throw in
+                        // the caller's instruction stream.
+                        self.pending_flow = Some(crate::vm::PendingFlow::Throw(Box::new(thrown)));
+                        *ip_ref = instructions.len();
+                        return Ok(StepAction::Jumped);
                     }
                     *ip_ref = catch_ip;
                     return Ok(StepAction::Jumped);
                 } else {
-                    return Err(compile_codes::runtime_error(format!(
-                        "Uncaught exception: {}",
-                        crate::vm::exception_value::exception_field_str(&thrown, "description")
-                    )));
+                    // BUG1: no handler in this chunk. Route through finally
+                    // if one exists, otherwise unwind to caller.
+                    if let Some(finally_ip) = self.route_throw_through_finally(thrown.clone()) {
+                        *ip_ref = finally_ip;
+                        return Ok(StepAction::Jumped);
+                    }
+                    self.pending_flow = Some(crate::vm::PendingFlow::Throw(Box::new(thrown)));
+                    *ip_ref = instructions.len();
+                    return Ok(StepAction::Jumped);
                 }
             }
 

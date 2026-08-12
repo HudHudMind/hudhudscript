@@ -67,8 +67,16 @@ pub fn parse_protocol_decl(pair: Pair<Rule>) -> ParseResult<Stmt> {
                         }
                     }
                     "timeout" | "zamanAsimi" => {
-                        if let Expr::Literal(Literal::Number(n, _), _) = &value {
-                            timeout = Some(*n);
+                        if let Expr::Literal(lit, _) = &value {
+                            let n = match lit {
+                                Literal::Number(n, _) => *n,
+                                Literal::Int(i) => *i as f64,
+                                Literal::BigInt(s) => s.parse::<f64>().unwrap_or(f64::NAN),
+                                _ => f64::NAN,
+                            };
+                            if n.is_finite() {
+                                timeout = Some(n);
+                            }
                         }
                     }
                     "voting" | "oylama" => {}

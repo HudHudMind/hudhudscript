@@ -104,6 +104,7 @@ impl DeepSeekProvider {
         prompt: &str,
         temperature: Option<f32>,
         max_tokens: Option<u32>,
+        timeout_secs: Option<u64>,
     ) -> Result<DeepSeekCallResponse, ProviderError> {
         let request = DeepSeekRequest {
             model: model.to_string(),
@@ -120,9 +121,14 @@ impl DeepSeekProvider {
         };
 
         let url = format!("{}/chat/completions", self.base_url);
+        
+        let effective_timeout = timeout_secs.unwrap_or(crate::provider::types::DEFAULT_PROVIDER_TIMEOUT_SECS);
+        let timeout_duration = std::time::Duration::from_secs(effective_timeout);
+        
         let build_req = || {
             self.client
                 .post(&url)
+                .timeout(timeout_duration)
                 .header("Authorization", format!("Bearer {}", self.api_key))
                 .header("Content-Type", "application/json")
                 .json(&request)

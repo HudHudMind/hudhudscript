@@ -14,7 +14,10 @@ pub(super) fn compile_for_in(
     target.ct_emit(Instruction::ForIn { iter_reg, var_sym_idx: var_sym.0 as u16, end_offset: 0 });
     let loop_top = target.ct_current_ip();
     target.ct_emit(Instruction::IterNext { iter_reg, var_sym_idx: var_sym.0 as u16, end_offset: 0 });
+    target.ct_push_break_target(crate::compiler::target::BreakTarget::Loop);
     compile_stmt_shared(target, body)?;
+    target.ct_pop_break_target();
+
     let back_jump_site = target.ct_current_ip();
     target.ct_emit(Instruction::Jump(jump_off(back_jump_site, loop_top)));
     let end = target.ct_current_ip();
@@ -59,16 +62,34 @@ pub(super) fn compile_for_c_style(
                             BinaryOp::Ge => target.ct_emit(Instruction::IntLeRRJumpIfFalse { src1: b_reg, src2: a_reg, offset: 0 }),
                             _ => unreachable!(),
                         }
-                        let payload_idx = target.ct_add_loop_payload(loop_start as u32, 0);
-                        target.ct_emit(Instruction::LoopBegin(payload_idx));
+                        let payload_idx = if crate::compiler::helpers::body_contains_loop_exit(body) {
+                            Some(target.ct_add_loop_payload(loop_start as u32, 0))
+                        } else {
+                            None
+                        };
+                        if let Some(idx) = payload_idx {
+                            target.ct_emit(Instruction::LoopBegin(idx));
+                        }
+                        target.ct_push_break_target(crate::compiler::target::BreakTarget::Loop);
                         compile_stmt_shared(target, body)?;
-                        target.ct_emit(Instruction::LoopEnd);
+                        target.ct_pop_break_target();
+
+                        if let Some(idx) = payload_idx {
+                            target.ct_emit(Instruction::LoopEnd);
+                            // C3: ForCStyle `continue` must jump past LoopEnd to
+                            // the update clause. Patch payload.start to point here.
+                            let continue_target = target.ct_current_ip() as u32;
+                            target.ct_patch_loop_payload_start(idx, continue_target);
+                        }
                         if let Some(update_stmt) = update {
                             compile_stmt_shared(target, update_stmt)?;
                         }
                         let back_jump_site = target.ct_current_ip();
                         target.ct_emit(Instruction::Jump(jump_off(back_jump_site, loop_start)));
                         let end = target.ct_current_ip();
+                        if let Some(idx) = payload_idx {
+                            target.ct_patch_loop_payload_end(idx, end as u32);
+                        }
                         let offset = jump_off(jump_to_end, end);
                         let patch_instr = match op {
                             BinaryOp::Lt => Instruction::IntLtRRJumpIfFalse { src1: a_reg, src2: b_reg, offset: offset as i16 },
@@ -78,7 +99,9 @@ pub(super) fn compile_for_c_style(
                             _ => unreachable!(),
                         };
                         target.ct_patch(jump_to_end, patch_instr);
-                        target.ct_patch_loop_payload_end(payload_idx, end as u32);
+                        if let Some(idx) = payload_idx {
+                            target.ct_patch_loop_payload_end(idx, end as u32);
+                        }
                         return Ok(());
                     }
                 }
@@ -98,10 +121,23 @@ pub(super) fn compile_for_c_style(
     };
     let jump_to_end = target.ct_current_ip();
     target.ct_emit(Instruction::JumpIfFalse { src: cr, offset: 0 });
-    let payload_idx = target.ct_add_loop_payload(loop_start as u32, 0);
-    target.ct_emit(Instruction::LoopBegin(payload_idx));
+    let payload_idx = if crate::compiler::helpers::body_contains_loop_exit(body) {
+        Some(target.ct_add_loop_payload(loop_start as u32, 0))
+    } else {
+        None
+    };
+    if let Some(idx) = payload_idx {
+        target.ct_emit(Instruction::LoopBegin(idx));
+    }
+    target.ct_push_break_target(crate::compiler::target::BreakTarget::Loop);
     compile_stmt_shared(target, body)?;
-    target.ct_emit(Instruction::LoopEnd);
+    target.ct_pop_break_target();
+
+    if let Some(idx) = payload_idx {
+        target.ct_emit(Instruction::LoopEnd);
+        // C3: ForCStyle `continue` must jump past LoopEnd to the update clause.
+        target.ct_patch_loop_payload_start(idx, target.ct_current_ip() as u32);
+    }
     if let Some(update_stmt) = update {
         compile_stmt_shared(target, update_stmt)?;
     }
@@ -112,7 +148,9 @@ pub(super) fn compile_for_c_style(
         jump_to_end,
         Instruction::JumpIfFalse { src: cr, offset: jump_off(jump_to_end, end) as i16 },
     );
-    target.ct_patch_loop_payload_end(payload_idx, end as u32);
+    if let Some(idx) = payload_idx {
+        target.ct_patch_loop_payload_end(idx, end as u32);
+    }
     Ok(())
 }
 
@@ -133,7 +171,7 @@ pub(super) fn compile_for_range(
     let start_reg = crate::compiler::expr::compile_reg::compile_expr_to_reg(
         target, start, &mut crate::compiler::regalloc::RegAlloc::new_with_base(target.ct_next_local_reg()).expect("out of register zones"),
     );
-    target.ct_emit(Instruction::Move { dst: iter_reg, src: start_reg });
+    target.emit_move(iter_reg, start_reg );
 
     let start_reg2 = crate::compiler::expr::compile_reg::compile_expr_to_reg(
         target, start, &mut crate::compiler::regalloc::RegAlloc::new_with_base(target.ct_next_local_reg()).expect("out of register zones"),
@@ -143,17 +181,17 @@ pub(super) fn compile_for_range(
     );
     let dir_reg = crate::compiler::regalloc::temp_reg();
     target.ct_emit(Instruction::IntCmp { dst: dir_reg, src1: start_reg2, src2: stop_reg, op: 1 });
-    target.ct_emit(Instruction::Move { dst: dir_reg, src: dir_reg });
+    target.emit_move(dir_reg, dir_reg );
 
     let loop_start = target.ct_current_ip();
 
     let dir_load = crate::compiler::regalloc::temp_reg();
-    target.ct_emit(Instruction::Move { dst: dir_load, src: dir_reg });
+    target.emit_move(dir_load, dir_reg );
     let asc_jump = target.ct_current_ip();
     target.ct_emit(Instruction::JumpIfFalse { src: dir_load, offset: 0 });
 
     let iter_load1 = crate::compiler::regalloc::temp_reg();
-    target.ct_emit(Instruction::Move { dst: iter_load1, src: iter_reg });
+    target.emit_move(iter_load1, iter_reg );
     let stop_reg2 = crate::compiler::expr::compile_reg::compile_expr_to_reg(
         target, stop, &mut crate::compiler::regalloc::RegAlloc::new_with_base(target.ct_next_local_reg()).expect("out of register zones"),
     );
@@ -167,7 +205,7 @@ pub(super) fn compile_for_range(
         Instruction::JumpIfFalse { src: dir_load, offset: jump_off(asc_jump, desc_start) as i16 });
 
     let iter_load2 = crate::compiler::regalloc::temp_reg();
-    target.ct_emit(Instruction::Move { dst: iter_load2, src: iter_reg });
+    target.emit_move(iter_load2, iter_reg );
     let stop_reg3 = crate::compiler::expr::compile_reg::compile_expr_to_reg(
         target, stop, &mut crate::compiler::regalloc::RegAlloc::new_with_base(target.ct_next_local_reg()).expect("out of register zones"),
     );
@@ -180,10 +218,13 @@ pub(super) fn compile_for_range(
     let jump_to_end = target.ct_current_ip();
     target.ct_emit(Instruction::JumpIfFalse { src: cond_desc, offset: 0 });
 
+    target.ct_push_break_target(crate::compiler::target::BreakTarget::Loop);
     compile_stmt_shared(target, body)?;
+    target.ct_pop_break_target();
+
 
     let iter_load3 = crate::compiler::regalloc::temp_reg();
-    target.ct_emit(Instruction::Move { dst: iter_load3, src: iter_reg });
+    target.emit_move(iter_load3, iter_reg );
 
     let step_reg = if let Some(step_expr) = step {
         crate::compiler::expr::compile_reg::compile_expr_to_reg(
@@ -191,7 +232,7 @@ pub(super) fn compile_for_range(
         )
     } else {
         let dir_load2 = crate::compiler::regalloc::temp_reg();
-        target.ct_emit(Instruction::Move { dst: dir_load2, src: dir_reg });
+        target.emit_move(dir_load2, dir_reg );
         let step_asc_jump = target.ct_current_ip();
         target.ct_emit(Instruction::JumpIfFalse { src: dir_load2, offset: 0 });
 
@@ -220,7 +261,7 @@ pub(super) fn compile_for_range(
 
     let new_iter = crate::compiler::regalloc::temp_reg();
     target.ct_emit(Instruction::NumAdd { dst: new_iter, src1: iter_load3, src2: step_reg });
-    target.ct_emit(Instruction::Move { dst: iter_reg, src: new_iter });
+    target.emit_move(iter_reg, new_iter );
 
     let back_jump_site = target.ct_current_ip();
     target.ct_emit(Instruction::Jump(jump_off(back_jump_site, loop_start)));

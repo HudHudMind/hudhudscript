@@ -7,8 +7,9 @@
 //! measure VM optimisations (scope pool, indexed locals, etc.) against a
 //! fixed workload.
 
-use hudhudscript_compiler::{Compiler, VM};
+use hudhudscript_compiler::Compiler;
 use hudhudscript_parser::parse;
+use hudhudscript_vm::VM;
 use std::time::Instant;
 
 #[global_allocator]

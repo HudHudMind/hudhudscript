@@ -9,8 +9,9 @@
 //! before CROSS-1) and do not modify any existing tests.
 
 use hudhudscript_bytecode::{Instruction, Value16};
-use hudhudscript_compiler::{Compiler, VM};
+use hudhudscript_compiler::Compiler;
 use hudhudscript_parser::parse;
+use hudhudscript_vm::VM;
 
 fn run_named(src: &str, name: &str) -> Value16 {
     let ast = parse(src).expect("parse failed");
@@ -84,7 +85,9 @@ fn test_tco_emits_tail_call_instruction() {
     let ast = parse(src).expect("parse failed");
     let mut compiler = Compiler::new();
     let bytecode = compiler.compile(&ast).expect("compile failed");
-    let chunk = bytecode.get_function("loop_rec").expect("loop_rec chunk missing");
+    let chunk = bytecode
+        .get_function("loop_rec")
+        .expect("loop_rec chunk missing");
     let has_tail_call = chunk
         .instructions
         .iter()

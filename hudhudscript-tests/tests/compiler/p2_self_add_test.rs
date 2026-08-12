@@ -20,10 +20,7 @@ fn run_get_variable(src: &str, name: &str) -> hudhudscript_bytecode::Value16 {
 }
 
 fn get_func_instrs(bc: &hudhudscript_bytecode::Bytecode, name: &str) -> Vec<Instruction> {
-    bc.get_function(name)
-        .unwrap()
-        .instructions
-        .clone()
+    bc.get_function(name).unwrap().instructions.clone()
 }
 
 // ── 1. Numeric self-add semantic ─────────────────────────────

@@ -15,7 +15,7 @@ hudhudscript-ast = { path = "../crates/hudhudscript-ast" }
 hudhudscript-lexer = { path = "../crates/hudhudscript-lexer" }
 hudhudscript-types = { path = "../crates/hudhudscript-types" }
 hudhudscript-compiler = { path = "../crates/hudhudscript-compiler" }
-hudhudscript-vm = { path = "../crates/hudhudscript-vm" }
+hudhudscript-vm = { path = "../crates/hudhudscript-vm", features = ["telemetry"] }
 hudhudscript-bytecode = { path = "../crates/hudhudscript-bytecode" }
 hudhudscript-governance = { path = "../crates/hudhudscript-governance" }
 hudhudscript-ids = { path = "../crates/hudhudscript-ids" }
@@ -330,8 +330,8 @@ name = "stm"
 path = "tests/stm/mod.rs"
 
 [[test]]
-name = "samples"
-path = "tests/samples/mod.rs"
+name = "examples"
+path = "tests/examples/mod.rs"
 
 [[test]]
 name = "exception"
@@ -344,4 +344,8 @@ path = "tests/resources/mod.rs"
 [[test]]
 name = "loop_engineering"
 path = "tests/loop_engineering/mod.rs"
+
+[[test]]
+name = "gc"
+path = "tests/gc/mod.rs"
 

@@ -99,28 +99,15 @@ impl ModuleLoader {
 
     /// Resolve module path
     pub fn resolve_path(&self, path: &str) -> Result<PathBuf, ModuleLoaderError> {
-        let path = if path.starts_with("./") || path.starts_with("../") {
-            // Relative path
-            self.base_path.join(path)
-        } else {
-            // Absolute or package path
-            PathBuf::from(path)
-        };
-
-        // Add .hudhud extension if missing
-        let path = if path.extension().is_none() {
-            path.with_extension("hudhud")
-        } else {
-            path
-        };
-
-        if !path.exists() {
-            return Err(ModuleLoaderError::ModuleNotFound(
-                path.display().to_string(),
-            ));
+        for candidate in candidate_paths(&self.base_path, path) {
+            if candidate.exists() {
+                return Ok(candidate);
+            }
         }
 
-        Ok(path)
+        Err(ModuleLoaderError::ModuleNotFound(
+            self.base_path.join(path).display().to_string(),
+        ))
     }
 
     /// Extract imports and exports from AST
@@ -143,6 +130,51 @@ impl ModuleLoader {
             module.add_import(module_path, names);
         }
     }
+
+    fn base_from(&self, from: Option<&str>) -> std::path::PathBuf {
+        let Some(from) = from else {
+            return self.base_path.clone();
+        };
+
+        let raw = std::path::Path::new(from);
+        let path = if raw.is_absolute() {
+            raw.to_path_buf()
+        } else {
+            self.base_path.join(raw)
+        };
+
+        if path.is_dir() {
+            return path;
+        }
+
+        if path.extension().is_some() {
+            return path
+                .parent()
+                .unwrap_or(self.base_path.as_path())
+                .to_path_buf();
+        }
+
+        path
+    }
+}
+
+fn candidate_paths(base: &std::path::Path, raw: &str) -> Vec<std::path::PathBuf> {
+    let raw_path = std::path::Path::new(raw);
+    let base_path = if raw_path.is_absolute() {
+        raw_path.to_path_buf()
+    } else {
+        base.join(raw_path)
+    };
+
+    if base_path.extension().is_some() {
+        return vec![base_path];
+    }
+
+    vec![
+        base_path.with_extension("hudhud"),
+        base_path.with_extension("hud"),
+        base_path.with_extension("hudb"),
+    ]
 }
 
 // ---------------------------------------------------------------------------
@@ -157,36 +189,25 @@ impl ModuleResolverTrait for ModuleLoader {
         path: &str,
         from: Option<&str>,
     ) -> Result<ModuleContent, hudhudscript_errors::Error> {
-        // If `from` is provided, resolve relative to the importing file's directory
-        let resolved = if let Some(from_path) = from {
-            let from_dir = std::path::Path::new(from_path)
-                .parent()
-                .unwrap_or(self.base_path.as_path());
-            if path.starts_with("./") || path.starts_with("../") {
-                let mut p = from_dir.join(path);
-                if p.extension().is_none() {
-                    p.set_extension("hudhud");
-                }
-                p
-            } else {
-                // Absolute or package path — fall through to normal resolution
-                self.resolve_path(path)?
-            }
-        } else {
-            self.resolve_path(path)?
-        };
+        let base = self.base_from(from);
 
-        // Check for bytecode companion file (.hudb)
-        let bytecode_path = resolved.with_extension("hudb");
-        if bytecode_path.exists() {
-            let bytes = fs::read(&bytecode_path).map_err(|e| {
+        let resolved = candidate_paths(&base, path)
+            .into_iter()
+            .find(|p| p.exists())
+            .ok_or_else(|| {
+                hudhudscript_errors::Error::new(
+                    hudhudscript_errors::ErrorCode::ModuleLoaderModuleNotFound,
+                    format!("Module not found: {}", base.join(path).display()),
+                )
+            })?;
+
+        let ext = resolved.extension().and_then(|s| s.to_str());
+
+        if ext == Some("hudb") {
+            let bytes = fs::read(&resolved).map_err(|e| {
                 hudhudscript_errors::Error::new(
                     hudhudscript_errors::ErrorCode::ModuleLoaderReadError,
-                    format!(
-                        "Failed to read bytecode file {}: {}",
-                        bytecode_path.display(),
-                        e
-                    ),
+                    format!("Failed to read bytecode file {}: {}", resolved.display(), e),
                 )
             })?;
             return Ok(ModuleContent::Bytecode(bytes));

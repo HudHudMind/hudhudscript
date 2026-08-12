@@ -11,9 +11,9 @@ impl VM {
         params: &[String],
         args: &[Value16],
         bytecode: &Bytecode,
-        func_name: &str,
+        func_sym: hudhudscript_bytecode::SymId,
     ) -> CompileResult<Value16> {
-        self.call_chunk_with_captures(chunk, params, args, bytecode, func_name, &HashMap::new())
+        self.call_chunk_with_captures(chunk, params, args, bytecode, func_sym, &HashMap::new())
     }
 
     pub(crate) fn call_chunk_with_captures(
@@ -22,11 +22,9 @@ impl VM {
         params: &[String],
         args: &[Value16],
         bytecode: &Bytecode,
-        func_name: &str,
+        func_sym: hudhudscript_bytecode::SymId,
         closure_captures: &HashMap<String, Arc<parking_lot::RwLock<Value16>>>,
     ) -> CompileResult<Value16> {
-        let func_sym =
-            hudhudscript_bytecode::SymId(hudhudscript_bytecode::interner::intern(func_name).0);
         let stop_depth = self.frame_stack.len();
         self.exec_call_push_frame(
             chunk,

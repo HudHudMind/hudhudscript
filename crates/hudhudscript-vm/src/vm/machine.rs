@@ -4,7 +4,7 @@ use hudhudscript_async::PromiseRegistry;
 use hudhudscript_bytecode::cache_utils::{MAX_MCP_CACHE, MAX_RAG_STORE_CACHE};
 use hudhudscript_bytecode::{
     actor_registry::{ActorMailbox, SharedActorRegistry},
-    FunctionChunk, GeneratorState16, SymId, Value16,
+    FunctionChunk, FunctionData, GeneratorState16, SymId, Value16,
 };
 use hudhudscript_debug::Debugger;
 use hudhudscript_governance::Constitution;
@@ -23,6 +23,11 @@ use crate::vm::registry::ModuleRegistry;
 
 /// Virtual Machine state
 pub struct VM {
+    /// Feature-gated telemetry counters (GATE 2).
+    /// Not present in default builds — zero memory/cpu overhead.
+    #[cfg(feature = "telemetry")]
+    pub telemetry: crate::vm::telemetry::Telemetry,
+    pub gc_heap: Box<hudhudscript_bytecode::gc::GcHeap>,
     /// Operand stack.  Audit v3 Finding 1.1 / S1.1 (PERF-20): stores
     /// Return value relay: function Return/IntAddReturn/IntSubReturn write here.
     /// run_frame_loop reads from here on hit_return path instead of registers[255].
@@ -42,13 +47,13 @@ pub struct VM {
     /// enclosing function is promoted to a shared cell (`Arc<RwLock<Value>>`).
     /// Reads/writes to that name route through the cell instead of the plain
     /// slot entry.  One map is pushed on every function call and popped on
-    /// return; block scopes do not need their own map because all block-scoped
-    /// variables live in `registers`.
-    pub(crate) scope_cells: Vec<FxHashMap<String, Arc<parking_lot::RwLock<Value16>>>>,
-    /// Recycled scope cell maps — avoids FxHashMap::default() alloc on every closure call.
-    pub(crate) scope_cells_pool: Vec<FxHashMap<String, Arc<parking_lot::RwLock<Value16>>>>,
+    /// G5-slotvec: (cells, sym_ids) per scope. cells[slot]=None → uninitialized.
+    /// sym_ids: Arc shared from chunk (single ref-count bump per call, no clone).
+    pub(crate) scope_cells: Vec<(Box<[Option<Arc<parking_lot::RwLock<Value16>>>]>, Arc<[u32]>)>,
     /// Output locale (for number formatting)
     pub(crate) locale: OutputLocale,
+    /// F3: Object/dizi eşitlik politikası (varsayılan: Identity)
+    pub object_equality: crate::vm::config_types::ObjectEquality,
     /// Try-catch frames: (catch_target_ip, iterator_depth, loop_header_depth)
     pub(crate) try_frames: Vec<(usize, usize, usize)>,
     /// Finally frames: (finally_ip, iter_depth, loop_depth).
@@ -172,6 +177,8 @@ pub struct VM {
     pub(crate) max_builtin_iter: usize,
     /// Non-Linux default stack size in bytes for remaining_stack_bytes().
     pub(crate) default_stack_bytes: usize,
+    /// Default provider timeout in seconds (Issue #446).
+    pub(crate) provider_timeout_secs: u64,
     /// Sandbox config: allowed file paths and network hosts.
     /// PERF-50: `Box` the config so the `Option<...>` niche-optimises to a
     /// single nullable pointer.  `SandboxConfig` holds three `Vec`s and three
@@ -179,7 +186,15 @@ pub struct VM {
     /// struct by ~80 B per instance.  The sandbox is only consulted on
     /// file/network/MCP ops, so indirect access is irrelevant to the hot
     /// dispatch loop.
+    /// G12 (exp/unboxed-float): sıcak döngünün float-kanıtlı yerelleri —
+    /// tag'siz f64 slot dosyası. F* komutları yalnız burayı okur/yazar;
+    /// döngü sınırlarında FLoadNum/FStoreNum köprüler.
+    pub(crate) f_slots: [f64; 64],
     pub(crate) sandbox: Option<Box<SandboxConfig>>,
+    /// M2: `[runtime] allow_insecure_http` — SSE MCP için http:// + loopback
+    /// SSRF muafiyeti opt-in'i. `allow_network`'ten kasıtlı olarak AYRI izin
+    /// (biri ağ erişimi, diğeri şifresiz http). Default: false.
+    pub(crate) allow_insecure_http: bool,
     /// HOST-3: runtime host-access policy. Default is permissive to preserve
     /// existing CLI behaviour when no `[host_access]` section is configured.
     pub(crate) host_access_policy: crate::vm::host_access::HostAccessPolicy,
@@ -187,7 +202,7 @@ pub struct VM {
     /// Maps script-visible string handles to live `Arc<TVar<Value>>`.
     pub(crate) tvars: hudhudscript_stm::TVarRegistry<Value16>,
     /// Class context stack for proper super call resolution in nested contexts
-    pub(crate) class_context_stack: Vec<String>,
+    pub(crate) class_context_stack: Vec<hudhudscript_bytecode::SymId>,
     /// Scratch slot used by `call_method_on_value` for `Value::Instance`
     /// receivers: the post-method updated `this` is stashed here before
     /// the method's frame-local `this` is restored, so the MethodCall
@@ -368,7 +383,10 @@ pub struct VM {
     /// Invalidated by `invalidate_call_cache` when a binding changes.
     /// PERF-T1-6: params stored as raw pointer (Box::into_raw) to eliminate
     /// Arc::clone atomic refcount ops on every recursive call.
-    pub(crate) call_cache: Vec<Option<(*const FunctionChunk, *const Vec<String>)>>,
+    /// G1.4.5 GC audit: *const FunctionChunk is safe — chunks are owned by
+    /// Bytecode::functions (Arc), their constants are in gc_constant_roots
+    /// (add_chunk_constants, run.rs:11), and cache is drained on VM drop.
+    pub(crate) call_cache: Vec<Option<(*const FunctionData, *const FunctionChunk, *const Vec<String>)>>,
 
     /// ISSUE-5: single-entry inline cache for subject ability dispatch.
     /// P2: ability inline cache — 2-entry PIC (polymorphic inline cache).
@@ -376,15 +394,61 @@ pub struct VM {
     /// On lookup, check entries in order; on miss, do full lookup and
     /// insert into LRU position.  Avoids repeated String-key HashMap
     /// lookup for hot ability call sequences.
-    pub(crate) ability_cache: [(Option<(String, String, Arc<hudhudscript_bytecode::FunctionChunk>, String)>, u8); 2],
+    pub(crate) ability_cache: [(
+        Option<(
+            String,
+            hudhudscript_bytecode::SymId,
+            Arc<hudhudscript_bytecode::FunctionChunk>,
+            String,
+        )>,
+        u8,
+    ); 2],
 
+    /// P3: pre-interned SymId for hot-path set_var/get_var in class method dispatch.
+    pub(crate) this_sym: u32,
+    /// T5.2: Inline `this` storage — eliminates FxHashMap lookup for every self.x read.
+    pub(crate) cur_this: Value16,
+}
+
+impl VM {
+    /// GATE-2: record BigInt promotion/allocation if operands were plain Int.
+    /// No-op when telemetry feature is disabled.
+    #[inline(always)]
+    pub(crate) fn record_bigint_promotion(&mut self,
+        a: Value16,
+        b: Value16,
+        result: Value16,
+    ) {
+        #[cfg(feature = "telemetry")]
+        if a.is_int() && b.is_int() && result.is_bigint() {
+            self.telemetry.bigint_promotion += 1;
+            self.telemetry.bigint_alloc += 1;
+        }
+        let _ = (a, b, result);
+    }
 }
 
 impl VM {
     /// Return the last function return value (the result object).
-    /// Available after VM::execute completes with a Return instruction.
     pub fn last_return_value(&self) -> Value16 {
         self.last_return
+    }
+
+    /// Snapshot of GATE-2 telemetry counters (telemetry feature only).
+    #[cfg(feature = "telemetry")]
+    pub fn telemetry_snapshot(&self) -> crate::vm::telemetry::TelemetrySnapshot {
+        let mut snap = self.telemetry.snapshot();
+        hudhudscript_bytecode::gc::take_telemetry_alloc_counts(&mut snap.alloc_count_by_kind);
+        hudhudscript_bytecode::gc::take_telemetry_gc_stats(
+            &mut snap.gc_cycle_count,
+            &mut snap.gc_mark_count,
+            &mut snap.gc_sweep_count,
+            &mut snap.gc_pause_ns_total,
+            &mut snap.gc_pause_ns_max,
+            &mut snap.gc_heap_bytes_after_sweep,
+        );
+        snap.int_add_slow_count = crate::vm::math_fast_paths::take_int_add_slow_count();
+        snap
     }
 
     /// P3: fast SymbolId-indexed top-level slot lookup.
@@ -394,7 +458,11 @@ impl VM {
         let idx = sym_id as usize;
         if idx < self.main_local_slots.len() {
             let enc = self.main_local_slots[idx];
-            if enc != u32::MAX { Some(enc) } else { None }
+            if enc != u32::MAX {
+                Some(enc)
+            } else {
+                None
+            }
         } else {
             None
         }
@@ -415,7 +483,7 @@ impl Drop for VM {
     fn drop(&mut self) {
         // PERF-T1-6: Free the leaked Box<Vec<String>> allocations in call_cache.
         for entry in self.call_cache.drain(..) {
-            if let Some((_, params_ptr)) = entry {
+            if let Some((_, _, params_ptr)) = entry {
                 if !params_ptr.is_null() {
                     unsafe { drop(Box::from_raw(params_ptr as *mut Vec<String>)) };
                 }
@@ -435,3 +503,23 @@ impl Drop for VM {
 // owned by the same VM instance (arena Vec) or by the Bytecode
 // (FunctionChunk), both of which outlive any thread spawn.
 unsafe impl Send for VM {}
+
+
+pub struct HeapGuard {
+    prev: *mut hudhudscript_bytecode::gc::GcHeap,
+}
+
+impl HeapGuard {
+    pub fn new(vm: &mut VM) -> Self {
+        let heap_ptr = vm.gc_heap.as_mut() as *mut _;
+        let prev = hudhudscript_bytecode::gc::CURRENT_HEAP.with(|c| c.get());
+        hudhudscript_bytecode::gc::CURRENT_HEAP.with(|c| c.set(heap_ptr));
+        Self { prev }
+    }
+}
+
+impl Drop for HeapGuard {
+    fn drop(&mut self) {
+        hudhudscript_bytecode::gc::CURRENT_HEAP.with(|c| c.set(self.prev));
+    }
+}

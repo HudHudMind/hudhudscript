@@ -57,13 +57,15 @@ impl Value16 {
                 return Value16(repr);
             }
         }
-        gc::alloc(DynamicKind::String, DynamicData::String(s))
+        let kind = if s.is_ascii() { DynamicKind::StringAscii } else { DynamicKind::String };
+        gc::alloc(kind, DynamicData::String(s))
     }
 
     /// Create a String value from a &str WITHOUT intermediate heap allocation.
     /// Short strings (≤15 bytes) are stored inline directly from the slice.
     /// Long strings fall through to GC heap (single allocation, no double-copy).
     /// P0.3 fix: eliminates `s.into()` allocation for hot-path string methods.
+    /// P4: ASCII strings use DynamicKind::StringAscii for O(1) substring.
     #[inline]
     pub fn string_from_str(s: &str) -> Self {
         if s.len() <= 15 {
@@ -71,7 +73,8 @@ impl Value16 {
                 return Value16(repr);
             }
         }
-        gc::alloc(DynamicKind::String, DynamicData::String(s.to_string()))
+        let kind = if s.is_ascii() { DynamicKind::StringAscii } else { DynamicKind::String };
+        gc::alloc(kind, DynamicData::String(s.to_string()))
     }
 
     /// Return a cached single-byte ASCII string (0–127) without heap allocation.
@@ -328,7 +331,7 @@ impl Value16 {
         if self.0.tag() == ReprTag::Dynamic {
             let ptr = self.0.as_ptr()?;
             let obj = unsafe { &*(ptr as *const DynamicObject) };
-            if matches!(obj.kind, DynamicKind::String) {
+            if crate::dynamic::is_string_kind(obj.kind) {
                 if let DynamicData::String(s) = &obj.data {
                     return Some(s.clone());
                 }

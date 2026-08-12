@@ -154,14 +154,9 @@ impl Formatter {
     pub(super) fn format_literal(&self, lit: &Literal) -> String {
         match lit {
             Literal::String(s) => format!("\"{}\"", escape_string(s)),
-            Literal::Number(n, _) => {
-                // Format integers without decimal point
-                if *n == n.floor() && n.is_finite() && n.abs() < 1e15 {
-                    format!("{}", *n as i64)
-                } else {
-                    n.to_string()
-                }
-            }
+            Literal::Number(n, _) => n.to_string(),
+            Literal::Int(i) => format!("{}", i),
+            Literal::BigInt(s) => s.clone(),
             Literal::Boolean(b) => b.to_string(),
             Literal::Null => "null".to_string(),
         }

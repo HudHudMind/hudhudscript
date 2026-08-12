@@ -1,6 +1,23 @@
 use super::*;
 use hudhudscript_lexer::is_hard_reserved_keyword;
 
+/// Convert a raw ASCII decimal number string (no Arabic-Indic conversion)
+/// into the appropriate AST literal. Float strings keep `Literal::Number`;
+/// integer strings that fit in `i64` become `Literal::Int`; anything larger
+/// becomes `Literal::BigInt` with the original decimal text preserved exactly.
+pub(crate) fn number_literal_from_ascii(num_str: &str) -> Literal {
+    let is_float = num_str.contains('.') || num_str.contains('e') || num_str.contains('E');
+    if is_float {
+        // SAFETY: grammar guarantees a syntactically valid float here.
+        let value = num_str.parse::<f64>().unwrap_or(f64::NAN);
+        Literal::Number(value, true)
+    } else {
+        match num_str.parse::<i64>() {
+            Ok(i) => Literal::Int(i),
+            Err(_) => Literal::BigInt(num_str.to_string()),
+        }
+    }
+}
 
 pub(super) fn parse_number(pair: Pair<Rule>) -> ParseResult<Expr> {
     let span = pair_to_span(&pair);
@@ -13,11 +30,8 @@ pub(super) fn parse_number(pair: Pair<Rule>) -> ParseResult<Expr> {
 
     // Convert Arabic-Indic digits to ASCII before parsing
     let num_str = arabic_to_ascii(num_str);
-    let is_float = num_str.contains('.') || num_str.contains('e') || num_str.contains('E');
-    let value = num_str
-        .parse::<f64>()
-        .map_err(|_| parse_codes::invalid_syntax("Invalid number", span))?;
-    Ok(Expr::Literal(Literal::Number(value, is_float), span))
+    let lit = number_literal_from_ascii(&num_str);
+    Ok(Expr::Literal(lit, span))
 }
 
 pub(super) fn parse_string(pair: Pair<Rule>) -> ParseResult<Expr> {

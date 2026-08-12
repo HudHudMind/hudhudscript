@@ -9,7 +9,7 @@ use hudhudscript_parser::parse;
 // ── BN — Bengali ────────────────────────────────────────────────────────────
 
 #[test]
-    #[ignore] // locale keyword not yet implemented
+#[ignore] // locale keyword not yet implemented
 fn test_bn_if_statement() {
     // যদি (if) x { }
     let source = "যদি x { }";
@@ -28,7 +28,7 @@ fn test_bn_function_decl() {
 // ── BS — Bosnian ─────────────────────────────────────────────────────────────
 
 #[test]
-    #[ignore] // locale keyword not yet implemented
+#[ignore] // locale keyword not yet implemented
 fn test_bs_if_statement() {
     // ako (if) x { }
     let source = "ako x { }";
@@ -47,7 +47,7 @@ fn test_bs_function_decl() {
 // ── EL — Greek ───────────────────────────────────────────────────────────────
 
 #[test]
-    #[ignore] // locale keyword not yet implemented
+#[ignore] // locale keyword not yet implemented
 fn test_el_if_statement() {
     // αν (if) x { }
     let source = "αν x { }";
@@ -66,7 +66,7 @@ fn test_el_function_decl() {
 // ── HR — Croatian ────────────────────────────────────────────────────────────
 
 #[test]
-    #[ignore] // locale keyword not yet implemented
+#[ignore] // locale keyword not yet implemented
 fn test_hr_if_statement() {
     // ako (if) — shared with BS via normalizer
     let source = "ako x { }";
@@ -85,7 +85,7 @@ fn test_hr_function_decl() {
 // ── ID — Indonesian ──────────────────────────────────────────────────────────
 
 #[test]
-    #[ignore] // locale keyword not yet implemented
+#[ignore] // locale keyword not yet implemented
 fn test_id_if_statement() {
     // jika (if) x { }
     let source = "jika x { }";
@@ -104,7 +104,7 @@ fn test_id_function_decl() {
 // ── IT — Italian ─────────────────────────────────────────────────────────────
 
 #[test]
-    #[ignore] // locale keyword not yet implemented
+#[ignore] // locale keyword not yet implemented
 fn test_it_if_statement() {
     // se (if) x { }
     let source = "se x { }";
@@ -123,7 +123,7 @@ fn test_it_function_decl() {
 // ── PL — Polish ──────────────────────────────────────────────────────────────
 
 #[test]
-    #[ignore] // locale keyword not yet implemented
+#[ignore] // locale keyword not yet implemented
 fn test_pl_if_statement() {
     // jeśli (if) x { }
     let source = "jeśli x { }";
@@ -142,7 +142,7 @@ fn test_pl_function_decl() {
 // ── PT — Portuguese ──────────────────────────────────────────────────────────
 
 #[test]
-    #[ignore] // locale keyword not yet implemented
+#[ignore] // locale keyword not yet implemented
 fn test_pt_if_statement() {
     // se (if) x { } — shared with IT via normalizer
     let source = "se x { }";
@@ -161,7 +161,7 @@ fn test_pt_function_decl() {
 // ── SR — Serbian Cyrillic ────────────────────────────────────────────────────
 
 #[test]
-    #[ignore] // locale keyword not yet implemented
+#[ignore] // locale keyword not yet implemented
 fn test_sr_if_statement() {
     // ако (if) x { }
     let source = "ако x { }";
@@ -180,7 +180,7 @@ fn test_sr_function_decl() {
 // ── TH — Thai ────────────────────────────────────────────────────────────────
 
 #[test]
-    #[ignore] // locale keyword not yet implemented
+#[ignore] // locale keyword not yet implemented
 fn test_th_if_statement() {
     // ถ้า (if) x { }
     let source = "ถ้า x { }";
@@ -199,7 +199,7 @@ fn test_th_function_decl() {
 // ── VI — Vietnamese ──────────────────────────────────────────────────────────
 
 #[test]
-    #[ignore] // locale keyword not yet implemented
+#[ignore] // locale keyword not yet implemented
 fn test_vi_if_statement() {
     // nếu (if) x { }
     let source = "nếu x { }";
@@ -218,7 +218,7 @@ fn test_vi_function_decl() {
 // ── Cross-language: all 11 produce same AST for equivalent if ────────────────
 
 #[test]
-    #[ignore] // locale keyword not yet implemented
+#[ignore] // locale keyword not yet implemented
 fn test_all_new_languages_if_normalizes_to_same() {
     // Her dilde "if x { }" eşdeğeri — normalizer sonrası aynı AST beklenir
     let cases = vec![

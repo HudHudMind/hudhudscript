@@ -5,6 +5,17 @@ pub enum OutputLocale {
     Arabic,
 }
 
+/// F3: Object/dizi eşitlik politikası (hudhud.toml → [language] object_equality)
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ObjectEquality {
+    /// Pointer kimliği: `a == a` true, `{x:1}=={x:1}` false. Varsayılan.
+    Identity,
+    /// Derin eşitlik: tüm alanlar rekürsif karşılaştırılır.
+    Deep,
+    /// Hiçbir nesne/dizi eşit değil (geriye uyum, önerilmez).
+    Never,
+}
+
 /// Sandbox configuration for file, network, and process access control.
 #[derive(Debug, Clone)]
 pub struct SandboxConfig {

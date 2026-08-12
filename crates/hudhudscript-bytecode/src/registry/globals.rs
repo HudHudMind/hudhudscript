@@ -127,23 +127,31 @@ pub const BUILTIN_GLOBALS: &[BuiltinMember] = &[
     BuiltinMember {
         name: "remember",
         kind: MemberKind::Function,
-        description: "Store a value in RAG memory",
-        params: &[("key", "string"), ("value", "any")],
-        return_type: "null",
+        description: "Store a value in RAG memory — returns the new entry's id. \
+                      Implemented by VM::rag_remember, the same code path as the \
+                      `remember x in S;` statement.",
+        params: &[("content", "any"), ("store", "string")],
+        return_type: "string",
     },
     BuiltinMember {
         name: "recall",
         kind: MemberKind::Function,
-        description: "Query RAG memory",
-        params: &[("query", "string")],
-        return_type: "any",
+        description: "Query RAG memory — returns ranked hits as \
+                      [{ id, text, score }] (top 5). An empty query returns \
+                      every stored item. Implemented by VM::rag_recall, the \
+                      same code path as the `recall \"q\" from S;` statement.",
+        params: &[("query", "string"), ("store", "string")],
+        return_type: "array",
     },
     BuiltinMember {
         name: "forget",
         kind: MemberKind::Function,
-        description: "Delete a value from RAG memory",
-        params: &[("key", "string")],
-        return_type: "null",
+        description: "Delete entries from RAG memory by content — returns how \
+                      many were removed. An empty target clears the store. \
+                      Implemented by VM::rag_forget, the same code path as the \
+                      `forget x from S;` statement.",
+        params: &[("target", "any"), ("store", "string")],
+        return_type: "number",
     },
     BuiltinMember {
         name: "put",

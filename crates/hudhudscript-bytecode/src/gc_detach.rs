@@ -10,7 +10,7 @@
 
 use crate::{DynamicData, DynamicKind, DynamicObject, Value16};
 use hudhudscript_errors::catalog::ErrorCode;
-use crate::{ObjMap, SymId};
+use crate::{DataData, InstanceData, ObjMap, SymId};
 use std::collections::HashMap;
 
 /// Error for unsupported thread transfer types (G3-1a).
@@ -33,6 +33,13 @@ pub enum OwnedTree {
     Set(Vec<OwnedTree>),
     Map(Vec<(OwnedTree, OwnedTree)>),
     Option(Option<Box<OwnedTree>>),
+    /// V2-C2: Preserve Result type through detach/attach round-trip.
+    Ok(Box<OwnedTree>),
+    Err(String),
+    /// V2-C2: Preserve Data type (tagged struct) through round-trip.
+    Data { type_name: String, fields: Vec<(String, OwnedTree)> },
+    /// V2-C2: Preserve Instance type through round-trip.
+    Instance { class_name: String, fields: Vec<(String, OwnedTree)> },
     Ref(usize),
 }
 
@@ -134,21 +141,21 @@ fn detach_value(
             }
             DynamicData::Result(res) => {
                 match res.as_ref() {
-                    Ok(boxed) => OwnedTree::Array(vec![detach_value(**boxed, graph, seen)?]),
-                    Err(s) => OwnedTree::String(format!("Err({})", s)),
+                    Ok(boxed) => OwnedTree::Ok(Box::new(detach_value(**boxed, graph, seen)?)),
+                    Err(s) => OwnedTree::Err(s.clone()),
                 }
             }
             DynamicData::Data(data) => {
                 let fields: Vec<(String, OwnedTree)> = data.fields.iter()
                     .map(|(k, v)| Ok((k.to_string(), detach_value(*v, graph, seen)?)))
                     .collect::<Result<_, ErrorCode>>()?;
-                OwnedTree::Object(fields)
+                OwnedTree::Data { type_name: data.type_name.clone(), fields }
             }
             DynamicData::Instance(inst) => {
                 let fields: Vec<(String, OwnedTree)> = inst.fields.iter()
                     .map(|(k, v)| Ok((k.to_string(), detach_value(*v, graph, seen)?)))
                     .collect::<Result<_, ErrorCode>>()?;
-                OwnedTree::Object(fields)
+                OwnedTree::Instance { class_name: inst.class_name.clone(), fields }
             }
             DynamicData::Function(_)
             | DynamicData::Promise(_)
@@ -170,17 +177,140 @@ fn detach_value(
 
 pub fn attach(graph: &DetachedGraph) -> Value16 {
     let mut pool = vec![Value16::null(); graph.nodes.len()];
-    let mut visiting = std::collections::HashSet::new();
-    attach_tree(
-        &graph.nodes[graph.root_idx], &graph.nodes, &mut pool, &mut visiting)
+    // Two-pass attach (V2-C2):
+    // Pass 1: create preliminary nodes with correct DynamicKind
+    // Pass 2: rebuild each Ref node with resolved children, replacing pool entries
+    // Cycles are preserved — a node may reference itself or its ancestors.
+    for (idx, node) in graph.nodes.iter().enumerate() {
+        pool[idx] = attach_placeholder(node);
+    }
+    // Pass 2: fill children into pre-allocated node for EVERY aggregate node.
+    // Node table entries are always aggregate types (not Ref — only children are Ref).
+    for idx in 0..graph.nodes.len() {
+        let node = &graph.nodes[idx];
+        match node {
+            OwnedTree::Array(items) => {
+                let children: Vec<Value16> = items.iter().map(|t| resolve(t, &graph.nodes, &pool)).collect();
+                if let Some(dst) = pool[idx].as_array_mut() { *dst = children; }
+            }
+            OwnedTree::Object(fields) => {
+                let mut map = ObjMap::default();
+                for (k, t) in fields { map.insert(SymId::from(k.as_str()), resolve(t, &graph.nodes, &pool)); }
+                if let Some(dst) = pool[idx].as_object_mut() { *dst = map; }
+            }
+            OwnedTree::Set(items) => {
+                let children: Vec<Value16> = items.iter().map(|t| resolve(t, &graph.nodes, &pool)).collect();
+                drop(items);
+                if let Some(v) = pool[idx].as_set_mut() { *v = children; }
+            }
+            OwnedTree::Map(pairs) => {
+                let vals: Vec<(Value16, Value16)> = pairs.iter()
+                    .map(|(k, v)| (resolve(k, &graph.nodes, &pool), resolve(v, &graph.nodes, &pool))).collect();
+                drop(pairs);
+                if let Some(v) = pool[idx].as_map_mut() { *v = vals; }
+            }
+            OwnedTree::Option(Some(boxed)) => {
+                let val = resolve(boxed, &graph.nodes, &pool);
+                if let Some(v) = pool[idx].as_option_mut() { *v = Some(Box::new(val)); }
+            }
+            OwnedTree::Ok(boxed) => {
+                let val = resolve(boxed, &graph.nodes, &pool);
+                if let Some(v) = pool[idx].as_result_mut() { *v = Ok(Box::new(val)); }
+            }
+            OwnedTree::Err(_) => {}
+            OwnedTree::Data { fields, .. } => {
+                let pairs: Vec<(SymId, Value16)> = fields.iter()
+                    .map(|(k, t)| (SymId::from(k.as_str()), resolve(t, &graph.nodes, &pool))).collect();
+                if let Some(d) = pool[idx].as_data_mut() {
+                    d.fields = pairs.into_iter().collect();
+                }
+            }
+            OwnedTree::Instance { fields, .. } => {
+                let pairs: Vec<(SymId, Value16)> = fields.iter()
+                    .map(|(k, t)| (SymId::from(k.as_str()), resolve(t, &graph.nodes, &pool))).collect();
+                if let Some(i) = pool[idx].as_instance_mut() {
+                    i.fields = pairs.into_iter().collect();
+                }
+            }
+            _ => { /* primitive/leaf node: already correct */ }
+        }
+    }
+    // Return root from pool
+    pool[graph.root_idx]
 }
 
-fn attach_tree(
-    tree: &OwnedTree,
-    nodes: &Vec<OwnedTree>,
-    pool: &mut Vec<Value16>,
-    visiting: &mut std::collections::HashSet<usize>,
-) -> Value16 {
+fn resolve(t: &OwnedTree, nodes: &Vec<OwnedTree>, pool: &Vec<Value16>) -> Value16 {
+    match t {
+        OwnedTree::Ref(idx) => pool[*idx],
+        other => attach_leaf(other, nodes, pool),
+    }
+}
+
+/// Create a preliminary node with correct DynamicKind, children uninitialized.
+fn attach_placeholder(tree: &OwnedTree) -> Value16 {
+    match tree {
+        OwnedTree::Array(_) => Value16::array(vec![]),
+        OwnedTree::Object(_) => Value16::object(ObjMap::default()),
+        OwnedTree::Set(_) => Value16::set(vec![]),
+        OwnedTree::Map(_) => crate::gc::alloc(DynamicKind::Map, DynamicData::Map(vec![])),
+        OwnedTree::Option(_) => Value16::option(None::<Value16>),
+        OwnedTree::Ok(_) => Value16::result(Ok(Value16::null())),
+        OwnedTree::Err(s) => Value16::result(Err(s.clone())),
+        OwnedTree::Data { type_name, .. } => {
+            let data = crate::DataData { type_name: type_name.clone(), fields: ObjMap::default() };
+            Value16::data(data)
+        }
+        OwnedTree::Instance { class_name, .. } => {
+            let inst = crate::InstanceData { class_name: class_name.clone(), fields: ObjMap::default(), class: Value16::null() };
+            Value16::instance(inst)
+        }
+        _ => attach_leaf(tree, &vec![], &vec![]),
+    }
+}
+
+/// Rebuild a Ref node fully with resolved children, then replace pool entry.
+fn attach_ref_node(tree: &OwnedTree, nodes: &Vec<OwnedTree>, pool: &Vec<Value16>) -> Value16 {
+    let idx = match tree {
+        OwnedTree::Ref(i) => *i,
+        _ => return attach_leaf(tree, nodes, pool),
+    };
+    let node = &nodes[idx];
+    let r = |t: &OwnedTree| resolve(t, nodes, pool);
+    match node {
+        OwnedTree::Array(items) => Value16::array(items.iter().map(|t| r(t)).collect()),
+        OwnedTree::Object(fields) => {
+            let mut map = ObjMap::default();
+            for (k, t) in fields { map.insert(SymId::from(k.as_str()), r(t)); }
+            Value16::object(map)
+        }
+        OwnedTree::Set(items) => Value16::set(items.iter().map(|t| r(t)).collect()),
+        OwnedTree::Map(pairs) => {
+            let vals: Vec<(Value16, Value16)> = pairs.iter().map(|(k, v)| (r(k), r(v))).collect();
+            crate::gc::alloc(DynamicKind::Map, DynamicData::Map(vals))
+        }
+        OwnedTree::Option(opt) => {
+            if let Some(boxed) = opt { Value16::option(Some(r(boxed))) }
+            else { Value16::option(None::<Value16>) }
+        }
+        OwnedTree::Ok(boxed) => Value16::result(Ok(r(boxed))),
+        OwnedTree::Err(s) => Value16::result(Err(s.clone())),
+        OwnedTree::Data { type_name, fields } => {
+            let mut m = ObjMap::default();
+            for (k, t) in fields { m.insert(SymId::from(k.as_str()), r(t)); }
+            Value16::data(crate::DataData { type_name: type_name.clone(), fields: m })
+        }
+        OwnedTree::Instance { class_name, fields } => {
+            let mut m = ObjMap::default();
+            for (k, t) in fields { m.insert(SymId::from(k.as_str()), r(t)); }
+            Value16::instance(crate::InstanceData { class_name: class_name.clone(), fields: m, class: Value16::null() })
+        }
+        _ => attach_leaf(node, nodes, pool),
+    }
+}
+
+/// Resolve a leaf (non-Ref) tree to a final Value16.
+fn attach_leaf(tree: &OwnedTree, nodes: &Vec<OwnedTree>, pool: &Vec<Value16>) -> Value16 {
+    let r = |t: &OwnedTree| resolve(t, nodes, pool);
     match tree {
         OwnedTree::Null => Value16::null(),
         OwnedTree::Bool(b) => Value16::bool_(*b),
@@ -188,58 +318,87 @@ fn attach_tree(
         OwnedTree::Float(f) => Value16::number(*f),
         OwnedTree::String(s) => Value16::string(s.clone()),
         OwnedTree::BigInt(s) => Value16::bigint(num_bigint::BigInt::from_signed_bytes_le(s)),
-        OwnedTree::Array(items) => {
-            let values: Vec<Value16> = items
-                .iter()
-                .map(|t| attach_tree(t, nodes, pool, visiting))
-                .collect();
-            Value16::array(values)
-        }
+        OwnedTree::Array(items) => Value16::array(items.iter().map(|t| r(t)).collect()),
         OwnedTree::Object(fields) => {
             let mut map = ObjMap::default();
-            for (k, v) in fields { map.insert(SymId::from(k.as_str()), attach_tree(v, nodes, pool, visiting)); }
+            for (k, t) in fields { map.insert(SymId::from(k.as_str()), r(t)); }
             Value16::object(map)
         }
-        OwnedTree::Set(items) => {
-            let values: Vec<Value16> = items
-                .iter()
-                .map(|t| attach_tree(t, nodes, pool, visiting))
-                .collect();
-            crate::gc::alloc(DynamicKind::Set, DynamicData::Set(values))
-        }
+        OwnedTree::Set(items) => Value16::set(items.iter().map(|t| r(t)).collect()),
         OwnedTree::Map(pairs) => {
-            let values: Vec<(Value16, Value16)> = pairs
-                .iter()
-                .map(|(k, v)| (attach_tree(k, nodes, pool, visiting), attach_tree(v, nodes, pool, visiting)))
-                .collect();
-            crate::gc::alloc(DynamicKind::Map, DynamicData::Map(values))
+            let vals: Vec<(Value16, Value16)> = pairs.iter().map(|(k, v)| (r(k), r(v))).collect();
+            crate::gc::alloc(DynamicKind::Map, DynamicData::Map(vals))
         }
         OwnedTree::Option(opt) => {
-            if let Some(boxed) = opt {
-                Value16::option(Some(attach_tree(boxed, nodes, pool, visiting)))
-            } else {
-                Value16::option(None::<Value16>)
-            }
+            if let Some(boxed) = opt { Value16::option(Some(r(boxed))) }
+            else { Value16::option(None::<Value16>) }
         }
-        OwnedTree::Ref(idx) => {
-            if let Some(v) = pool.get(*idx) {
-                if !v.is_null() {
-                    return *v;
-                }
-            }
-            if !visiting.insert(*idx) {
-                // Cycle: the target is already being constructed. Return null to break the loop.
-                // Full cycle preservation requires a two-pass attach implementation (G2-A3).
-                return Value16::null();
-            }
-            let node = nodes.get(*idx).expect("Invalid Ref index");
-            let built = attach_tree(node, nodes, pool, visiting);
-            if *idx < pool.len() {
-                pool[*idx] = built;
-            }
-            visiting.remove(idx);
-            built
+        OwnedTree::Ok(boxed) => Value16::result(Ok(r(boxed))),
+        OwnedTree::Err(s) => Value16::result(Err(s.clone())),
+        OwnedTree::Data { type_name, fields } => {
+            let mut m = ObjMap::default();
+            for (k, t) in fields { m.insert(SymId::from(k.as_str()), r(t)); }
+            Value16::data(crate::DataData { type_name: type_name.clone(), fields: m })
         }
+        OwnedTree::Instance { class_name, fields } => {
+            let mut m = ObjMap::default();
+            for (k, t) in fields { m.insert(SymId::from(k.as_str()), r(t)); }
+            Value16::instance(crate::InstanceData { class_name: class_name.clone(), fields: m, class: Value16::null() })
+        }
+        OwnedTree::Ref(idx) => pool[*idx],
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn round_trip_string() {
+        let v = Value16::string("hello world over 15 chars");
+        let g = detach(v).unwrap();
+        let v2 = attach(&g);
+        assert_eq!(v2.as_str(), Some("hello world over 15 chars"));
+    }
+
+    #[test]
+    fn round_trip_int() {
+        let v = Value16::int(42);
+        let g = detach(v).unwrap();
+        let v2 = attach(&g);
+        assert_eq!(v2.as_int(), Some(42));
+    }
+
+    #[test]
+    fn round_trip_bigint() {
+        let big = num_bigint::BigInt::from(2u64).pow(100);
+        let v = Value16::bigint(big.clone());
+        let g = detach(v).unwrap();
+        let v2 = attach(&g);
+        assert!(v2.is_bigint());
+        assert_eq!(*v2.as_bigint().unwrap(), big);
+    }
+
+    #[test]
+    fn round_trip_result_ok() {
+        let v = Value16::result(Ok(Value16::int(99)));
+        let g = detach(v).unwrap();
+        let v2 = attach(&g);
+        let res = v2.as_result().unwrap();
+        assert!(res.is_ok());
+        assert_eq!(res.unwrap().as_int(), Some(99));
+    }
+
+    #[test]
+    fn round_trip_data() {
+        let mut m = ObjMap::default();
+        m.insert(SymId::from("x"), Value16::int(1));
+        let v = Value16::data(crate::DataData { type_name: "Test".into(), fields: m });
+        let g = detach(v).unwrap();
+        let v2 = attach(&g);
+        let d = v2.as_data_data().unwrap();
+        assert_eq!(d.type_name, "Test");
+        assert_eq!(d.fields.get(&SymId::from("x")).unwrap().as_int(), Some(1));
     }
 }
 

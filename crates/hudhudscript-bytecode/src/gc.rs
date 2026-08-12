@@ -8,13 +8,17 @@ pub const DEFAULT_GC_GROWTH: usize = 2;
 const MIN_GC_GROWTH: usize = 1;
 
 #[derive(Default)]
-struct GcHeap {
+pub struct GcHeap {
     objects: Vec<*mut DynamicObject>,
     bytes_alloc: usize,
     next_gc: usize,
     collections: u64,
     total_freed: u64,
     last_pause_micros: u64,
+    pause_micros_total: u64,
+    pause_micros_max: u64,
+    #[cfg(feature = "telemetry")]
+    alloc_count_by_kind: [u64; 17],
 }
 
 impl Drop for GcHeap {
@@ -24,12 +28,46 @@ impl Drop for GcHeap {
                 drop(Box::from_raw(ptr));
             }
         }
+        // Drain BigInt free-list if thread-local still accessible.
+        let _ = BIGINT_FREE_LIST.try_with(|fl| {
+            for ptr in fl.borrow_mut().drain(..) {
+                unsafe { drop(Box::from_raw(ptr)) };
+            }
+        });
     }
 }
 
+
 std::thread_local! {
-    static HEAP: RefCell<GcHeap> = RefCell::new(GcHeap::default());
+    pub static CURRENT_HEAP: std::cell::Cell<*mut GcHeap> = std::cell::Cell::new(std::ptr::null_mut());
+    pub static FALLBACK_HEAP: std::cell::RefCell<GcHeap> = std::cell::RefCell::new(GcHeap {
+        objects: Vec::new(),
+        bytes_alloc: 0,
+        next_gc: 0,
+        collections: 0,
+        total_freed: 0,
+        last_pause_micros: 0,
+        pause_micros_total: 0,
+        pause_micros_max: 0,
+        #[cfg(feature = "telemetry")]
+        alloc_count_by_kind: [0; 17],
+    });
 }
+
+#[inline]
+pub fn with_heap<R>(f: impl FnOnce(&mut GcHeap) -> R) -> R {
+    CURRENT_HEAP.with(|c| {
+        let ptr = c.get();
+        if ptr.is_null() {
+            FALLBACK_HEAP.with(|fallback| {
+                f(&mut *fallback.borrow_mut())
+            })
+        } else {
+            f(unsafe { &mut *ptr })
+        }
+    })
+}
+
 
 std::thread_local! {
     /// P2: alloc eşik aşımında SADECE bu bayrağı kaldırır; collect'i yalnız
@@ -39,7 +77,11 @@ std::thread_local! {
     static GC_PENDING: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
     /// HUDHUD_GC_STRESS=1 env önbelleği (her safepoint'te env okumamak için).
     static GC_STRESS: std::cell::Cell<Option<bool>> = const { std::cell::Cell::new(None) };
+    /// P6: BigInt free-list — reclaimed DynamicObject slots, reused without heap alloc.
+    static BIGINT_FREE_LIST: std::cell::RefCell<Vec<*mut DynamicObject>> = std::cell::RefCell::new(Vec::new());
 }
+
+const BIGINT_FREE_LIST_MAX: usize = 1024;
 
 pub trait GcRootSource {
     fn mark_roots(&self);
@@ -106,6 +148,23 @@ pub fn safepoint_due() -> bool {
 /// or heap teardown.
 #[inline]
 pub fn alloc(kind: DynamicKind, data: DynamicData) -> Value16 {
+    // P6: BigInt free-list fast path — reuse a reclaimed slot.
+    if matches!(kind, DynamicKind::BigInt) {
+        if let Some(ptr) = BIGINT_FREE_LIST.with(|fl| fl.borrow_mut().pop()) {
+            let obj = unsafe { &mut *ptr };
+            obj.marked.set(false);
+            obj.data = data;
+            with_heap(|heap| {
+                heap.objects.push(ptr);
+                heap.bytes_alloc = heap.bytes_alloc.saturating_add(mem::size_of_val(unsafe { &*ptr }));
+                #[cfg(feature = "telemetry")]
+                {
+                    heap.alloc_count_by_kind[kind as usize] += 1;
+                }
+            });
+            return Value16(Repr::new_dynamic(ptr as *const ()));
+        }
+    }
     let obj = Box::new(DynamicObject {
         kind,
         marked: std::cell::Cell::new(false),
@@ -114,10 +173,13 @@ pub fn alloc(kind: DynamicKind, data: DynamicData) -> Value16 {
     let bytes = mem::size_of_val(obj.as_ref());
     let ptr = Box::into_raw(obj);
 
-    HEAP.with(|heap| {
-        let mut heap = heap.borrow_mut();
+    with_heap(|heap| {
         heap.objects.push(ptr);
         heap.bytes_alloc = heap.bytes_alloc.saturating_add(bytes);
+        #[cfg(feature = "telemetry")]
+        {
+            heap.alloc_count_by_kind[kind as usize] += 1;
+        }
         // P2: eşik obje SAYISI bazlı (next_gc, collect'te canlı*GROWTH olarak güncellenir).
         if heap.objects.len() >= heap.next_gc.max(gc_min_threshold()) {
             GC_PENDING.with(|p| p.set(true));
@@ -129,17 +191,17 @@ pub fn alloc(kind: DynamicKind, data: DynamicData) -> Value16 {
 
 #[inline]
 pub fn heap_object_count() -> usize {
-    HEAP.with(|heap| heap.borrow().objects.len())
+    with_heap(|heap| heap.objects.len())
 }
 
 #[inline]
 pub fn bytes_allocated() -> usize {
-    HEAP.with(|heap| heap.borrow().bytes_alloc)
+    with_heap(|heap| heap.bytes_alloc)
 }
 
 #[inline]
 pub fn next_gc_threshold() -> usize {
-    HEAP.with(|heap| heap.borrow().next_gc)
+    with_heap(|heap| heap.next_gc)
 }
 
 // ── P8/W3: GC telemetrisi ──
@@ -156,8 +218,8 @@ pub struct GcStats {
 
 pub fn stats() -> GcStats {
     let pinned_count = crate::gc_pin::pinned_count();
-    HEAP.with(|heap| {
-        let h = heap.borrow();
+    with_heap(|heap| {
+        let h = heap;
         GcStats {
             collections: h.collections,
             live_objects: h.objects.len(),
@@ -167,6 +229,33 @@ pub fn stats() -> GcStats {
             pinned_count,
         }
     })
+}
+
+#[cfg(feature = "telemetry")]
+pub fn take_telemetry_alloc_counts(out: &mut [u64]) {
+    with_heap(|heap| {
+        out.copy_from_slice(&heap.alloc_count_by_kind);
+        heap.alloc_count_by_kind.fill(0);
+    });
+}
+
+#[cfg(feature = "telemetry")]
+pub fn take_telemetry_gc_stats(
+    cycle_count: &mut u64,
+    mark_count: &mut u64,
+    sweep_count: &mut u64,
+    pause_ns_total: &mut u64,
+    pause_ns_max: &mut u64,
+    heap_bytes: &mut u64,
+) {
+    with_heap(|heap| {
+        *cycle_count = heap.collections;
+        *mark_count = 0; // Not tracked
+        *sweep_count = heap.total_freed;
+        *pause_ns_total = heap.pause_micros_total * 1000;
+        *pause_ns_max = heap.pause_micros_max * 1000;
+        *heap_bytes = (heap.objects.len() * std::mem::size_of::<*mut DynamicObject>()) as u64;
+    });
 }
 
 #[inline]
@@ -283,8 +372,8 @@ pub fn collect(roots: &impl GcRootSource) {
     crate::gc::drain_gray(&mut gray);
     // Faz 1: borrow ALTINDA sadece ayrıştır — burada Drop ÇALIŞTIRILMAZ
     // (Drop, heap'e erişirse RefCell çifte-borrow paniği olur).
-    let dead: Vec<*mut DynamicObject> = HEAP.with(|heap| {
-        let mut heap = heap.borrow_mut();
+    let dead: Vec<*mut DynamicObject> = with_heap(|heap| {
+        
         let mut dead = Vec::new();
         heap.objects.retain(|ptr| {
             let obj = unsafe { &**ptr };
@@ -307,20 +396,36 @@ pub fn collect(roots: &impl GcRootSource) {
         heap.total_freed += dead.len() as u64;
         dead
     });
-    // Faz 2: borrow BIRAKILDI — ölüleri şimdi düşür. Drop'lar artık heap'e
-    // güvenle erişebilir (ileride finalizer kuyruğunun temeli).
+    // Faz 2: borrow BIRAKILDI. BigInt'leri free-list'e koy.
     for ptr in dead {
+        let is_bigint = unsafe { matches!((*ptr).kind, DynamicKind::BigInt) };
+        if is_bigint {
+            let added = BIGINT_FREE_LIST.with(|fl| {
+                let mut fl = fl.borrow_mut();
+                if fl.len() < BIGINT_FREE_LIST_MAX {
+                    fl.push(ptr);
+                    true
+                } else {
+                    false
+                }
+            });
+            if added { continue; }
+        }
         unsafe { drop(Box::from_raw(ptr)) };
     }
     // P8: Pause süresini yaz (ayrı borrow).
     let elapsed = start.elapsed().as_micros() as u64;
-    HEAP.with(|heap| {
-        heap.borrow_mut().last_pause_micros = elapsed;
+    with_heap(|heap| {
+        heap.last_pause_micros = elapsed;
+        heap.pause_micros_total += elapsed;
+        if elapsed > heap.pause_micros_max {
+            heap.pause_micros_max = elapsed;
+        }
     });
     // P7/W2: Debug doğrulaması — sweep sonrası canlı objelerde mark kalmamalı.
     if gc_verify_enabled() {
-        HEAP.with(|heap| {
-            let heap = heap.borrow();
+        with_heap(|heap| {
+            let heap = heap;
             for ptr in &heap.objects {
                 debug_assert!(
                     !unsafe { &**ptr }.marked.get(),
@@ -425,6 +530,7 @@ mod tests {
             name: "traceFn".to_string(),
             params: vec![],
             chunk_name: "trace_chunk".to_string(),
+            chunk_sym: crate::interner::intern("trace_chunk").0,
             captures: HashMap::from([("captured".to_string(), captured)]),
         });
 

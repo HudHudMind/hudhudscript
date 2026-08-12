@@ -13,7 +13,10 @@ mod expr;
 // FunctionCompiler eliminated (ISSUE-2) — Compiler handles function bodies directly
 // mod function_compiler;
 // mod function_compiler_target;
+mod floop;
+mod floop_analyze;
 mod helpers;
+pub(crate) use helpers::*;
 mod regalloc;
 pub(crate) use regalloc::RegAlloc;
 mod stmt_shared;
@@ -28,6 +31,10 @@ pub use target::CompileTarget;
 
 pub struct Compiler {
     bytecode: Bytecode,
+    /// B8: snapshot of the outer bytecode's int/numeric constants for inliner remap.
+    /// Set before function body compilation, cleared after.
+    pub(super) global_int_constants: Vec<i64>,
+    pub(super) global_numeric_constants: Vec<u64>,
     /// Current scope nesting depth (0 = global)
     scope_depth: usize,
     /// True only for the outermost compilation (not inner function bodies)
@@ -103,6 +110,23 @@ pub struct Compiler {
     pub(super) attach_step_queue: HashMap<String, Vec<LoopItemAst>>,
     /// A3: Attached loops pending injection per chain.
     pub(super) attach_loop_queue: HashMap<String, Vec<(String, Option<ChainTargetAst>, Option<ChainTargetAst>)>>,
+    /// Stack of active loop/switch break targets.
+    pub(super) break_targets: Vec<crate::compiler::target::BreakTarget>,
+    /// G12: etkin f-loop bağlamları (iç içe döngü v1'de reddedildiği için
+    /// pratikte en fazla 1; yığın ileriye dönük sağlamlık içindir).
+    pub(super) floop_stack: Vec<FloopCtx>,
+    /// Base directory for resolving nested module imports.
+    pub module_base_dir: Option<std::path::PathBuf>,
+}
+
+/// G12: tek bir f-loop bağlamı — aday isim → f-slot + geçici slot sayacı +
+/// döngü-öncesi hoist edilmiş sabitler (f64 bit deseni → f-slot; sabitler
+/// döngü-değişmezidir, gövde içinde FConst tekrarı YASAK — slot okunur).
+pub(super) struct FloopCtx {
+    pub(super) slots: HashMap<String, u8>,
+    pub(super) consts: HashMap<u64, u8>,
+    pub(super) temp_next: u8,
+    pub(super) temp_base: u8,
 }
 
 /// Per-function-body compilation context (ISSUE-2).
@@ -112,6 +136,8 @@ pub(super) struct FuncCtx {
     pub(super) fn_name: Option<String>,
     pub(super) has_rest: bool,
     pub(super) referenced: Vec<String>,
+    /// ADIM B: locals genuinely captured by nested closures (not pure locals)
+    pub(super) nested_captured: HashSet<String>,
     pub(super) is_async: bool,
 }
 

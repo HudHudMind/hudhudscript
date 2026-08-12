@@ -112,31 +112,12 @@ fn collect_preserves_scope_cell_root() {
     assert_collect_preserves_root(
         "scope-cell",
         |vm, rooted| {
-            vm.scope_cells.push(FxHashMap::from_iter([(
-                "cell".to_string(),
-                Arc::new(RwLock::new(rooted)),
-            )]));
+            let cells: Box<[Option<Arc<RwLock<Value16>>>]> =
+                Box::new([Some(Arc::new(RwLock::new(rooted)))]);
+            let sym_ids: Arc<[u32]> = Arc::new([42]);
+            vm.scope_cells.push((cells, sym_ids));
         },
-        |vm| *vm.scope_cells[0].get("cell").expect("cell exists").read(),
-    );
-}
-
-#[test]
-fn collect_preserves_scope_cell_pool_root() {
-    assert_collect_preserves_root(
-        "scope-cell-pool",
-        |vm, rooted| {
-            vm.scope_cells_pool.push(FxHashMap::from_iter([(
-                "cell".to_string(),
-                Arc::new(RwLock::new(rooted)),
-            )]));
-        },
-        |vm| {
-            *vm.scope_cells_pool[0]
-                .get("cell")
-                .expect("cell exists")
-                .read()
-        },
+        |vm| *vm.scope_cells[0].0[0].as_ref().expect("cell exists").read(),
     );
 }
 

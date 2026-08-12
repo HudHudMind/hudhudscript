@@ -63,7 +63,15 @@ pub fn run_debug_with_config(
 
     // Compile up-front so bytecode carries source positions for
     // statement-level breakpoints (Issue #661 / 3a6c17da).
+    let canonical_script = fs::canonicalize(path)
+        .map_err(|e| CliError::Io(format!("Failed to resolve path: {}", e)))?;
+    let module_base = canonical_script
+        .parent()
+        .unwrap_or_else(|| Path::new("."))
+        .to_path_buf();
+
     let mut compiler = Compiler::new();
+    compiler.set_module_base_dir(module_base.clone());
     let bytecode = compiler.compile(&ast).map_err(|e| {
         let unified: hudhudscript_errors::Error = e;
         CliError::ParseCompile(unified.render_full())

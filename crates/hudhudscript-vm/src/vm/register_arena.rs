@@ -16,6 +16,9 @@ pub struct RegisterArena {
     /// Cached pointer to arena[base] — eliminates base+add+bounds_check
     /// per register access. Invalidated only by arena.resize in advance().
     base_ptr: *mut Value16,
+    /// G1.4.2: current frame size. Updated by advance/retreat.
+    /// GC root scan uses `arena[0..base+frame_size]` — excludes retired tail.
+    frame_size: usize,
 }
 
 impl RegisterArena {
@@ -33,6 +36,7 @@ impl RegisterArena {
             arena,
             base: 0,
             base_ptr,
+            frame_size: 256,  // G1.4.2: initial frame (main script)
         }
     }
 
@@ -49,6 +53,7 @@ impl RegisterArena {
             self.arena.resize(needed, Value16::null());
         }
         self.base_ptr = unsafe { self.arena.as_mut_ptr().add(self.base) };
+        self.frame_size = frame_size;  // G1.4.2
     }
 
     /// Move the base backward by `frame_size` on return.
@@ -56,6 +61,7 @@ impl RegisterArena {
     pub fn retreat(&mut self, frame_size: usize) {
         self.base -= frame_size;
         self.base_ptr = unsafe { self.arena.as_mut_ptr().add(self.base) };
+        self.frame_size = frame_size;  // G1.4.2: restore parent frame size
     }
 
     /// Zero the current frame's registers.
@@ -75,8 +81,18 @@ impl RegisterArena {
     }
 
     /// Immutable access to the whole arena for conservative root scans.
+    /// G1.4.2: prefer `active_slice()` which skips retired frames.
     pub fn arena(&self) -> &[Value16] {
         &self.arena
+    }
+
+    /// G1.4.2: active register range for GC root scan.
+    /// Returns `arena[0..base+frame_size]` — parent frames + current frame.
+    /// Excludes the pre-allocated tail beyond the frame (retired child frames).
+    /// No memset — retired range is simply not scanned.
+    pub fn active_range(&self) -> &[Value16] {
+        let end = (self.base + self.frame_size).min(self.arena.len());
+        &self.arena[0..end]
     }
 
     pub fn base(&self) -> usize {
@@ -93,7 +109,9 @@ impl RegisterArena {
             self.base_ptr = unsafe { self.arena.as_mut_ptr().add(self.base) };
         }
         debug_assert!(idx < self.arena.len(), "set_absolute OOB");
-        unsafe { *self.arena.get_unchecked_mut(idx) = value; }
+        unsafe {
+            *self.arena.get_unchecked_mut(idx) = value;
+        }
     }
 
     /// Read an absolute arena index, bypassing the current frame base.

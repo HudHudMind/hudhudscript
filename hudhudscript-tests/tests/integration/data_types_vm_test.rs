@@ -1,22 +1,21 @@
 //! VM parity tests for v0.4.38 Batch 3: Data Types
 
 use hudhudscript_bytecode::Value16;
-use hudhudscript_compiler::{Compiler, VM};
+use hudhudscript_compiler::Compiler;
 use hudhudscript_parser::parse;
+use hudhudscript_vm::VM;
 
-fn vm_run_and_get(code: &str, var: &str) -> Value16 {
+fn vm_run_and_get(code: &str, var: &str) -> (hudhudscript_vm::VM, hudhudscript_bytecode::Value16) {
     let ast = parse(code).expect("parse failed");
     let mut compiler = Compiler::new();
     let bytecode = compiler.compile(&ast).expect("compile failed");
     let mut vm = VM::new();
     vm.execute(&bytecode).expect("VM execution failed");
-    vm.get_variable(var)
-        .cloned()
-        .map(|v| v)
-        .unwrap_or_else(|| panic!("variable '{}' not found", var))
+    let val = vm.get_variable(var).cloned().map(|v| v).unwrap_or_else(|| panic!("variable \'{}\' not found", var));
+    (vm, val)
 }
 
-fn assert_number(val: Value16, expected: f64) {
+fn assert_number((_vm, val): (hudhudscript_vm::VM, hudhudscript_bytecode::Value16), expected: f64) {
     if let Some(n) = val.as_number() {
         assert!(
             (n - expected).abs() < f64::EPSILON,
@@ -29,7 +28,7 @@ fn assert_number(val: Value16, expected: f64) {
     }
 }
 
-fn assert_bool(val: Value16, expected: bool) {
+fn assert_bool((_vm, val): (hudhudscript_vm::VM, hudhudscript_bytecode::Value16), expected: bool) {
     if let Some(b) = val.as_bool() {
         assert_eq!(b, expected, "Expected {}, got {}", expected, b);
     } else {
@@ -37,7 +36,7 @@ fn assert_bool(val: Value16, expected: bool) {
     }
 }
 
-fn assert_string(val: Value16, expected: &str) {
+fn assert_string((_vm, val): (hudhudscript_vm::VM, hudhudscript_bytecode::Value16), expected: &str) {
     if let Some(s) = val.as_str() {
         assert_eq!(s, expected, "Expected '{}', got '{}'", expected, s);
     } else {
@@ -49,13 +48,13 @@ fn assert_string(val: Value16, expected: &str) {
 
 #[test]
 fn test_vm_set_new_empty() {
-    let val = vm_run_and_get("var s = Set.new();", "s");
+    let (_vm, val) = vm_run_and_get("var s = Set.new();", "s");
     assert!(val.as_set().map(|items| items.is_empty()).unwrap_or(false));
 }
 
 #[test]
 fn test_vm_set_new_from_array() {
-    let val = vm_run_and_get("var s = Set.new([1, 2, 3, 2, 1]);", "s");
+    let (_vm, val) = vm_run_and_get("var s = Set.new([1, 2, 3, 2, 1]);", "s");
     if let Some(items) = val.as_set() {
         assert_eq!(items.len(), 3);
     } else {
@@ -128,7 +127,7 @@ fn test_vm_set_difference() {
 
 #[test]
 fn test_vm_map_new_empty() {
-    let val = vm_run_and_get("var m = Map.new();", "m");
+    let (_vm, val) = vm_run_and_get("var m = Map.new();", "m");
     assert!(val.as_map_pairs().map(|p| p.is_empty()).unwrap_or(false));
 }
 
@@ -144,7 +143,7 @@ fn test_vm_map_set_get() {
     "#;
     assert_number(vm_run_and_get(code, "a"), 1.0);
     assert_number(vm_run_and_get(code, "b"), 2.0);
-    assert!(vm_run_and_get(code, "c").is_null());
+    assert!(vm_run_and_get(code, "c").1.is_null());
 }
 
 #[test]
@@ -171,7 +170,7 @@ fn test_vm_map_keys_values_entries() {
         var size = m.size();
     "#;
     assert_number(vm_run_and_get(code, "size"), 2.0);
-    if let Some(keys) = vm_run_and_get(code, "ks").as_array() {
+    let tuple = vm_run_and_get(code, "ks"); if let Some(keys) = tuple.1.as_array() {
         assert_eq!(keys.len(), 2);
     } else {
         panic!("Expected Array");

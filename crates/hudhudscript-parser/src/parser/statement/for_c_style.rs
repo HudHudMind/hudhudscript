@@ -64,7 +64,7 @@ pub fn parse_for_c_style_stmt(pair: Pair<Rule>) -> ParseResult<Stmt> {
                     })?;
                     let is_inc = op_pair.as_rule() == Rule::increment_op;
                     let imm_literal = hudhudscript_ast::Expr::Literal(
-                        hudhudscript_ast::Literal::Number(1.0, false), update_span);
+                        hudhudscript_ast::Literal::Int(1), update_span);
                     let target_expr = hudhudscript_ast::Expr::Identifier(name.clone(), update_span);
                     update = Some(Box::new(Stmt::Assignment {
                         target: target_expr,

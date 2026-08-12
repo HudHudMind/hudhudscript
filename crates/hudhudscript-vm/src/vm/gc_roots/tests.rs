@@ -82,17 +82,10 @@ root_test!(marks_global_root, |vm: &mut VM, rooted| {
 });
 
 root_test!(marks_scope_cell_root, |vm: &mut VM, rooted| {
-    vm.scope_cells.push(FxHashMap::from_iter([(
-        "cell".to_string(),
-        Arc::new(RwLock::new(rooted)),
-    )]));
-});
-
-root_test!(marks_scope_cell_pool_root, |vm: &mut VM, rooted| {
-    vm.scope_cells_pool.push(FxHashMap::from_iter([(
-        "cell".to_string(),
-        Arc::new(RwLock::new(rooted)),
-    )]));
+    let cells: Box<[Option<Arc<RwLock<Value16>>>]> =
+        Box::new([Some(Arc::new(RwLock::new(rooted)))]);
+    let sym_ids: Arc<[u32]> = Arc::new([42]);
+    vm.scope_cells.push((cells, sym_ids));
 });
 
 root_test!(marks_iterator_root, |vm: &mut VM, rooted| {
@@ -252,15 +245,10 @@ fn mark_from_roots_marks_vm_reachable_values() {
     vm.globals
         .insert(hudhudscript_bytecode::interner::intern("g"), global_root);
     let scope_root = dyn_value("scope");
-    vm.scope_cells.push(FxHashMap::from_iter([(
-        "cell".to_string(),
-        Arc::new(RwLock::new(scope_root)),
-    )]));
-    let pooled_scope_root = dyn_value("scope-pool");
-    vm.scope_cells_pool.push(FxHashMap::from_iter([(
-        "cell".to_string(),
-        Arc::new(RwLock::new(pooled_scope_root)),
-    )]));
+    let cells: Box<[Option<Arc<RwLock<Value16>>>]> =
+        Box::new([Some(Arc::new(RwLock::new(scope_root)))]);
+    let sym_ids: Arc<[u32]> = Arc::new([42]);
+    vm.scope_cells.push((cells, sym_ids));
     let iter_root = dyn_value("iterator");
     vm.iterators.push((vec![iter_root], "item".to_string(), 0));
     let generator_root = dyn_value("iterator-generator");
@@ -337,7 +325,6 @@ fn mark_from_roots_marks_vm_reachable_values() {
         last_return_root,
         global_root,
         scope_root,
-        pooled_scope_root,
         iter_root,
         generator_root,
         declaration_root,

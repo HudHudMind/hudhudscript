@@ -217,7 +217,7 @@ pub struct TypeChecker {
 pub enum RedeclarePolicy { Allow, Warn, Error }
 
 impl Default for RedeclarePolicy {
-    fn default() -> Self { RedeclarePolicy::Warn }
+    fn default() -> Self { RedeclarePolicy::Error }
 }
 
 impl Default for TypeChecker {

@@ -13,6 +13,7 @@ fn create_test_config() -> ProviderConfig {
         temperature: Some(0.7),
         max_tokens: Some(2000),
         budget: Some(TokenBudget::default()),
+        timeout_secs: None,
         extra: HashMap::new(),
     }
 }
@@ -71,6 +72,7 @@ fn test_mnemonic_optimization() {
         mnemonics: Some(mnemonics),
         optimize: true,
         tools: None,
+        timeout_secs: None,
     };
 
     let optimized = provider.optimize_with_mnemonics(&request).unwrap();

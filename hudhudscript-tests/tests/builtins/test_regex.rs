@@ -24,13 +24,13 @@ fn regex_escape(args: &[Value16]) -> hudhudscript_errors::HudHudResult<Value16> 
     hudhudscript_shared_builtins::regex_ops::dispatch(RegexMethodId::Escape, args)
 }
 fn string_match(s: &str, args: &[Value16]) -> hudhudscript_errors::HudHudResult<Value16> {
-    call_string_method(s, "match", args)
+    call_string_method(s, "match", args, false)
 }
 fn string_match_all(s: &str, args: &[Value16]) -> hudhudscript_errors::HudHudResult<Value16> {
-    call_string_method(s, "match_all", args)
+    call_string_method(s, "match_all", args, false)
 }
 fn string_replace_regex(s: &str, args: &[Value16]) -> hudhudscript_errors::HudHudResult<Value16> {
-    call_string_method(s, "replace_regex", args)
+    call_string_method(s, "replace_regex", args, false)
 }
 
 #[test]

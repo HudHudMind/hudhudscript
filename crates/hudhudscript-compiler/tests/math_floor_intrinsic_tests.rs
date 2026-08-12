@@ -35,10 +35,28 @@ fn math_floor_div_literal_emits_intdivi() {
 
 #[test]
 fn math_floor_div_variable_emits_intdiv() {
-    let insns = compile_instructions("let x = 100; let y = 3; let z = Math.floor(x / y);");
+    // The divisor must be genuinely unknown at compile time. With
+    // `let y = 3` the const-propagator folds y into an immediate and the
+    // intrinsic legitimately emits the *better* IntDivI form instead — it even
+    // folds through a function return (`let y = f()` where f returns 3), so
+    // parameters are the only way to keep a divisor opaque.
+    let insns = compile_instructions("fn g(a, b) { return Math.floor(a / b); }");
     assert!(
         has_instruction(&insns, |i| matches!(i, Instruction::IntDiv { .. })),
-        "Math.floor(x / y) must emit IntDiv"
+        "Math.floor(a / b) with unknown operands must emit IntDiv"
+    );
+}
+
+#[test]
+fn math_floor_div_const_propagated_divisor_emits_intdivi() {
+    // Companion to the test above: when the divisor is a known constant — even
+    // one bound through a local — the intrinsic must take the immediate form.
+    // This pins the const-propagation win so it cannot silently regress into
+    // the slower two-register IntDiv.
+    let insns = compile_instructions("let x = 100; let y = 3; let z = Math.floor(x / y);");
+    assert!(
+        has_instruction(&insns, |i| matches!(i, Instruction::IntDivI { .. })),
+        "a const-propagated divisor must emit IntDivI, not IntDiv"
     );
 }
 

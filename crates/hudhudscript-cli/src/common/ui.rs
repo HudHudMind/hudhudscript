@@ -63,7 +63,15 @@ pub fn run_ui_with_config(
 
     // Execute script via compile + VM (Faz 4 migration — interpreter
     // crate is on the path to removal).
+    let canonical_script = fs::canonicalize(path)
+        .map_err(|e| CliError::Io(format!("Failed to resolve path: {}", e)))?;
+    let module_base = canonical_script
+        .parent()
+        .unwrap_or_else(|| Path::new("."))
+        .to_path_buf();
+
     let mut compiler = Compiler::new();
+    compiler.set_module_base_dir(module_base.clone());
     let bytecode = compiler.compile(&ast).map_err(|e| {
         let unified: hudhudscript_errors::Error = e;
         CliError::ParseCompile(unified.render_full())

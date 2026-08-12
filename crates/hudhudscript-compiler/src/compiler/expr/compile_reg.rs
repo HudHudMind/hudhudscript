@@ -15,12 +15,28 @@ pub(crate) fn compile_expr_to_reg(
                 target.ct_emit(Instruction::LoadNumConst { dst, const_idx: idx as u16 });
                 dst
             } else {
+                // Back-compat: manually-built AST may still use Number(false)
+                // for small integers; treat it as Int.
                 let i = *n as i64;
                 let idx = target.ct_emit_int_const(i);
                 let dst = regs.alloc(ip, last_use).expect("out of registers");
                 target.ct_emit(Instruction::LoadIntConst { dst, const_idx: idx as u16 });
                 dst
             }
+        }
+        Expr::Literal(Literal::Int(i), _) => {
+            let idx = target.ct_emit_int_const(*i);
+            let dst = regs.alloc(ip, last_use).expect("out of registers");
+            target.ct_emit(Instruction::LoadIntConst { dst, const_idx: idx as u16 });
+            dst
+        }
+        Expr::Literal(Literal::BigInt(s), _) => {
+            let big = s.parse::<num_bigint::BigInt>().expect("BigInt literal must be a valid decimal integer");
+            let v = hudhudscript_bytecode::Value16::bigint(big);
+            let idx = target.ct_emit_const(v);
+            let dst = regs.alloc(ip, last_use).expect("out of registers");
+            target.ct_emit(Instruction::LoadConst { dst, const_idx: idx as u16 });
+            dst
         }
         Expr::Literal(_, _) => {
             let v = literal_to_value(expr);
@@ -34,7 +50,7 @@ pub(crate) fn compile_expr_to_reg(
                 .or_else(|| target.ct_local_reg("this"))
             {
                 let dst = regs.alloc(ip, last_use).expect("out of registers");
-                target.ct_emit(Instruction::Move { dst, src: reg });
+                target.emit_move(dst, reg );
                 dst
             } else {
                 let sym = target.ct_intern("this");
@@ -147,11 +163,11 @@ pub(crate) fn compile_expr_to_reg(
                     }
                 }
             } else {
-                target.ct_emit(Instruction::MakeObject { dst, count: 0 });
+                target.ct_emit(Instruction::MakeObject { dst, count: properties.len() as u16 });
                 for (key, value) in properties {
                     let val_reg = compile_expr_to_reg(target, value, regs);
                     let key_sym = target.ct_sym(key);
-                    target.ct_emit(Instruction::SetProperty { dst, obj: dst, val: val_reg, prop_sym: key_sym.0 as u16 });
+                    target.ct_emit(Instruction::ObjLitSet { obj: dst, val: val_reg, prop_sym: key_sym.0 as u16 });
                     regs.free_now(val_reg);
                 }
             }
@@ -170,24 +186,26 @@ pub(crate) fn compile_expr_to_reg(
                                 let r = compile_expr_to_reg(target, arg, regs);
                                 arg_regs.push(r);
                             }
-                            let first_arg = if argc == 1 {
-                                arg_regs[0]
+                            // Allocate arg area BEFORE dst (register order = v0.8.157 compat)
+                            let opt_first_arg = if argc == 0 {
+                                None
+                            } else if argc == 1 {
+                                Some(arg_regs[0])
                             } else {
                                 let first = regs.alloc_contiguous(argc, target.ct_current_ip(), target.ct_current_ip() + 1)
                                     .expect("out of contiguous registers");
                                 for (i, &r) in arg_regs.iter().enumerate() {
-                                    target.ct_emit(Instruction::Move { dst: first + i as u8, src: r });
+                                    target.emit_move(first + i as u8, r );
                                     regs.free_now(r);
                                 }
-                                first
+                                Some(first)
                             };
                             let dst = regs.alloc(target.ct_current_ip(), last_use).expect("out of registers");
-                            if let Some(inlined) = crate::optimizer::inline_compile::try_inline_call(
-                                &chunk, first_arg, argc, dst,
+                            // L1: for 0-arg calls, use dst as first_arg to avoid clobber
+                            let first_arg = opt_first_arg.unwrap_or(dst);
+                            if crate::optimizer::inline_compile::try_inline_call(
+                                target, &chunk, first_arg, argc, dst,
                             ) {
-                                for instr in inlined {
-                                    target.ct_emit(instr);
-                                }
                                 if argc == 1 { regs.free_now(first_arg); }
                                 return dst;
                             }
@@ -197,7 +215,6 @@ pub(crate) fn compile_expr_to_reg(
                             target.ct_emit(Instruction::Call { dst, payload_idx: idx as u16, first_arg, arg_count: argc });
                             if argc == 1 { regs.free_now(first_arg); }
                             return dst;
-                        } else {
                         }
                         // Original direct Call path (no inline attempt)
                         let argc = args.len() as u8;
@@ -214,7 +231,7 @@ pub(crate) fn compile_expr_to_reg(
                             let first_arg = regs.alloc_contiguous(argc, call_ip, call_ip + 1)
                                 .expect("out of contiguous registers");
                             for (i, r) in arg_regs.iter().enumerate() {
-                                target.ct_emit(Instruction::Move { dst: first_arg + i as u8, src: *r });
+                                target.emit_move(first_arg + i as u8, *r );
                                 regs.free_now(*r);
                             }
                             first_arg
@@ -230,8 +247,13 @@ pub(crate) fn compile_expr_to_reg(
                     }
                 }
             }
-            crate::compiler::expr::compile_complex::compile_expr_complex(target, expr)
-                .expect("compile_complex failed")
+            // B5: always move compile_expr_complex result to caller's RegAlloc
+            // (complex_reg is from a different pool — must be tracked here)
+            let complex_reg = crate::compiler::expr::compile_complex::compile_expr_complex(target, expr)
+                .expect("compile_complex failed");
+            let dst = regs.alloc(ip, last_use).expect("out of registers");
+            target.emit_move(dst, complex_reg);
+            dst
         }
         Expr::Perform { action, .. } => {
             if let Expr::Call { callee, args, .. } = action.as_ref() {
@@ -248,7 +270,7 @@ pub(crate) fn compile_expr_to_reg(
                         let first_arg = regs.alloc_contiguous(argc, call_ip, call_ip + 1)
                             .expect("out of contiguous registers for perform");
                         for (i, r) in arg_regs.iter().enumerate() {
-                            target.ct_emit(Instruction::Move { dst: first_arg + i as u8, src: *r });
+                            target.emit_move(first_arg + i as u8, *r );
                             regs.free_now(*r);
                         }
                         let name_sym = target.ct_sym(&qualified);
@@ -259,8 +281,11 @@ pub(crate) fn compile_expr_to_reg(
                     }
                 }
             }
-            crate::compiler::expr::compile_complex::compile_expr_complex(target, expr)
-                .expect("compile_complex failed")
+            let complex_reg = crate::compiler::expr::compile_complex::compile_expr_complex(target, expr)
+                .expect("compile_complex failed");
+            let dst = regs.alloc(ip, last_use).expect("out of registers");
+            target.emit_move(dst, complex_reg);
+            dst
         }
         Expr::Unary { op, expr: inner, .. } => {
             match op {
@@ -269,7 +294,7 @@ pub(crate) fn compile_expr_to_reg(
                     if let Expr::Identifier(name, _) = inner.as_ref() {
                         if let Some(reg) = target.ct_local_reg(name) {
                             let dst = regs.alloc(target.ct_current_ip(), last_use).expect("out of registers");
-                            target.ct_emit(Instruction::Move { dst, src: reg });
+                            target.emit_move(dst, reg );
                             target.ct_emit(Instruction::IntAddI { dst: reg, src: reg, imm });
                             if target.ct_is_top_level() && target.ct_is_shared_top_level(name) {
                                 let sym = target.ct_intern(name);
@@ -336,7 +361,7 @@ pub(crate) fn compile_expr_to_reg(
             let jump_to_else = target.ct_current_ip();
             target.ct_emit(Instruction::JumpIfFalse { src: cond_reg, offset: 0 });
             let true_reg = compile_expr_to_reg(target, true_expr, regs);
-            target.ct_emit(Instruction::Move { dst, src: true_reg });
+            target.emit_move(dst, true_reg );
             regs.free_now(true_reg);
             let jump_to_end = target.ct_current_ip();
             target.ct_emit(Instruction::Jump(0));
@@ -346,204 +371,27 @@ pub(crate) fn compile_expr_to_reg(
             });
             regs.free_now(cond_reg);
             let false_reg = compile_expr_to_reg(target, false_expr, regs);
-            target.ct_emit(Instruction::Move { dst, src: false_reg });
+            target.emit_move(dst, false_reg );
             regs.free_now(false_reg);
             let end_ip = target.ct_current_ip();
             target.ct_patch(jump_to_end, Instruction::Jump(jump_off(jump_to_end, end_ip)));
             dst
         }
         Expr::OptionalMember { object, property, .. } => {
-            let obj_reg = compile_expr_to_reg(target, object, regs);
-            let null_idx = target.ct_emit_const(Value16::null());
-            let null_reg = regs.alloc(target.ct_current_ip(), last_use).expect("out of registers");
-            target.ct_emit(Instruction::LoadConst { dst: null_reg, const_idx: null_idx as u16 });
-            let cmp_reg = regs.alloc(target.ct_current_ip(), last_use).expect("out of registers");
-            target.ct_emit(Instruction::IntCmp { dst: cmp_reg, src1: obj_reg, src2: null_reg, op: 4 });
-            let jump_null = target.ct_current_ip();
-            target.ct_emit(Instruction::JumpIfTrue { src: cmp_reg, offset: 0 });
-            let dst = regs.alloc(target.ct_current_ip(), last_use).expect("out of registers");
-            let prop_sym = target.ct_sym(property);
-            target.ct_emit(Instruction::GetProperty { dst, obj: obj_reg, prop_sym: prop_sym.0 as u16 });
-            let jump_end = target.ct_current_ip();
-            target.ct_emit(Instruction::Jump(0));
-            let null_case = target.ct_current_ip();
-            target.ct_patch(
-                jump_null,
-                Instruction::JumpIfTrue { src: cmp_reg, offset: jump_off(jump_null, null_case) as i16 },
-            );
-            target.ct_emit(Instruction::LoadConst { dst, const_idx: null_idx as u16 });
-            let end = target.ct_current_ip();
-            target.ct_patch(jump_end, Instruction::Jump(jump_off(jump_end, end)));
-            regs.free_now(obj_reg);
-            regs.free_now(null_reg);
-            regs.free_now(cmp_reg);
-            dst
+            crate::compiler::expr::compile_reg_binary::compile_optional_member(
+                target, object, property, regs, last_use,
+            )
         }
         Expr::Binary { left, op, right, .. } => {
-            if matches!(op, BinaryOp::Add) {
-                let resolve = |n: &str| target.ct_local_type(n);
-                let l_ty = infer_type_with_locals(left, &resolve);
-                let r_ty = infer_type_with_locals(right, &resolve);
-                if l_ty == ExprType::Str || r_ty == ExprType::Str {
-                    let l_reg = compile_expr_to_reg(target, left, regs);
-                    let r_reg = compile_expr_to_reg(target, right, regs);
-                    let dst = regs.alloc(target.ct_current_ip(), last_use).expect("out of registers");
-                    target.ct_emit(Instruction::StrCat { dst, src1: l_reg, src2: r_reg });
-                    regs.free_now(l_reg);
-                    regs.free_now(r_reg);
-                    return dst;
-                }
-            }
-            if let (Expr::Identifier(name, _), Expr::Literal(Literal::Number(n, is_float), _)) = (left.as_ref(), right.as_ref()) {
-                if !is_float && target.ct_local_type(name) != ExprType::Number {
-                    if let Some(reg) = target.ct_local_reg(name) {
-                        let imm = *n as i64;
-                        if let Ok(imm_i16) = i16::try_from(imm) {
-                            let dst = regs.alloc(target.ct_current_ip(), last_use).expect("out of registers");
-                            match op {
-                                BinaryOp::Add => {
-                                    target.ct_emit(Instruction::IntAddI { dst, src: reg, imm: imm_i16 });
-                                    return dst;
-                                }
-                                BinaryOp::Sub => {
-                                    target.ct_emit(Instruction::IntSubI { dst, src: reg, imm: imm_i16 });
-                                    return dst;
-                                }
-                                BinaryOp::Mul => {
-                                    target.ct_emit(Instruction::IntMulI { dst, src: reg, imm: imm_i16 });
-                                    return dst;
-                                }
-                                _ => {}
-                            }
-                        }
-                    }
-                }
-            }
-            let l_reg = compile_expr_to_reg(target, left, regs);
-            let dst = regs.alloc(target.ct_current_ip(), last_use).expect("out of registers");
-            match op {
-                BinaryOp::And => {
-                    let skip = target.ct_current_ip();
-                    target.ct_emit(Instruction::JumpIfFalse { src: l_reg, offset: 0 });
-                    let r_reg = compile_expr_to_reg(target, right, regs);
-                    target.ct_emit(Instruction::Move { dst, src: r_reg });
-                    let over = target.ct_current_ip();
-                    target.ct_emit(Instruction::Jump(0));
-                    let false_path = target.ct_current_ip();
-                    target.ct_patch(skip, Instruction::JumpIfFalse { src: l_reg, offset: jump_off(skip, false_path) as i16 });
-                    target.ct_emit(Instruction::Move { dst, src: l_reg });
-                    let after = target.ct_current_ip();
-                    target.ct_patch(over, Instruction::Jump(jump_off(over, after)));
-                    regs.free_now(l_reg);
-                    regs.free_now(r_reg);
-                    return dst;
-                }
-                BinaryOp::Or => {
-                    let skip = target.ct_current_ip();
-                    target.ct_emit(Instruction::JumpIfTrue { src: l_reg, offset: 0 });
-                    let r_reg = compile_expr_to_reg(target, right, regs);
-                    target.ct_emit(Instruction::Move { dst, src: r_reg });
-                    let over = target.ct_current_ip();
-                    target.ct_emit(Instruction::Jump(0));
-                    let true_path = target.ct_current_ip();
-                    target.ct_patch(skip, Instruction::JumpIfTrue { src: l_reg, offset: jump_off(skip, true_path) as i16 });
-                    target.ct_emit(Instruction::Move { dst, src: l_reg });
-                    let after = target.ct_current_ip();
-                    target.ct_patch(over, Instruction::Jump(jump_off(over, after)));
-                    regs.free_now(l_reg);
-                    regs.free_now(r_reg);
-                    return dst;
-                }
-                _ => {}
-            }
-            let r_reg = compile_expr_to_reg(target, right, regs);
-            match op {
-                BinaryOp::Add => {
-                    let resolve = |n: &str| target.ct_local_type(n);
-                    let l_ty = infer_type_with_locals(left, &resolve);
-                    let r_ty = infer_type_with_locals(right, &resolve);
-                    // P4b: Int+Int → IntAdd, Number involved → NumAdd, Unknown → IntAdd (safe fallback)
-                    if l_ty == ExprType::Int && r_ty == ExprType::Int {
-                        target.ct_emit(Instruction::IntAdd { dst, src1: l_reg, src2: r_reg })
-                    } else if (l_ty == ExprType::Int || l_ty == ExprType::Number)
-                        && (r_ty == ExprType::Int || r_ty == ExprType::Number)
-                    {
-                        target.ct_emit(Instruction::NumAdd { dst, src1: l_reg, src2: r_reg })
-                    } else {
-                        target.ct_emit(Instruction::IntAdd { dst, src1: l_reg, src2: r_reg })
-                    }
-                },
-                BinaryOp::Sub => {
-                    let resolve = |n: &str| target.ct_local_type(n);
-                    let l_ty = infer_type_with_locals(left, &resolve);
-                    let r_ty = infer_type_with_locals(right, &resolve);
-                    if l_ty == ExprType::Int && r_ty == ExprType::Int {
-                        target.ct_emit(Instruction::IntSub { dst, src1: l_reg, src2: r_reg })
-                    } else if (l_ty == ExprType::Int || l_ty == ExprType::Number)
-                        && (r_ty == ExprType::Int || r_ty == ExprType::Number)
-                    {
-                        target.ct_emit(Instruction::NumSub { dst, src1: l_reg, src2: r_reg })
-                    } else {
-                        target.ct_emit(Instruction::IntSub { dst, src1: l_reg, src2: r_reg })
-                    }
-                },
-                BinaryOp::Mul => {
-                    let resolve = |n: &str| target.ct_local_type(n);
-                    let l_ty = infer_type_with_locals(left, &resolve);
-                    let r_ty = infer_type_with_locals(right, &resolve);
-                    if l_ty == ExprType::Int && r_ty == ExprType::Int {
-                        target.ct_emit(Instruction::IntMul { dst, src1: l_reg, src2: r_reg })
-                    } else if (l_ty == ExprType::Int || l_ty == ExprType::Number)
-                        && (r_ty == ExprType::Int || r_ty == ExprType::Number)
-                    {
-                        target.ct_emit(Instruction::NumMul { dst, src1: l_reg, src2: r_reg })
-                    } else {
-                        target.ct_emit(Instruction::IntMul { dst, src1: l_reg, src2: r_reg })
-                    }
-                },
-                BinaryOp::Div => {
-                    let resolve = |n: &str| target.ct_local_type(n);
-                    let l_ty = infer_type_with_locals(left, &resolve);
-                    let r_ty = infer_type_with_locals(right, &resolve);
-                    let l_is_int = l_ty == ExprType::Int || l_ty == ExprType::Unknown;
-                    let r_is_int = r_ty == ExprType::Int || r_ty == ExprType::Unknown;
-                    if l_is_int && r_is_int {
-                        target.ct_emit(Instruction::IntDiv { dst, src1: l_reg, src2: r_reg })
-                    } else {
-                        target.ct_emit(Instruction::NumDiv { dst, src1: l_reg, src2: r_reg })
-                    }
-                },
-                BinaryOp::Mod => {
-                    let resolve = |n: &str| target.ct_local_type(n);
-                    let l_ty = infer_type_with_locals(left, &resolve);
-                    let r_ty = infer_type_with_locals(right, &resolve);
-                    let l_is_int = l_ty == ExprType::Int || l_ty == ExprType::Unknown;
-                    let r_is_int = r_ty == ExprType::Int || r_ty == ExprType::Unknown;
-                    if l_is_int && r_is_int {
-                        target.ct_emit(Instruction::IntMod { dst, src1: l_reg, src2: r_reg })
-                    } else {
-                        target.ct_emit(Instruction::NumMod { dst, src1: l_reg, src2: r_reg })
-                    }
-                },
-                BinaryOp::Lt  => target.ct_emit(Instruction::IntCmp { dst, src1: l_reg, src2: r_reg, op: 0 }),
-                BinaryOp::Le  => target.ct_emit(Instruction::IntCmp { dst, src1: l_reg, src2: r_reg, op: 1 }),
-                BinaryOp::Gt  => target.ct_emit(Instruction::IntCmp { dst, src1: l_reg, src2: r_reg, op: 2 }),
-                BinaryOp::Ge  => target.ct_emit(Instruction::IntCmp { dst, src1: l_reg, src2: r_reg, op: 3 }),
-                BinaryOp::Eq  => target.ct_emit(Instruction::IntCmp { dst, src1: l_reg, src2: r_reg, op: 4 }),
-                BinaryOp::Ne  => target.ct_emit(Instruction::IntCmp { dst, src1: l_reg, src2: r_reg, op: 5 }),
-                BinaryOp::And => { /* handled above with short-circuit */ }
-                BinaryOp::Or => { /* handled above with short-circuit */ }
-                _ => { regs.free_now(l_reg); regs.free_now(r_reg); regs.free_now(dst); return dst; }
-            }
-            regs.free_now(l_reg);
-            regs.free_now(r_reg);
-            dst
+            crate::compiler::expr::compile_reg_binary::compile_binary(
+                target, left, op, right, regs, last_use,
+            )
         }
         _ => {
             crate::compiler::expr::compile_complex::compile_expr_complex(target, expr)
                 .expect("compile_complex failed");
             let dst = regs.alloc(ip, last_use).expect("out of registers");
-            target.ct_emit(Instruction::Move { dst, src: 255 });
+            target.emit_move(dst, 255 );
             dst
         }
     }

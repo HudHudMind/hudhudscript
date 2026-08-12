@@ -3,6 +3,7 @@ use crate::{
     PromiseState16, Repr, ResourceRef, ToolRef, Value16,
 };
 use parking_lot::Mutex;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 /// Heap-allocated dynamic object for String, Array, Object, Function, etc.
 /// Wrapped by Repr with Dynamic tag.
@@ -12,8 +13,10 @@ pub struct DynamicObject {
     pub data: DynamicData,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DynamicKind {
     String,
+    StringAscii,
     Array,
     Object,
     Function,
@@ -29,6 +32,13 @@ pub enum DynamicKind {
     Option,
     Result,
     BigInt,
+}
+
+/// Returns true for String OR StringAscii — use instead of direct
+/// DynamicKind::String comparisons (P4: StringAscii is a string).
+#[inline]
+pub fn is_string_kind(k: DynamicKind) -> bool {
+    matches!(k, DynamicKind::String | DynamicKind::StringAscii)
 }
 
 pub enum DynamicData {

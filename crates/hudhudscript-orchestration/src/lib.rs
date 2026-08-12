@@ -12,25 +12,55 @@
 //! ## Example
 //!
 //! ```rust
-//! use hudhudscript_orchestration::{OrchestrationEngine, Layer, Network, Workflow};
+//! use hudhudscript_orchestration::{
+//!     CouncilExecutor, EventBus, Layer, LayerExecutor, Network, NetworkExecutor,
+//!     OrchestrationEngine, Workflow,
+//! };
+//! use hudhudscript_orchestration::orchestration::types::{
+//!     StepConfig, StepType, WorkflowConfig, WorkflowStep,
+//! };
+//! use std::sync::Arc;
+//! use uuid::Uuid;
 //!
 //! #[tokio::main]
 //! async fn main() {
-//!     let engine = OrchestrationEngine::new();
-//!     
-//!     // Register a layer
-//!     let layer = Layer::new("processing_layer".to_string(), vec!["agent1".to_string()]);
-//!     let layer_id = engine.register_layer(layer).await.unwrap();
-//!     
-//!     // Register a network
+//!     // The engine is composed from the event bus and the three executors it
+//!     // drives; the network executor runs layers, so it borrows that one.
+//!     let event_bus = Arc::new(EventBus::new());
+//!     let layer_executor = Arc::new(LayerExecutor::new());
+//!     let network_executor = Arc::new(NetworkExecutor::new(layer_executor.clone()));
+//!     let council_executor = Arc::new(CouncilExecutor::new(event_bus.clone()));
+//!     let engine = OrchestrationEngine::new(
+//!         event_bus,
+//!         layer_executor.clone(),
+//!         network_executor,
+//!         council_executor,
+//!     );
+//!
+//!     // A layer names the agents that run together. Layers are registered on
+//!     // the layer executor, not on the engine.
+//!     let mut layer = Layer::new("processing_layer");
+//!     layer.agents.push("agent1".to_string());
+//!     let layer_id = layer.id;
+//!     layer_executor.register_layer(layer).await.unwrap();
+//!
+//!     // A network chains layers together.
 //!     let mut network = Network::new("pipeline".to_string());
 //!     network.add_layer(layer_id);
-//!     let network_id = engine.register_network(network).await.unwrap();
-//!     
-//!     // Register a workflow
-//!     let mut workflow = Workflow::new("main_workflow".to_string());
-//!     workflow.add_network(network_id);
-//!     let workflow_id = engine.register_workflow(workflow).await.unwrap();
+//!     let network_id = network.id;
+//!
+//!     // A workflow is a sequence of steps; one step can run a whole network.
+//!     let workflow = Workflow {
+//!         id: Uuid::new_v4(),
+//!         name: "main_workflow".to_string(),
+//!         steps: vec![WorkflowStep {
+//!             name: "run_pipeline".to_string(),
+//!             step_type: StepType::Network { network_id },
+//!             config: StepConfig::default(),
+//!         }],
+//!         config: WorkflowConfig::default(),
+//!     };
+//!     let _workflow_id = engine.register_workflow(workflow).await.unwrap();
 //! }
 //! ```
 

@@ -61,6 +61,7 @@ use std::collections::{HashMap, HashSet};
 // the cancellation token field (see `cancellation_token` below).
 use std::sync::Arc;
 pub(crate) mod types;
+pub(crate) mod opcode_spec;
 pub(crate) use crate::vm::types::*;
 
 // ── Packed-instruction opcode constants for fast dispatch ────────────
@@ -69,13 +70,13 @@ pub(crate) use crate::vm::types::*;
 // constants are intentionally `pub(crate)` in the bytecode crate.
 pub(crate) mod api;
 pub mod array;
-pub(crate) mod bigint_arith;
+pub mod bigint_arith;
 pub(crate) mod builtin;
 pub(crate) mod builtin_aliases;
 pub(crate) mod builtin_core;
+pub(crate) mod builtin_method;
 pub(crate) mod builtin_method_dispatch;
 pub(crate) mod builtin_object;
-pub(crate) mod builtin_object_dispatch;
 pub(crate) mod builtin_object_extra;
 pub(crate) mod builtin_system;
 pub(crate) mod builtin_system_extra;
@@ -118,6 +119,7 @@ pub(crate) mod index_helpers;
 pub use host_access::{AccessDecision as HostAccessDecision, HostAccessPolicy};
 pub mod json;
 pub mod map;
+pub(crate) mod math_fast_paths;
 pub(crate) mod mcp;
 pub mod mcp_dispatch;
 pub mod mcp_server_ops;
@@ -128,6 +130,16 @@ pub(crate) mod promise;
 pub(crate) mod property;
 pub(crate) mod provider;
 pub mod provider_dispatch;
+pub mod provider_system_context;
+
+/// M1: üretimin async→sync köprüsü — kalıcı paylaşımlı runtime üzerinde
+/// `block_on`. Embedder'lar ve testler MCP/provider future'larını VM ile
+/// AYNI şeritten koşsun diye public (ikinci köprü yazmak Kural 7 ihlali).
+pub fn provider_bridge_block_on<T: Send + 'static>(
+    fut: impl std::future::Future<Output = T> + Send + 'static,
+) -> T {
+    provider::block_on_provider(fut)
+}
 pub(crate) mod register_arena;
 pub mod registry;
 pub(crate) mod run;
@@ -137,6 +149,8 @@ pub mod sop_types;
 pub mod string;
 pub(crate) mod trampoline;
 pub(crate) mod util;
+#[cfg(feature = "telemetry")]
+pub mod telemetry;
 
 pub use crate::vm::config_types::{OutputLocale, SandboxConfig};
 use crate::vm::prepack::{prepack_instructions, PACK_SENTINEL};

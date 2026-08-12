@@ -40,7 +40,8 @@ impl Compiler {
                 Ok(Value16::function(FunctionData {
                     name: chunk_name.clone(),
                     params: param_names,
-                    chunk_name,
+                    chunk_name: chunk_name.clone(),
+                    chunk_sym: hudhudscript_bytecode::interner::intern(&chunk_name).0,
                     captures: Default::default(),
                 }))
             }

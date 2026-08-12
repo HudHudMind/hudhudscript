@@ -249,16 +249,12 @@ impl TypeChecker {
                 Ok(Type::Any)
             }
 
-            Expr::This(span) => {
+            Expr::This(_) => {
                 // 'this' refers to the current instance (Issue #689)
                 if let Some(ref class_name) = self.current_class {
                     Ok(Type::Instance(class_name.clone()))
                 } else {
-                    Err(type_codes::mismatch(
-                        "class context".to_string(),
-                        "'this' used outside of a class".to_string(),
-                        *span,
-                    ))
+                    Ok(Type::Any)
                 }
             }
             Expr::Perform { action, .. } => {
@@ -277,6 +273,8 @@ impl TypeChecker {
         match lit {
             Literal::String(_) => Type::String,
             Literal::Number(_, _) => Type::Number,
+            Literal::Int(_) => Type::Number,
+            Literal::BigInt(_) => Type::Number,
             Literal::Boolean(_) => Type::Boolean,
             Literal::Null => Type::Null,
         }

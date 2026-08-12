@@ -6,6 +6,8 @@
 // P7.2 — swap the system allocator for mimalloc.  Callgrind profiling of the
 // interpreter hot path (`fib(30)`) showed ~24% of instructions in malloc/free;
 // mimalloc reduces that to ~11% and is safe (same API, thread-safe).
+// G0: allow sysalloc-profile feature for heaptrack/valgrind.
+#[cfg(not(feature = "sysalloc-profile"))]
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
@@ -64,6 +66,11 @@ enum Commands {
         /// Print timing breakdown: parse | compile | VM-exec | total
         #[arg(long)]
         timing: bool,
+
+        /// Write telemetry counters to JSON file (requires telemetry feature)
+        #[cfg(feature = "telemetry")]
+        #[arg(long, value_name = "PATH")]
+        telemetry_json: Option<PathBuf>,
     },
 
     /// Deploy a HudHudScript app
@@ -231,7 +238,27 @@ fn run_cli(cli: Cli) {
             strict,
             gc_stats,
             timing,
+            #[cfg(feature = "telemetry")]
+            telemetry_json,
         }) => {
+            #[cfg(not(feature = "telemetry"))]
+            let telemetry_json: Option<std::path::PathBuf> = None;
+            // Early reject: --watch, --ui, and .hudb paths don't support telemetry
+            #[cfg(feature = "telemetry")]
+            if telemetry_json.is_some() {
+                if watch {
+                    eprintln!("Error: --telemetry-json is not supported with --watch");
+                    process::exit(1);
+                }
+                if ui.is_some() {
+                    eprintln!("Error: --telemetry-json is not supported with --ui");
+                    process::exit(1);
+                }
+                if file.extension().and_then(|s| s.to_str()) == Some("hudb") {
+                    eprintln!("Error: --telemetry-json is not supported with .hudb bytecode files");
+                    process::exit(1);
+                }
+            }
             if watch {
                 if let Err(e) = watch_and_run_with_config(
                     &file,
@@ -254,7 +281,7 @@ fn run_cli(cli: Cli) {
                 if strict {
                     eprintln!("Warning: --strict type checking is not yet wired into the VM path; running without it.");
                 }
-                run_file_vm_with_config(&file, debug || cli.verbose, config_path, timing)
+                run_file_vm_with_config(&file, debug || cli.verbose, config_path, timing, telemetry_json.as_deref())
             } {
                 eprintln!("{}", render_error(&e));
                 process::exit(e.exit_code());

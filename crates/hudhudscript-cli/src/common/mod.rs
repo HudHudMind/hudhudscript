@@ -172,9 +172,36 @@ pub struct RuntimeConfig {
     /// Non-Linux default stack bytes (default: 8MB).
     #[serde(default = "default_stack_bytes", rename = "default_stack_bytes")]
     pub default_stack_bytes: usize,
-    /// Allow network access (default: false). Set to true for provider/LLM calls.
+    /// Allow network access (default: false). Set to true for provider/LLM calls
+    /// and for SSE MCP servers.
     #[serde(default)]
     pub allow_network: bool,
+    /// Allow spawning child processes (default: false). Required by stdio MCP
+    /// servers, which launch the server as a subprocess. Without it a stdio
+    /// `mcp` declaration is rejected at declaration time.
+    #[serde(default)]
+    pub allow_process: bool,
+    /// M2: Allow plain-http SSE MCP URLs and exempt loopback hosts
+    /// (localhost/127.0.0.1/[::1]) from SSRF blocking (default: false).
+    /// Deliberately separate from `allow_network`: that grants network
+    /// access, this grants UNENCRYPTED http — local dev gateways only.
+    /// Remote and private-range targets stay blocked regardless.
+    #[serde(default)]
+    pub allow_insecure_http: bool,
+    /// Allow operations that escalate privileges via `sudo` (default: false) —
+    /// the `firewall` module (`sudo ufw …`) and `apt` module's mutating methods
+    /// (`sudo apt-get install/remove/update`). Deliberately separate from
+    /// `allow_process`: spawning a stdio MCP server is not the same permission
+    /// as reconfiguring the host's firewall or installing packages.
+    #[serde(default)]
+    pub allow_privileged: bool,
+    /// Default provider timeout in seconds (default: 120).
+    #[serde(default = "default_provider_timeout_secs", rename = "provider_timeout_secs")]
+    pub provider_timeout_secs: u64,
+}
+
+fn default_provider_timeout_secs() -> u64 {
+    hudhudscript_runtime::provider::DEFAULT_PROVIDER_TIMEOUT_SECS
 }
 
 /// [gc] section — GC tuning parameters (Issue #1).
@@ -215,6 +242,8 @@ mod locale;
 pub(crate) mod provider;
 mod repl;
 mod run;
+#[cfg(feature = "telemetry")]
+pub mod telemetry_writer;
 mod ui;
 
 pub use compile::*;

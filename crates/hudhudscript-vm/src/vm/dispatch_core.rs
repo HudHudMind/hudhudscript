@@ -342,36 +342,6 @@ impl crate::vm::VM {
 
                 Ok(true)
             }
-            "slice" => {
-                if !(2..=3).contains(&arg_count) {
-                    return Err(compile_codes::runtime_error(format!(
-                        "slice() expects 2-3 arguments, got {}",
-                        arg_count
-                    )));
-                }
-                let val = self.registers[first_arg as usize];
-                let start = self.pop_number(first_arg + 1)? as usize;
-                let end = if arg_count == 3 {
-                    Some(self.pop_number(first_arg + 2)? as usize)
-                } else {
-                    None
-                };
-                let val_v = val;
-                if let Some(s) = val_v.as_string() {
-                    let end = end.unwrap_or(s.len());
-                    let sliced: String = s.chars().skip(start).take(end - start).collect();
-                    self.registers[255] = Value16::string(sliced);
-                } else if let Some(arr) = val_v.as_array() {
-                    let end = end.unwrap_or(arr.len());
-                    let sliced = arr[start..end.min(arr.len())].iter().cloned().collect();
-                    self.registers[255] = Value16::array(sliced);
-                } else {
-                    return Err(compile_codes::runtime_error(
-                        "slice() requires string or array".to_string(),
-                    ));
-                }
-                Ok(true)
-            }
             // T1-8: Native strrev builtin — single alloc, O(n) reverse.
             "strrev" => {
                 self.check_arg_count("strrev()", 1, arg_count)?;
@@ -384,7 +354,7 @@ impl crate::vm::VM {
                         ))
                     }
                 };
-                let result = crate::vm::string::call_string_method(s, "reverse", &[])?;
+                let result = crate::vm::string::call_string_method(s, "reverse", &[], false)?;
                 self.registers[255] = result;
                 Ok(true)
             }

@@ -23,6 +23,7 @@ fn run_ok(src: &str) {
 
 #[test]
 fn test_event_bus_emit() {
+    let _guard = crate::EVENT_BUS_LOCK.lock().unwrap();
     // Clear any state from previous tests, then emit
     let src = r#"
         EventBus.clear();
@@ -43,6 +44,7 @@ fn test_event_bus_emit() {
 
 #[test]
 fn test_event_bus_on() {
+    let _guard = crate::EVENT_BUS_LOCK.lock().unwrap();
     let src = r#"var result = EventBus.on("user.*", "handle_user");"#;
     let val = run(src);
     if let Some(obj) = val.as_object() {
@@ -59,6 +61,7 @@ fn test_event_bus_on() {
 
 #[test]
 fn test_event_bus_once() {
+    let _guard = crate::EVENT_BUS_LOCK.lock().unwrap();
     let src = r#"var result = EventBus.once("shutdown");"#;
     let val = run(src);
     if let Some(obj) = val.as_object() {
@@ -70,6 +73,7 @@ fn test_event_bus_once() {
 
 #[test]
 fn test_event_bus_off() {
+    let _guard = crate::EVENT_BUS_LOCK.lock().unwrap();
     // off() with a nonexistent subscription ID → false (real behavior)
     let src = r#"var result = EventBus.off("sub_123");"#;
     assert_eq!(run(src), Value16::boolean(false));
@@ -77,12 +81,14 @@ fn test_event_bus_off() {
 
 #[test]
 fn test_event_bus_has_listeners() {
+    let _guard = crate::EVENT_BUS_LOCK.lock().unwrap();
     let src = r#"var result = EventBus.has_listeners("test");"#;
     assert_eq!(run(src), Value16::boolean(false));
 }
 
 #[test]
 fn test_event_bus_channels() {
+    let _guard = crate::EVENT_BUS_LOCK.lock().unwrap();
     let src = r#"var result = EventBus.channels();"#;
     let val = run(src);
     assert!(val.is_array());
@@ -315,7 +321,7 @@ fn test_server_middleware() {
 }
 
 #[test]
-    #[ignore] // pre-existing issue
+#[ignore] // pre-existing issue
 fn test_server_listen_stop() {
     let src = r#"var result = Server.listen(3000);"#;
     let val = run(src);

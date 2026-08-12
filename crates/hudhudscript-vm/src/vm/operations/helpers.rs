@@ -13,6 +13,13 @@ pub fn eval_literal(lit: &Literal) -> SharedResult<Value16> {
     Ok(match lit {
         Literal::String(s) => Value16::string(s.clone()),
         Literal::Number(n, _) => Value16::number(*n),
+        Literal::Int(i) => Value16::int(*i),
+        Literal::BigInt(s) => {
+            let big = s.parse::<num_bigint::BigInt>().map_err(|_| {
+                hudhudscript_bytecode::shared_value::runtime_error("Invalid BigInt literal".to_string())
+            })?;
+            Value16::bigint(big)
+        }
         Literal::Boolean(b) => Value16::boolean(*b),
         Literal::Null => Value16::null(),
     })
@@ -22,22 +29,32 @@ pub fn eval_literal(lit: &Literal) -> SharedResult<Value16> {
 pub fn eval_unary_op(op: UnaryOp, val: Value16) -> SharedResult<Value16> {
     match op {
         UnaryOp::Not => Ok(Value16::boolean(!val.is_truthy())),
-        UnaryOp::Neg => match val.as_number() {
-            Some(n) => Ok(Value16::number(-n)),
-            None => Err(hudhudscript_bytecode::shared_value::type_error_ctx(
-                "number".to_string(),
-                val.type_name_str().to_string(),
-                "negation".to_string(),
-            )),
-        },
-        UnaryOp::Plus => match val.as_number() {
-            Some(n) => Ok(Value16::number(n)),
-            None => Err(hudhudscript_bytecode::shared_value::type_error_ctx(
-                "number".to_string(),
-                val.type_name_str().to_string(),
-                "unary plus".to_string(),
-            )),
-        },
+        UnaryOp::Neg => {
+            if let Some(i) = val.as_int_fast() {
+                Ok(Value16::int(-i))
+            } else if let Some(n) = val.as_number_fast() {
+                Ok(Value16::number(-n))
+            } else if let Some(b) = val.as_bigint() {
+                Ok(Value16::bigint(-b.clone()))
+            } else {
+                Err(hudhudscript_bytecode::shared_value::type_error_ctx(
+                    "number".to_string(),
+                    val.type_name_str().to_string(),
+                    "negation".to_string(),
+                ))
+            }
+        }
+        UnaryOp::Plus => {
+            if val.is_int() || val.is_number() || val.as_bigint().is_some() {
+                Ok(val)
+            } else {
+                Err(hudhudscript_bytecode::shared_value::type_error_ctx(
+                    "number".to_string(),
+                    val.type_name_str().to_string(),
+                    "unary plus".to_string(),
+                ))
+            }
+        }
         UnaryOp::PostIncrement => match val.as_int() {
             Some(n) => Ok(Value16::int(n + 1)),
             None => match val.as_number() {
@@ -156,9 +173,9 @@ pub fn eval_member_access(obj: Value16, property: &str) -> SharedResult<Value16>
     }
 
     // ── String ─────────────────────────────────────────────────────────
-    if let Some(s) = obj.as_str() {
+    if let Some(char_len) = obj.str_char_len() {
         return match property {
-            "length" => Ok(Value16::int(s.chars().count() as i64)),
+            "length" => Ok(Value16::int(char_len as i64)),
             // For methods, callers handle dispatch via eval_call.
             _ => Err(hudhudscript_bytecode::shared_value::property_not_found(
                 property.to_string(),

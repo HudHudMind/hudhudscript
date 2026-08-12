@@ -1,11 +1,15 @@
 use hudhudscript_bytecode::Value16;
 use crate::common::{detect_locale, load_hudhud_config_with_path, CliError, HudHudConfig};
+use crate::common::provider::setup_provider_registry;
 use hudhudscript_compiler::{Bytecode, Compiler};
 use hudhudscript_deploy_core::adapters::{create_adapter, Adapter};
 use hudhudscript_formatter::Formatter;
+#[cfg(feature = "telemetry")]
+use crate::common::telemetry_writer::write_telemetry_json;
 use hudhudscript_mcp::{McpClient, TransportConfig};
 use hudhudscript_parser::{parse, parse_lang_directive, parse_with_recovery};
 use hudhudscript_vm::{OutputLocale, VM};
+use hudhudscript_modules::ModuleLoader;
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -71,7 +75,7 @@ pub fn watch_and_run_with_config(
     // Initial run
     println!("[watch] Running {}...", path.display());
     println!("{}", "=".repeat(60));
-    if let Err(e) = run_file_vm_with_config(path, debug, config_path, timing) {
+    if let Err(e) = run_file_vm_with_config(path, debug, config_path, timing, None) {
         eprintln!("{}", crate::common::render_error(&e));
     }
     println!("{}", "=".repeat(60));
@@ -106,7 +110,7 @@ pub fn watch_and_run_with_config(
             println!("[watch] Re-running {}...", path.display());
             println!("{}", "=".repeat(60));
 
-            if let Err(e) = run_file_vm_with_config(path, debug, config_path, timing) {
+            if let Err(e) = run_file_vm_with_config(path, debug, config_path, timing, None) {
                 eprintln!("{}", crate::common::render_error(&e));
             }
 
@@ -142,7 +146,7 @@ pub fn register_vm_stdlib_modules(vm: &mut VM) {
 /// For the legacy AST walker path, use [`run_file_with_config`].
 #[allow(dead_code)]
 pub fn run_file_vm(path: &PathBuf, debug: bool) -> Result<(), CliError> {
-    run_file_vm_with_config(path, debug, None, false)
+    run_file_vm_with_config(path, debug, None, false, None)
 }
 
 /// Run a source script via the VM path with an optional explicit config path.
@@ -151,6 +155,7 @@ pub fn run_file_vm_with_config(
     debug: bool,
     config_path: Option<&std::path::Path>,
     timing: bool,
+    telemetry_json: Option<&std::path::Path>,
 ) -> Result<(), CliError> {
     let total_start = Instant::now();
     // If a .hudb bytecode file was passed, delegate to the bytecode runner.
@@ -162,6 +167,13 @@ pub fn run_file_vm_with_config(
     let source = fs::read_to_string(path)
         .map_err(|e| CliError::Io(format!("Failed to read file: {}", e)))?;
     let read_done = Instant::now();
+
+    let canonical_script = fs::canonicalize(path)
+        .map_err(|e| CliError::Io(format!("Failed to resolve path: {}", e)))?;
+    let module_base = canonical_script
+        .parent()
+        .unwrap_or_else(|| Path::new("."))
+        .to_path_buf();
 
     // Detect locale — directive (#!dil=tr) > script detection > default
     let directive_locale = hudhudscript_parser::parse_lang_directive(&source);
@@ -193,6 +205,7 @@ pub fn run_file_vm_with_config(
     // Compile
     let compile_start = Instant::now();
     let mut compiler = Compiler::new();
+    compiler.set_module_base_dir(module_base.clone());
     let bytecode = compiler.compile(&ast).map_err(|e| {
         let unified: hudhudscript_errors::Error = e;
         CliError::ParseCompile(unified.render_full())
@@ -224,12 +237,19 @@ pub fn run_file_vm_with_config(
     vm.with_register_arena_kb(config.runtime.register_arena_kb);
     vm.with_max_builtin_iter(config.runtime.builtin_max_iter);
     vm.with_default_stack_bytes(config.runtime.default_stack_bytes);
+    vm.with_provider_timeout_secs(config.runtime.provider_timeout_secs);
     vm.set_toml_providers(config.providers.clone());
     vm.set_toml_config_object(build_config_value(&config));
 
-    // ENV: allow network for provider calls via hudhud.toml [runtime]
-    if config.runtime.allow_network {
-        vm.allow_network();
+    // ENV: sandbox capabilities (network for provider calls, process for stdio
+    // MCP) via hudhud.toml [runtime]
+    apply_runtime_capabilities(&mut vm, &config.runtime);
+
+    // Provider registry: shared with REPL (Kural 7 — single source).
+    // Uses OLLAMA_BASE_URL env var for ollama endpoint; no hardcoded model/URL.
+    match setup_provider_registry(debug, None) {
+        Ok(registry) => { vm.set_provider_registry(registry); }
+        Err(e) => { if debug { eprintln!("Provider registry: {}", e); } }
     }
 
     // HOST-4: apply [host_access] policy to VM
@@ -240,6 +260,8 @@ pub fn run_file_vm_with_config(
     // Register all stdlib modules (shared with run_bytecode_with_config)
     register_vm_stdlib_modules(&mut vm);
 
+    vm.set_module_resolver(Box::new(ModuleLoader::new(module_base.clone())));
+
     // TOKIO T-2+T-3: single conditional current_thread runtime.
     let needs_async = bytecode.needs_async;
     #[cfg(feature = "mcp")]
@@ -248,7 +270,7 @@ pub fn run_file_vm_with_config(
     let needs_mcp = false;
 
     let exec_start = Instant::now();
-    if needs_async || needs_mcp {
+    let exec_result: Result<(), CliError> = if needs_async || needs_mcp {
         let rt = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
@@ -262,16 +284,32 @@ pub fn run_file_vm_with_config(
                     Err(e) => { if debug { eprintln!("⚠ MCP: {}", e); } }
                 }
             }
-            let exec_result = vm.execute(&bytecode)
+            let result = vm.execute(&bytecode)
                 .map_err(|e| CliError::Runtime(format!("VM error: {}", e)));
             vm.shutdown_mcp_clients().await;
-            exec_result
-        })?;
+            result
+        })
     } else {
         vm.execute(&bytecode)
-            .map_err(|e| CliError::Runtime(format!("VM error: {}", e)))?;
-    }
+            .map_err(|e| CliError::Runtime(format!("VM error: {}", e)))
+    };
     let exec_done = Instant::now();
+
+    // GATE-2: Write telemetry JSON if requested (after exec, before propagate)
+    if let Some(out_path) = telemetry_json {
+        #[cfg(feature = "telemetry")]
+        {
+            write_telemetry_json(&vm, out_path, exec_result.is_ok())?;
+        }
+        #[cfg(not(feature = "telemetry"))]
+        {
+            return Err(CliError::Runtime(
+                "--telemetry-json requires a telemetry-enabled build. Rebuild with: cargo build --features telemetry".into()
+            ));
+        }
+    }
+
+    exec_result?;
 
     if timing {
         let total_ms = total_start.elapsed().as_secs_f64() * 1000.0;
@@ -301,6 +339,13 @@ fn run_bytecode_with_config(
     // Read bytecode file
     let bytes =
         fs::read(path).map_err(|e| CliError::Io(format!("Failed to read bytecode file: {}", e)))?;
+
+    let canonical_script = fs::canonicalize(path)
+        .map_err(|e| CliError::Io(format!("Failed to resolve path: {}", e)))?;
+    let module_base = canonical_script
+        .parent()
+        .unwrap_or_else(|| Path::new("."))
+        .to_path_buf();
 
     // Deserialize bytecode
     let bytecode = Bytecode::from_bytes(&bytes)
@@ -364,12 +409,11 @@ fn run_bytecode_with_config(
     vm.with_max_builtin_iter(config.runtime.builtin_max_iter);
     vm.with_max_call_depth_ceiling(config.runtime.max_call_depth_hard_ceiling);
     vm.with_default_stack_bytes(config.runtime.default_stack_bytes);
+    vm.with_provider_timeout_secs(config.runtime.provider_timeout_secs);
     vm.set_toml_providers(config.providers.clone());
     vm.set_toml_config_object(build_config_value(&config));
 
-    if config.runtime.allow_network {
-        vm.allow_network();
-    }
+    apply_runtime_capabilities(&mut vm, &config.runtime);
 
     // HOST-4: apply [host_access] policy to VM
     if let Some(ref host_access) = config.host_access {
@@ -378,6 +422,8 @@ fn run_bytecode_with_config(
 
     // Register stdlib modules from shared-builtins (#928) — Kural 7: single source.
     register_vm_stdlib_modules(&mut vm);
+
+    vm.set_module_resolver(Box::new(ModuleLoader::new(module_base.clone())));
 
     vm.execute(&bytecode)
         .map_err(|e| CliError::Runtime(format!("VM error: {}", e)))?;
@@ -390,6 +436,36 @@ fn run_bytecode_with_config(
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // ── config() builtin helper ────────────────────────────────────────────────
+/// Apply the `[runtime]` sandbox capabilities from `hudhud.toml` to the VM.
+///
+/// Single source (Kural 7) for both the `run_file_vm_with_config` and the
+/// `run_bytecode_with_config` paths, which previously each carried their own
+/// copy of the `allow_network` block — so a capability added to one silently
+/// stayed missing from the other.
+///
+/// `allow_process` gates stdio MCP servers (which spawn a child process);
+/// `allow_network` gates SSE MCP servers and provider/LLM calls. Both default
+/// to false and are opt-in via `hudhud.toml`.
+fn apply_runtime_capabilities(vm: &mut VM, runtime: &crate::common::RuntimeConfig) {
+    if runtime.allow_network {
+        vm.allow_network();
+    }
+    if runtime.allow_process {
+        vm.allow_process();
+    }
+    // M2: unencrypted-http opt-in — SSE MCP'nin http:// + loopback muafiyeti.
+    // `allow_network`'ten ayrı izin (biri ağ, diğeri şifresiz http).
+    if runtime.allow_insecure_http {
+        vm.allow_insecure_http();
+    }
+    // Privilege escalation (`sudo`) is a separate grant from process spawning:
+    // the firewall and apt modules change host state, so they stay off unless the
+    // project asks for them explicitly.
+    if runtime.allow_privileged {
+        hudhudscript_bytecode::privileged_ops::allow_privileged_ops();
+    }
+}
+
 fn build_config_value(config: &HudHudConfig) -> Value16 {
     use std::collections::HashMap;
     let mut root = hudhudscript_bytecode::ObjMap::default();
@@ -399,6 +475,9 @@ fn build_config_value(config: &HudHudConfig) -> Value16 {
     runtime.insert("max_recursion".to_string(), Value16::int(config.runtime.max_recursion as i64));
     runtime.insert("fuel_limit".to_string(), Value16::int(config.runtime.fuel_limit as i64));
     runtime.insert("allow_network".to_string(), Value16::bool_(config.runtime.allow_network));
+    runtime.insert("allow_process".to_string(), Value16::bool_(config.runtime.allow_process));
+    runtime.insert("allow_insecure_http".to_string(), Value16::bool_(config.runtime.allow_insecure_http));
+    runtime.insert("allow_privileged".to_string(), Value16::bool_(config.runtime.allow_privileged));
     root.insert("runtime".to_string(), Value16::object(runtime));
 
     // [providers]

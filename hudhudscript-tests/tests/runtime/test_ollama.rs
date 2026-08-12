@@ -11,6 +11,7 @@ fn make_config(endpoint: Option<String>) -> ProviderConfig {
         temperature: Some(0.7),
         max_tokens: Some(1000),
         budget: None,
+        timeout_secs: None,
         extra: HashMap::new(),
     }
 }

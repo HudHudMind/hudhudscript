@@ -48,14 +48,32 @@ pub fn validate_sse_url(
             server_name, url
         ));
     }
-    // MCP-41: http only allowed with explicit opt-in (localhost or allowlist).
+    // MCP-41: http only allowed with explicit opt-in ([runtime] allow_insecure_http).
     if is_http && !allow_insecure_http {
         return Err(format!(
-            "MCP server '{}': http:// URLs require explicit allow_insecure_http (use https:// or enable insecure HTTP)",
+            "MCP server '{}': http:// URLs require explicit opt-in — set [runtime] allow_insecure_http = true in hudhud.toml (or use https://)",
             server_name
         ));
     }
-    // Block common SSRF targets.
+    let host_part = if is_https {
+        lower.strip_prefix("https://").unwrap()
+    } else {
+        lower.strip_prefix("http://").unwrap()
+    };
+    let host = host_part.split('/').next().unwrap_or("");
+    let host = host.split(':').next().unwrap_or(host);
+
+    // M2: loopback sınıfı, bayrak açıkken SSRF blokundan MUAF — yerel
+    // geliştirmede (örn. localhost:11434 ollama SSE geçidi) kasıtlı hedef.
+    // Bayrak KAPALIYKEN localhost engelli kalır (güvenlik varsayılanı).
+    let loopback_hosts = ["localhost", "127.0.0.1", "0.0.0.0", "[::1]"];
+    let is_loopback = loopback_hosts.contains(&host);
+    if is_loopback && allow_insecure_http {
+        return Ok(());
+    }
+
+    // Block common SSRF targets. Özel ağ aralıkları ve bulut metadata
+    // uçları bayraktan BAĞIMSIZ her zaman engelli (uzak hedef ≠ loopback).
     let blocked_hosts = [
         "localhost",
         "127.0.0.1",
@@ -68,13 +86,6 @@ pub fn validate_sse_url(
         "metadata.google.internal", // GCP
         "169.254.169.254",          // AWS
     ];
-    let host_part = if is_https {
-        lower.strip_prefix("https://").unwrap()
-    } else {
-        lower.strip_prefix("http://").unwrap()
-    };
-    let host = host_part.split('/').next().unwrap_or("");
-    let host = host.split(':').next().unwrap_or(host);
     for blocked in &blocked_hosts {
         if host == *blocked || host.starts_with(blocked) {
             return Err(format!(
@@ -111,6 +122,7 @@ pub fn create_mcp_client_from_config(
     command: Option<&str>,
     args: &[String],
     url: Option<&str>,
+    allow_insecure_http: bool,
 ) -> Result<Arc<McpClient>, String> {
     let transport_config = match transport {
         McpTransportKind::Stdio => {
@@ -126,8 +138,9 @@ pub fn create_mcp_client_from_config(
             let u = url.ok_or_else(|| {
                 format!("MCP server '{}': SSE transport requires 'url' field", name)
             })?;
-            // MCP-41: SSRF protection — validate SSE URL (http only with allowlist).
-            validate_sse_url(name, u, false)?;
+            // MCP-41: SSRF protection — validate SSE URL. M2: bayrak artık
+            // [runtime] allow_insecure_http'ten geliyor (sabit false değil).
+            validate_sse_url(name, u, allow_insecure_http)?;
             TransportConfig::sse(u.to_string())
         }
     };
@@ -139,10 +152,7 @@ pub fn create_mcp_client_from_config(
             .await
             .map_err(|e| e.to_string())
     };
-    match tokio::runtime::Handle::try_current() {
-        Ok(handle) => tokio::task::block_in_place(|| handle.block_on(connect_fut)),
-        Err(_) => futures::executor::block_on(connect_fut),
-    }
+    crate::vm::provider::block_on_provider(connect_fut)
     .map_err(|e| format!("Failed to connect MCP client '{}': {}", name, e))
 }
 
@@ -224,15 +234,11 @@ where
         serde_json::from_str(&json_str).unwrap_or(serde_json::Value::Null)
     };
 
-    // Async → sync bridge. Inside a tokio context we use `block_in_place`
-    // to avoid blocking a worker thread; outside any runtime we fall back
-    // to the lightweight futures executor.
+    // Async → sync bridge. Runs the future on a fresh OS thread with its
+    // own tokio runtime to avoid deadlocking the VM's current_thread runtime.
     let tool_name_owned = tool_name.to_string();
     let tool_fut = async move { client.call_tool(tool_name_owned, Some(json_args)).await };
-    let result = match tokio::runtime::Handle::try_current() {
-        Ok(handle) => tokio::task::block_in_place(|| handle.block_on(tool_fut)),
-        Err(_) => futures::executor::block_on(tool_fut),
-    };
+    let result = crate::vm::provider::block_on_provider(tool_fut);
 
     match result {
         Ok(response) => mcp_response_to_value(&response),

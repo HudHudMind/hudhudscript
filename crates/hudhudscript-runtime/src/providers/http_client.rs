@@ -11,8 +11,7 @@ use std::time::Duration;
 use crate::provider::ProviderError;
 use hudhudscript_utils::RetryConfig;
 
-/// Default HTTP request timeout (30 seconds).
-pub const DEFAULT_TIMEOUT_SECS: u64 = 30;
+use crate::provider::types::DEFAULT_PROVIDER_TIMEOUT_SECS;
 
 /// Retry configuration for provider HTTP calls: retry once after 1 second.
 fn provider_retry_config() -> RetryConfig {
@@ -30,7 +29,7 @@ fn provider_retry_config() -> RetryConfig {
 /// Call this once at provider construction time and store the result.
 pub fn build_http_client() -> Result<Client, ProviderError> {
     Client::builder()
-        .timeout(Duration::from_secs(DEFAULT_TIMEOUT_SECS))
+        .timeout(Duration::from_secs(DEFAULT_PROVIDER_TIMEOUT_SECS))
         .build()
         .map_err(|e| ProviderError::NetworkError(format!("Failed to build HTTP client: {}", e)))
 }

@@ -28,11 +28,38 @@ impl Bytecode {
         self.loop_payloads[idx as usize].end = end;
     }
 
+    /// C3: Patch the `start` field of a loop payload.  Used by the ForCStyle
+    /// emitter which needs `continue` to jump past the body to the update clause.
+    #[inline]
+    pub fn patch_loop_start(&mut self, idx: u32, start: u32) {
+        self.loop_payloads[idx as usize].start = start;
+    }
+
     /// Resolve a `LoopBegin` payload by index.  Panics on out-of-bounds —
     /// compiler invariant violation (Kural 7c, no fallback).
     #[inline]
     pub fn get_loop_payload(&self, idx: u32) -> LoopPayload {
         self.loop_payloads[idx as usize]
+    }
+
+    /// C6: Register a 256-entry char-dispatch jump table and return its index.
+    #[inline]
+    pub fn add_char_dispatch_table(&mut self, table: Vec<i16>) -> u16 {
+        let idx = self.char_dispatch_tables.len() as u16;
+        self.char_dispatch_tables.push(table);
+        idx
+    }
+
+    /// C6: Replace a previously registered char-dispatch jump table.
+    #[inline]
+    pub fn patch_char_dispatch_table(&mut self, idx: u16, table: Vec<i16>) {
+        self.char_dispatch_tables[idx as usize] = table;
+    }
+
+    /// C6: Resolve a char-dispatch table by index.
+    #[inline]
+    pub fn get_char_dispatch_table(&self, idx: u16) -> &Vec<i16> {
+        &self.char_dispatch_tables[idx as usize]
     }
 
     /// Register an `EnumDecl` payload and return its index (CROSS-2a).

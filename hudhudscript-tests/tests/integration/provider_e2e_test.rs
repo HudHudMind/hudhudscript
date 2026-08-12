@@ -104,7 +104,15 @@ async fn test_e2e_simple_provider_call() {
     interpreter.set_provider_registry(registry);
 
     let result = interpreter.execute(&statements);
-    if result.is_err() { let msg = result.err().unwrap().to_string(); assert!(msg.contains("type") || msg.contains("provider"), "Unexpected: {}", msg); return; }
+    if result.is_err() {
+        let msg = result.err().unwrap().to_string();
+        assert!(
+            msg.contains("type") || msg.contains("provider"),
+            "Unexpected: {}",
+            msg
+        );
+        return;
+    }
 
     let response_text = interpreter.get_variable("response_text").unwrap();
     if let Some(s) = response_text.as_str() {
@@ -140,7 +148,15 @@ async fn test_e2e_provider_with_options() {
     interpreter.set_provider_registry(registry);
 
     let result = interpreter.execute(&statements);
-    if result.is_err() { let msg = result.err().unwrap().to_string(); assert!(msg.contains("type") || msg.contains("provider"), "Unexpected: {}", msg); return; }
+    if result.is_err() {
+        let msg = result.err().unwrap().to_string();
+        assert!(
+            msg.contains("type") || msg.contains("provider"),
+            "Unexpected: {}",
+            msg
+        );
+        return;
+    }
 
     let tokens = interpreter.get_variable("tokens").unwrap();
     if let Some(n) = tokens.as_number() {
@@ -183,7 +199,15 @@ async fn test_e2e_multiple_provider_calls() {
     interpreter.set_provider_registry(registry);
 
     let result = interpreter.execute(&statements);
-    if result.is_err() { let msg = result.err().unwrap().to_string(); assert!(msg.contains("type") || msg.contains("provider"), "Unexpected: {}", msg); return; }
+    if result.is_err() {
+        let msg = result.err().unwrap().to_string();
+        assert!(
+            msg.contains("type") || msg.contains("provider"),
+            "Unexpected: {}",
+            msg
+        );
+        return;
+    }
 
     assert_eq!(mock_provider.get_call_count(), 3);
 
@@ -222,7 +246,15 @@ async fn test_e2e_provider_in_function() {
     interpreter.set_provider_registry(registry);
 
     let result = interpreter.execute(&statements);
-    if result.is_err() { let msg = result.err().unwrap().to_string(); assert!(msg.contains("type") || msg.contains("provider"), "Unexpected: {}", msg); return; }
+    if result.is_err() {
+        let msg = result.err().unwrap().to_string();
+        assert!(
+            msg.contains("type") || msg.contains("provider"),
+            "Unexpected: {}",
+            msg
+        );
+        return;
+    }
 
     assert_eq!(mock_provider.get_call_count(), 2);
 
@@ -265,7 +297,15 @@ async fn test_e2e_provider_with_mnemonics() {
     interpreter.set_provider_registry(registry);
 
     let result = interpreter.execute(&statements);
-    if result.is_err() { let msg = result.err().unwrap().to_string(); assert!(msg.contains("type") || msg.contains("provider"), "Unexpected: {}", msg); return; }
+    if result.is_err() {
+        let msg = result.err().unwrap().to_string();
+        assert!(
+            msg.contains("type") || msg.contains("provider"),
+            "Unexpected: {}",
+            msg
+        );
+        return;
+    }
 
     let optimized = interpreter.get_variable("optimized").unwrap();
     if let Some(s) = optimized.as_str() {
@@ -332,7 +372,15 @@ async fn test_e2e_provider_declaration_and_usage() {
     interpreter.set_provider_registry(registry);
 
     let result = interpreter.execute(&statements);
-    if result.is_err() { let msg = result.err().unwrap().to_string(); assert!(msg.contains("type") || msg.contains("provider"), "Unexpected: {}", msg); return; }
+    if result.is_err() {
+        let msg = result.err().unwrap().to_string();
+        assert!(
+            msg.contains("type") || msg.contains("provider"),
+            "Unexpected: {}",
+            msg
+        );
+        return;
+    }
 
     let model = interpreter.get_variable("model").unwrap();
     if let Some(s) = model.as_str() {
@@ -371,7 +419,15 @@ async fn test_e2e_conditional_provider_calls() {
     interpreter.set_provider_registry(registry);
 
     let result = interpreter.execute(&statements);
-    if result.is_err() { let msg = result.err().unwrap().to_string(); assert!(msg.contains("type") || msg.contains("provider"), "Unexpected: {}", msg); return; }
+    if result.is_err() {
+        let msg = result.err().unwrap().to_string();
+        assert!(
+            msg.contains("type") || msg.contains("provider"),
+            "Unexpected: {}",
+            msg
+        );
+        return;
+    }
 
     assert_eq!(mock_provider.get_call_count(), 1);
 

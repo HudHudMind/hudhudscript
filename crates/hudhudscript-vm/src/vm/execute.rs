@@ -40,7 +40,7 @@ mod actor_messaging;
 mod actor_misc;
 mod actor_spawn;
 mod actors_decl;
-mod branch;
+pub(crate) mod branch;
 mod call_load;
 mod class_ops;
 mod classes_modules;

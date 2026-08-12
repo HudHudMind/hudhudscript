@@ -42,20 +42,10 @@ fn g5_marks_args_scratch_call_temporary_root() {
 #[test]
 fn g5_marks_scope_cell_closure_root() {
     assert_runtime_bucket_marks_root("scope-cell", |vm, rooted| {
-        vm.scope_cells.push(FxHashMap::from_iter([(
-            "captured".to_string(),
-            Arc::new(RwLock::new(rooted)),
-        )]));
-    });
-}
-
-#[test]
-fn g5_marks_scope_cell_pool_closure_root() {
-    assert_runtime_bucket_marks_root("scope-cell-pool", |vm, rooted| {
-        vm.scope_cells_pool.push(FxHashMap::from_iter([(
-            "pooled".to_string(),
-            Arc::new(RwLock::new(rooted)),
-        )]));
+        let cells: Box<[Option<Arc<RwLock<Value16>>>]> =
+            Box::new([Some(Arc::new(RwLock::new(rooted)))]);
+        let sym_ids: Arc<[u32]> = Arc::new([42]);
+        vm.scope_cells.push((cells, sym_ids));
     });
 }
 

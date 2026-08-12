@@ -159,7 +159,7 @@ pub fn show_info() {
     println!("📚 Documentation:");
     println!("   README:         https://github.com/HudHudMind/hudhudscript");
     println!("   Quickstart:     QUICKSTART.md");
-    println!("   Samples:        samples/");
+    println!("   Examples:       examples/");
     println!();
 
     println!("╔════════════════════════════════════════════════════════════════╗");

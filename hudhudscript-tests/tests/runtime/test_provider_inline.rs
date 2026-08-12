@@ -76,6 +76,7 @@ fn test_llm_request_with_tools() {
         mnemonics: None,
         optimize: false,
         tools: Some(vec![tool]),
+        timeout_secs: None,
     };
 
     assert_eq!(request.prompt, "What's the weather in Berlin?");

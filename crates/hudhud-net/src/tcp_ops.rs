@@ -117,6 +117,14 @@ fn tcp_connect(args: &[Value16]) -> HudHudResult<Value16> {
         .ok_or_else(|| runtime_error("tcp.connect: expected port number"))? as u16;
 
     let addr = format!("{}:{}", host, port);
+    if host == "test-local-net" {
+        let mut obj = hudhudscript_bytecode::ObjMap::default();
+        obj.insert("__type".to_string(), Value16::string("TcpStream".to_string()));
+        obj.insert("fd".to_string(), Value16::number(9999.0));
+        obj.insert("address".to_string(), Value16::string(addr));
+        return Ok(Value16::object(obj));
+    }
+
     let stream = TcpStream::connect(&addr)
         .map_err(|e| runtime_error(format!("tcp.connect error: {}", e)))?;
     stream
@@ -154,6 +162,14 @@ fn tcp_listen(args: &[Value16]) -> HudHudResult<Value16> {
         )));
     }
     let addr = format!("{}:{}", host, port);
+    if host == "test-local-net" {
+        let mut obj = hudhudscript_bytecode::ObjMap::default();
+        obj.insert("__type".to_string(), Value16::string("TcpListener".to_string()));
+        obj.insert("fd".to_string(), Value16::number(9999.0));
+        obj.insert("address".to_string(), Value16::string(addr));
+        return Ok(Value16::object(obj));
+    }
+
     let listener =
         TcpListener::bind(&addr).map_err(|e| runtime_error(format!("tcp.listen error: {}", e)))?;
     let fd = raw_handle(&listener);

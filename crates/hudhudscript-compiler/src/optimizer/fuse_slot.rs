@@ -4,7 +4,7 @@ use hudhudscript_bytecode::{CallPayload, Instruction, LoopPayload};
 
 /// Jump offset'lerini ve loop payload'larını bir instruction silindikten sonra düzeltir.
 /// Moved to utils.rs — single source (Kural 7).
-use crate::optimizer::utils::adjust_jumps_after_remove;
+use crate::optimizer::utils::adjust_jumps_after_remove_full;
 
 /// Fuse IntModI + IntCmpI → IntModCmpI in a separate pass.
 /// This must run AFTER `fuse_slot_immediate_with_positions` which creates
@@ -50,7 +50,7 @@ pub fn fuse_intmodcmpi_chain(
                             cmp_imm: *cmp_imm,
                             op: *op,
                         };
-                        adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
+                        adjust_jumps_after_remove_full(instructions, loop_payloads, &mut [], &mut [], i + 1);
                         instructions.remove(i + 1);
                         if i + 1 < source_positions.len() {
                             source_positions.remove(i + 1);
@@ -62,6 +62,54 @@ pub fn fuse_intmodcmpi_chain(
         }
         i += 1;
     }
+}
+
+/// G2.2b: check if register `reg` is modified in a loop body after `site`.
+/// Scans forward until a backward jump is found that targets at or before `site`.
+fn reg_modified_in_enclosing_loop(
+    instructions: &[Instruction],
+    loop_payloads: &[LoopPayload],
+    site: usize,
+    reg: u8,
+) -> bool {
+    // First try loop payloads (precise)
+    let enclosing = loop_payloads
+        .iter()
+        .filter(|lp| (lp.start as usize) <= site && site < (lp.end as usize))
+        .min_by_key(|lp| lp.end - lp.start);
+    let end = if let Some(lp) = enclosing {
+        (lp.end as usize).min(instructions.len())
+    } else {
+        // Fallback: scan forward for backward jumps that loop back to near `site`.
+        // A jump targeting far before site is a different loop, not this one.
+        let mut loop_end = instructions.len();
+        for (j, instr) in instructions.iter().enumerate().skip(site + 1) {
+            let backward = match instr {
+                Instruction::Jump(o) if (*o as i32) < 0 => Some((j as i32 + *o as i32) as usize),
+                Instruction::IntAddIJump { offset, .. } if *offset < 0 => Some((j as i32 + *offset as i32) as usize),
+                Instruction::IntSubIJump { offset, .. } if *offset < 0 => Some((j as i32 + *offset as i32) as usize),
+                _ => None,
+            };
+            if let Some(target) = backward {
+                // Target must be near site (same loop header), not a distant unrelated loop
+                if target <= site && site - target <= 5 {
+                    loop_end = j + 1;
+                    break;
+                }
+            }
+        }
+        loop_end
+    };
+    for instr in &instructions[site + 1..end] {
+        match instr {
+            Instruction::IntAddIJump { reg: r, .. } if *r == reg => return true,
+            Instruction::IntAddI { dst, .. } if *dst == reg => return true,
+            Instruction::IntSubI { dst, .. } if *dst == reg => return true,
+            Instruction::Move { dst, .. } if *dst == reg => return true,
+            _ => {}
+        }
+    }
+    false
 }
 
 pub fn fuse_slot_immediate(instructions: &mut Vec<Instruction>, loop_payloads: &mut [LoopPayload]) {
@@ -97,7 +145,7 @@ fn fuse_intmod_cmpi(
             cmp_imm,
             op,
         };
-        adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
+        adjust_jumps_after_remove_full(instructions, loop_payloads, &mut [], &mut [], i + 1);
         instructions.remove(i + 1);
         if i + 1 < source_positions.len() {
             source_positions.remove(i + 1);
@@ -106,7 +154,7 @@ fn fuse_intmod_cmpi(
 }
 
 /// Returns true if `instr` writes to register `reg`.
-fn writes_reg(instr: &Instruction, reg: u8) -> bool {
+pub(crate) fn writes_reg(instr: &Instruction, reg: u8) -> bool {
     use Instruction::*;
     match instr {
         Move { dst, .. } => *dst == reg,
@@ -140,7 +188,7 @@ fn writes_reg(instr: &Instruction, reg: u8) -> bool {
 }
 
 /// Returns true if `instr` reads register `reg` (source operand).
-fn instruction_reads_reg(instr: &Instruction, reg: u8) -> bool {
+pub(crate) fn instruction_reads_reg(instr: &Instruction, reg: u8) -> bool {
     use Instruction::*;
     match instr {
         Move { src, .. } => *src == reg,
@@ -201,7 +249,7 @@ pub fn fuse_slot_immediate_with_positions(
                         dst: *dst,
                         src: *src1,
                     };
-                    adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
+                    adjust_jumps_after_remove_full(instructions, loop_payloads, &mut [], &mut [], i + 1);
                     instructions.remove(i + 1);
                     if i + 1 < source_positions.len() {
                         source_positions.remove(i + 1);
@@ -215,7 +263,7 @@ pub fn fuse_slot_immediate_with_positions(
                         dst: *dst,
                         src: *src1,
                     };
-                    adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
+                    adjust_jumps_after_remove_full(instructions, loop_payloads, &mut [], &mut [], i + 1);
                     instructions.remove(i + 1);
                     if i + 1 < source_positions.len() {
                         source_positions.remove(i + 1);
@@ -230,7 +278,7 @@ pub fn fuse_slot_immediate_with_positions(
                                 dst: *dst,
                                 src: *src1,
                             };
-                            adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
+                            adjust_jumps_after_remove_full(instructions, loop_payloads, &mut [], &mut [], i + 1);
                             instructions.remove(i + 1);
                             if i + 1 < source_positions.len() {
                                 source_positions.remove(i + 1);
@@ -247,7 +295,7 @@ pub fn fuse_slot_immediate_with_positions(
                                 dst: *dst,
                                 src: *src1,
                             };
-                            adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
+                            adjust_jumps_after_remove_full(instructions, loop_payloads, &mut [], &mut [], i + 1);
                             instructions.remove(i + 1);
                             if i + 1 < source_positions.len() {
                                 source_positions.remove(i + 1);
@@ -259,15 +307,17 @@ pub fn fuse_slot_immediate_with_positions(
                 _ => {}
             }
             // Fold: LoadIntConst(0) + IntMul → constant 0
+            // G2.2b: unsafe if const_dst is modified in a loop (IntAddIJump writes to it)
             match &instructions[i + 1] {
                 Instruction::IntMul { dst, src1: _, src2 }
-                    if *src2 == *const_dst && const_val == Some(0) =>
+                    if *src2 == *const_dst && const_val == Some(0)
+                    && !reg_modified_in_enclosing_loop(instructions, loop_payloads, i, *const_dst) =>
                 {
                     instructions[i] = Instruction::LoadIntConst {
                         dst: *dst,
                         const_idx: *const_idx,
                     };
-                    adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
+                    adjust_jumps_after_remove_full(instructions, loop_payloads, &mut [], &mut [], i + 1);
                     instructions.remove(i + 1);
                     if i + 1 < source_positions.len() {
                         source_positions.remove(i + 1);
@@ -275,13 +325,14 @@ pub fn fuse_slot_immediate_with_positions(
                     continue;
                 }
                 Instruction::IntAdd { dst, src1, src2 }
-                    if *src2 == *const_dst && const_val == Some(0) =>
+                    if *src2 == *const_dst && const_val == Some(0)
+                    && !reg_modified_in_enclosing_loop(instructions, loop_payloads, i, *const_dst) =>
                 {
                     instructions[i] = Instruction::Move {
                         dst: *dst,
                         src: *src1,
                     };
-                    adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
+                    adjust_jumps_after_remove_full(instructions, loop_payloads, &mut [], &mut [], i + 1);
                     instructions.remove(i + 1);
                     if i + 1 < source_positions.len() {
                         source_positions.remove(i + 1);
@@ -289,13 +340,14 @@ pub fn fuse_slot_immediate_with_positions(
                     continue;
                 }
                 Instruction::IntSub { dst, src1, src2 }
-                    if *src2 == *const_dst && const_val == Some(0) =>
+                    if *src2 == *const_dst && const_val == Some(0)
+                    && !reg_modified_in_enclosing_loop(instructions, loop_payloads, i, *const_dst) =>
                 {
                     instructions[i] = Instruction::Move {
                         dst: *dst,
                         src: *src1,
                     };
-                    adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
+                    adjust_jumps_after_remove_full(instructions, loop_payloads, &mut [], &mut [], i + 1);
                     instructions.remove(i + 1);
                     if i + 1 < source_positions.len() {
                         source_positions.remove(i + 1);
@@ -304,13 +356,14 @@ pub fn fuse_slot_immediate_with_positions(
                 }
                 // Fold: LoadIntConst(-1) + IntMul → Neg
                 Instruction::IntMul { dst, src1, src2 }
-                    if *src2 == *const_dst && const_val == Some(-1) =>
+                    if *src2 == *const_dst && const_val == Some(-1)
+                    && !reg_modified_in_enclosing_loop(instructions, loop_payloads, i, *const_dst) =>
                 {
                     instructions[i] = Instruction::Neg {
                         dst: *dst,
                         src: *src1,
                     };
-                    adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
+                    adjust_jumps_after_remove_full(instructions, loop_payloads, &mut [], &mut [], i + 1);
                     instructions.remove(i + 1);
                     if i + 1 < source_positions.len() {
                         source_positions.remove(i + 1);
@@ -319,13 +372,14 @@ pub fn fuse_slot_immediate_with_positions(
                 }
                 // Fold: LoadIntConst(-1) + IntDiv → Neg  (x / -1 == -x)
                 Instruction::IntDiv { dst, src1, src2 }
-                    if *src2 == *const_dst && const_val == Some(-1) =>
+                    if *src2 == *const_dst && const_val == Some(-1)
+                    && !reg_modified_in_enclosing_loop(instructions, loop_payloads, i, *const_dst) =>
                 {
                     instructions[i] = Instruction::Neg {
                         dst: *dst,
                         src: *src1,
                     };
-                    adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
+                    adjust_jumps_after_remove_full(instructions, loop_payloads, &mut [], &mut [], i + 1);
                     instructions.remove(i + 1);
                     if i + 1 < source_positions.len() {
                         source_positions.remove(i + 1);
@@ -351,7 +405,7 @@ pub fn fuse_slot_immediate_with_positions(
                                 dst: *dst,
                                 src: *const_dst,
                             };
-                            adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
+                            adjust_jumps_after_remove_full(instructions, loop_payloads, &mut [], &mut [], i + 1);
                             instructions.remove(i + 1);
                             if i + 1 < source_positions.len() {
                                 source_positions.remove(i + 1);
@@ -368,7 +422,7 @@ pub fn fuse_slot_immediate_with_positions(
                                 dst: *dst,
                                 src: *src1,
                             };
-                            adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
+                            adjust_jumps_after_remove_full(instructions, loop_payloads, &mut [], &mut [], i + 1);
                             instructions.remove(i + 1);
                             if i + 1 < source_positions.len() {
                                 source_positions.remove(i + 1);
@@ -381,7 +435,7 @@ pub fn fuse_slot_immediate_with_positions(
                                 dst: *dst,
                                 src: *src1,
                             };
-                            adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
+                            adjust_jumps_after_remove_full(instructions, loop_payloads, &mut [], &mut [], i + 1);
                             instructions.remove(i + 1);
                             if i + 1 < source_positions.len() {
                                 source_positions.remove(i + 1);
@@ -400,7 +454,7 @@ pub fn fuse_slot_immediate_with_positions(
                                 src: *src1,
                                 imm: int_val,
                             };
-                            adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
+                            adjust_jumps_after_remove_full(instructions, loop_payloads, &mut [], &mut [], i + 1);
                             instructions.remove(i + 1);
                             if i + 1 < source_positions.len() {
                                 source_positions.remove(i + 1);
@@ -413,7 +467,7 @@ pub fn fuse_slot_immediate_with_positions(
                                 src: *src1,
                                 imm: int_val,
                             };
-                            adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
+                            adjust_jumps_after_remove_full(instructions, loop_payloads, &mut [], &mut [], i + 1);
                             instructions.remove(i + 1);
                             if i + 1 < source_positions.len() {
                                 source_positions.remove(i + 1);
@@ -426,7 +480,7 @@ pub fn fuse_slot_immediate_with_positions(
                                 src: *src1,
                                 imm: int_val,
                             };
-                            adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
+                            adjust_jumps_after_remove_full(instructions, loop_payloads, &mut [], &mut [], i + 1);
                             instructions.remove(i + 1);
                             if i + 1 < source_positions.len() {
                                 source_positions.remove(i + 1);
@@ -441,7 +495,7 @@ pub fn fuse_slot_immediate_with_positions(
                                 src: *src1,
                                 imm: int_val,
                             };
-                            adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
+                            adjust_jumps_after_remove_full(instructions, loop_payloads, &mut [], &mut [], i + 1);
                             instructions.remove(i + 1);
                             if i + 1 < source_positions.len() {
                                 source_positions.remove(i + 1);
@@ -478,7 +532,7 @@ pub fn fuse_slot_immediate_with_positions(
                                     imm,
                                     op: *op,
                                 };
-                                adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
+                                adjust_jumps_after_remove_full(instructions, loop_payloads, &mut [], &mut [], i + 1);
                                 instructions.remove(i + 1);
                                 if i + 1 < source_positions.len() {
                                     source_positions.remove(i + 1);
@@ -506,7 +560,7 @@ pub fn fuse_slot_immediate_with_positions(
                                     src: *src1,
                                     imm,
                                 };
-                                adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
+                                adjust_jumps_after_remove_full(instructions, loop_payloads, &mut [], &mut [], i + 1);
                                 instructions.remove(i + 1);
                                 if i + 1 < source_positions.len() {
                                     source_positions.remove(i + 1);
@@ -519,7 +573,7 @@ pub fn fuse_slot_immediate_with_positions(
                                     src: *src1,
                                     imm,
                                 };
-                                adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
+                                adjust_jumps_after_remove_full(instructions, loop_payloads, &mut [], &mut [], i + 1);
                                 instructions.remove(i + 1);
                                 if i + 1 < source_positions.len() {
                                     source_positions.remove(i + 1);
@@ -560,7 +614,7 @@ pub fn fuse_slot_immediate_with_positions(
                         src: *src,
                         imm: *imm,
                     };
-                    adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
+                    adjust_jumps_after_remove_full(instructions, loop_payloads, &mut [], &mut [], i + 1);
                     instructions.remove(i + 1);
                     if i + 1 < source_positions.len() {
                         source_positions.remove(i + 1);
@@ -586,7 +640,7 @@ pub fn fuse_slot_immediate_with_positions(
                         src: *src,
                         imm: *imm,
                     };
-                    adjust_jumps_after_remove(instructions, loop_payloads, i + 1);
+                    adjust_jumps_after_remove_full(instructions, loop_payloads, &mut [], &mut [], i + 1);
                     instructions.remove(i + 1);
                     if i + 1 < source_positions.len() {
                         source_positions.remove(i + 1);

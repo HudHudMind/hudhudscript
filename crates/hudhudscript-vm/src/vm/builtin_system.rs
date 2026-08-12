@@ -329,7 +329,10 @@ impl crate::vm::VM {
                     result.insert("status".to_string(), Value16::number(0.0));
                     result.insert("ok".to_string(), Value16::bool_(false));
                     result.insert("body".to_string(), Value16::string(response));
-                    result.insert("headers".to_string(), Value16::object(hudhudscript_bytecode::ObjMap::default()));
+                    result.insert(
+                        "headers".to_string(),
+                        Value16::object(hudhudscript_bytecode::ObjMap::default()),
+                    );
                     result.insert("json".to_string(), Value16::null());
                 }
 
@@ -385,7 +388,7 @@ impl crate::vm::VM {
                 m.insert("daily".to_string(), Value16::int(0));
                 m.insert("monthly".to_string(), Value16::int(0));
                 Ok(Value16::object(m))
-            },
+            }
             "budget_health" => Ok(Value16::number(1.0)),
             _ => Err(compile_codes::runtime_error(format!(
                 "Unknown tokenomics method: {}",

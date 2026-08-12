@@ -96,8 +96,15 @@ impl VM {
                         self.registers.set_absolute(slot, value);
                     }
                 } else {
+                    // T5.2 parity: `this` single source is VM.cur_this field
+                    // (same special case as set_var_by_sym). Compiler emits
+                    // `this.f = v` writeback as StoreGlobal.
+                    if sym_key.0 == self.this_sym {
+                        self.cur_this = value;
+                        return Ok(StepAction::Advance);
+                    }
                     let name = bytecode.resolve_symbol(sym_key.0);
-                    if let Some(cell) = self.find_cell(&name) {
+                    if let Some(cell) = self.find_cell_by_sym(sym_key.0) {
                         *cell.write() = value;
                     } else {
                         self.globals.insert(sym_key, value);
@@ -126,6 +133,30 @@ impl VM {
                 } else {
                     // Plain global (not in main_local_slots) — canonical home is globals HashMap.
                     self.globals.insert(sym_key, value);
+                }
+            }
+            Instruction::LoadClosureSlot { dst, slot } => {
+                // G5-slotvec: O(1) cell read — no hash, no sym lookup
+                let slot_idx = *slot as usize;
+                if let Some((cells, _)) = self.scope_cells.last() {
+                    if slot_idx < cells.len() {
+                        if let Some(cell) = &cells[slot_idx] {
+                            let val = *cell.read();
+                            self.registers[*dst as usize] = val;
+                        }
+                    }
+                }
+            }
+            Instruction::StoreClosureSlot { src, slot } => {
+                // G5-slotvec: O(1) cell write
+                let slot_idx = *slot as usize;
+                let value = self.registers[*src as usize];
+                if let Some((cells, _)) = self.scope_cells.last_mut() {
+                    if slot_idx < cells.len() {
+                        if let Some(cell) = &cells[slot_idx] {
+                            *cell.write() = value;
+                        }
+                    }
                 }
             }
             _ => unreachable!("instruction routed to wrong execute helper"),

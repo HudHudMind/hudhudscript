@@ -12,7 +12,7 @@ impl TypeChecker {
             current_class: None,
             strict: false,
             generic_constraints: HashMap::new(),
-            redeclare_policy: RedeclarePolicy::Warn,
+            redeclare_policy: RedeclarePolicy::Error,
         }
     }
 
@@ -46,7 +46,7 @@ impl TypeChecker {
             current_class: None,
             strict: true,
             generic_constraints: HashMap::new(),
-            redeclare_policy: RedeclarePolicy::Warn,
+            redeclare_policy: RedeclarePolicy::Error,
         }
     }
 

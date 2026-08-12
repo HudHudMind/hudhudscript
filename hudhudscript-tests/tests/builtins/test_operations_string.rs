@@ -7,7 +7,7 @@ fn call_string_method(
     method: &str,
     args: &[Value16],
 ) -> hudhudscript_errors::HudHudResult<Value16> {
-    hudhudscript_shared_builtins::string::call_string_method(s, method, args)
+    hudhudscript_shared_builtins::string::call_string_method(s, method, args, false)
 }
 
 #[test]

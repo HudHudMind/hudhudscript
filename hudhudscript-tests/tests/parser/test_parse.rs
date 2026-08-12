@@ -3440,6 +3440,10 @@ fn test_parse_bare_expression_stmt() {
         )) => {
             assert_eq!(*n, 42.0);
         }
+        hudhudscript_ast::Stmt::Expr(hudhudscript_ast::Expr::Literal(
+            hudhudscript_ast::Literal::Int(42),
+            _,
+        )) => {}
         other => panic!("Expected Expr(Number), got {:?}", other),
     }
 }
@@ -3714,6 +3718,7 @@ fn test_parse_match_number_pattern() {
             hudhudscript_ast::MatchPattern::Literal(hudhudscript_ast::Literal::Number(n, _)) => {
                 assert_eq!(*n, 42.0);
             }
+            hudhudscript_ast::MatchPattern::Literal(hudhudscript_ast::Literal::Int(42)) => {}
             other => panic!("Expected Number pattern, got {:?}", other),
         },
         other => panic!("Expected Match, got {:?}", other),
@@ -4636,6 +4641,9 @@ fn test_parse_mixed_array() {
                 assert!(matches!(
                     elements[0],
                     hudhudscript_ast::Expr::Literal(hudhudscript_ast::Literal::Number(_, _), _)
+                ) || matches!(
+                    elements[0],
+                    hudhudscript_ast::Expr::Literal(hudhudscript_ast::Literal::Int(_), _)
                 ));
                 assert!(matches!(
                     elements[1],
@@ -6749,6 +6757,7 @@ fn test_parse_arabic_indic_number() {
             hudhudscript_ast::Expr::Literal(hudhudscript_ast::Literal::Number(n, _), _) => {
                 assert_eq!(*n, 42.0);
             }
+            hudhudscript_ast::Expr::Literal(hudhudscript_ast::Literal::Int(42), _) => {}
             other => panic!("Expected Number, got {:?}", other),
         },
         other => panic!("Expected Let, got {:?}", other),
@@ -6765,6 +6774,7 @@ fn test_parse_bengali_number() {
             hudhudscript_ast::Expr::Literal(hudhudscript_ast::Literal::Number(n, _), _) => {
                 assert_eq!(*n, 10.0);
             }
+            hudhudscript_ast::Expr::Literal(hudhudscript_ast::Literal::Int(10), _) => {}
             other => panic!("Expected Number, got {:?}", other),
         },
         other => panic!("Expected Let, got {:?}", other),

@@ -145,10 +145,15 @@ fn test_match_literal_number() {
     let stmts = parse(src).expect("parse failed");
     match &stmts[0] {
         Stmt::Match { arms, .. } => {
-            assert!(matches!(
-                &arms[0].pattern,
-                MatchPattern::Literal(hudhudscript_ast::Literal::Number(n, _)) if *n == 42.0
-            ));
+            assert!(
+                matches!(
+                    &arms[0].pattern,
+                    MatchPattern::Literal(hudhudscript_ast::Literal::Number(n, _)) if *n == 42.0
+                ) || matches!(
+                    &arms[0].pattern,
+                    MatchPattern::Literal(hudhudscript_ast::Literal::Int(42))
+                )
+            );
         }
         other => panic!("Expected Match, got {:?}", other),
     }

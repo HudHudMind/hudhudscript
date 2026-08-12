@@ -78,52 +78,46 @@ impl VM {
                 self.registers[*dst as usize] = Value16::bool_(result);
             }
             Instruction::IntCmpI { dst, src, imm, op } => {
-                let (tag, payload) = self.registers[*src as usize].split_tag();
+                let v = self.registers[*src as usize];
+                let (tag, payload) = v.split_tag();
                 let result = match tag {
                     ReprTag::Int => {
                         let a = payload as i64;
                         let b = *imm as i64;
                         match *op {
-                            0 => a < b,
-                            1 => a <= b,
-                            2 => a > b,
-                            3 => a >= b,
-                            4 => a == b,
-                            5 => a != b,
-                            _ => {
-                                return Err(Self::runtime_error_with_pos(
-                                    &format!("IntCmpI: unknown op {}", op),
-                                    bytecode,
-                                    ip,
-                                ))
-                            }
+                            0 => a < b, 1 => a <= b, 2 => a > b,
+                            3 => a >= b, 4 => a == b, 5 => a != b,
+                            _ => return Err(Self::runtime_error_with_pos(
+                                &format!("IntCmpI: unknown op {}", op), bytecode, ip))
                         }
                     }
                     ReprTag::Number => {
                         let a = f64::from_bits(payload);
                         let b = *imm as f64;
                         match *op {
-                            0 => a < b,
-                            1 => a <= b,
-                            2 => a > b,
-                            3 => a >= b,
-                            4 => a == b,
-                            5 => a != b,
-                            _ => {
-                                return Err(Self::runtime_error_with_pos(
-                                    &format!("IntCmpI: unknown op {}", op),
-                                    bytecode,
-                                    ip,
-                                ))
+                            0 => a < b, 1 => a <= b, 2 => a > b,
+                            3 => a >= b, 4 => a == b, 5 => a != b,
+                            _ => return Err(Self::runtime_error_with_pos(
+                                &format!("IntCmpI: unknown op {}", op), bytecode, ip))
+                        }
+                    }
+                    ReprTag::Dynamic => {
+                        if let Some(a) = v.to_bigint_value() {
+                            let b = num_bigint::BigInt::from(*imm as i64);
+                            match *op {
+                                0 => a < b, 1 => a <= b, 2 => a > b,
+                                3 => a >= b, 4 => a == b, 5 => a != b,
+                                _ => return Err(Self::runtime_error_with_pos(
+                                    &format!("IntCmpI: unknown op {}", op), bytecode, ip))
                             }
+                        } else {
+                            return Err(Self::runtime_error_with_pos(
+                                "IntCmpI: src not numeric", bytecode, ip))
                         }
                     }
                     _ => {
                         return Err(Self::runtime_error_with_pos(
-                            "IntCmpI: src not numeric",
-                            bytecode,
-                            ip,
-                        ))
+                            "IntCmpI: src not numeric", bytecode, ip))
                     }
                 };
                 self.registers[*dst as usize] = Value16::bool_(result);
@@ -188,7 +182,21 @@ impl VM {
                         }
                     }
                     _ => {
-                        if let (Some(a), Some(b)) = (v1.as_str(), v2.as_str()) {
+                        // BigInt comparison: either operand is Dynamic
+                        let a_big = v1.to_bigint_value();
+                        let b_big = v2.to_bigint_value();
+                        if let (Some(a), Some(b)) = (a_big, b_big) {
+                            match *op {
+                                0 => a < b,
+                                1 => a <= b,
+                                2 => a > b,
+                                3 => a >= b,
+                                4 => a == b,
+                                5 => a != b,
+                                _ => return Err(Self::runtime_error_with_pos(
+                                    &format!("IntCmp: unknown op {}", op), bytecode, ip))
+                            }
+                        } else if let (Some(a), Some(b)) = (v1.as_str(), v2.as_str()) {
                             match *op {
                                 0 => a < b,
                                 1 => a <= b,
@@ -228,11 +236,21 @@ impl VM {
                                 _ => false,
                             }
                         } else {
-                            return Err(Self::runtime_error_with_pos(
-                                &format!("IntCmp: incompatible types {:?} {:?}", t1, t2),
-                                bytecode,
-                                ip,
-                            ));
+                            // F3: Object/array equality — use configured policy
+                            match self.object_equality {
+                                crate::vm::config_types::ObjectEquality::Identity => {
+                                    let ptr1 = v1.split_tag().1;
+                                    let ptr2 = v2.split_tag().1;
+                                    match *op { 4 => ptr1 == ptr2, 5 => ptr1 != ptr2, _ => false }
+                                }
+                                crate::vm::config_types::ObjectEquality::Never => {
+                                    match *op { 4 => false, 5 => true, _ => false }
+                                }
+                                crate::vm::config_types::ObjectEquality::Deep => {
+                                    let eq = v1.values_equal(v2);
+                                    match *op { 4 => eq, 5 => !eq, _ => false }
+                                }
+                            }
                         }
                     }
                 };
@@ -241,8 +259,27 @@ impl VM {
             Instruction::Neg { dst, src } => {
                 let (tag, payload) = self.registers[*src as usize].split_tag();
                 let result = match tag {
-                    ReprTag::Int => Value16::int(-(payload as i64)),
+                    ReprTag::Int => {
+                        let n = payload as i64;
+                        // G3.1: i64::MIN negated → BigInt (was wrapping)
+                        if n == i64::MIN {
+                            Value16::bigint(-num_bigint::BigInt::from(n))
+                        } else {
+                            Value16::int(-n)
+                        }
+                    }
                     ReprTag::Number => Value16::number(-f64::from_bits(payload)),
+                    ReprTag::Dynamic => {
+                        if let Some(b) = self.registers[*src as usize].as_bigint() {
+                            Value16::bigint(-b.clone())
+                        } else {
+                            return Err(Self::runtime_error_with_pos(
+                                "Neg: expected numeric value",
+                                bytecode,
+                                ip,
+                            ));
+                        }
+                    }
                     _ => {
                         return Err(Self::runtime_error_with_pos(
                             "Neg: expected Int or Number",
@@ -268,6 +305,8 @@ impl VM {
                 let result = crate::vm::bigint_arith::int_add(a, b).map_err(|code| {
                     Self::runtime_error_with_pos(&code.to_string(), bytecode, ip)
                 })?;
+                #[cfg(feature = "telemetry")]
+                self.record_bigint_promotion(a, b, result);
                 self.registers[dst as usize] = result;
                 return Ok(StepAction::Return { src: dst });
             }
@@ -278,6 +317,8 @@ impl VM {
                 let result = crate::vm::bigint_arith::int_sub(a, b).map_err(|code| {
                     Self::runtime_error_with_pos(&code.to_string(), bytecode, ip)
                 })?;
+                #[cfg(feature = "telemetry")]
+                self.record_bigint_promotion(a, b, result);
                 self.registers[dst as usize] = result;
                 return Ok(StepAction::Return { src: dst });
             }
@@ -288,6 +329,8 @@ impl VM {
                 let result = crate::vm::bigint_arith::int_mul(a, b).map_err(|code| {
                     Self::runtime_error_with_pos(&code.to_string(), bytecode, ip)
                 })?;
+                #[cfg(feature = "telemetry")]
+                self.record_bigint_promotion(a, b, result);
                 self.registers[dst as usize] = result;
                 return Ok(StepAction::Return { src: dst });
             }
@@ -306,14 +349,50 @@ impl VM {
                 let dst = self.frame_stack.last().map(|f| f.dst).unwrap_or(255);
                 let result = match tag {
                     ReprTag::Int => {
-                        let a = p as i64; let b = *imm as i64;
-                        match *op { 0 => a < b, 1 => a <= b, 2 => a > b, 3 => a >= b, 4 => a == b, 5 => a != b, _ => return Err(Self::runtime_error_with_pos(&format!("IntCmpIReturn: unknown op {}", op), bytecode, ip)) }
+                        let a = p as i64;
+                        let b = *imm as i64;
+                        match *op {
+                            0 => a < b,
+                            1 => a <= b,
+                            2 => a > b,
+                            3 => a >= b,
+                            4 => a == b,
+                            5 => a != b,
+                            _ => {
+                                return Err(Self::runtime_error_with_pos(
+                                    &format!("IntCmpIReturn: unknown op {}", op),
+                                    bytecode,
+                                    ip,
+                                ))
+                            }
+                        }
                     }
                     ReprTag::Number => {
-                        let a = f64::from_bits(p); let b = *imm as f64;
-                        match *op { 0 => a < b, 1 => a <= b, 2 => a > b, 3 => a >= b, 4 => a == b, 5 => a != b, _ => return Err(Self::runtime_error_with_pos(&format!("IntCmpIReturn: unknown op {}", op), bytecode, ip)) }
+                        let a = f64::from_bits(p);
+                        let b = *imm as f64;
+                        match *op {
+                            0 => a < b,
+                            1 => a <= b,
+                            2 => a > b,
+                            3 => a >= b,
+                            4 => a == b,
+                            5 => a != b,
+                            _ => {
+                                return Err(Self::runtime_error_with_pos(
+                                    &format!("IntCmpIReturn: unknown op {}", op),
+                                    bytecode,
+                                    ip,
+                                ))
+                            }
+                        }
                     }
-                    _ => return Err(Self::runtime_error_with_pos("IntCmpIReturn: src not numeric", bytecode, ip)),
+                    _ => {
+                        return Err(Self::runtime_error_with_pos(
+                            "IntCmpIReturn: src not numeric",
+                            bytecode,
+                            ip,
+                        ))
+                    }
                 };
                 self.registers[dst as usize] = Value16::bool_(result);
                 return Ok(StepAction::Return { src: dst });

@@ -1,8 +1,9 @@
 //! VM integration tests for Network Batch 6 — TCP/UDP (#675), Unix (#676), WebSocket (#616)
 
 use hudhudscript_bytecode::Value16;
-use hudhudscript_compiler::{Compiler, VM};
+use hudhudscript_compiler::Compiler;
 use hudhudscript_parser::parse;
+use hudhudscript_vm::VM;
 
 fn vm_run(code: &str) -> VM {
     let ast = parse(code).expect("parse failed");
@@ -16,29 +17,61 @@ fn vm_run(code: &str) -> VM {
 // ── TCP tests (#675) ────────────────────────────────────────────────
 
 #[test]
-fn test_vm_tcp_listen_returns_object() {
+fn test_vm_tcp_listen_returns_object_with_stub_transport() {
+    let code = r#"
+        var server = tcp.listen("test-local-net", 0);
+        var has_fd = server.fd != null;
+        var has_addr = server.address != null;
+    "#;
+    let vm = vm_run(code);
+    assert!(vm.get_variable("has_fd").and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool()) == Some(true));
+    assert!(vm.get_variable("has_addr").and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool()) == Some(true));
+}
+
+#[test]
+#[ignore = "requires HUDHUD_REAL_NETWORK_TESTS=1 and localhost bind permission"]
+fn test_vm_tcp_listen_returns_object_real_socket() {
+    if std::env::var("HUDHUD_REAL_NETWORK_TESTS").unwrap_or_default() != "1" {
+        return;
+    }
     let code = r#"
         var server = tcp.listen("127.0.0.1", 0);
         var has_fd = server.fd != null;
         var has_addr = server.address != null;
     "#;
     let vm = vm_run(code);
-    assert!(vm.get_variable("has_fd").and_then(|v| v.as_bool()) == Some(true));
-    assert!(vm.get_variable("has_addr").and_then(|v| v.as_bool()) == Some(true));
+    assert!(vm.get_variable("has_fd").and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool()) == Some(true));
+    assert!(vm.get_variable("has_addr").and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool()) == Some(true));
 }
 
 // ── UDP tests (#675) ────────────────────────────────────────────────
 
 #[test]
-fn test_vm_udp_bind_returns_object() {
+fn test_vm_udp_bind_returns_object_with_stub_transport() {
+    let code = r#"
+        var sock = udp.bind("test-local-net", 0);
+        var has_fd = sock.fd != null;
+        var has_addr = sock.address != null;
+    "#;
+    let vm = vm_run(code);
+    assert!(vm.get_variable("has_fd").and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool()) == Some(true));
+    assert!(vm.get_variable("has_addr").and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool()) == Some(true));
+}
+
+#[test]
+#[ignore = "requires HUDHUD_REAL_NETWORK_TESTS=1 and localhost bind permission"]
+fn test_vm_udp_bind_returns_object_real_socket() {
+    if std::env::var("HUDHUD_REAL_NETWORK_TESTS").unwrap_or_default() != "1" {
+        return;
+    }
     let code = r#"
         var sock = udp.bind("127.0.0.1", 0);
         var has_fd = sock.fd != null;
         var has_addr = sock.address != null;
     "#;
     let vm = vm_run(code);
-    assert!(vm.get_variable("has_fd").and_then(|v| v.as_bool()) == Some(true));
-    assert!(vm.get_variable("has_addr").and_then(|v| v.as_bool()) == Some(true));
+    assert!(vm.get_variable("has_fd").and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool()) == Some(true));
+    assert!(vm.get_variable("has_addr").and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool()) == Some(true));
 }
 
 // ── Unix domain socket tests (#676) ─────────────────────────────────
@@ -57,15 +90,31 @@ fn test_vm_unix_connect_nonexistent_fails() {
 // ── WebSocket tests (#616) ──────────────────────────────────────────
 
 #[test]
-fn test_vm_ws_serve_returns_server() {
+fn test_vm_ws_serve_returns_server_with_stub_transport() {
+    let code = r#"
+        var server = ws.serve("test-local-net", 0);
+        var has_id = server.id != null;
+        var has_addr = server.address != null;
+    "#;
+    let vm = vm_run(code);
+    assert!(vm.get_variable("has_id").and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool()) == Some(true));
+    assert!(vm.get_variable("has_addr").and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool()) == Some(true));
+}
+
+#[test]
+#[ignore = "requires HUDHUD_REAL_NETWORK_TESTS=1 and localhost bind permission"]
+fn test_vm_ws_serve_returns_server_real_socket() {
+    if std::env::var("HUDHUD_REAL_NETWORK_TESTS").unwrap_or_default() != "1" {
+        return;
+    }
     let code = r#"
         var server = ws.serve("127.0.0.1", 0);
         var has_id = server.id != null;
         var has_addr = server.address != null;
     "#;
     let vm = vm_run(code);
-    assert!(vm.get_variable("has_id").and_then(|v| v.as_bool()) == Some(true));
-    assert!(vm.get_variable("has_addr").and_then(|v| v.as_bool()) == Some(true));
+    assert!(vm.get_variable("has_id").and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool()) == Some(true));
+    assert!(vm.get_variable("has_addr").and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool()) == Some(true));
 }
 
 #[test]

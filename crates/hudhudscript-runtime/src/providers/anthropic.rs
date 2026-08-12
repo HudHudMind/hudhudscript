@@ -158,9 +158,13 @@ impl Provider for AnthropicProvider {
 
         // Make API call (retry once on 5xx)
         let endpoint = self.get_endpoint();
+        let timeout_secs = request.timeout_secs.or(self.config.timeout_secs).unwrap_or(crate::provider::types::DEFAULT_PROVIDER_TIMEOUT_SECS);
+        let timeout_duration = std::time::Duration::from_secs(timeout_secs);
+        
         let build_req = || {
             self.client
                 .post(&endpoint)
+                .timeout(timeout_duration)
                 .header("x-api-key", &api_key)
                 .header("anthropic-version", "2023-06-01")
                 .header("content-type", "application/json")

@@ -53,7 +53,15 @@ pub fn compile_file(
 
     // Issue #866 TYPE-001: Run type checker before compilation when --strict is enabled
     // Issue #920: Use AnnotatedAST pipeline (TypeChecker → AnnotatedAST → Compiler)
+    let canonical_script = fs::canonicalize(path)
+        .map_err(|e| CliError::Io(format!("Failed to resolve path: {}", e)))?;
+    let module_base = canonical_script
+        .parent()
+        .unwrap_or_else(|| Path::new("."))
+        .to_path_buf();
+
     let mut compiler = Compiler::new();
+    compiler.set_module_base_dir(module_base.clone());
     let bytecode = if strict {
         if verbose {
             println!("🔒 Strict type checking...");

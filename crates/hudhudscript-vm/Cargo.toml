@@ -5,6 +5,7 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
+readme.workspace = true
 description = "Virtual machine execution engine for HudHudScript bytecode"
 
 [dependencies]
@@ -90,12 +91,19 @@ tracing = { workspace = true }
 parking_lot = { workspace = true }
 rustc-hash = { workspace = true }
 libc = "0.2"
-
+hudhudscript-compiler = { path = "../hudhudscript-compiler" }
 [dev-dependencies]
 criterion = { workspace = true }
-hudhudscript-compiler = { path = "../hudhudscript-compiler" }
 
 [[bench]]
 name = "value_repr_microbench"
 harness = false
+
+[features]
+# Must forward to the bytecode crate: `machine.rs` reads the GC counters that
+# live behind `hudhudscript-bytecode`'s own `telemetry` feature. Without the
+# forward those functions are configured out and enabling this feature failed
+# to compile ("cannot find function take_telemetry_alloc_counts … found an item
+# that was configured out").
+telemetry = ["hudhudscript-bytecode/telemetry"]
 

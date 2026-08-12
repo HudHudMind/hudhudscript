@@ -7,11 +7,13 @@ impl Compiler {
         alias: Option<&String>,
     ) -> CompileResult<()> {
         let alias_sym = alias.map(|a| sym(a));
+        let base_dir = self.module_base_dir.as_ref().map(|p| p.to_string_lossy().into_owned());
         let idx = self
             .bytecode
             .add_load_module_payload(hudhudscript_bytecode::LoadModulePayload {
                 path: module.to_string(),
                 alias: alias_sym,
+                base_dir,
             });
         self.bytecode.push_instr(Instruction::LoadModule(idx));
         Ok(())
@@ -26,21 +28,38 @@ impl Compiler {
         use hudhudscript_ast::Expr;
         let mut agent_obj = hudhudscript_bytecode::ObjMap::default();
         agent_obj.insert("name".to_string(), Value16::string(name.to_string()));
+
+        let mut dynamic_provider_expr = None;
         for (key, value_expr) in fields {
-            let val = if key == "provider" {
-                // provider: DeepSeek → store as string reference, resolve at runtime
+            if key == "provider" {
+                // provider: DeepSeek → store as string reference (backward compatibility)
                 if let Expr::Identifier(ident, _) = value_expr {
-                    Value16::string(ident.clone())
+                    agent_obj.insert(key.clone(), Value16::string(ident.clone()));
                 } else {
-                    self.expr_to_const_value(value_expr)
+                    dynamic_provider_expr = Some(value_expr);
                 }
             } else {
-                self.expr_to_const_value(value_expr)
-            };
-            agent_obj.insert(key.clone(), val);
+                let val = self.expr_to_const_value(value_expr);
+                agent_obj.insert(key.clone(), val);
+            }
         }
         let idx = self.bytecode.add_constant(Value16::object(agent_obj));
-        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_instr(Instruction::Move { dst: 255, src: tr }); }
+
+        let obj_reg = crate::compiler::regalloc::temp_reg();
+        self.bytecode.push_instr(Instruction::LoadConst { dst: obj_reg, const_idx: idx as u16 });
+
+        if let Some(expr) = dynamic_provider_expr {
+            self.compile_expr(expr)?;
+            let key_sym = sym("provider");
+            self.bytecode.push_instr(Instruction::SetProperty {
+                dst: obj_reg,
+                obj: obj_reg,
+                val: 255,
+                prop_sym: key_sym.0 as u16,
+            });
+        }
+
+        self.bytecode.push_move(255, obj_reg );
         self.emit_decl_store("agent", name, 255);
         Ok(())
     }
@@ -90,7 +109,7 @@ impl Compiler {
             provider_obj.insert(normalized_key, val);
         }
         let idx = self.bytecode.add_constant(Value16::object(provider_obj));
-        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_instr(Instruction::Move { dst: 255, src: tr }); }
+        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_move(255, tr ); }
         self.emit_decl_store("provider", name, 255);
         Ok(())
     }

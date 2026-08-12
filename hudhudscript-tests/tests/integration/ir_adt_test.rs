@@ -1,8 +1,9 @@
 //! Tests for Issue #107: Dual-Phase Compilation — ADT/Match IR lowering
 //! Verifies that AST → Bytecode lowering works for enum declarations and match statements.
 
-use hudhudscript_compiler::{Compiler, VM};
+use hudhudscript_compiler::Compiler;
 use hudhudscript_parser::parse;
+use hudhudscript_vm::VM;
 
 fn compile_and_run(src: &str) {
     let stmts = parse(src).expect("parse error");
@@ -91,12 +92,15 @@ fn test_match_literal_emits_eq_instruction() {
         matches!(
             i,
             Instruction::IntCmp { op: 4, .. }
-            | Instruction::IntCmpRRJumpIfFalse { op: 4, .. }
+                | Instruction::IntCmpRRJumpIfFalse { op: 4, .. }
+                // G4 (OPUS_IS_PLANI): cmp+branch artık payload-tablolu packed
+                // forma çevriliyor — aynı eq karşılaştırması, hızlı temsil.
+                | Instruction::IntCmpRRJumpPacked { op: 4, .. }
         )
     });
     assert!(
         has_eq,
-        "Expected IntCmp/IntCmpRRJumpIfFalse eq instruction for literal pattern"
+        "Expected IntCmp/IntCmpRRJumpIfFalse/IntCmpRRJumpPacked eq instruction for literal pattern"
     );
 }
 
@@ -225,11 +229,11 @@ fn test_arabic_while_same_ir_as_english() {
     let en_has_jump = bc_en
         .instructions
         .iter()
-        .any(|i| matches!(i, Instruction::Jump(_)));
+        .any(|i| matches!(i, Instruction::Jump(_) | Instruction::IntAddIJump { .. }));
     let ar_has_jump = bc_ar
         .instructions
         .iter()
-        .any(|i| matches!(i, Instruction::Jump(_)));
+        .any(|i| matches!(i, Instruction::Jump(_) | Instruction::IntAddIJump { .. }));
     let en_has_jif = bc_en.instructions.iter().any(|i| {
         matches!(
             i,

@@ -1,3 +1,4 @@
+mod m1_stdio_bridge_lifetime_test;
 mod mcp_server_test;
 mod test_client;
 mod test_mcp_vm_dispatch;
@@ -8,3 +9,4 @@ mod test_real_git_server;
 mod test_real_stdio_fixture;
 mod test_stdio_transport;
 mod test_transport;
+mod test_transport_decl;

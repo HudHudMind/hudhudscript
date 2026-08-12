@@ -1,0 +1,14 @@
+# Give test threads the same stack the runtime gets in production.
+#
+# `hudhud` runs scripts on the process main thread (8 MiB) and can be asked for
+# more via HUDHUD_THREAD_STACK_MB (see hudhudscript-cli/src/startup.rs), but the
+# libtest harness spawns each test on a 2 MiB thread. VM evaluation of ordinary
+# scripts — class inheritance with `super`, nested module imports — exceeds
+# 2 MiB, so tests aborted with "has overflowed its stack" for programs that run
+# fine under the real CLI. That is a harness artefact, not a language limit, and
+# it masks the actual assertion failures underneath.
+#
+# 8 MiB mirrors the production main thread. Raise it here, not per test, so the
+# whole suite is measured under production-like conditions.
+[env]
+RUST_MIN_STACK = "8388608"

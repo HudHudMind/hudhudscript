@@ -1,5 +1,5 @@
 use super::*;
-use hudhudscript_bytecode::{Instruction, LoopPayload};
+use hudhudscript_bytecode::{CmpJumpPayload, Instruction, LoopPayload, SuperInstrPayload};
 
 /// Stack effect for remaining instructions. Most arithmetic ops removed.
 pub fn stack_effect(inst: &Instruction) -> Option<i32> {
@@ -56,7 +56,6 @@ pub fn stack_effect(inst: &Instruction) -> Option<i32> {
         | GetStatic(_)
         | LoadModule(_)
         | DefineFunction(_)
-        | WriteBackReceiver(_)
         | DestructArray(_, _)
         | DestructObject(_) => return None,
         TailCall { .. } => return None,
@@ -102,9 +101,11 @@ pub fn abs_target_for_jump(ip: usize, offset: i32) -> usize {
 
 /// Adjust all jump offsets and loop payloads after removing the instruction
 /// at `removed_at`.  Must be called BEFORE `instructions.remove(removed_at)`.
-pub(crate) fn adjust_jumps_after_remove(
+pub(crate) fn adjust_jumps_after_remove_full(
     instructions: &mut [Instruction],
     loop_payloads: &mut [LoopPayload],
+    cmp_jump_payloads: &mut [CmpJumpPayload],
+    super_instr_payloads: &mut [SuperInstrPayload],
     removed_at: usize,
 ) {
     // 1. Adjust instruction-embedded jump offsets
@@ -157,6 +158,18 @@ pub(crate) fn adjust_jumps_after_remove(
         }
         if lp.end as usize > removed_at {
             lp.end -= 1;
+        }
+    }
+    // 3. Adjust cmp_jump payload absolute IPs (G2.3)
+    for cjp in cmp_jump_payloads.iter_mut() {
+        if cjp.target as usize > removed_at {
+            cjp.target -= 1;
+        }
+    }
+    // 4. Adjust super_instr payload offsets (G2.3)
+    for sip in super_instr_payloads.iter_mut() {
+        if sip.offset != 0 && removed_at < removed_at.wrapping_add(sip.offset as usize) {
+            sip.offset -= 1;
         }
     }
 }

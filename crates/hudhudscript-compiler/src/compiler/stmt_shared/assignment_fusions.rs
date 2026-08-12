@@ -46,6 +46,11 @@ pub(crate) fn try_self_sub_int<'a>(value: &'a Expr, name: &str) -> Option<i16> {
         if !is_ident(left, name) {
             return None;
         }
+        if let Expr::Literal(Literal::Int(i), _) = right.as_ref() {
+            if *i > 0 && *i <= i16::MAX as i64 {
+                return Some(*i as i16);
+            }
+        }
         if let Expr::Literal(Literal::Number(n, false), _) = right.as_ref() {
             let i = *n as i64;
             if i > 0 && i <= i16::MAX as i64 {
@@ -59,6 +64,18 @@ pub(crate) fn try_self_sub_int<'a>(value: &'a Expr, name: &str) -> Option<i16> {
 /// If `value` matches `name + positive_int_literal` or `positive_int_literal + name`,
 /// returns `Some(imm)`. Only matches when one side is Identifier(name).
 pub(super) fn try_self_add_int<'a>(value: &'a Expr, name: &str) -> Option<i16> {
+    let lit_to_i16 = |lit: &Literal| -> Option<i16> {
+        let i = match lit {
+            Literal::Int(i) => *i,
+            Literal::Number(n, false) => *n as i64,
+            _ => return None,
+        };
+        if i > 0 && i <= i16::MAX as i64 {
+            Some(i as i16)
+        } else {
+            None
+        }
+    };
     if let Expr::Binary {
         op: BinaryOp::Add,
         left,
@@ -66,16 +83,18 @@ pub(super) fn try_self_add_int<'a>(value: &'a Expr, name: &str) -> Option<i16> {
         ..
     } = value
     {
-        if let Expr::Literal(Literal::Number(n, false), _) = right.as_ref() {
-            let i = *n as i64;
-            if i > 0 && i <= i16::MAX as i64 && is_ident(left, name) {
-                return Some(i as i16);
+        if let Expr::Literal(lit, _) = right.as_ref() {
+            if let Some(imm) = lit_to_i16(lit) {
+                if is_ident(left, name) {
+                    return Some(imm);
+                }
             }
         }
-        if let Expr::Literal(Literal::Number(n, false), _) = left.as_ref() {
-            let i = *n as i64;
-            if i > 0 && i <= i16::MAX as i64 && is_ident(right, name) {
-                return Some(i as i16);
+        if let Expr::Literal(lit, _) = left.as_ref() {
+            if let Some(imm) = lit_to_i16(lit) {
+                if is_ident(right, name) {
+                    return Some(imm);
+                }
             }
         }
     }
@@ -164,8 +183,8 @@ mod tests {
         assert!(has_fma, "NumMulAddIndexed not emitted for horner pattern");
     }
 
-    fn literal_int(n: f64) -> Expr {
-        Expr::Literal(Literal::Number(n, false), Span::default())
+    fn literal_int(n: i64) -> Expr {
+        Expr::Literal(Literal::Int(n), Span::default())
     }
 
     fn sub(l: Expr, r: Expr) -> Expr {
@@ -175,7 +194,7 @@ mod tests {
     #[test]
     fn test_self_sub_int_detected() {
         // i = i - 1
-        let val = sub(ident("i"), literal_int(1.0));
+        let val = sub(ident("i"), literal_int(1));
         let r = try_self_sub_int(&val, "i");
         assert_eq!(r, Some(1));
     }
@@ -183,7 +202,7 @@ mod tests {
     #[test]
     fn test_self_sub_int_larger() {
         // i = i - 42
-        let val = sub(ident("i"), literal_int(42.0));
+        let val = sub(ident("i"), literal_int(42));
         let r = try_self_sub_int(&val, "i");
         assert_eq!(r, Some(42));
     }
@@ -191,7 +210,7 @@ mod tests {
     #[test]
     fn test_self_sub_int_not_same_local() {
         // i = j - 1
-        let val = sub(ident("j"), literal_int(1.0));
+        let val = sub(ident("j"), literal_int(1));
         let r = try_self_sub_int(&val, "i");
         assert!(r.is_none());
     }
@@ -207,7 +226,7 @@ mod tests {
     #[test]
     fn test_self_sub_int_not_sub() {
         // i = i + 1 (not Sub)
-        let val = add(ident("i"), literal_int(1.0));
+        let val = add(ident("i"), literal_int(1));
         let r = try_self_sub_int(&val, "i");
         assert!(r.is_none());
     }

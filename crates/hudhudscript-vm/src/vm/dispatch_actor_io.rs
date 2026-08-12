@@ -56,9 +56,7 @@ impl crate::vm::VM {
                     let chunk_name = &func_data.chunk_name;
                     let params = &func_data.params;
                     let captures = &func_data.captures;
-                    if let Some(chunk) = bytecode
-                        .get_function(chunk_name.as_str())
-                    {
+                    if let Some(chunk) = bytecode.get_function(chunk_name.as_str()) {
                         let params = params.clone();
                         let captures = captures.clone();
 
@@ -85,7 +83,7 @@ impl crate::vm::VM {
                                 &params,
                                 &[],
                                 bytecode,
-                                "atomically",
+                                hudhudscript_bytecode::SymId(hudhudscript_bytecode::interner::intern("atomically").0),
                                 &captures,
                             );
 

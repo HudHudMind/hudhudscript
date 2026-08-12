@@ -25,7 +25,7 @@ fn test_spawn_coverage() {
     let mut bytecode = Bytecode::new();
     let sym = SymId(intern("Agent").0);
     let payload = bytecode.add_call_payload(sym, 0);
-    let _instr = Instruction::Spawn { payload_idx: payload, first_arg: 0, arg_count: 0 };
+    let _instr = Instruction::Spawn { name_sym: 0, first_arg: 0, arg_count: 0 };
 }
 
 #[test]

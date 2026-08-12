@@ -23,7 +23,7 @@ fn compile_expr_complex_inner(
             let dst = regs.alloc(base_ip, base_ip + 255).expect("out of registers");
             if has_spread {
                 // Build array incrementally to handle spread elements (#945)
-                { let tr = crate::compiler::regalloc::temp_reg(); target.ct_emit(Instruction::MakeArray { dst: tr, count: 0 }); target.ct_emit(Instruction::Move { dst: 255, src: tr }); }
+                { let tr = crate::compiler::regalloc::temp_reg(); target.ct_emit(Instruction::MakeArray { dst: tr, count: 0 }); target.emit_move(255, tr ); }
                 for elem in elements {
                     if let Expr::Spread { expr, .. } = elem {
                         let r = compile_expr_to_reg(target, expr, &mut RegAlloc::new_with_base(target.ct_next_local_reg())?);
@@ -33,69 +33,32 @@ fn compile_expr_complex_inner(
                         let ip = target.ct_current_ip();
                         // Pop current array from stack, then push back after mutation
                         let arr_reg = crate::compiler::regalloc::temp_reg();
-                        target.ct_emit(Instruction::Move { dst: arr_reg, src: 255 });
+                        target.emit_move(arr_reg, 255 );
                         let val_reg = compile_expr_to_reg(target, elem, &mut regs);
                         let dst_reg = regs.alloc(ip, ip + 255).expect("out of registers");
                         target.ct_emit(Instruction::ArrayPush { dst: dst_reg, arr: arr_reg, val: val_reg });
-                        target.ct_emit(Instruction::Move { dst: 255, src: dst_reg });
+                        target.emit_move(255, dst_reg );
                     }
                 }
             } else {
                 // Register-based: build array incrementally with ArrayPush
-                { let tr = crate::compiler::regalloc::temp_reg(); target.ct_emit(Instruction::MakeArray { dst: tr, count: 0 }); target.ct_emit(Instruction::Move { dst: 255, src: tr }); }
+                { let tr = crate::compiler::regalloc::temp_reg(); target.ct_emit(Instruction::MakeArray { dst: tr, count: 0 }); target.emit_move(255, tr ); }
                 for elem in elements {
                     let r = compile_expr_to_reg(target, elem, &mut RegAlloc::new_with_base(target.ct_next_local_reg())?);
                     let arr_reg = crate::compiler::regalloc::temp_reg();
-                    target.ct_emit(Instruction::Move { dst: arr_reg, src: 255 });
+                    target.emit_move(arr_reg, 255 );
                     let dst_reg = crate::compiler::regalloc::temp_reg();
                     target.ct_emit(Instruction::ArrayPush { dst: dst_reg, arr: arr_reg, val: r });
-                    target.ct_emit(Instruction::Move { dst: 255, src: dst_reg });
+                    target.emit_move(255, dst_reg );
                 }
             }
         }
 
-        Expr::Object { properties, .. } => {
-            // Gap 1 — the parser emits object-literal spread entries as
-            // `("__spread__N", Expr::Spread { expr })`.  When any spread
-            // is present, build the object incrementally using
-            // MakeObject(0) + SetProperty / SpreadIntoObject so the
-            // unpacked source fields land as real keys (and the
-            // "__spread__N" placeholder never leaks into the live
-            // object).  No-spread path preserves the fast MakeObject(n)
-            // encoding.
-            let has_spread = properties
-                .iter()
-                .any(|(_, v)| matches!(v, Expr::Spread { .. }));
-            if has_spread {
-                { let tr = crate::compiler::regalloc::temp_reg(); target.ct_emit(Instruction::MakeObject { dst: tr, count: 0 }); target.ct_emit(Instruction::Move { dst: 255, src: tr }); }
-                for (key, value) in properties {
-                    if let Expr::Spread { expr, .. } = value {
-                        let r = compile_expr_to_reg(target, expr, &mut RegAlloc::new_with_base(target.ct_next_local_reg())?);
-                        target.ct_emit(Instruction::SpreadIntoObject { dst: 255, src: r });
-                    } else {
-                        let mut regs = RegAlloc::new_with_base(target.ct_next_local_reg())?;
-                        let ip = target.ct_current_ip();
-                        // Pop current object from stack, then push back after mutation
-                        let obj_reg = crate::compiler::regalloc::temp_reg();
-                        target.ct_emit(Instruction::Move { dst: obj_reg, src: 255 });
-                        let val_reg = compile_expr_to_reg(target, value, &mut regs);
-                        let dst_reg = regs.alloc(ip, ip + 255).expect("out of registers");
-                        let key_sym = target.ct_sym(key);
-                        target.ct_emit(Instruction::SetProperty { dst: dst_reg, obj: obj_reg, val: val_reg, prop_sym: key_sym.0 as u16 });
-                        target.ct_emit(Instruction::Move { dst: 255, src: dst_reg });
-                    }
-                }
-            } else {
-                for (key, value) in properties {
-                    let key_idx = target.ct_emit_const(Value16::string(key.clone()));
-                    { let tr = crate::compiler::regalloc::temp_reg(); target.ct_emit(Instruction::LoadConst { dst: tr, const_idx: key_idx as u16 }); target.ct_emit(Instruction::Move { dst: 255, src: tr }); }
-                    {
-                        let r = compile_expr_to_reg(target, value, &mut RegAlloc::new_with_base(target.ct_next_local_reg())?);
-                        target.ct_emit(Instruction::Move { dst: 255, src: r });
-                    }
-                }
-                { let tr = crate::compiler::regalloc::temp_reg(); target.ct_emit(Instruction::MakeObject { dst: tr, count: properties.len() as u16 }); target.ct_emit(Instruction::Move { dst: 255, src: tr }); }
-            }
+        Expr::Object { .. } => {
+            // Object literals are lowered via compile_reg (compile_reg.rs:150).
+            // This arm is unreachable but kept for exhaustive safety.
+            return Err(compile_codes::generic(
+                "Compiler invariant: Expr::Object must lower via compile_reg"));
         }
 
         Expr::Index { object, index, .. } => {
@@ -122,23 +85,23 @@ fn compile_expr_complex_inner(
                 } else {
                     target.ct_emit(Instruction::Index { dst: tr_dst, obj: arr_reg, idx: idx_reg });
                 }
-                target.ct_emit(Instruction::Move { dst: 255, src: tr_dst });
+                target.emit_move(255, tr_dst );
             } else {
                 {
                         let r = compile_expr_to_reg(target, object, &mut RegAlloc::new_with_base(target.ct_next_local_reg())?);
-                        target.ct_emit(Instruction::Move { dst: 255, src: r });
+                        target.emit_move(255, r );
                     }
                 {
                         let r = compile_expr_to_reg(target, index, &mut RegAlloc::new_with_base(target.ct_next_local_reg())?);
-                        target.ct_emit(Instruction::Move { dst: 255, src: r });
+                        target.emit_move(255, r );
                     }
                 let tr_idx = crate::compiler::regalloc::temp_reg();
                 let tr_obj = crate::compiler::regalloc::temp_reg();
                 let tr_dst = crate::compiler::regalloc::temp_reg();
-                target.ct_emit(Instruction::Move { dst: tr_idx, src: 255 });
-                target.ct_emit(Instruction::Move { dst: tr_obj, src: 255 });
+                target.emit_move(tr_idx, 255 );
+                target.emit_move(tr_obj, 255 );
                 target.ct_emit(Instruction::Index { dst: tr_dst, obj: tr_obj, idx: tr_idx });
-                target.ct_emit(Instruction::Move { dst: 255, src: tr_dst });
+                target.emit_move(255, tr_dst );
             }
         }
 
@@ -159,7 +122,7 @@ fn compile_expr_complex_inner(
                     let dst_reg = regs.alloc(ip, ip + 255).expect("out of registers");
                     let prop_sym = target.ct_sym(property);
                     target.ct_emit(Instruction::GetProperty { dst: dst_reg, obj: obj_reg, prop_sym: prop_sym.0 as u16 });
-                    target.ct_emit(Instruction::Move { dst: 255, src: dst_reg });
+                    target.emit_move(255, dst_reg );
                 }
             } else {
                 let mut regs = RegAlloc::new_with_base(target.ct_next_local_reg())?;
@@ -168,7 +131,7 @@ fn compile_expr_complex_inner(
                 let dst_reg = regs.alloc(ip, ip + 255).expect("out of registers");
                 let prop_sym = target.ct_sym(property);
                 target.ct_emit(Instruction::GetProperty { dst: dst_reg, obj: obj_reg, prop_sym: prop_sym.0 as u16 });
-                target.ct_emit(Instruction::Move { dst: 255, src: dst_reg });
+                target.emit_move(255, dst_reg );
             }
         }
 
@@ -182,7 +145,7 @@ fn compile_expr_complex_inner(
 
             if has_spread {
                 // Materialise the arguments as a single Array at runtime.
-                { let tr = crate::compiler::regalloc::temp_reg(); target.ct_emit(Instruction::MakeArray { dst: tr, count: 0 }); target.ct_emit(Instruction::Move { dst: 255, src: tr }); }
+                { let tr = crate::compiler::regalloc::temp_reg(); target.ct_emit(Instruction::MakeArray { dst: tr, count: 0 }); target.emit_move(255, tr ); }
                 for arg in args {
                     if let Expr::Spread { expr, .. } = arg {
                         let r = compile_expr_to_reg(target, expr, &mut RegAlloc::new_with_base(target.ct_next_local_reg())?);
@@ -192,11 +155,11 @@ fn compile_expr_complex_inner(
                         let ip = target.ct_current_ip();
                         // arr_reg: re-read from stack (previously pushed MakeArray result)
                         let arr_reg = crate::compiler::regalloc::temp_reg();
-                        target.ct_emit(Instruction::Move { dst: arr_reg, src: 255 });
+                        target.emit_move(arr_reg, 255 );
                         let val_reg = compile_expr_to_reg(target, arg, &mut regs);
                         let dst_reg = regs.alloc(ip, ip + 255).expect("out of registers");
                         target.ct_emit(Instruction::ArrayPush { dst: dst_reg, arr: arr_reg, val: val_reg });
-                        target.ct_emit(Instruction::Move { dst: 255, src: dst_reg });
+                        target.emit_move(255, dst_reg );
                     }
                 }
                 match &**callee {
@@ -221,12 +184,8 @@ fn compile_expr_complex_inner(
                         let mut outer_regs = RegAlloc::new_with_base(target.ct_next_local_reg())?;
                         let receiver_reg = compile_expr_to_reg(target, object, &mut outer_regs);
                         let prop_sym = target.ct_sym(property);
-                        target.ct_emit(Instruction::Move { dst: 255, src: receiver_reg });
+                        target.emit_move(255, receiver_reg );
                         target.ct_emit(Instruction::MethodCallSpread(prop_sym));
-                        if let Some(root_name) = root_var_name(object) {
-                            let root_sym = target.ct_sym(&root_name);
-                            target.ct_emit(Instruction::WriteBackReceiver(root_sym));
-                        }
                     }
                     _ => {
                         return Err(compile_codes::unsupported_feature_at(
@@ -245,22 +204,49 @@ fn compile_expr_complex_inner(
                             let math_shadowed = target.ct_local_reg("Math").is_some()
                                 || target.ct_math_global_written();
                             if !math_shadowed {
+                                // G8: tip kapısı KALDIRILDI — Math gölgelenmediyse
+                                // NumSqrt her zaman emit edilir (derleme kararı,
+                                // fallback değil). Eski kapı yalnız tip-KANITLI
+                                // argümanlara izin veriyordu; param'lı gerçek kod
+                                // (rk4/newton/monte_carlo) hep Unknown çıkıp 5
+                                // komutluk MethodCall'a düşüyordu. Runtime
+                                // semantiği aynı: iki yol da sayısal zorunlu
+                                // (NumSqrt as_number_fast ↔ metot pop_number),
+                                // n.sqrt() birebir.
                                 let arg = &args[0];
-                                let resolve = |n: &str| target.ct_local_type(n);
-                                let arg_ty = infer_type_with_locals(arg, &resolve);
-                                let arg_num = arg_ty == ExprType::Int || arg_ty == ExprType::Number;
-                                if arg_num {
-                                    let src = compile_expr_to_reg(
-                                        target, arg,
-                                        &mut RegAlloc::new_with_base(target.ct_next_local_reg())?,
-                                    );
-                                    let dst = crate::compiler::regalloc::temp_reg();
-                                    target.ct_emit(Instruction::NumSqrt { dst, src });
-                                    target.ct_emit(Instruction::Move { dst: 255, src: dst });
-                                    return Ok(255);
-                                }
+                                let src = compile_expr_to_reg(
+                                    target, arg,
+                                    &mut RegAlloc::new_with_base(target.ct_next_local_reg())?,
+                                );
+                                let dst = crate::compiler::regalloc::temp_reg();
+                                target.ct_emit(Instruction::NumSqrt { dst, src });
+                                target.emit_move(255, dst );
+                                return Ok(255);
                             }
-                            // Math shadowed or Unknown arg → fall through to MethodCall
+                            // Math gölgelendi → derleme kararı: MethodCall
+                        }
+                        // G8: Math.sin / Math.cos intrinsics — sqrt ile aynı desen.
+                        if math_name == "Math"
+                            && (property == "sin" || property == "cos")
+                            && args.len() == 1
+                        {
+                            let math_shadowed = target.ct_local_reg("Math").is_some()
+                                || target.ct_math_global_written();
+                            if !math_shadowed {
+                                let arg = &args[0];
+                                let src = compile_expr_to_reg(
+                                    target, arg,
+                                    &mut RegAlloc::new_with_base(target.ct_next_local_reg())?,
+                                );
+                                let dst = crate::compiler::regalloc::temp_reg();
+                                if property == "sin" {
+                                    target.ct_emit(Instruction::NumSin { dst, src });
+                                } else {
+                                    target.ct_emit(Instruction::NumCos { dst, src });
+                                }
+                                target.emit_move(255, dst);
+                                return Ok(255);
+                            }
                         }
                         if math_name == "Math" && property == "floor" && args.len() == 1 {
                             // P5c: check both local shadow AND global reassignment
@@ -276,7 +262,7 @@ fn compile_expr_complex_inner(
                                 if !arg_is_float {
                                     match arg {
                                         Expr::Binary { left, op: BinaryOp::Div, right, .. } => {
-                                            if let Expr::Literal(Literal::Number(n, false), _) = &**right {
+                                            if let Expr::Literal(Literal::Int(n), _) = &**right {
                                                 // Rule 1: Math.floor(x / 2) → IntDivI
                                                 let src = compile_expr_to_reg(
                                                     target, left,
@@ -285,7 +271,16 @@ fn compile_expr_complex_inner(
                                                 let dst = crate::compiler::regalloc::temp_reg();
                                                 let imm = *n as i16;
                                                 target.ct_emit(Instruction::IntDivI { dst, src, imm });
-                                                target.ct_emit(Instruction::Move { dst: 255, src: dst });
+                                                target.emit_move(255, dst );
+                                            } else if let Expr::Literal(Literal::Number(f, false), _) = &**right {
+                                                let src = compile_expr_to_reg(
+                                                    target, left,
+                                                    &mut RegAlloc::new_with_base(target.ct_next_local_reg())?,
+                                                );
+                                                let dst = crate::compiler::regalloc::temp_reg();
+                                                let imm = *f as i16;
+                                                target.ct_emit(Instruction::IntDivI { dst, src, imm });
+                                                target.emit_move(255, dst );
                                             } else {
                                                 // Rule 2: Math.floor(x / y) → IntDiv
                                                 let l_reg = compile_expr_to_reg(
@@ -298,7 +293,7 @@ fn compile_expr_complex_inner(
                                                 );
                                                 let dst = crate::compiler::regalloc::temp_reg();
                                                 target.ct_emit(Instruction::IntDiv { dst, src1: l_reg, src2: r_reg });
-                                                target.ct_emit(Instruction::Move { dst: 255, src: dst });
+                                                target.emit_move(255, dst );
                                             }
                                         }
                                         _ => {
@@ -307,7 +302,7 @@ fn compile_expr_complex_inner(
                                                 target, arg,
                                                 &mut RegAlloc::new_with_base(target.ct_next_local_reg())?,
                                             );
-                                            target.ct_emit(Instruction::Move { dst: 255, src: r });
+                                            target.emit_move(255, r );
                                         }
                                     }
                                     return Ok(255);
@@ -318,10 +313,6 @@ fn compile_expr_complex_inner(
                         }
                     }
                 }
-                for arg in args {
-                    let r = crate::compiler::expr::compile_reg::compile_expr_to_reg(target, arg, &mut RegAlloc::new_with_base(target.ct_next_local_reg())?);
-                    target.ct_emit(Instruction::Move { dst: 255, src: r });
-                }
                 match &**callee {
                     Expr::Identifier(name, _) => {
                         if name == "super" {
@@ -329,7 +320,7 @@ fn compile_expr_complex_inner(
                             let first_arg = crate::compiler::regalloc::temp_reg();
                             for (i, arg) in args.iter().enumerate() {
                                 let r = compile_expr_to_reg(target, arg, &mut RegAlloc::new_with_base(target.ct_next_local_reg())?);
-                                target.ct_emit(Instruction::Move { dst: first_arg + i as u8, src: r });
+                                target.emit_move(first_arg + i as u8, r );
                             }
                             let ctor_sym = target.ct_sym("constructor");
                             let idx = target.ct_add_call_payload(ctor_sym, argc);
@@ -341,7 +332,7 @@ fn compile_expr_complex_inner(
                             let first_arg = crate::compiler::regalloc::temp_reg();
                             for (i, arg) in args.iter().enumerate() {
                                 let r = compile_expr_to_reg(target, arg, &mut RegAlloc::new_with_base(target.ct_next_local_reg())?);
-                                target.ct_emit(Instruction::Move { dst: first_arg + i as u8, src: r });
+                                target.emit_move(first_arg + i as u8, r );
                             }
                             let idx = target.ct_add_call_payload(name_sym, argc);
                             target.ct_emit(Instruction::MakeGenerator { payload_idx: idx as u16, first_arg, arg_count: argc });
@@ -366,28 +357,26 @@ fn compile_expr_complex_inner(
                             let first_arg = crate::compiler::regalloc::temp_reg();
                             for (i, arg) in args.iter().enumerate() {
                                 let r = compile_expr_to_reg(target, arg, &mut RegAlloc::new_with_base(target.ct_next_local_reg())?);
-                                target.ct_emit(Instruction::Move { dst: first_arg + i as u8, src: r });
+                                target.emit_move(first_arg + i as u8, r );
                             }
                             if let Some(chunk) = target.ct_get_function_chunk(name) {
-                                if let Some(inlined) = crate::optimizer::inline_compile::try_inline_call(
-                                    &chunk, first_arg, argc, 255,
+                                if crate::optimizer::inline_compile::try_inline_call(
+                                    target, &chunk, first_arg, argc, 255,
                                 ) {
-                                    for instr in inlined {
-                                        target.ct_emit(instr);
-                                    }
+                                    // inlined successfully, instructions already emitted
                                 } else {
                                     let name_sym = target.ct_sym(name);
                                     let idx = target.ct_add_call_payload(name_sym, argc);
                                     let tr = crate::compiler::regalloc::temp_reg();
                                     target.ct_emit(Instruction::Call { dst: tr, payload_idx: idx as u16, first_arg, arg_count: argc });
-                                    target.ct_emit(Instruction::Move { dst: 255, src: tr });
+                                    target.emit_move(255, tr );
                                 }
                             } else {
                                 let name_sym = target.ct_sym(name);
                                 let idx = target.ct_add_call_payload(name_sym, argc);
                                 let tr = crate::compiler::regalloc::temp_reg();
                                 target.ct_emit(Instruction::Call { dst: tr, payload_idx: idx as u16, first_arg, arg_count: argc });
-                                target.ct_emit(Instruction::Move { dst: 255, src: tr });
+                                target.emit_move(255, tr );
                             }
                         }
                     }
@@ -400,7 +389,7 @@ fn compile_expr_complex_inner(
                             let first_arg = crate::compiler::regalloc::temp_reg();
                             for (i, arg) in args.iter().enumerate() {
                                 let r = compile_expr_to_reg(target, arg, &mut RegAlloc::new_with_base(target.ct_next_local_reg())?);
-                                target.ct_emit(Instruction::Move { dst: first_arg + i as u8, src: r });
+                                target.emit_move(first_arg + i as u8, r );
                             }
                             let prop_sym = target.ct_sym(property);
                             let idx = target.ct_add_call_payload(prop_sym, argc);
@@ -410,20 +399,21 @@ fn compile_expr_complex_inner(
                             // MethodCall arguments cannot clobber reg255.
                             let mut outer_regs = RegAlloc::new_with_base(target.ct_next_local_reg())?;
                             let receiver_reg = compile_expr_to_reg(target, object, &mut outer_regs);
-                            let stash = crate::compiler::regalloc::temp_reg();
-                            target.ct_emit(Instruction::Move { dst: stash, src: receiver_reg });
                             let argc = args.len() as u8;
                             let first_arg = crate::compiler::regalloc::temp_reg();
                             for (i, arg) in args.iter().enumerate() {
                                 let r = compile_expr_to_reg(target, arg, &mut RegAlloc::new_with_base(target.ct_next_local_reg())?);
-                                target.ct_emit(Instruction::Move { dst: first_arg + i as u8, src: r });
+                                target.emit_move(first_arg + i as u8, r );
                             }
-                            // OPT: array.push(x) → ArrayPush; array.pop() → ArrayPop; string ops
+                            // G4B: eliminate stash — use receiver_reg directly
                             if property == "push" && argc == 1 {
+                                let stash = crate::compiler::regalloc::temp_reg();
+                                target.emit_move(stash, receiver_reg );
                                 target.ct_emit(Instruction::ArrayPush { dst: stash, arr: stash, val: first_arg });
-                                target.ct_emit(Instruction::Move { dst: 255, src: stash });
+                                target.emit_move(255, stash );
                             } else if property == "pop" && argc == 0 {
-                                // P2a: only emit ArrayPop when receiver is typed Array
+                                let stash = crate::compiler::regalloc::temp_reg();
+                                target.emit_move(stash, receiver_reg );
                                 let is_typed_array = root_var_name(object)
                                     .map(|n| target.ct_local_type(&n) == crate::compiler::expr::ExprType::Array)
                                     .unwrap_or(false);
@@ -432,18 +422,22 @@ fn compile_expr_complex_inner(
                                 } else {
                                     let prop_sym = target.ct_sym(property);
                                     let idx = target.ct_add_call_payload_with_builtin(prop_sym, argc, hudhudscript_bytecode::builtin_method::NONE);
-                                    target.ct_emit(Instruction::Move { dst: 255, src: stash });
+                                    target.emit_move(255, stash );
                                     target.ct_emit(Instruction::MethodCall { dst: 255, obj: 255, payload_idx: idx as u16, first_arg, arg_count: argc });
                                 }
                             } else if property == "indexOf" && argc == 1 {
+                                let stash = crate::compiler::regalloc::temp_reg();
+                                target.emit_move(stash, receiver_reg );
                                 target.ct_emit(Instruction::StringIndexOf { dst: stash, haystack: stash, needle: first_arg });
-                                target.ct_emit(Instruction::Move { dst: 255, src: stash });
+                                target.emit_move(255, stash );
                             } else if property == "contains" && argc == 1 {
+                                let stash = crate::compiler::regalloc::temp_reg();
+                                target.emit_move(stash, receiver_reg );
                                 target.ct_emit(Instruction::StringContains { dst: stash, haystack: stash, needle: first_arg });
-                                target.ct_emit(Instruction::Move { dst: 255, src: stash });
+                                target.emit_move(255, stash );
                             } else {
+                                // G4B: generic MethodCall — use receiver_reg directly, no stash
                                 let prop_sym = target.ct_sym(property);
-                                // P6: resolve known builtin method IDs for fast VM dispatch
                                 let builtin_idx = if let Expr::Identifier(obj_name, _) = &**object {
                                     hudhudscript_bytecode::builtin_method::resolve(obj_name, property)
                                 } else {
@@ -454,25 +448,12 @@ fn compile_expr_complex_inner(
                                 } else {
                                     target.ct_add_call_payload(prop_sym, argc)
                                 };
-                                target.ct_emit(Instruction::Move { dst: 255, src: stash });
+                                target.emit_move(255, receiver_reg );
                                 target.ct_emit(Instruction::MethodCall { dst: 255, obj: 255, payload_idx: idx as u16, first_arg, arg_count: argc });
                             }
                             // Bug 4: this.call() implicitly references 'provider'
                             if property == "call" && root_var_name(object).as_deref() == Some("this") {
                                 target.ct_track_reference("provider");
-                            }
-                            if let Some(root_name) = root_var_name(object) {
-                                // P2a: skip WriteBackReceiver only for local Array push/pop —
-                                // the register is already the mutated array, no global writeback needed.
-                                let skip_wbr = (property == "push" || property == "pop")
-                                    && target.ct_local_type(&root_name) == crate::compiler::expr::ExprType::Array;
-                                if !skip_wbr {
-                                    let save_result = crate::compiler::regalloc::temp_reg();
-                                    target.ct_emit(Instruction::Move { dst: save_result, src: 255 });
-                                    let root_sym = target.ct_sym(&root_name);
-                                    target.ct_emit(Instruction::WriteBackReceiver(root_sym));
-                                    target.ct_emit(Instruction::Move { dst: 255, src: save_result });
-                                }
                             }
                         }
                     }
@@ -482,7 +463,7 @@ fn compile_expr_complex_inner(
                         let first_arg = crate::compiler::regalloc::temp_reg();
                         for (i, arg) in args.iter().enumerate() {
                             let r = compile_expr_to_reg(target, arg, &mut RegAlloc::new_with_base(target.ct_next_local_reg())?);
-                            target.ct_emit(Instruction::Move { dst: first_arg + i as u8, src: r });
+                            target.emit_move(first_arg + i as u8, r );
                         }
                         let mut ri = RegAlloc::new_with_base(target.ct_next_local_reg())?;
                         let obj_reg = compile_expr_to_reg(target, object, &mut ri);
@@ -494,7 +475,7 @@ fn compile_expr_complex_inner(
                         let call_idx = target.ct_add_call_payload(hudhudscript_bytecode::SymId(temp_sym), argc);
                         let tr = crate::compiler::regalloc::temp_reg();
                         target.ct_emit(Instruction::Call { dst: tr, payload_idx: call_idx as u16, first_arg, arg_count: argc });
-                        target.ct_emit(Instruction::Move { dst: 255, src: tr });
+                        target.emit_move(255, tr );
                     }
                     _ => {
                         return Err(compile_codes::unsupported_feature_at(
@@ -522,7 +503,7 @@ fn compile_expr_complex_inner(
             let first_arg = crate::compiler::regalloc::temp_reg();
             for (i, arg) in args.iter().enumerate() {
                 let r = compile_expr_to_reg(target, arg, &mut RegAlloc::new_with_base(target.ct_next_local_reg())?);
-                target.ct_emit(Instruction::Move { dst: first_arg + i as u8, src: r });
+                target.emit_move(first_arg + i as u8, r );
             }
             let cls_sym = target.ct_sym(class_name);
             let idx = target.ct_add_call_payload(cls_sym, argc);
@@ -538,7 +519,7 @@ fn compile_expr_complex_inner(
                 let idx = target.ct_emit_const(Value16::string(String::new()));
                 let tr = regs.alloc(target.ct_current_ip(), base_ip + 255).expect("out of registers");
                 target.ct_emit(Instruction::LoadConst { dst: tr, const_idx: idx as u16 });
-                target.ct_emit(Instruction::Move { dst: 255, src: tr });
+                target.emit_move(255, tr );
                 return Ok(255);
             }
             if parts.len() == 1 {
@@ -554,7 +535,7 @@ fn compile_expr_complex_inner(
                         crate::compiler::expr::compile_reg::compile_expr_to_reg(target, expr, regs)
                     }
                 };
-                target.ct_emit(Instruction::Move { dst: 255, src: res });
+                target.emit_move(255, res );
                 return Ok(255);
             }
 
@@ -573,7 +554,7 @@ fn compile_expr_complex_inner(
                         crate::compiler::expr::compile_reg::compile_expr_to_reg(target, expr, regs)
                     }
                 };
-                target.ct_emit(Instruction::Move { dst: dst_start + i as u8, src: r });
+                target.emit_move(dst_start + i as u8, r );
                 regs.free_now(r);
             }
 
@@ -586,7 +567,7 @@ fn compile_expr_complex_inner(
             for i in 0..count {
                 regs.free_now(dst_start + i);
             }
-            target.ct_emit(Instruction::Move { dst: 255, src: result_reg });
+            target.emit_move(255, result_reg );
             return Ok(255);
         }
 

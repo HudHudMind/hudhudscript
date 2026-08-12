@@ -52,27 +52,15 @@ where
     match expr {
         Expr::Identifier(name, _) => local_type(name),
 
-        // A3c: integer-valued numeric literals route to `Int` so the
-        // compiler emits `IntXxx` for pure-integer arithmetic.  Must use
-        // the same cut-off as `emit_numeric_literal` — finite, whole, and
-        // within the f64-exact integer range.
-        //
-        // NOTE: Only bare integer literals (3) → Int. Float literals (3.0)
-        // stay Number even when the value is whole, because IntDiv requires
-        // strictly integer operands and 3.0 loads as Value16::number.
-        Expr::Literal(Literal::Number(n, is_float), _) => {
+        Expr::Literal(Literal::Number(_, is_float), _) => {
             if *is_float {
                 ExprType::Number
-            } else if n.is_finite()
-                && n.fract() == 0.0
-                && *n >= -(1i64 << 53) as f64
-                && *n <= (1i64 << 53) as f64
-            {
-                ExprType::Int
             } else {
-                ExprType::Number
+                ExprType::Int
             }
         }
+        Expr::Literal(Literal::Int(_), _) => ExprType::Int,
+        Expr::Literal(Literal::BigInt(_), _) => ExprType::Int,
         Expr::Literal(Literal::Boolean(_), _) => ExprType::Bool,
         Expr::Literal(Literal::String(_), _) => ExprType::Str,
         Expr::Array { .. } => ExprType::Array,
@@ -201,11 +189,11 @@ pub(crate) fn emit_numeric_literal(target: &mut impl CompileTarget, n: f64) {
         let i = n as i64;
         let idx = target.ct_emit_int_const(i);
         target.ct_emit(Instruction::LoadIntConst { dst: temp, const_idx: idx as u16 });
-        target.ct_emit(Instruction::Move { dst: 255, src: temp });
+        target.emit_move(255, temp );
     } else {
         let idx = target.ct_emit_num_const(n);
         target.ct_emit(Instruction::LoadNumConst { dst: temp, const_idx: idx as u16 });
-        target.ct_emit(Instruction::Move { dst: 255, src: temp });
+        target.emit_move(255, temp );
     }
 }
 
@@ -214,4 +202,5 @@ pub(crate) fn emit_numeric_literal(target: &mut impl CompileTarget, n: f64) {
 
 pub mod compile_complex;
 pub mod compile_complex_extra;
+pub mod compile_reg_binary;
 pub mod compile_reg;

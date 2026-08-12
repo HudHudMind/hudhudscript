@@ -1,6 +1,6 @@
-//! Integration tests for validating all .hudhud sample files
+//! Integration tests for validating all .hudhud example files
 //!
-//! This test suite validates that all sample files in the samples/ directory
+//! This test suite validates that all example files in the examples/ directory
 //! can be parsed successfully without errors.
 
 use hudhudscript_parser::parse;
@@ -18,13 +18,13 @@ fn examples_path(rel: &str) -> PathBuf {
     workspace_root().join(rel)
 }
 
-/// Test that all .hudhud files in samples/ directory can be parsed
+/// Test that all .hudhud files in examples/ directory can be parsed
 #[test]
-fn test_all_samples_parse_successfully() {
-    let samples_dir = examples_path("samples");
+fn test_all_examples_parse_successfully() {
+    let examples_dir = examples_path("examples");
 
-    if !samples_dir.exists() {
-        panic!("Samples directory not found: {:?}", samples_dir);
+    if !examples_dir.exists() {
+        panic!("Examples directory not found: {:?}", examples_dir);
     }
 
     let mut total_files = 0;
@@ -32,7 +32,7 @@ fn test_all_samples_parse_successfully() {
     let mut failed_files = Vec::new();
 
     // Recursively find all .hudhud files
-    visit_dirs(&samples_dir, &mut |path| {
+    visit_dirs(&examples_dir, &mut |path| {
         if path.extension().and_then(|s| s.to_str()) == Some("hudhud") {
             total_files += 1;
 
@@ -69,7 +69,7 @@ fn test_all_samples_parse_successfully() {
         }
     }
 
-    // Note: We don't fail the test for now since many samples use features
+    // Note: We don't fail the test for now since many examples use features
     // that are not yet implemented in the parser (MCP calls, AI providers, etc.)
     // This test serves as a validation tool to track progress.
 
@@ -82,7 +82,7 @@ fn test_all_samples_parse_successfully() {
     println!("Parse success rate: {:.1}%", parse_rate);
 
     // We expect at least some files to parse successfully
-    assert!(total_files > 0, "No .hudhud files found in samples/");
+    assert!(total_files > 0, "No .hudhud files found in examples/");
 }
 
 /// Recursively visit all files in a directory
@@ -101,27 +101,29 @@ fn visit_dirs(dir: &Path, cb: &mut dyn FnMut(&Path)) {
     }
 }
 
-/// Test basic sample files that should definitely parse
+/// Test specific example files that should definitely parse
 #[test]
-fn test_basic_samples_parse() {
+fn test_basic_examples_parse() {
     // Test basic governance example
-    let governance_sample = examples_path("samples/governance_council.hud");
-    if governance_sample.exists() {
+    let governance_example = examples_path("examples/governance/basic_constitution.hudhud");
+    if governance_example.exists() {
         let content =
-            fs::read_to_string(&governance_sample).expect("Failed to read governance sample");
+            fs::read_to_string(&governance_example).expect("Failed to read governance example");
 
         match parse(&content) {
-            Ok(_) => println!("✓ Basic governance sample parsed successfully"),
-            Err(e) => println!("✗ Basic governance sample failed: {}", e),
+            Ok(_) => println!("✓ Basic governance example parsed successfully"),
+            Err(e) => println!("✗ Basic governance example failed: {}", e),
         }
     }
 }
 
-/// Test that parser can handle multi-language samples
+/// Test that parser can handle multi-language examples
 #[test]
-fn test_multilang_samples() {
-    let multilang_samples = vec![
-        "samples/_wip/real_world_agents/tr/musteri_destek_ajani.hudhud",
+fn test_multilang_examples() {
+    let multilang_examples = vec![
+        "examples/real_world_agents/en/customer_support_agent.hudhud",
+        "examples/real_world_agents/tr/musteri_destek_ajani.hudhud",
+        "examples/real_world_agents/jp/顧客サポートエージェント.hudhud",
     ];
 
     for rel in multilang_examples {
@@ -129,7 +131,7 @@ fn test_multilang_samples() {
         if example_path.exists() {
             println!("Testing multilang: {}", rel);
             let content =
-                fs::read_to_string(&sample_path).expect(&format!("Failed to read {}", rel));
+                fs::read_to_string(&example_path).expect(&format!("Failed to read {}", rel));
 
             match parse(&content) {
                 Ok(_) => println!("  ✓ Parsed successfully"),
@@ -139,32 +141,32 @@ fn test_multilang_samples() {
     }
 }
 
-/// Test that new industry samples are syntactically valid
+/// Test that new industry examples are syntactically valid
 #[test]
-fn test_industry_samples_syntax() {
-    let industry_samples = vec![
-        "samples/_wip/real_world_agents/autonomous_code_review.hudhud",
-        "samples/_wip/real_world_agents/game_ai_director.hudhud",
-        "samples/_wip/real_world_agents/ai_project_manager.hudhud",
-        "samples/_wip/real_world_agents/fraud_detection_system.hudhud",
-        "samples/_wip/real_world_agents/flight_operations_ai.hudhud",
-        "samples/_wip/real_world_agents/algorithmic_trading.hudhud",
-        "samples/_wip/real_world_agents/medical_diagnosis_ai.hudhud",
-        "samples/_wip/real_world_agents/personalization_engine.hudhud",
-        "samples/_wip/real_world_agents/adaptive_learning.hudhud",
-        "samples/_wip/real_world_agents/predictive_maintenance.hudhud",
-        "samples/_wip/real_world_agents/police_intelligence_system.hudhud",
-        "samples/_wip/real_world_agents/research_automation.hudhud",
+fn test_industry_examples_syntax() {
+    let industry_examples = vec![
+        "examples/real_world_agents/autonomous_code_review.hudhud",
+        "examples/real_world_agents/game_ai_director.hudhud",
+        "examples/real_world_agents/ai_project_manager.hudhud",
+        "examples/real_world_agents/fraud_detection_system.hudhud",
+        "examples/real_world_agents/flight_operations_ai.hudhud",
+        "examples/real_world_agents/algorithmic_trading.hudhud",
+        "examples/real_world_agents/medical_diagnosis_ai.hudhud",
+        "examples/real_world_agents/personalization_engine.hudhud",
+        "examples/real_world_agents/adaptive_learning.hudhud",
+        "examples/real_world_agents/predictive_maintenance.hudhud",
+        "examples/real_world_agents/police_intelligence_system.hudhud",
+        "examples/real_world_agents/research_automation.hudhud",
     ];
 
     let mut parsed_count = 0;
     let mut total_count = 0;
 
-    for rel in industry_samples {
-        let sample_path = examples_path(rel);
-        if sample_path.exists() {
+    for rel in industry_examples {
+        let example_path = examples_path(rel);
+        if example_path.exists() {
             total_count += 1;
-            println!("Testing industry sample: {}", rel);
+            println!("Testing industry example: {}", rel);
 
             match fs::read_to_string(&example_path) {
                 Ok(content) => match parse(&content) {
@@ -184,14 +186,14 @@ fn test_industry_samples_syntax() {
     }
 
     println!(
-        "\nIndustry samples: {}/{} parsed successfully",
+        "\nIndustry examples: {}/{} parsed successfully",
         parsed_count, total_count
     );
 
-    // Industry samples may be in _wip/ if they use aspirational syntax
+    // Industry examples may be in _wip/ if they use aspirational syntax
     // that the parser doesn't support yet. Don't require a minimum count.
     println!(
-        "Industry samples found: {}, parsed: {}",
+        "Industry examples found: {}, parsed: {}",
         total_count, parsed_count
     );
 }

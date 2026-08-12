@@ -8,7 +8,6 @@ use hudhudscript_bytecode::Bytecode;
 use hudhudscript_bytecode::SymId;
 use hudhudscript_bytecode::Value16;
 impl VM {
-
     pub(crate) fn add_chunk_constants(&mut self, chunk: &hudhudscript_bytecode::FunctionChunk) {
         // G3-2: dedup — aynı chunk birden fazla eklenmez
         let ptr = chunk as *const hudhudscript_bytecode::FunctionChunk;
@@ -19,6 +18,15 @@ impl VM {
     }
 
     pub fn execute(&mut self, bytecode: &Bytecode) -> CompileResult<()> {
+        // GATE-2: reset telemetry counters for this execution
+        #[cfg(feature = "telemetry")]
+        {
+            self.telemetry.reset();
+            // FAZ0-A/E2: fusion "emitted" census — nihai bytecode kesiti
+            // (tek envanter: telemetry::fused_name).
+            self.telemetry.census_fusion_emitted(bytecode);
+        }
+
         bytecode.validate()?;
 
         // P5.1: Sabit havuzlarını GC root olarak kaydet
@@ -31,17 +39,24 @@ impl VM {
         self.main_local_slots.clear();
         self.shared_globals_vec.clear();
         if has_slots {
-            let shared_count = bytecode.main_local_names.iter().enumerate()
+            let shared_count = bytecode
+                .main_local_names
+                .iter()
+                .enumerate()
                 .filter(|(i, _)| bytecode.main_local_shared.get(*i).copied().unwrap_or(false))
                 .count();
-            self.shared_globals_vec.resize(shared_count, Value16::null());
+            self.shared_globals_vec
+                .resize(shared_count, Value16::null());
             let mut shared_idx: u32 = 0;
             let mut max_sym = 0u32;
             for name in bytecode.main_local_names.iter() {
                 let sym_id = hudhudscript_bytecode::interner::intern(name).0;
-                if sym_id > max_sym { max_sym = sym_id; }
+                if sym_id > max_sym {
+                    max_sym = sym_id;
+                }
             }
-            self.main_local_slots.resize((max_sym + 1) as usize, u32::MAX);
+            self.main_local_slots
+                .resize((max_sym + 1) as usize, u32::MAX);
             for (slot, name) in bytecode.main_local_names.iter().enumerate() {
                 let sym_id = hudhudscript_bytecode::interner::intern(name).0;
                 let shared = bytecode
@@ -49,7 +64,13 @@ impl VM {
                     .get(slot)
                     .copied()
                     .unwrap_or(false);
-                let si = if shared { let cur = shared_idx; shared_idx += 1; cur } else { 0 };
+                let si = if shared {
+                    let cur = shared_idx;
+                    shared_idx += 1;
+                    cur
+                } else {
+                    0
+                };
                 let encoded = slot as u32 | ((shared as u32) << 8) | (si << 9);
                 self.main_local_slots[sym_id as usize] = encoded;
             }
@@ -128,6 +149,10 @@ impl VM {
         max_duration: std::time::Duration,
     ) -> CompileResult<ExecutionState> {
         bytecode.validate()?;
+        // G1.4.4: clear dedup state for fresh execution (mirrors execute())
+        self.gc_constant_roots.clear();
+        self.constant_root_chunks.clear();
+        self.gc_constant_roots.extend_from_slice(&bytecode.constants);
         let deadline = std::time::Instant::now() + max_duration;
         self.execution_deadline = Some(deadline);
         self.suspended_ip = None;
@@ -135,17 +160,24 @@ impl VM {
         self.main_local_slots.clear();
         self.shared_globals_vec.clear();
         if bytecode.main_local_count > 0 {
-            let shared_count = bytecode.main_local_names.iter().enumerate()
+            let shared_count = bytecode
+                .main_local_names
+                .iter()
+                .enumerate()
                 .filter(|(i, _)| bytecode.main_local_shared.get(*i).copied().unwrap_or(false))
                 .count();
-            self.shared_globals_vec.resize(shared_count, Value16::null());
+            self.shared_globals_vec
+                .resize(shared_count, Value16::null());
             let mut shared_idx: u32 = 0;
             let mut max_sym = 0u32;
             for name in bytecode.main_local_names.iter() {
                 let sym_id = hudhudscript_bytecode::interner::intern(name).0;
-                if sym_id > max_sym { max_sym = sym_id; }
+                if sym_id > max_sym {
+                    max_sym = sym_id;
+                }
             }
-            self.main_local_slots.resize((max_sym + 1) as usize, u32::MAX);
+            self.main_local_slots
+                .resize((max_sym + 1) as usize, u32::MAX);
             for (slot, name) in bytecode.main_local_names.iter().enumerate() {
                 let sym_id = hudhudscript_bytecode::interner::intern(name).0;
                 let shared = bytecode
@@ -153,7 +185,13 @@ impl VM {
                     .get(slot)
                     .copied()
                     .unwrap_or(false);
-                let si = if shared { let cur = shared_idx; shared_idx += 1; cur } else { 0 };
+                let si = if shared {
+                    let cur = shared_idx;
+                    shared_idx += 1;
+                    cur
+                } else {
+                    0
+                };
                 let encoded = slot as u32 | ((shared as u32) << 8) | (si << 9);
                 self.main_local_slots[sym_id as usize] = encoded;
             }

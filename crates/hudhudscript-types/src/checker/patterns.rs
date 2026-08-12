@@ -83,6 +83,8 @@ impl TypeChecker {
                 let type_name = match lit {
                     Literal::String(_) => "String",
                     Literal::Number(_, _) => "Number",
+                    Literal::Int(_) => "Number",
+                    Literal::BigInt(_) => "Number",
                     Literal::Boolean(_) => "Boolean",
                     Literal::Null => "Null",
                 };

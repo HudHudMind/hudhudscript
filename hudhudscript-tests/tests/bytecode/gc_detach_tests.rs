@@ -7,9 +7,9 @@
 //! API and `Value16` constructors; they preserve the original assertions.
 
 use hudhudscript_bytecode::gc_detach::{attach, detach, OwnedTree};
-use hudhudscript_bytecode::{DynamicData, DynamicObject, FunctionData, ObjMap, Value16};
-use hudhudscript_bytecode::sym::SymId;
 use hudhudscript_bytecode::interner::intern;
+use hudhudscript_bytecode::sym::SymId;
+use hudhudscript_bytecode::{DynamicData, DynamicObject, FunctionData, ObjMap, Value16};
 
 #[test]
 fn detach_attach_roundtrip_simple() {
@@ -38,8 +38,16 @@ fn detach_attach_roundtrip_nested() {
     let graph = detach(obj).unwrap();
     let back = attach(&graph);
     let map = back.as_object().unwrap();
-    assert_eq!(map[&SymId(intern("num").0)].as_int(), Some(99));
-    let arr_back = map[&SymId(intern("arr").0)].as_array().unwrap();
+    let num_back = map
+        .get(&SymId(intern("num").0))
+        .expect("num field missing after detach/attach");
+    assert_eq!(num_back.as_int(), Some(99));
+
+    let arr_back = map
+        .get(&SymId(intern("arr").0))
+        .expect("arr field missing after detach/attach")
+        .as_array()
+        .unwrap();
     assert_eq!(arr_back.len(), 2);
     assert_eq!(arr_back[0].as_str(), Some("nested-value"));
 }
@@ -81,6 +89,9 @@ fn detach_unsupported_type_returns_error() {
         name: "test".to_string(),
         params: vec![],
         chunk_name: "".to_string(),
+        // F/LANG-2 (25cbf7150): FunctionData carries the interned chunk name
+        // alongside the string, so it must be initialised to match chunk_name.
+        chunk_sym: hudhudscript_bytecode::interner::intern("").0,
         captures: std::collections::HashMap::new(),
     });
     let result = detach(func);

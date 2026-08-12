@@ -30,3 +30,5 @@ mod test_url_parse;
 mod test_uuid;
 mod test_websocket;
 mod test_xdg;
+mod test_rag_recall_value;
+mod test_rag_remember_forget;

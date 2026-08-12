@@ -19,12 +19,12 @@ pub(super) fn compile_stmt_part3(
             target.ct_declare_local(&var_decl.name, var_decl.is_const)?;
             if var_decl.is_const {
                 if let Some(local_reg) = target.ct_local_reg(&var_decl.name) {
-                    target.ct_emit(Instruction::Move { dst: local_reg, src: reg });
+                    target.emit_move(local_reg, reg );
                 }
                 let sym = target.ct_intern(&var_decl.name);
                 target.ct_emit(Instruction::StoreConst { src: reg, sym: sym as u16 });
             } else if let Some(local_reg) = target.ct_local_reg(&var_decl.name) {
-                target.ct_emit(Instruction::Move { dst: local_reg, src: reg });
+                target.emit_move(local_reg, reg );
                 if target.ct_is_top_level() && target.ct_is_shared_top_level(&var_decl.name) {
                     let sym = target.ct_intern(&var_decl.name);
                     target.ct_emit(Instruction::DeclGlobal { src: reg, sym: sym as u16 });
@@ -49,10 +49,10 @@ pub(super) fn compile_stmt_part3(
             let first_arg = crate::compiler::regalloc::temp_reg();
             for (i, arg) in args.iter().enumerate() {
                 let r = crate::compiler::expr::compile_reg::compile_expr_to_reg(target, arg, &mut RegAlloc::new_with_base(target.ct_next_local_reg())?);
-                target.ct_emit(Instruction::Move { dst: first_arg + i as u8, src: r });
+                target.emit_move(first_arg + i as u8, r );
             }
-            let idx = target.ct_add_call_payload(name_sym, argc);
-            target.ct_emit(Instruction::Spawn { payload_idx: idx as u16, first_arg, arg_count: argc });
+            let name_sym = name_sym; // keep for Spawn
+            target.ct_emit(Instruction::Spawn { name_sym: name_sym.0, first_arg, arg_count: argc });
             target.ct_emit_store_var(subject_name);
         }
 
@@ -133,7 +133,7 @@ pub(super) fn compile_stmt_part3(
         } => {
             {
             let r = crate::compiler::expr::compile_reg::compile_expr_to_reg(target, value, &mut RegAlloc::new_with_base(target.ct_next_local_reg())?);
-            target.ct_emit(Instruction::Move { dst: 255, src: r });
+            target.emit_move(255, r );
         }
             target.ct_compile_destructure_pattern(pattern, *is_const)?;
         }

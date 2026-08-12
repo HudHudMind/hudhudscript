@@ -72,37 +72,8 @@ impl VM {
                 // WriteBackReceiver only fires for THIS method call
                 // (not a leftover from a prior instance method call).
                 self.last_instance_mutation = None;
-                let result = self.call_method_on_value(&receiver, &method, args, bytecode)?;
+                let result = self.call_method_on_value(&receiver, &method, method_sym, args, bytecode)?;
                 self.registers[255] = result;
-            }
-
-            Instruction::WriteBackReceiver(var_sym) => {
-                // Flush the `this` mutation captured by the preceding
-                // MethodCall back into the receiver variable. No-op
-                // when the slot is empty (non-instance receivers,
-                // builtin methods, etc.). The method result already
-                // sits on top of the stack and is left untouched.
-                if let Some(updated) = self.last_instance_mutation.take() {
-                    let sym_id = var_sym.0;
-                    let mut stored = false;
-                    if let Some(local_syms_ptr) = self.call_stack_local_syms.last() {
-                        let local_syms = unsafe { &**local_syms_ptr };
-                        if let Ok(idx) = local_syms.binary_search_by_key(&sym_id, |(s, _, _)| *s) {
-                            let slot = local_syms[idx].1 as i32;
-                            if slot >= 0 {
-                                let local_idx = slot as usize;
-                                if local_idx < self.registers.len() {
-                                    self.registers[local_idx] = *updated;
-                                    stored = true;
-                                }
-                            }
-                        }
-                    }
-                    if !stored {
-                        let name = bytecode.resolve_symbol(sym_id);
-                        let _ = self.set_var(&name, *updated);
-                    }
-                }
             }
 
             // ── Async/Await (Issue #342) ─────────────────────────────
@@ -202,11 +173,8 @@ impl VM {
                 let current_class = self
                     .class_context_stack
                     .last()
-                    .cloned()
-                    .or_else(|| {
-                        self.get_var("__current_class")
-                            .and_then(|v| v.as_string().map(|s| s.to_string()))
-                    })
+                    .map(|s| hudhudscript_bytecode::interner::resolve(
+                        hudhudscript_bytecode::interner::SymbolId(s.0)))
                     .ok_or_else(|| {
                         compile_codes::runtime_error("super used outside class context".to_string())
                     })?;
@@ -221,15 +189,11 @@ impl VM {
                         ))
                     })?;
                 let chunk_name = format!("{}::{}", parent_name, method_name);
-                let chunk = bytecode
-                    .get_function(chunk_name.as_str())
-                    .ok_or_else(|| {
-                        compile_codes::runtime_error(format!(
-                            "Parent method not found: {}",
-                            chunk_name
-                        ))
-                    })?;
-                self.class_context_stack.push(parent_name.clone());
+                let chunk = bytecode.get_function(chunk_name.as_str()).ok_or_else(|| {
+                    compile_codes::runtime_error(format!("Parent method not found: {}", chunk_name))
+                })?;
+                self.class_context_stack.push(hudhudscript_bytecode::SymId(
+                    hudhudscript_bytecode::interner::intern(&parent_name).0));
                 let func_sym = hudhudscript_bytecode::SymId(
                     hudhudscript_bytecode::interner::intern(&chunk_name).0,
                 );
@@ -239,7 +203,7 @@ impl VM {
                     self.call_cache.resize(sym_id + 1, None);
                 }
                 let params_box = Box::new(chunk.params.clone());
-                self.call_cache[sym_id] = Some((Arc::as_ptr(&chunk), Box::into_raw(params_box)));
+                self.call_cache[sym_id] = Some((std::ptr::null(), Arc::as_ptr(&chunk), Box::into_raw(params_box) as *const Vec<String>));
                 // P5.1: call_cache'ye yeni eklenen chunk sabitleri GC root.
                 self.add_chunk_constants(&chunk);
                 self.pending_super_call = true;

@@ -1,4 +1,4 @@
-use crate::optimizer::utils::adjust_jumps_after_remove;
+use crate::optimizer::utils::adjust_jumps_after_remove_full;
 use hudhudscript_bytecode::{Instruction, LoopPayload};
 type SourcePositions = Vec<Option<(usize, usize)>>;
 
@@ -21,7 +21,7 @@ fn remove_at(
     source_positions: &mut SourcePositions,
     idx: usize,
 ) {
-    adjust_jumps_after_remove(instructions, loop_payloads, idx);
+    adjust_jumps_after_remove_full(instructions, loop_payloads, &mut [], &mut [], idx);
     instructions.remove(idx);
     if idx < source_positions.len() {
         source_positions.remove(idx);
@@ -77,6 +77,98 @@ fn try_array_push_const(
         instructions[i] = instr;
         remove_at(instructions, loop_payloads, source_positions, i + 2);
         remove_at(instructions, loop_payloads, source_positions, i + 1);
+        return true;
+    }
+
+    // 4-instruction window: the const value AND the receiver array are each
+    // staged into a call-argument register before the push, so the shapes above
+    // (which allow at most one intervening Move) no longer match what codegen
+    // emits for `arr.push(5)`:
+    //
+    //   LoadIntConst { dst: 97, .. }        ← the constant
+    //   Move { dst: 128, src: 97 }          ← value staged
+    //   Move { dst: 129, src: 0 }           ← array staged
+    //   ArrayPush { dst: 129, arr: 129, val: 128 }
+    //
+    // The array staging Move must survive — the fused instruction pushes into
+    // that register — so this collapses four instructions into two, dropping
+    // the constant load and the value Move.
+    if i + 3 >= instructions.len() {
+        return false;
+    }
+    let fused4 = match (
+        &instructions[i],
+        &instructions[i + 1],
+        &instructions[i + 2],
+        &instructions[i + 3],
+    ) {
+        (
+            Instruction::LoadIntConst { dst, const_idx },
+            Instruction::Move { dst: arg, src },
+            Instruction::Move {
+                dst: arr_dst,
+                src: arr_src,
+            },
+            Instruction::ArrayPush {
+                dst: push_dst,
+                arr,
+                val,
+            },
+        ) if *dst == *src
+            && *arg == *val
+            && *arr_dst == *arr
+            && *push_dst == *arr
+            && *arg != *arr_dst
+            && *arr_src != *dst =>
+        {
+            Some((
+                Instruction::Move {
+                    dst: *arr_dst,
+                    src: *arr_src,
+                },
+                Instruction::ArrayPushIntConst {
+                    arr: *arr,
+                    const_idx: *const_idx,
+                },
+            ))
+        }
+        (
+            Instruction::LoadConst { dst, const_idx },
+            Instruction::Move { dst: arg, src },
+            Instruction::Move {
+                dst: arr_dst,
+                src: arr_src,
+            },
+            Instruction::ArrayPush {
+                dst: push_dst,
+                arr,
+                val,
+            },
+        ) if *dst == *src
+            && *arg == *val
+            && *arr_dst == *arr
+            && *push_dst == *arr
+            && *arg != *arr_dst
+            && *arr_src != *dst =>
+        {
+            Some((
+                Instruction::Move {
+                    dst: *arr_dst,
+                    src: *arr_src,
+                },
+                Instruction::ArrayPushConst {
+                    arr: *arr,
+                    const_idx: *const_idx,
+                },
+            ))
+        }
+        _ => None,
+    };
+    if let Some((keep_array_move, fused_push)) = fused4 {
+        instructions[i] = keep_array_move;
+        instructions[i + 1] = fused_push;
+        remove_at(instructions, loop_payloads, source_positions, i + 3);
+        remove_at(instructions, loop_payloads, source_positions, i + 2);
         return true;
     }
     false
@@ -278,25 +370,25 @@ fn try_int_mul_add_assign(
     }
     false
 }
+/// G3 diriltme: mul/add kolları hem Int hem Num varyantını kabul eder.
+/// Tip yayılımı param-kaynaklı float döngülerde `NumMul` üretir; eski desen
+/// yalnız `IntMul` tanıdığı için rk4/fft'nin `acc = acc + x*y` kalbi
+/// füzlenmiyordu. `IntMulAddAssign` handler'ı zaten generic
+/// (`bigint_arith::int_mul/int_add` Number tag'ini işler; p_dot probe'u
+/// float'ta 12.0 doğruladı) — Num varyantını kabul etmek semantik değiştirmez.
 fn int_mul_add_match(instructions: &[Instruction], i: usize) -> Option<(u8, u8, u8, usize)> {
-    let (mul_dst, mul_src1, mul_src2, add_dst, add_src1, add_src2) =
-        match (&instructions[i], &instructions[i + 1]) {
-            (
-                Instruction::IntMul {
-                    dst: mul_dst,
-                    src1: mul_src1,
-                    src2: mul_src2,
-                },
-                Instruction::IntAdd {
-                    dst: add_dst,
-                    src1: add_src1,
-                    src2: add_src2,
-                },
-            ) => (
-                *mul_dst, *mul_src1, *mul_src2, *add_dst, *add_src1, *add_src2,
-            ),
-            _ => return None,
-        };
+    let (mul_dst, mul_src1, mul_src2) = match &instructions[i] {
+        Instruction::IntMul { dst, src1, src2 } | Instruction::NumMul { dst, src1, src2 } => {
+            (*dst, *src1, *src2)
+        }
+        _ => return None,
+    };
+    let (add_dst, add_src1, add_src2) = match &instructions[i + 1] {
+        Instruction::IntAdd { dst, src1, src2 } | Instruction::NumAdd { dst, src1, src2 } => {
+            (*dst, *src1, *src2)
+        }
+        _ => return None,
+    };
 
     if mul_dst == add_src2 && add_dst == add_src1 {
         return Some((add_dst, mul_src1, mul_src2, 1));
@@ -327,15 +419,27 @@ fn try_property_assign(
     if i + 2 >= instructions.len() {
         return false;
     }
-    if let Some(instr) = property_assign_match(instructions, i) {
+    if let Some((instr, extra)) = property_assign_match(instructions, i) {
         instructions[i] = instr;
+        if extra {
+            remove_at(instructions, loop_payloads, source_positions, i + 3);
+        }
         remove_at(instructions, loop_payloads, source_positions, i + 2);
         remove_at(instructions, loop_payloads, source_positions, i + 1);
         return true;
     }
     false
 }
-fn property_assign_match(instructions: &[Instruction], i: usize) -> Option<Instruction> {
+/// G3 doğruluk fix'i: codegen `o.x = o.x - y` için 4 komut üretir —
+/// GetProperty + IntSub + SetProperty{dst} + Move{obj, dst}. SetProperty
+/// güncel objeyi `dst`'ye yazar, Move onu obj register'ına geri taşır.
+/// Eski desen yalnız ilk 3'ü yutuyor, artık Move (hiç yazılmayan eski
+/// `dst`'den) objeyi null'la eziyordu: `fn p(y){var o={x:10}; o.x=o.x-y;
+/// return o.x}` → "Property 'x' not found on null" (v0.8.183'te de vardı).
+/// Kural: `dst`'yi kullanan kuyruk TAM eşleşiyorsa Move da yutulur;
+/// `dst == obj` ise kuyruk yoktur; başka her şekilde FÜZE ETME (doğruluk
+/// hızdan önce gelir).
+fn property_assign_match(instructions: &[Instruction], i: usize) -> Option<(Instruction, bool)> {
     match (&instructions[i], &instructions[i + 1], &instructions[i + 2]) {
         (
             Instruction::GetProperty {
@@ -348,14 +452,26 @@ fn property_assign_match(instructions: &[Instruction], i: usize) -> Option<Instr
                 obj: set_obj,
                 prop_sym: set_sym,
                 val,
-                ..
+                dst: set_dst,
             },
         ) if *got == *src1 && *dst == *val && *obj == *set_obj && *prop_sym == *set_sym => {
-            Some(Instruction::PropertySubAssign {
+            let fused = Instruction::PropertySubAssign {
                 obj: *obj,
                 prop_sym: *prop_sym,
                 src: *src2,
-            })
+            };
+            if *set_dst == *obj {
+                // SetProperty çıktısı zaten obj register'ında — kuyruk yok.
+                return Some((fused, false));
+            }
+            // Kuyruktaki Move{dst: obj, src: set_dst}'i de yut.
+            if let Some(Instruction::Move { dst: mv_dst, src: mv_src }) = instructions.get(i + 3) {
+                if *mv_dst == *obj && *mv_src == *set_dst {
+                    return Some((fused, true));
+                }
+            }
+            // Desen tanınmadı: set_dst canlı olabilir → füzyon YAPMA.
+            None
         }
         _ => None,
     }

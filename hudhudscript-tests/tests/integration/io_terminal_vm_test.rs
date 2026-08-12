@@ -1,35 +1,35 @@
 //! VM integration tests for Batch 5: I/O & Terminal (v0.4.38)
 
 use hudhudscript_bytecode::{ObjMap, Value16};
-use hudhudscript_compiler::{Compiler, VM};
+use hudhudscript_compiler::Compiler;
 use hudhudscript_parser::parse;
+use hudhudscript_vm::VM;
 
-fn vm_run_and_get(code: &str, var: &str) -> Value16 {
+fn vm_run_and_get(code: &str, var: &str) -> (hudhudscript_vm::VM, hudhudscript_bytecode::Value16) {
     let ast = parse(code).expect("parse failed");
     let mut compiler = Compiler::new();
     let bytecode = compiler.compile(&ast).expect("compile failed");
     let mut vm = VM::new();
     vm.execute(&bytecode).expect("VM execution failed");
-    vm.get_variable(var)
-        .cloned()
-        .unwrap_or_else(|| panic!("variable '{}' not found", var))
+    let val = vm.get_variable(var).cloned().unwrap_or_else(|| panic!("variable \'{}\' not found", var));
+    (vm, val)
 }
 
-fn assert_string(val: Value16, expected: &str) {
+fn assert_string((_vm, val): (hudhudscript_vm::VM, hudhudscript_bytecode::Value16), expected: &str) {
     match val.as_str() {
         Some(s) => assert_eq!(s, expected, "Expected '{}', got '{}'", expected, s),
         other => panic!("Expected String(\"{}\"), got {:?}", expected, other),
     }
 }
 
-fn unwrap_string(val: Value16) -> String {
+fn unwrap_string((_vm, val): (hudhudscript_vm::VM, hudhudscript_bytecode::Value16)) -> String {
     match val.as_str() {
         Some(s) => s.to_string(),
         other => panic!("Expected String, got {:?}", other),
     }
 }
 
-fn unwrap_object(val: Value16) -> ObjMap {
+fn unwrap_object((_vm, val): (hudhudscript_vm::VM, hudhudscript_bytecode::Value16)) -> ObjMap {
     match val.as_object() {
         Some(obj) => obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect(),
         other => panic!("Expected Object, got {:?}", other),
@@ -138,7 +138,7 @@ fn test_vm_exec_output() {
 
 #[test]
 fn test_vm_exec_lines() {
-    match vm_run_and_get(r#"var x = exec.lines("echo hello");"#, "x").as_array() {
+    let tuple = vm_run_and_get(r#"var x = exec.lines("echo hello");"#, "x"); match tuple.1.as_array() {
         Some(arr) => assert!(!arr.is_empty()),
         other => panic!("Expected array, got {:?}", other),
     }

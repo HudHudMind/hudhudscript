@@ -1,6 +1,6 @@
-use hudhudscript_parser::parse;
 use hudhudscript_compiler::compiler::decl::loop_engine::validate_loop_structure;
 use hudhudscript_compiler::compiler::Compiler;
+use hudhudscript_parser::parse;
 
 #[test]
 fn gate_without_else_is_parse_error() {
@@ -36,12 +36,10 @@ fn chain_validates() {
 
 #[test]
 fn no_body_exec_file_exists() {
-    let body_exec = std::path::Path::new(
-        "crates/hudhudscript-compiler/src/compiler/decl/body_exec.rs"
-    );
-    let gate_eval = std::path::Path::new(
-        "crates/hudhudscript-compiler/src/compiler/decl/gate_eval.rs"
-    );
+    let body_exec =
+        std::path::Path::new("crates/hudhudscript-compiler/src/compiler/decl/body_exec.rs");
+    let gate_eval =
+        std::path::Path::new("crates/hudhudscript-compiler/src/compiler/decl/gate_eval.rs");
     assert!(!body_exec.exists(), "body_exec.rs must be deleted");
     assert!(!gate_eval.exists(), "gate_eval.rs must be deleted");
 }

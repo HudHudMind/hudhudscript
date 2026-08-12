@@ -19,8 +19,7 @@ impl VM {
             | Instruction::IntDivI { .. }
             | Instruction::IntModI { .. } => self.step_int_arith(instr, ctx),
 
-            Instruction::IntModCmpI { .. }
-            | Instruction::IntCmp { .. }
+            Instruction::IntCmp { .. }
             | Instruction::IntCmpI { .. }
             | Instruction::IntAddReturn { .. }
             | Instruction::IntSubReturn { .. }
@@ -47,7 +46,9 @@ impl VM {
             | Instruction::IntMulMod { .. }
             | Instruction::IntMulModI { .. }
             // P5: NumSqrt intrinsic
-            | Instruction::NumSqrt { .. } => self.step_num_arith(instr, ctx),
+            | Instruction::NumSqrt { .. }
+            | Instruction::NumSin { .. }
+            | Instruction::NumCos { .. } => self.step_num_arith(instr, ctx),
 
             Instruction::Jump(..)
             | Instruction::JumpIfFalse { .. }
@@ -58,6 +59,7 @@ impl VM {
             | Instruction::IntLeRRJumpPacked(_)
             | Instruction::IntCmpIJumpIfFalse { .. }
             | Instruction::IntCmpRRJumpIfFalse { .. }
+            | Instruction::CharDispatch { .. }
             | Instruction::IntAddIJump { .. }
             | Instruction::LoopEndIntAddIJump { .. }
             | Instruction::IntSubIJump { .. }
@@ -77,6 +79,7 @@ impl VM {
             | Instruction::ArrayPushIntConst { .. }
             | Instruction::ArrayPushConst { .. }
             | Instruction::ArrayPush { .. }
+            | Instruction::ObjLitSet { .. }
             | Instruction::IntMulAddAssign { .. }
             // P2: fast path length/pop
             | Instruction::ArrayLen { .. }
@@ -86,8 +89,7 @@ impl VM {
             // P8: MakeArray2
             Instruction::MakeArray2 { .. } => self.step_collections_fast(instr, ctx),
 
-            Instruction::Call { .. }
-            | Instruction::StoreConst { .. }
+            Instruction::StoreConst { .. }
             | Instruction::LoadNumConst { .. }
             | Instruction::Return { .. }
             | Instruction::GetProperty { .. } => self.step_call_load(instr, ctx),

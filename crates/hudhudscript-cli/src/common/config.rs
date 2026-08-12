@@ -42,6 +42,10 @@ impl Default for RuntimeConfig {
             max_call_depth_hard_ceiling: default_call_depth_ceiling(),
             default_stack_bytes: default_stack_bytes(),
             allow_network: false,
+            allow_process: false,
+            allow_insecure_http: false,
+            allow_privileged: false,
+            provider_timeout_secs: hudhudscript_runtime::provider::DEFAULT_PROVIDER_TIMEOUT_SECS,
         }
     }
 }
@@ -253,7 +257,16 @@ fn merge_config(base: HudHudConfig, overlay: HudHudConfig) -> HudHudConfig {
             builtin_max_iter: overlay.runtime.builtin_max_iter,
             max_call_depth_hard_ceiling: overlay.runtime.max_call_depth_hard_ceiling,
             default_stack_bytes: overlay.runtime.default_stack_bytes,
+            provider_timeout_secs: if overlay.runtime.provider_timeout_secs != hudhudscript_runtime::provider::DEFAULT_PROVIDER_TIMEOUT_SECS {
+                overlay.runtime.provider_timeout_secs
+            } else {
+                base.runtime.provider_timeout_secs
+            },
             allow_network: overlay.runtime.allow_network || base.runtime.allow_network,
+            allow_process: overlay.runtime.allow_process || base.runtime.allow_process,
+            allow_insecure_http: overlay.runtime.allow_insecure_http
+                || base.runtime.allow_insecure_http,
+            allow_privileged: overlay.runtime.allow_privileged || base.runtime.allow_privileged,
         },
         _stream: base._stream, // stream config from first found
         _security: base._security,
@@ -274,4 +287,19 @@ fn dirs_fallback_home() -> PathBuf {
     std::env::var("HOME")
         .map(PathBuf::from)
         .unwrap_or_else(|_| PathBuf::from("/tmp"))
+}
+
+#[cfg(test)]
+mod provider_timeout_tests {
+    use super::*;
+    use crate::common::HudHudConfig;
+    #[test]
+    fn test_provider_timeout_toml_merge() {
+        let toml_str = r#"
+[runtime]
+provider_timeout_secs = 180
+"#;
+        let config: HudHudConfig = toml::from_str(toml_str).unwrap();
+        assert_eq!(config.runtime.provider_timeout_secs, 180);
+    }
 }

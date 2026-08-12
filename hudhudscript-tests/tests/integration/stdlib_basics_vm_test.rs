@@ -1,22 +1,21 @@
 //! VM parity tests for v0.4.38 Batch 2: Stdlib Basics
 
 use hudhudscript_bytecode::Value16;
-use hudhudscript_compiler::{Compiler, VM};
+use hudhudscript_compiler::Compiler;
 use hudhudscript_parser::parse;
+use hudhudscript_vm::VM;
 
-fn vm_run_and_get(code: &str, var: &str) -> hudhudscript_bytecode::Value16 {
+fn vm_run_and_get(code: &str, var: &str) -> (hudhudscript_vm::VM, hudhudscript_bytecode::Value16) {
     let ast = parse(code).expect("parse failed");
     let mut compiler = Compiler::new();
     let bytecode = compiler.compile(&ast).expect("compile failed");
     let mut vm = VM::new();
     vm.execute(&bytecode).expect("VM execution failed");
-    vm.get_variable(var)
-        .cloned()
-        .map(|v| v)
-        .unwrap_or_else(|| panic!("variable '{}' not found", var))
+    let val = vm.get_variable(var).cloned().map(|v| v).unwrap_or_else(|| panic!("variable \'{}\' not found", var));
+    (vm, val)
 }
 
-fn assert_string(val: hudhudscript_bytecode::Value16, expected: &str) {
+fn assert_string((_vm, val): (hudhudscript_vm::VM, hudhudscript_bytecode::Value16), expected: &str) {
     if let Some(s) = val.as_str() {
         assert_eq!(s, expected, "Expected '{}', got '{}'", expected, s);
     } else {
@@ -24,7 +23,7 @@ fn assert_string(val: hudhudscript_bytecode::Value16, expected: &str) {
     }
 }
 
-fn assert_bool(val: hudhudscript_bytecode::Value16, expected: bool) {
+fn assert_bool((_vm, val): (hudhudscript_vm::VM, hudhudscript_bytecode::Value16), expected: bool) {
     if let Some(b) = val.as_bool() {
         assert_eq!(b, expected, "Expected {}, got {}", expected, b);
     } else {
@@ -32,7 +31,7 @@ fn assert_bool(val: hudhudscript_bytecode::Value16, expected: bool) {
     }
 }
 
-fn assert_number(val: hudhudscript_bytecode::Value16, expected: f64) {
+fn assert_number((_vm, val): (hudhudscript_vm::VM, hudhudscript_bytecode::Value16), expected: f64) {
     if let Some(n) = val.as_number() {
         assert!(
             (n - expected).abs() < 0.001,
@@ -49,13 +48,13 @@ fn assert_number(val: hudhudscript_bytecode::Value16, expected: f64) {
 
 #[test]
 fn test_vm_sleep_zero() {
-    let val = vm_run_and_get("var x = sleep(0);", "x");
+    let (_vm, val) = vm_run_and_get("var x = sleep(0);", "x");
     assert!(val.is_null());
 }
 
 #[test]
 fn test_vm_delay_zero() {
-    let val = vm_run_and_get("var x = delay(0);", "x");
+    let (_vm, val) = vm_run_and_get("var x = delay(0);", "x");
     assert!(val.is_null());
 }
 
@@ -109,7 +108,7 @@ fn test_vm_path_is_absolute() {
 
 #[test]
 fn test_vm_temp_file() {
-    let val = vm_run_and_get("var f = Temp.file(); var x = f.path;", "x");
+    let (_vm, val) = vm_run_and_get("var f = Temp.file(); var x = f.path;", "x");
     if let Some(s) = val.as_str() {
         assert!(!s.is_empty());
     } else {
@@ -119,7 +118,7 @@ fn test_vm_temp_file() {
 
 #[test]
 fn test_vm_temp_dir() {
-    let val = vm_run_and_get("var d = Temp.dir(); var x = d.path;", "x");
+    let (_vm, val) = vm_run_and_get("var d = Temp.dir(); var x = d.path;", "x");
     if let Some(s) = val.as_str() {
         assert!(!s.is_empty());
     } else {

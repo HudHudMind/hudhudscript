@@ -56,19 +56,13 @@ fn this_inside_class_has_correct_type() {
 }
 
 #[test]
-fn this_outside_class_is_error() {
+fn this_outside_class_returns_any() {
     let mut checker = TypeChecker::new();
     // current_class is None by default
 
     let result = checker.check_expr(&Expr::This(dummy_span()));
-    assert!(result.is_err());
-    let err = result.unwrap_err();
-    assert_eq!(err.code, hudhudscript_errors::ErrorCode::TypeMismatch);
-    assert_eq!(err.context_get("expected"), Some("class context"));
-    assert!(err
-        .context_get("found")
-        .map(|s| s.contains("outside"))
-        .unwrap_or(false));
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap(), Type::Any);
 }
 
 #[test]

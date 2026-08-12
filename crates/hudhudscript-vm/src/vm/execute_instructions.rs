@@ -45,7 +45,39 @@ impl crate::vm::VM {
                 .cancellation_token
                 .load(std::sync::atomic::Ordering::Relaxed);
 
+        // BUG1: Cross-frame throw propagation. If this chunk is resuming
+        // because a deeper frame popped and stashed PendingFlow::Throw,
+        // check once before the instruction loop.
+        if let Some(crate::vm::PendingFlow::Throw(thrown)) = self.pending_flow.take() {
+            if let Some((catch_ip, iter_depth, loop_depth)) = self.try_frames.pop() {
+                let thrown_val = *thrown;
+                self.iterators.truncate(iter_depth);
+                self.iterator_generators.truncate(iter_depth);
+                self.loop_headers.truncate(loop_depth);
+                self.registers[255] = thrown_val;
+                if catch_ip < instructions.len() {
+                    local_ip = catch_ip;
+                } else {
+                    self.pending_flow = Some(crate::vm::PendingFlow::Throw(Box::new(thrown_val)));
+                    local_ip = instructions.len();
+                }
+            } else if let Some(finally_ip) = self.route_throw_through_finally((*thrown).clone()) {
+                // D1: pending throw with finally frames active in THIS frame.
+                // Route to finally body instead of propagating past the chunk end.
+                self.pending_flow = Some(crate::vm::PendingFlow::Throw(thrown));
+                local_ip = finally_ip;
+            } else {
+                self.pending_flow = Some(crate::vm::PendingFlow::Throw(thrown));
+                local_ip = instructions.len();
+            }
+        }
+
         while local_ip < instructions.len() {
+            // TELEMETRY: opcode counter (zero-cost when feature disabled).
+            #[cfg(feature = "telemetry")]
+            {
+                self.telemetry.total_instructions += 1;
+            }
             // GC SAFEPOINT (G7): instruction sınırı — canlı &DynamicObject borrow YOK.
             // alloc() sadece GC_PENDING kaldırır; collect YALNIZ buradan çağrılır.
             gc_safepoint_tick = gc_safepoint_tick.wrapping_add(1);
@@ -130,7 +162,15 @@ impl crate::vm::VM {
                 Ok(StepAction::Jumped) => {}
                 Ok(StepAction::Return { src }) => {
                     self.last_return = self.registers[src as usize];
-                    if !self.finally_frames.is_empty() {
+                    // A pending flow with no finally frame left means this
+                    // `return` is executing *inside* a finally body — the frame
+                    // was popped when control was routed here. That return
+                    // supersedes whatever was pending, so it still has to go
+                    // through `handle_return_finally`; skipping it left a routed
+                    // `Throw` in place and the discarded exception resurfaced
+                    // (`try { throw "err" } finally { return 2 }` reported
+                    // "Uncaught exception: err" instead of returning 2).
+                    if !self.finally_frames.is_empty() || self.pending_flow.is_some() {
                         if let Some(target_ip) = self.handle_return_finally() {
                             local_ip = target_ip;
                             continue;
@@ -148,7 +188,8 @@ impl crate::vm::VM {
                     ip,
                 }) => {
                     local_ip += 1;
-                    self.pending_call = Some((func_sym, function_idx, arg_count, first_arg, dst, ip));
+                    self.pending_call =
+                        Some((func_sym, function_idx, arg_count, first_arg, dst, ip));
                     hit_return = false;
                     break;
                 }

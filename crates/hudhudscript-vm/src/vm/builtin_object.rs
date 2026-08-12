@@ -138,9 +138,38 @@ impl crate::vm::VM {
         &self,
         s: &str,
         method: &str,
-        args: Vec<Value16>,
+        args: &[Value16],
+        is_ascii: bool,
     ) -> CompileResult<Value16> {
-        crate::vm::string::call_string_method(s, method, &args)
+        crate::vm::string::call_string_method(s, method, args, is_ascii)
+    }
+
+    /// `obj.m(...)` where the property `m` holds a real function value rather
+    /// than a class method's chunk *name*.
+    ///
+    /// Module namespaces store `fn` declarations as function values, so
+    /// `use "lib.hudhud" as lib; lib.topla(2, 3)` used to die with
+    /// "Unknown method 'topla' on object" even though the property was callable —
+    /// `let f = lib.topla; f(2, 3)` worked all along. Both object-method
+    /// dispatchers (`builtin_method_dispatch` and `builtin_object_dispatch`) route
+    /// through this pair so the behaviour has one definition (Kural 7).
+    #[inline]
+    pub(crate) fn property_function_value(prop: Option<&Value16>) -> Option<Value16> {
+        prop.copied().filter(|v| v.as_function_data().is_some())
+    }
+
+    /// Companion to [`VM::property_function_value`] — binds `this` to the
+    /// receiver, then calls through the shared function-value entry point.
+    pub(crate) fn call_property_function(
+        &mut self,
+        receiver: &Value16,
+        f: Value16,
+        args: Vec<Value16>,
+        bytecode: &Bytecode,
+    ) -> CompileResult<Value16> {
+        self.with_this_context(receiver, None, |this| {
+            this.call_value_as_function(&f, args, bytecode)
+        })
     }
 
     /// Call a Value as a function (used by map/filter/reduce/etc.)
@@ -154,6 +183,7 @@ impl crate::vm::VM {
             let chunk_name = &func_data.chunk_name;
             let params = &func_data.params;
             let captures = &func_data.captures;
+            // B1: use reference directly, no clone needed (call_chunk_with_captures takes &)
             let chunk = bytecode
                 .get_function(chunk_name)
                 .ok_or_else(|| {
@@ -161,9 +191,9 @@ impl crate::vm::VM {
                         "Function chunk not found: {}",
                         chunk_name
                     ))
-                })?
-                .clone();
-            self.call_chunk_with_captures(&chunk, params, &args, bytecode, chunk_name, captures)
+                })?;
+            let chunk_sym = func_data.chunk_sym;
+            self.call_chunk_with_captures(&chunk, params, &args, bytecode, hudhudscript_bytecode::SymId(chunk_sym), captures)
         } else {
             Err(compile_codes::runtime_error(format!(
                 "Expected function, got {:?}",

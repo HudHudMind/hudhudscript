@@ -17,7 +17,7 @@ pub fn exec_run(args: &[Value16]) -> HudHudResult<Value16> {
 
     let output = cmd
         .output()
-        .map_err(|e| runtime_error(format!("exec.run error: {}", e)))?;
+        .map_err(|e| runtime_error(format!("exec.run error: program '{}' not found or failed to start: {}", program, e)))?;
 
     let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert(
@@ -49,7 +49,7 @@ pub fn exec_output(args: &[Value16]) -> HudHudResult<Value16> {
 
     let output = cmd
         .output()
-        .map_err(|e| runtime_error(format!("exec.output error: {}", e)))?;
+        .map_err(|e| runtime_error(format!("exec.output error: program '{}' not found or failed to start: {}", program, e)))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -74,7 +74,7 @@ pub fn exec_lines(args: &[Value16]) -> HudHudResult<Value16> {
 
     let output = cmd
         .output()
-        .map_err(|e| runtime_error(format!("exec.lines error: {}", e)))?;
+        .map_err(|e| runtime_error(format!("exec.lines error: program '{}' not found or failed to start: {}", program, e)))?;
     let stdout = String::from_utf8_lossy(&output.stdout);
     let lines: Vec<Value16> = stdout
         .lines()

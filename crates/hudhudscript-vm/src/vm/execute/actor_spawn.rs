@@ -14,14 +14,12 @@ impl VM {
         let ip_ref = &mut *ctx.ip_ref;
         match instr {
             Instruction::Spawn {
-                payload_idx,
+                name_sym,
                 first_arg,
                 arg_count,
             } => {
-                // CROSS-2c: resolve the call payload from the side table.
-                let payload = bytecode.get_call_payload(*payload_idx as u32);
-                let subject_name_sym = payload.sym;
-                let subject_name = bytecode.resolve_symbol(subject_name_sym.0);
+                // B3: resolve subject name directly from SymId (no payload index)
+                let subject_name = bytecode.resolve_symbol(*name_sym);
                 // Register-based: read args from registers[first_arg..+n]
                 let n = *arg_count as usize;
                 let first = *first_arg as usize;
@@ -109,6 +107,26 @@ impl VM {
                 }
             }
             _ => unreachable!("instruction routed to wrong execute helper"),
+        }
+        Ok(StepAction::Advance)
+    }
+
+    /// Handler for ViewAs — sets __view_name marker on subject instance.
+    #[inline(always)]
+    pub(crate) fn step_view_as(
+        &mut self,
+        instr: &Instruction,
+        ctx: &mut StepContext<'_>,
+    ) -> CompileResult<StepAction> {
+        if let Instruction::ViewAs { obj, view_sym } = instr {
+            let view_name = ctx.bytecode.symbols.get(*view_sym as usize)
+                .cloned().unwrap_or_else(|| "unknown".to_string());
+            let instance = self.registers[*obj as usize];
+            if let Some(map) = instance.as_object() {
+                let mut new_map = map.clone();
+                new_map.insert(hudhudscript_bytecode::SymId::from("__view_name"), Value16::string(view_name));
+                self.registers[*obj as usize] = Value16::object(new_map);
+            }
         }
         Ok(StepAction::Advance)
     }

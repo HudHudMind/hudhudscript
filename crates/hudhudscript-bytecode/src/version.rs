@@ -137,4 +137,8 @@ pub type GeneratorState16 = hudhudscript_errors::GeneratorState<Value16>;
 ///   semantics compose exactly.  The peephole runs AFTER
 ///   `fuse_slot_immediate_with_positions` and re-stitches jump offsets
 ///   and loop-payload indices identically to the I6 fusion pass.
-pub const BYTECODE_VERSION: u32 = 21;
+// v22 (G4): Instruction enum kuyruğuna `IntCmpRRJumpPacked { op, payload_idx }`
+// eklendi — genel cmp+branch packed formu. Kuyruk-ekleme olduğu için eski
+// varyant indeksleri değişmedi (v21 .hudb v22 binary'de açılır); v22 üretimi
+// yeni varyantı içerebileceğinden sürüm yükseltildi.
+pub const BYTECODE_VERSION: u32 = 22;

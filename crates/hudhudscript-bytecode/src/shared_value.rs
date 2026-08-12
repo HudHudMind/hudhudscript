@@ -239,6 +239,21 @@ pub fn shared_add(left: &Value16, right: &Value16) -> CompileResult<Value16> {
         s.push_str(b);
         return Ok(Value16::string(s));
     }
+    // String + Int (exact, no f64 precision loss for large integers)
+    if let (Some(a), Some(b)) = (left.as_str(), right.as_int()) {
+        let b_str = b.to_string();
+        let mut s = String::with_capacity(a.len() + b_str.len());
+        s.push_str(a);
+        s.push_str(&b_str);
+        return Ok(Value16::string(s));
+    }
+    if let (Some(a), Some(b)) = (left.as_int(), right.as_str()) {
+        let a_str = a.to_string();
+        let mut s = String::with_capacity(a_str.len() + b.len());
+        s.push_str(&a_str);
+        s.push_str(b);
+        return Ok(Value16::string(s));
+    }
     if let (Some(a), Some(b)) = (left.as_str(), right.as_number()) {
         let b_str = format_number(b);
         let mut s = String::with_capacity(a.len() + b_str.len());

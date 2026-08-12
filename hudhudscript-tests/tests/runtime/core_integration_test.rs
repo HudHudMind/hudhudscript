@@ -98,6 +98,7 @@ async fn test_mock_provider_call() {
         mnemonics: None,
         optimize: false,
         tools: None,
+        timeout_secs: None,
     };
     let response = provider.call(request).await.unwrap();
     assert!(response.content.contains("hello"));
@@ -115,6 +116,7 @@ async fn test_mock_provider_failure() {
         mnemonics: None,
         optimize: false,
         tools: None,
+        timeout_secs: None,
     };
     let result = provider.call(request).await;
     assert!(result.is_err());

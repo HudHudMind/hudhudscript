@@ -89,10 +89,10 @@ impl Compiler {
                         let idx = self.bytecode.add_constant(Value16::null());
                         let tr = crate::compiler::regalloc::temp_reg();
                         self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 });
-                        self.bytecode.push_instr(Instruction::Move { dst: 255, src: tr });
+                        self.bytecode.push_move(255, tr );
                     }
                     let tr = crate::compiler::regalloc::temp_reg();
-                    self.bytecode.push_instr(Instruction::Move { dst: tr, src: 255 });
+                    self.bytecode.push_move(tr, 255 );
                     if *is_static {
                         static_field_names.push(name.clone());
                     }

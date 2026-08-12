@@ -43,6 +43,7 @@ fn test_parse_provider_english() {
             assert_eq!(fields[3].0, "max_tokens");
             match &fields[3].1 {
                 Expr::Literal(Literal::Number(n, _), _) => assert_eq!(*n, 4000.0),
+                Expr::Literal(Literal::Int(4000), _) => {}
                 _ => panic!("Expected number literal for max_tokens"),
             }
         }

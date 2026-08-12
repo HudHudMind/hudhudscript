@@ -34,6 +34,7 @@ pub fn setup_provider_registry(
                     temperature: Some(0.7),
                     max_tokens: Some(4096),
                     budget: None,
+                    timeout_secs: None,
                     extra: std::collections::HashMap::new(),
                 };
                 match OpenAIProvider::new(config) {
@@ -72,6 +73,7 @@ pub fn setup_provider_registry(
                     temperature: Some(0.7),
                     max_tokens: Some(4096),
                     budget: None,
+                    timeout_secs: None,
                     extra: std::collections::HashMap::new(),
                 };
                 match AnthropicProvider::new(config) {
@@ -110,6 +112,7 @@ pub fn setup_provider_registry(
             temperature: Some(0.7),
             max_tokens: Some(2048),
             budget: None,
+            timeout_secs: None,
             extra: std::collections::HashMap::new(),
         };
         match OllamaProvider::new(ollama_config) {
@@ -147,7 +150,7 @@ pub fn setup_provider_registry(
         for (name, env_var, display) in &compat_providers {
             if let Ok(api_key) = std::env::var(env_var) {
                 if !api_key.is_empty() {
-                    match OpenAICompatibleProvider::from_name(name, api_key, None) {
+                    match OpenAICompatibleProvider::from_name(name, api_key, None, None, None) {
                         Ok(p) => {
                             let p = Arc::new(p);
                             if let Some(ref b) = budget {
