@@ -1,0 +1,12 @@
+// 15_scope_test.hud — Lexical block scope variable shadowing in loop step
+loop ScopeTest {
+    step run {
+        let val = 10;
+        if true {
+            let val = 20; // Must shadow outer `val` in inner scope, not mutate it
+        }
+        print("Val: " + val); // Expected: Val: 10
+        gate check { when true -> done else -> done }
+    }
+}
+run loop ScopeTest;

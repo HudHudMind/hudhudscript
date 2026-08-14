@@ -1,0 +1,10 @@
+// 14_while_test.hud — Loop step with unparenthesized while conditional loop
+loop WhileTest {
+    step run {
+        while false {
+            print("Executes exactly once. No loop cycle created.");
+        }
+        gate check { when true -> done else -> done }
+    }
+}
+run loop WhileTest;
