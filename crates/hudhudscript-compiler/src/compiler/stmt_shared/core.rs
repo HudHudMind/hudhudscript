@@ -151,9 +151,14 @@ pub(super) fn compile_stmt_part1(
             target.ct_declare_local(name, true)?;
             if let Some(local_reg) = target.ct_local_reg(name) {
                 target.emit_move(local_reg, reg );
+                if target.ct_is_top_level() && target.ct_is_shared_top_level(name) {
+                    let sym = target.ct_intern(name);
+                    target.ct_emit(Instruction::StoreConst { src: reg, sym: sym as u16 });
+                }
+            } else {
+                let sym = target.ct_intern(name);
+                target.ct_emit(Instruction::StoreConst { src: reg, sym: sym as u16 });
             }
-            let sym = target.ct_intern(name);
-            target.ct_emit(Instruction::StoreConst { src: reg, sym: sym as u16 });
         }
         Stmt::Assignment { target: assign_target, value, span, } => {
             crate::compiler::stmt_shared::assignment::compile_assignment(target, assign_target, value, span)?;

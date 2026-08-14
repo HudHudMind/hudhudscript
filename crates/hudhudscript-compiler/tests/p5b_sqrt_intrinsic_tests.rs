@@ -50,12 +50,12 @@ fn function_param_math_sqrt_does_not_emit_numsqrt() {
 }
 
 #[test]
-fn unknown_arg_sqrt_stays_methodcall() {
-    // Function NOT called → param type truly Unknown → no NumSqrt
+fn unknown_arg_sqrt_emits_numsqrt() {
+    // G8: Math is not shadowed → NumSqrt emitted even for unconstrained param
     let insns = compile_instructions("fn f(x) { return Math.sqrt(x); }");
     assert!(
-        !has_instruction(&insns, |i| matches!(i, Instruction::NumSqrt { .. })),
-        "Unknown arg Math.sqrt must NOT emit NumSqrt"
+        has_instruction(&insns, |i| matches!(i, Instruction::NumSqrt { .. })),
+        "G8: unshadowed Math.sqrt must emit NumSqrt"
     );
 }
 

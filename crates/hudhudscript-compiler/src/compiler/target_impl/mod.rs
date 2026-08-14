@@ -4,6 +4,7 @@ use super::*;
 
 mod class_impl;
 mod emit_impl;
+mod floop_impl;
 mod func_impl;
 mod mcp_impl;
 
@@ -179,13 +180,16 @@ impl CompileTarget for Compiler {
         self.in_top_level
     }
     fn ct_is_shared_top_level(&self, name: &str) -> bool {
-        self.shared_top_level_names.contains(name)
+        self.scope_depth == 0 && self.shared_top_level_names.contains(name)
     }
     fn ct_begin_scope(&mut self) {
         self.begin_scope()
     }
     fn ct_end_scope(&mut self) {
         self.end_scope()
+    }
+    fn ct_scope_depth(&self) -> usize {
+        self.scope_depth
     }
     fn ct_compile_function_decl(
         &mut self,
@@ -308,51 +312,25 @@ impl CompileTarget for Compiler {
         consts: Vec<(u64, u8)>,
         temp_base: u8,
     ) {
-        self.floop_stack.push(crate::compiler::FloopCtx {
-            slots: slots.into_iter().collect(),
-            consts: consts.into_iter().collect(),
-            temp_next: temp_base,
-            temp_base,
-        });
+        self.target_floop_push(slots, consts, temp_base);
     }
     fn ct_floop_pop(&mut self) {
-        self.floop_stack.pop();
+        self.target_floop_pop();
     }
     fn ct_floop_slot(&self, name: &str) -> Option<u8> {
-        self.floop_stack.last()?.slots.get(name).copied()
+        self.target_floop_slot(name)
     }
     fn ct_floop_const_slot(&self, bits: u64) -> Option<u8> {
-        self.floop_stack.last()?.consts.get(&bits).copied()
+        self.target_floop_const_slot(bits)
     }
     fn ct_floop_temp(&mut self) -> Option<u8> {
-        let ctx = self.floop_stack.last_mut()?;
-        if ctx.temp_next >= 64 {
-            return None;
-        }
-        let t = ctx.temp_next;
-        ctx.temp_next += 1;
-        Some(t)
+        self.target_floop_temp()
     }
     fn ct_floop_temp_pop(&mut self) {
-        if let Some(ctx) = self.floop_stack.last_mut() {
-            if ctx.temp_next > ctx.temp_base {
-                ctx.temp_next -= 1;
-            }
-        }
+        self.target_floop_temp_pop();
     }
     fn ct_floop_captured(&self, name: &str) -> bool {
-        let local_captured = self.locals
-            .iter()
-            .rev()
-            .find(|l| l.name == name)
-            .map(|l| l.is_captured)
-            .unwrap_or(false);
-        local_captured
-            || self
-                .fn_ctx
-                .as_ref()
-                .map(|c| c.nested_captured.contains(name))
-                .unwrap_or(false)
+        self.target_floop_captured(name)
     }
     fn ct_is_known_generator(&self, name: &str) -> bool {
         self.known_generators.contains(name)

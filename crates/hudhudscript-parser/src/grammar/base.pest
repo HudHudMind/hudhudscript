@@ -287,19 +287,19 @@ throw_stmt = {
     throw_kw ~ expression ~ semicolon?
 }
 // If statement with else if support
-// Supports both English style: if (cond) { }
-// And Turkish style: (cond) ise { }
-// And else if: else if (cond) { } or değilse ama (cond) ise { }
+// Supports both English style: if (cond) { } or if cond { }
+// And Turkish style: (cond) ise { } or cond ise { }
+// And else if: else if (cond) { } or else if cond { } or değilse ama (cond) ise { }
 // Fix #416: Negative lookahead prevents mixing prefix if_kw with postfix ise_kw
 if_stmt = {
-    (if_kw ~ "(" ~ expression ~ ")" ~ !ise_kw | "(" ~ expression ~ ")" ~ ise_kw) ~ block_statement ~
-    (else_if_kw ~ ("(" ~ expression ~ ")" ~ (ise_kw)? | if_kw ~ "(" ~ expression ~ ")") ~ block_statement)* ~
+    (if_kw ~ "(" ~ expression ~ ")" ~ !ise_kw | if_kw ~ expression ~ !ise_kw | "(" ~ expression ~ ")" ~ ise_kw | expression ~ ise_kw) ~ block_statement ~
+    (else_if_kw ~ ("(" ~ expression ~ ")" ~ (ise_kw)? | if_kw ~ "(" ~ expression ~ ")" | if_kw ~ expression | expression ~ (ise_kw)?) ~ block_statement)* ~
     (else_kw ~ block_statement)?
 }
-// While loop — prefix: while/döngü (cond) { }  or Turkish postfix: (cond) iken { }
+// While loop — prefix: while/döngü (cond) { } or while/döngü cond { } or Turkish postfix: (cond) iken { } or cond iken { }
 // Normalizer converts "iken"→"while" before parsing, so postfix uses while_kw.
 while_stmt = {
-    (while_kw ~ "(" ~ expression ~ ")" | "(" ~ expression ~ ")" ~ while_kw) ~ block
+    (while_kw ~ "(" ~ expression ~ ")" | while_kw ~ expression | "(" ~ expression ~ ")" ~ while_kw | expression ~ while_kw) ~ block
 }
 // For loop (for-in: for(i in list) or for(let i in list))
 for_stmt = {

@@ -56,23 +56,23 @@ pub(crate) fn verify_instruction_bounds(
                 let target = (ip as i64 + *offset as i64) as usize;
                 assert!(target <= len, "G2.2: fused-compare target OOB at ip={}: offset={} target={} len={}", ip, offset, target, len);
             }
+            Instruction::LoopBegin(idx) => {
+                if let Some(lp) = loop_payloads.get(*idx as usize) {
+                    let start = lp.start as usize;
+                    let end = lp.end as usize;
+                    assert!(start <= len, "G2.2: loop_payloads[{}].start={} > len={}", idx, start, len);
+                    assert!(end <= len, "G2.2: loop_payloads[{}].end={} > len={}", idx, end, len);
+                    assert!(start <= end, "G2.2: loop_payloads[{}] start={} > end={}", idx, start, end);
+                }
+            }
+            Instruction::IntCmpRRJumpPacked { payload_idx, .. } => {
+                if let Some(cjp) = cmp_jump_payloads.get(*payload_idx as usize) {
+                    let target = cjp.target as usize;
+                    assert!(target <= len, "G2.2: cmp_jump_payloads[{}].target={} > len={}", payload_idx, target, len);
+                }
+            }
             _ => {}
         }
-    }
-
-    // 3. loop_payloads in bounds and ordered
-    for (i, lp) in loop_payloads.iter().enumerate() {
-        let start = lp.start as usize;
-        let end = lp.end as usize;
-        assert!(start <= len, "G2.2: loop_payloads[{}].start={} > len={}", i, start, len);
-        assert!(end <= len, "G2.2: loop_payloads[{}].end={} > len={}", i, end, len);
-        assert!(start <= end, "G2.2: loop_payloads[{}] start={} > end={}", i, start, end);
-    }
-
-    // 4. cmp_jump_payloads.target in bounds
-    for (i, cjp) in cmp_jump_payloads.iter().enumerate() {
-        let target = cjp.target as usize;
-        assert!(target <= len, "G2.2: cmp_jump_payloads[{}].target={} > len={}", i, target, len);
     }
 
     // 5. super_instr_payloads.offset resolves to valid IP

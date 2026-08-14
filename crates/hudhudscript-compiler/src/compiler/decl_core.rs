@@ -59,8 +59,12 @@ impl Compiler {
                 known_type: crate::compiler::expr::ExprType::Unknown,
             });
         } else {
-            // G2.2b: don't re-declare duplicates — ct_local_reg would return wrong reg
-            if self.locals.iter().any(|l| l.name == name && l.reg.is_some()) {
+            // G2.2b: don't re-declare duplicates in the same scope depth — ct_local_reg would return wrong reg
+            if self
+                .locals
+                .iter()
+                .any(|l| l.name == name && l.depth == self.scope_depth && l.reg.is_some())
+            {
                 return Ok(());
             }
             let slot = self.local_slot_names.len() as u32;

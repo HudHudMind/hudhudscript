@@ -27,3 +27,6 @@ mod g2_jump_if_true_parity_test;
 // G3: disabled — fusion_emitted field only exists on exp/perf-agent branch.
 // Re-enable when G3 telemetry-gated fusion counter is implemented and merged.
 mod g3_fusion_emit_tests;
+mod unparenthesized_control_flow_tests;
+mod deep_nested_scope_tests;
+

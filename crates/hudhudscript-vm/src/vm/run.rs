@@ -72,7 +72,9 @@ impl VM {
                     0
                 };
                 let encoded = slot as u32 | ((shared as u32) << 8) | (si << 9);
-                self.main_local_slots[sym_id as usize] = encoded;
+                if self.main_local_slots[sym_id as usize] == u32::MAX {
+                    self.main_local_slots[sym_id as usize] = encoded;
+                }
             }
             let mut built: Vec<(u32, usize, Option<usize>)> =
                 Vec::with_capacity(bytecode.main_local_names.len());
@@ -193,7 +195,9 @@ impl VM {
                     0
                 };
                 let encoded = slot as u32 | ((shared as u32) << 8) | (si << 9);
-                self.main_local_slots[sym_id as usize] = encoded;
+                if self.main_local_slots[sym_id as usize] == u32::MAX {
+                    self.main_local_slots[sym_id as usize] = encoded;
+                }
             }
         }
 

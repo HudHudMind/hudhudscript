@@ -259,6 +259,10 @@ pub trait CompileTarget {
     fn ct_begin_scope(&mut self);
     /// End the current scope (emits PopScope and cleans up locals).
     fn ct_end_scope(&mut self);
+    /// Current lexical scope depth.
+    fn ct_scope_depth(&self) -> usize {
+        0
+    }
     /// Compile a function declaration statement.
     fn ct_compile_function_decl(
         &mut self,
