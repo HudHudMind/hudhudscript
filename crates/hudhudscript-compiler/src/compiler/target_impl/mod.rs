@@ -180,13 +180,17 @@ impl CompileTarget for Compiler {
         self.in_top_level
     }
     fn ct_is_shared_top_level(&self, name: &str) -> bool {
-        let is_top = self
-            .locals
+        if !self.shared_top_level_names.contains(name) {
+            return false;
+        }
+        if self.scope_depth == 0 {
+            return true;
+        }
+        self.locals
             .iter()
             .rev()
             .find(|l| l.name == name)
-            .map_or(true, |l| l.depth == 0);
-        is_top && self.shared_top_level_names.contains(name)
+            .map_or(true, |l| l.depth == 0)
     }
     fn ct_begin_scope(&mut self) {
         self.begin_scope()

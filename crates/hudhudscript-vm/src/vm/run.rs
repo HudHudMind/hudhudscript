@@ -48,17 +48,20 @@ impl VM {
             self.shared_globals_vec
                 .resize(shared_count, Value16::null());
             let mut shared_idx: u32 = 0;
+            let mut sym_ids: Vec<u32> = Vec::with_capacity(bytecode.main_local_names.len());
             let mut max_sym = 0u32;
-            for name in bytecode.main_local_names.iter() {
+            for name in &bytecode.main_local_names {
                 let sym_id = hudhudscript_bytecode::interner::intern(name).0;
                 if sym_id > max_sym {
                     max_sym = sym_id;
                 }
+                sym_ids.push(sym_id);
             }
             self.main_local_slots
                 .resize((max_sym + 1) as usize, u32::MAX);
-            for (slot, name) in bytecode.main_local_names.iter().enumerate() {
-                let sym_id = hudhudscript_bytecode::interner::intern(name).0;
+            let mut built: Vec<(u32, usize, Option<usize>)> =
+                Vec::with_capacity(bytecode.main_local_names.len());
+            for (slot, &sym_id) in sym_ids.iter().enumerate() {
                 let shared = bytecode
                     .main_local_shared
                     .get(slot)
@@ -75,14 +78,9 @@ impl VM {
                 if self.main_local_slots[sym_id as usize] == u32::MAX {
                     self.main_local_slots[sym_id as usize] = encoded;
                 }
-            }
-            let mut built: Vec<(u32, usize, Option<usize>)> =
-                Vec::with_capacity(bytecode.main_local_names.len());
-            for (slot, name) in bytecode.main_local_names.iter().enumerate() {
-                let sym_id = hudhudscript_bytecode::interner::intern(name).0;
                 built.push((sym_id, slot, None));
             }
-            built.sort_by_key(|(sym_id, _, _)| *sym_id);
+            built.sort_unstable_by_key(|(sym_id, _, _)| *sym_id);
             let built_ptr = Box::into_raw(Box::new(built));
             self.call_stack_local_syms.push(built_ptr);
             self.owned_local_sym_refs.push(built_ptr);
