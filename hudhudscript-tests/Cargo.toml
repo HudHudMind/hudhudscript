@@ -349,3 +349,7 @@ path = "tests/loop_engineering/mod.rs"
 name = "gc"
 path = "tests/gc/mod.rs"
 
+
+[lib]
+name = "hudhud_script_tests"
+path = "src/lib.rs"
