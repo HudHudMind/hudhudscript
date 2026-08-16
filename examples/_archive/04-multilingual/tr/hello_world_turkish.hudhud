@@ -1,9 +1,0 @@
-// Türkçe HudHudScript Örneği
-// Turkish HudHudScript Example
-
-tanım mesaj = "Merhaba Dünya!";
-print(mesaj);
-
-eğer (mesaj == "Merhaba Dünya!") {
-    print("Doğru mesaj!");
-}
