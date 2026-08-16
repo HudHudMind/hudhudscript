@@ -362,14 +362,14 @@ fn object_schema_with_required_strings_empty() {
 fn standard_tool_file_read_real_file() {
     // Read a known-to-exist file
     let result = StandardTool::FileRead.call(&json!({
-        "path": "/home/onur/HudHudMind/hudhud-script/Cargo.toml"
+        "path": "../Cargo.toml"
     }));
     assert!(result.is_ok());
     let value = result.unwrap();
     assert!(value["contents"].as_str().unwrap().contains("[workspace]"));
     assert_eq!(
         value["path"],
-        "/home/onur/HudHudMind/hudhud-script/Cargo.toml"
+        "../Cargo.toml"
     );
 }
 

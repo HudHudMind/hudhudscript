@@ -1,8 +1,8 @@
 // P5c: Math.sqrt intrinsic correctness — local shadow guard tests.
 
+use hudhudscript_bytecode::Instruction;
 use hudhudscript_compiler::Compiler;
 use hudhudscript_parser::parse;
-use hudhudscript_bytecode::Instruction;
 
 fn compile_instructions(src: &str) -> Vec<Instruction> {
     let ast = parse(src).expect("parse failed");

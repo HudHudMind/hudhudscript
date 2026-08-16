@@ -120,23 +120,14 @@ pub fn builtin_info(word: &str) -> Option<HoverInfo> {
         ),
         "law" => ("law <name> { ... }", "Declares a governance law."),
         "rule" => ("rule <name> { ... }", "Declares a governance rule."),
-        "council" => (
-            "council <name>: { ... }",
-            "Declares a governance council.",
-        ),
+        "council" => ("council <name>: { ... }", "Declares a governance council."),
         "swarm" => ("swarm <name> { ... }", "Declares a swarm."),
         "community" => (
             "community <name> { ... }",
             "Declares a governance community.",
         ),
-        "contract" => (
-            "contract <name> { ... }",
-            "Declares a governance contract.",
-        ),
-        "treaty" => (
-            "treaty <name> { ... }",
-            "Declares a governance treaty.",
-        ),
+        "contract" => ("contract <name> { ... }", "Declares a governance contract."),
+        "treaty" => ("treaty <name> { ... }", "Declares a governance treaty."),
         "enforcement" => (
             "enforcement <name> { ... }",
             "Declares a governance enforcement mechanism.",
@@ -202,30 +193,21 @@ pub fn builtin_info(word: &str) -> Option<HoverInfo> {
         "technical" => ("technical", "Technical communication style."),
 
         // Loop engineering
-        "loop" => (
-            "loop <name> { ... }",
-            "Declares a loop-engineering block.",
-        ),
+        "loop" => ("loop <name> { ... }", "Declares a loop-engineering block."),
         "step" => ("step <name> { ... }", "Declares a loop-engineering step."),
         "gate" => ("gate <name> { ... }", "Declares a loop-engineering gate."),
         "chain" => (
             "chain <name> { attach <step>; ... }",
             "Declares a loop-engineering chain of steps.",
         ),
-        "attach" => (
-            "attach <stepName>",
-            "Attaches a step to the current chain.",
-        ),
+        "attach" => ("attach <stepName>", "Attaches a step to the current chain."),
 
         // Flow & orchestration
         "flow" => ("flow <name> { ... }", "Declares a flow."),
         "dataflow" => ("dataflow <name> { ... }", "Declares a dataflow."),
         "layer" => ("layer <name> { ... }", "Declares a layer."),
         "network" => ("network <name> { ... }", "Declares a network."),
-        "depends_on" => (
-            "depends_on <node>",
-            "Declares a dependency between nodes.",
-        ),
+        "depends_on" => ("depends_on <node>", "Declares a dependency between nodes."),
         "broadcast" => ("broadcast <message>", "Broadcasts a message."),
         "merge" => ("merge <a>, <b>", "Merges two flows."),
         "parallel" => ("parallel", "Parallel execution mode."),

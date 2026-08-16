@@ -95,7 +95,10 @@ fn html_response(status: u16, body: &str) -> Value16 {
     let mut obj = hudhudscript_bytecode::ObjMap::default();
     obj.insert("status".to_string(), Value16::number(status as f64));
     obj.insert("body".to_string(), Value16::string(body.to_string()));
-    obj.insert("content_type".to_string(), Value16::string("text/html; charset=utf-8".to_string()));
+    obj.insert(
+        "content_type".to_string(),
+        Value16::string("text/html; charset=utf-8".to_string()),
+    );
     obj.insert("headers".to_string(), Value16::object(headers));
     obj.insert("cookies".to_string(), Value16::array(vec![]));
     Value16::object(obj)
@@ -120,4 +123,3 @@ fn value_obj_to_context(obj: &hudhudscript_bytecode::ObjMap) -> Context {
 }
 
 // ── Unit tests ────────────────────────────────────────────────────────
-

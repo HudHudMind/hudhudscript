@@ -1,0 +1,19 @@
+// HudHudScript — Hello World Example
+// Basic variable declarations, expressions, and print
+
+let greeting = "Hello, World!";
+let name = "HudHud";
+let message = greeting;
+
+// Arithmetic
+let x = 10;
+let y = 20;
+let sum = x + y;
+
+// Boolean logic
+let is_ready = true;
+let is_valid = sum > 25 && is_ready;
+
+// Print the greeting
+print(greeting);
+print(sum);

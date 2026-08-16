@@ -1,7 +1,7 @@
 use crate::{
-    CallPayload, ClassDeclPayload, ClassStaticDeclPayload, DefineFunctionPayload,
+    CallPayload, ClassDeclPayload, ClassStaticDeclPayload, CmpJumpPayload, DefineFunctionPayload,
     DestructObjectPayload, EnumDeclPayload, FunctionChunk, Instruction, LoadModulePayload,
-    LoopPayload, OptSymPayload, SuperInstrPayload, CmpJumpPayload, SymId, TraitCheckPayload, TwoSymPayload,
+    LoopPayload, OptSymPayload, SuperInstrPayload, SymId, TraitCheckPayload, TwoSymPayload,
     Value16,
 };
 use serde::{Deserialize, Serialize};

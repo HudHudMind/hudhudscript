@@ -1,6 +1,6 @@
 //! Size report printed before benchmarks.
 
-use hudhudscript_bytecode::Value;
+use hudhudscript_bytecode::Value16;
 use std::mem::size_of;
 
 use super::variant_b::ReprArc;
@@ -9,9 +9,9 @@ use super::variant_c::ReprManual;
 pub fn print_size_report() {
     eprintln!("─── size_of report ───");
     eprintln!(
-        "A Value            : size={:>3}  size<Option>={:>3}",
-        size_of::<Value>(),
-        size_of::<Option<Value>>()
+        "A Value16          : size={:>3}  size<Option>={:>3}",
+        size_of::<Value16>(),
+        size_of::<Option<Value16>>()
     );
     eprintln!(
         "B ReprArc          : size={:>3}  size<Option>={:>3}",

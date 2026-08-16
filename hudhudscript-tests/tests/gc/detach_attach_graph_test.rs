@@ -44,8 +44,18 @@ fn nested_object_round_trip() {
     let g = gc_detach::detach(outer_obj).unwrap();
     let v2 = gc_detach::attach(&g);
     let obj = v2.as_object().unwrap();
-    let inner = obj.get(&hudhudscript_bytecode::SymId::from("inner")).unwrap();
-    assert_eq!(inner.as_object().unwrap().get(&hudhudscript_bytecode::SymId::from("x")).unwrap().as_int(), Some(10));
+    let inner = obj
+        .get(&hudhudscript_bytecode::SymId::from("inner"))
+        .unwrap();
+    assert_eq!(
+        inner
+            .as_object()
+            .unwrap()
+            .get(&hudhudscript_bytecode::SymId::from("x"))
+            .unwrap()
+            .as_int(),
+        Some(10)
+    );
 }
 
 #[test]

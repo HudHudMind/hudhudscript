@@ -1,0 +1,38 @@
+// Constitution Enforcement Demo
+// This demonstrates real-time enforcement of governance laws
+
+constitution DataGovernance {
+    description: "Data processing governance rules",
+    laws: [
+        {
+            name: "Data Size Limit",
+            description: "Data must be under 1000 bytes",
+            enforcement: mandatory,
+            rules: ["prompt_length < 1000"]
+        },
+        {
+            name: "Temperature Range",
+            description: "Temperature must be between 0 and 1",
+            enforcement: mandatory,
+            rules: ["temperature >= 0", "temperature <= 1"]
+        },
+        {
+            name: "High Temperature Warning",
+            description: "Temperature above 0.8 not recommended",
+            enforcement: advisory,
+            rules: ["temperature <= 0.8"]
+        }
+    ]
+}
+
+var x = 42;
+print("Constitution created and activated!");
+print("Data Governance is now enforcing laws.");
+print("");
+print("Laws:");
+print("  1. Data Size Limit (mandatory): prompt_length < 1000");
+print("  2. Temperature Range (mandatory): 0 <= temperature <= 1");
+print("  3. High Temperature Warning (advisory): temperature <= 0.8");
+print("");
+print("Test value: ");
+print(x);

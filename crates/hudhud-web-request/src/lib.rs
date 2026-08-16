@@ -41,10 +41,7 @@ pub fn parse(parsed: &ParsedRequest) -> HudHudResult<Value16> {
     obj.insert("body".to_string(), Value16::string(parsed.body.clone()));
 
     // Query args
-    obj.insert(
-        "args".to_string(),
-        query::parse_query_string(&parsed.query),
-    );
+    obj.insert("args".to_string(), query::parse_query_string(&parsed.query));
 
     // Headers (convert to Value16 object)
     let headers: hudhudscript_bytecode::ObjMap = parsed
@@ -63,12 +60,12 @@ pub fn parse(parsed: &ParsedRequest) -> HudHudResult<Value16> {
 
     // Form body (urlencoded)
     if content_type.contains("application/x-www-form-urlencoded") {
+        obj.insert("form".to_string(), query::parse_query_string(&parsed.body));
+    } else {
         obj.insert(
             "form".to_string(),
-            query::parse_query_string(&parsed.body),
+            Value16::object(hudhudscript_bytecode::ObjMap::default()),
         );
-    } else {
-        obj.insert("form".to_string(), Value16::object(hudhudscript_bytecode::ObjMap::default()));
     }
 
     // JSON body
@@ -89,7 +86,10 @@ pub fn parse(parsed: &ParsedRequest) -> HudHudResult<Value16> {
             multipart::parse_multipart(parsed.body.as_bytes(), &boundary),
         );
     } else {
-        obj.insert("files".to_string(), Value16::object(hudhudscript_bytecode::ObjMap::default()));
+        obj.insert(
+            "files".to_string(),
+            Value16::object(hudhudscript_bytecode::ObjMap::default()),
+        );
     }
 
     // Cookies
@@ -117,8 +117,9 @@ fn extract_boundary(content_type: &str) -> String {
 pub fn parse_request(_args: &[Value16]) -> HudHudResult<Value16> {
     // This function is called directly from the VM with a ParsedRequest
     // already serialized; the concrete parsing is provided by Web.accept.
-    Err(runtime_error("Web request: use Web.accept to get a parsed request"))
+    Err(runtime_error(
+        "Web request: use Web.accept to get a parsed request",
+    ))
 }
 
 // ── Unit tests ────────────────────────────────────────────────────────
-

@@ -1,6 +1,6 @@
 mod keywords_early;
-mod keywords_mid;
 mod keywords_late;
+mod keywords_mid;
 
 use std::sync::LazyLock;
 

@@ -70,7 +70,8 @@ pub(super) fn parse_spawn_stmt(pair: Pair<Rule>) -> ParseResult<Stmt> {
 pub(super) fn parse_despawn_stmt(pair: Pair<Rule>) -> ParseResult<Stmt> {
     let span = pair_to_span(&pair);
     let mut inner = pair.into_inner();
-    let name = inner.next()
+    let name = inner
+        .next()
         .ok_or_else(|| parse_codes::invalid_syntax("Expected subject name for despawn", span))?
         .as_str()
         .to_string();

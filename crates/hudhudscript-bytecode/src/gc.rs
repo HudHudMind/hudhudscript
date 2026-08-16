@@ -37,7 +37,6 @@ impl Drop for GcHeap {
     }
 }
 
-
 std::thread_local! {
     pub static CURRENT_HEAP: std::cell::Cell<*mut GcHeap> = std::cell::Cell::new(std::ptr::null_mut());
     pub static FALLBACK_HEAP: std::cell::RefCell<GcHeap> = std::cell::RefCell::new(GcHeap {
@@ -59,15 +58,12 @@ pub fn with_heap<R>(f: impl FnOnce(&mut GcHeap) -> R) -> R {
     CURRENT_HEAP.with(|c| {
         let ptr = c.get();
         if ptr.is_null() {
-            FALLBACK_HEAP.with(|fallback| {
-                f(&mut *fallback.borrow_mut())
-            })
+            FALLBACK_HEAP.with(|fallback| f(&mut *fallback.borrow_mut()))
         } else {
             f(unsafe { &mut *ptr })
         }
     })
 }
-
 
 std::thread_local! {
     /// P2: alloc eşik aşımında SADECE bu bayrağı kaldırır; collect'i yalnız
@@ -114,7 +110,9 @@ fn gc_stress_enabled() -> bool {
         if let Some(enabled) = cache.get() {
             return enabled;
         }
-        let enabled = std::env::var(ENV_GC_STRESS).map(|v| v == "1").unwrap_or(false);
+        let enabled = std::env::var(ENV_GC_STRESS)
+            .map(|v| v == "1")
+            .unwrap_or(false);
         cache.set(Some(enabled));
         enabled
     })
@@ -130,7 +128,9 @@ fn gc_verify_enabled() -> bool {
         if let Some(enabled) = cache.get() {
             return enabled;
         }
-        let enabled = std::env::var(ENV_GC_VERIFY).map(|v| v == "1").unwrap_or(false);
+        let enabled = std::env::var(ENV_GC_VERIFY)
+            .map(|v| v == "1")
+            .unwrap_or(false);
         cache.set(Some(enabled));
         enabled
     })
@@ -156,7 +156,9 @@ pub fn alloc(kind: DynamicKind, data: DynamicData) -> Value16 {
             obj.data = data;
             with_heap(|heap| {
                 heap.objects.push(ptr);
-                heap.bytes_alloc = heap.bytes_alloc.saturating_add(mem::size_of_val(unsafe { &*ptr }));
+                heap.bytes_alloc = heap
+                    .bytes_alloc
+                    .saturating_add(mem::size_of_val(unsafe { &*ptr }));
                 #[cfg(feature = "telemetry")]
                 {
                     heap.alloc_count_by_kind[kind as usize] += 1;
@@ -373,7 +375,6 @@ pub fn collect(roots: &impl GcRootSource) {
     // Faz 1: borrow ALTINDA sadece ayrıştır — burada Drop ÇALIŞTIRILMAZ
     // (Drop, heap'e erişirse RefCell çifte-borrow paniği olur).
     let dead: Vec<*mut DynamicObject> = with_heap(|heap| {
-        
         let mut dead = Vec::new();
         heap.objects.retain(|ptr| {
             let obj = unsafe { &**ptr };
@@ -409,7 +410,9 @@ pub fn collect(roots: &impl GcRootSource) {
                     false
                 }
             });
-            if added { continue; }
+            if added {
+                continue;
+            }
         }
         unsafe { drop(Box::from_raw(ptr)) };
     }
@@ -448,8 +451,8 @@ pub fn is_marked(value: Value16) -> bool {
 mod tests {
     use super::{bytes_allocated, heap_object_count, trace_children, trace_value};
     use crate::{
-        ClassData, DataData, DynamicObject, FunctionData, GeneratorState16, InstanceData,
-        ObjMap, PromiseState16, SymId, Value16,
+        ClassData, DataData, DynamicObject, FunctionData, GeneratorState16, InstanceData, ObjMap,
+        PromiseState16, SymId, Value16,
     };
     use parking_lot::{Mutex, RwLock};
     use std::{collections::HashMap, mem, sync::Arc};

@@ -210,4 +210,3 @@ fn extract_attr_opt(header: &str, attr: &str) -> Option<String> {
         Some(val_part.to_string())
     }
 }
-

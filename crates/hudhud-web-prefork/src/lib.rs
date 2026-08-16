@@ -14,18 +14,35 @@ fn runtime_error(msg: impl Into<String>) -> Error {
     Error::new(ErrorCode::CompileRuntimeError, msg.into())
 }
 fn type_error(expected: &str, got: &str, context: &str) -> Error {
-    Error::new(ErrorCode::RuntimeTypeError, format!("{}: expected {}, got {}", context, expected, got))
+    Error::new(
+        ErrorCode::RuntimeTypeError,
+        format!("{}: expected {}, got {}", context, expected, got),
+    )
 }
 
 /// `Web.run({script, host, port, workers})` → role info.
 pub fn run(args: &[Value16]) -> HudHudResult<Value16> {
-    let opts = args.first().and_then(|v| v.as_object()).ok_or_else(||
-        type_error("object", "", "Web.run"))?;
+    let opts = args
+        .first()
+        .and_then(|v| v.as_object())
+        .ok_or_else(|| type_error("object", "", "Web.run"))?;
 
-    let script = opts.get("script").and_then(|v| v.as_str()).unwrap_or("app.hud");
-    let host = opts.get("host").and_then(|v| v.as_str()).unwrap_or("127.0.0.1");
-    let port = opts.get("port").and_then(|v| v.as_number()).unwrap_or(8080.0) as u16;
-    let workers = opts.get("workers").and_then(|v| v.as_number()).unwrap_or(1.0) as usize;
+    let script = opts
+        .get("script")
+        .and_then(|v| v.as_str())
+        .unwrap_or("app.hud");
+    let host = opts
+        .get("host")
+        .and_then(|v| v.as_str())
+        .unwrap_or("127.0.0.1");
+    let port = opts
+        .get("port")
+        .and_then(|v| v.as_number())
+        .unwrap_or(8080.0) as u16;
+    let workers = opts
+        .get("workers")
+        .and_then(|v| v.as_number())
+        .unwrap_or(1.0) as usize;
 
     // ── Worker detection ───────────────────────────────────────────
     if let Ok(worker_id_str) = std::env::var("HUDHUD_WEB_WORKER") {
@@ -62,10 +79,7 @@ pub fn run(args: &[Value16]) -> HudHudResult<Value16> {
                 // Detach the child so it outlives the master if master exits
             }
             Err(e) => {
-                return Err(runtime_error(format!(
-                    "Web.run: spawn worker {}: {}",
-                    i, e
-                )));
+                return Err(runtime_error(format!("Web.run: spawn worker {}: {}", i, e)));
             }
         }
     }
@@ -83,9 +97,7 @@ pub fn run(args: &[Value16]) -> HudHudResult<Value16> {
     result.insert("workers".to_string(), Value16::number(workers as f64));
     result.insert(
         "pids".to_string(),
-        Value16::array(
-            pids.into_iter().map(Value16::number).collect(),
-        ),
+        Value16::array(pids.into_iter().map(Value16::number).collect()),
     );
     Ok(Value16::object(result))
 }

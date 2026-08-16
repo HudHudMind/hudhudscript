@@ -31,7 +31,11 @@ impl StdioTransport {
         let stdout = process.stdout.take().context("stdout")?;
         let stdout_reader = BufReader::new(stdout);
 
-        Ok(Self { process, stdin, stdout_reader })
+        Ok(Self {
+            process,
+            stdin,
+            stdout_reader,
+        })
     }
 }
 
@@ -44,9 +48,7 @@ impl Transport for StdioTransport {
     }
 
     fn split(self: Box<Self>) -> (super::TransportSendHalf, super::TransportRecvHalf) {
-        let send: super::TransportSendHalf = Box::new(StdioSendHalf {
-            stdin: self.stdin,
-        });
+        let send: super::TransportSendHalf = Box::new(StdioSendHalf { stdin: self.stdin });
         let recv: super::TransportRecvHalf = Box::new(StdioRecvHalf {
             stdout_reader: self.stdout_reader,
             _process: self.process,
@@ -82,7 +84,9 @@ impl TransportRecv for StdioRecvHalf {
     async fn receive(&mut self) -> Result<JsonRpcResponse> {
         let mut line = String::new();
         let n = self.stdout_reader.read_line(&mut line).await?;
-        if n == 0 { anyhow::bail!("EOF"); }
+        if n == 0 {
+            anyhow::bail!("EOF");
+        }
         serde_json::from_str(&line).context("parse response")
     }
 }
@@ -104,7 +108,9 @@ impl super::TransportRecv for StdioTransport {
     async fn receive(&mut self) -> Result<JsonRpcResponse> {
         let mut line = String::new();
         let n = self.stdout_reader.read_line(&mut line).await?;
-        if n == 0 { anyhow::bail!("EOF"); }
+        if n == 0 {
+            anyhow::bail!("EOF");
+        }
         serde_json::from_str(&line).context("parse response")
     }
 }

@@ -52,23 +52,177 @@ impl PricingRegistry {
         let mut models = HashMap::new();
 
         // ── Anthropic ──
-        models.insert("claude-opus-4".into(), ModelPricing { model: "claude-opus-4".into(), provider: "anthropic".into(), input_cost_per_mtok: 15.0, output_cost_per_mtok: 75.0, cached_input_cost_per_mtok: Some(1.5), cache_write_cost_per_mtok: Some(18.75), thinking_cost_per_mtok: Some(75.0), batch_discount: 0.50, image_cost_per_token: None, audio_cost_per_minute: None });
-        models.insert("claude-sonnet-4".into(), ModelPricing { model: "claude-sonnet-4".into(), provider: "anthropic".into(), input_cost_per_mtok: 3.0, output_cost_per_mtok: 15.0, cached_input_cost_per_mtok: Some(0.30), cache_write_cost_per_mtok: Some(3.75), thinking_cost_per_mtok: Some(15.0), batch_discount: 0.50, image_cost_per_token: None, audio_cost_per_minute: None });
-        models.insert("claude-haiku-3.5".into(), ModelPricing { model: "claude-haiku-3.5".into(), provider: "anthropic".into(), input_cost_per_mtok: 0.80, output_cost_per_mtok: 4.0, cached_input_cost_per_mtok: Some(0.08), cache_write_cost_per_mtok: Some(1.0), thinking_cost_per_mtok: Some(4.0), batch_discount: 0.50, image_cost_per_token: None, audio_cost_per_minute: None });
+        models.insert(
+            "claude-opus-4".into(),
+            ModelPricing {
+                model: "claude-opus-4".into(),
+                provider: "anthropic".into(),
+                input_cost_per_mtok: 15.0,
+                output_cost_per_mtok: 75.0,
+                cached_input_cost_per_mtok: Some(1.5),
+                cache_write_cost_per_mtok: Some(18.75),
+                thinking_cost_per_mtok: Some(75.0),
+                batch_discount: 0.50,
+                image_cost_per_token: None,
+                audio_cost_per_minute: None,
+            },
+        );
+        models.insert(
+            "claude-sonnet-4".into(),
+            ModelPricing {
+                model: "claude-sonnet-4".into(),
+                provider: "anthropic".into(),
+                input_cost_per_mtok: 3.0,
+                output_cost_per_mtok: 15.0,
+                cached_input_cost_per_mtok: Some(0.30),
+                cache_write_cost_per_mtok: Some(3.75),
+                thinking_cost_per_mtok: Some(15.0),
+                batch_discount: 0.50,
+                image_cost_per_token: None,
+                audio_cost_per_minute: None,
+            },
+        );
+        models.insert(
+            "claude-haiku-3.5".into(),
+            ModelPricing {
+                model: "claude-haiku-3.5".into(),
+                provider: "anthropic".into(),
+                input_cost_per_mtok: 0.80,
+                output_cost_per_mtok: 4.0,
+                cached_input_cost_per_mtok: Some(0.08),
+                cache_write_cost_per_mtok: Some(1.0),
+                thinking_cost_per_mtok: Some(4.0),
+                batch_discount: 0.50,
+                image_cost_per_token: None,
+                audio_cost_per_minute: None,
+            },
+        );
 
         // ── OpenAI ──
-        models.insert("gpt-4o".into(), ModelPricing { model: "gpt-4o".into(), provider: "openai".into(), input_cost_per_mtok: 2.50, output_cost_per_mtok: 10.0, cached_input_cost_per_mtok: Some(1.25), cache_write_cost_per_mtok: None, thinking_cost_per_mtok: None, batch_discount: 0.50, image_cost_per_token: None, audio_cost_per_minute: None });
-        models.insert("gpt-4o-mini".into(), ModelPricing { model: "gpt-4o-mini".into(), provider: "openai".into(), input_cost_per_mtok: 0.15, output_cost_per_mtok: 0.60, cached_input_cost_per_mtok: Some(0.075), cache_write_cost_per_mtok: None, thinking_cost_per_mtok: None, batch_discount: 0.50, image_cost_per_token: None, audio_cost_per_minute: None });
-        models.insert("o1".into(), ModelPricing { model: "o1".into(), provider: "openai".into(), input_cost_per_mtok: 15.0, output_cost_per_mtok: 60.0, cached_input_cost_per_mtok: Some(7.50), cache_write_cost_per_mtok: None, thinking_cost_per_mtok: Some(60.0), batch_discount: 0.50, image_cost_per_token: None, audio_cost_per_minute: None });
-        models.insert("o3".into(), ModelPricing { model: "o3".into(), provider: "openai".into(), input_cost_per_mtok: 10.0, output_cost_per_mtok: 40.0, cached_input_cost_per_mtok: Some(5.0), cache_write_cost_per_mtok: None, thinking_cost_per_mtok: Some(40.0), batch_discount: 0.50, image_cost_per_token: None, audio_cost_per_minute: None });
+        models.insert(
+            "gpt-4o".into(),
+            ModelPricing {
+                model: "gpt-4o".into(),
+                provider: "openai".into(),
+                input_cost_per_mtok: 2.50,
+                output_cost_per_mtok: 10.0,
+                cached_input_cost_per_mtok: Some(1.25),
+                cache_write_cost_per_mtok: None,
+                thinking_cost_per_mtok: None,
+                batch_discount: 0.50,
+                image_cost_per_token: None,
+                audio_cost_per_minute: None,
+            },
+        );
+        models.insert(
+            "gpt-4o-mini".into(),
+            ModelPricing {
+                model: "gpt-4o-mini".into(),
+                provider: "openai".into(),
+                input_cost_per_mtok: 0.15,
+                output_cost_per_mtok: 0.60,
+                cached_input_cost_per_mtok: Some(0.075),
+                cache_write_cost_per_mtok: None,
+                thinking_cost_per_mtok: None,
+                batch_discount: 0.50,
+                image_cost_per_token: None,
+                audio_cost_per_minute: None,
+            },
+        );
+        models.insert(
+            "o1".into(),
+            ModelPricing {
+                model: "o1".into(),
+                provider: "openai".into(),
+                input_cost_per_mtok: 15.0,
+                output_cost_per_mtok: 60.0,
+                cached_input_cost_per_mtok: Some(7.50),
+                cache_write_cost_per_mtok: None,
+                thinking_cost_per_mtok: Some(60.0),
+                batch_discount: 0.50,
+                image_cost_per_token: None,
+                audio_cost_per_minute: None,
+            },
+        );
+        models.insert(
+            "o3".into(),
+            ModelPricing {
+                model: "o3".into(),
+                provider: "openai".into(),
+                input_cost_per_mtok: 10.0,
+                output_cost_per_mtok: 40.0,
+                cached_input_cost_per_mtok: Some(5.0),
+                cache_write_cost_per_mtok: None,
+                thinking_cost_per_mtok: Some(40.0),
+                batch_discount: 0.50,
+                image_cost_per_token: None,
+                audio_cost_per_minute: None,
+            },
+        );
 
         // ── DeepSeek ──
-        models.insert("deepseek-v3".into(), ModelPricing { model: "deepseek-v3".into(), provider: "deepseek".into(), input_cost_per_mtok: 0.27, output_cost_per_mtok: 1.10, cached_input_cost_per_mtok: Some(0.07), cache_write_cost_per_mtok: None, thinking_cost_per_mtok: None, batch_discount: 0.50, image_cost_per_token: None, audio_cost_per_minute: None });
-        models.insert("deepseek-r1".into(), ModelPricing { model: "deepseek-r1".into(), provider: "deepseek".into(), input_cost_per_mtok: 0.55, output_cost_per_mtok: 2.19, cached_input_cost_per_mtok: Some(0.14), cache_write_cost_per_mtok: None, thinking_cost_per_mtok: Some(2.19), batch_discount: 0.50, image_cost_per_token: None, audio_cost_per_minute: None });
+        models.insert(
+            "deepseek-v3".into(),
+            ModelPricing {
+                model: "deepseek-v3".into(),
+                provider: "deepseek".into(),
+                input_cost_per_mtok: 0.27,
+                output_cost_per_mtok: 1.10,
+                cached_input_cost_per_mtok: Some(0.07),
+                cache_write_cost_per_mtok: None,
+                thinking_cost_per_mtok: None,
+                batch_discount: 0.50,
+                image_cost_per_token: None,
+                audio_cost_per_minute: None,
+            },
+        );
+        models.insert(
+            "deepseek-r1".into(),
+            ModelPricing {
+                model: "deepseek-r1".into(),
+                provider: "deepseek".into(),
+                input_cost_per_mtok: 0.55,
+                output_cost_per_mtok: 2.19,
+                cached_input_cost_per_mtok: Some(0.14),
+                cache_write_cost_per_mtok: None,
+                thinking_cost_per_mtok: Some(2.19),
+                batch_discount: 0.50,
+                image_cost_per_token: None,
+                audio_cost_per_minute: None,
+            },
+        );
 
         // ── Gemini ──
-        models.insert("gemini-1.5-pro".into(), ModelPricing { model: "gemini-1.5-pro".into(), provider: "gemini".into(), input_cost_per_mtok: 1.25, output_cost_per_mtok: 5.0, cached_input_cost_per_mtok: Some(0.3125), cache_write_cost_per_mtok: None, thinking_cost_per_mtok: None, batch_discount: 0.50, image_cost_per_token: None, audio_cost_per_minute: None });
-        models.insert("gemini-1.5-flash".into(), ModelPricing { model: "gemini-1.5-flash".into(), provider: "gemini".into(), input_cost_per_mtok: 0.075, output_cost_per_mtok: 0.30, cached_input_cost_per_mtok: Some(0.01875), cache_write_cost_per_mtok: None, thinking_cost_per_mtok: None, batch_discount: 0.50, image_cost_per_token: None, audio_cost_per_minute: None });
+        models.insert(
+            "gemini-1.5-pro".into(),
+            ModelPricing {
+                model: "gemini-1.5-pro".into(),
+                provider: "gemini".into(),
+                input_cost_per_mtok: 1.25,
+                output_cost_per_mtok: 5.0,
+                cached_input_cost_per_mtok: Some(0.3125),
+                cache_write_cost_per_mtok: None,
+                thinking_cost_per_mtok: None,
+                batch_discount: 0.50,
+                image_cost_per_token: None,
+                audio_cost_per_minute: None,
+            },
+        );
+        models.insert(
+            "gemini-1.5-flash".into(),
+            ModelPricing {
+                model: "gemini-1.5-flash".into(),
+                provider: "gemini".into(),
+                input_cost_per_mtok: 0.075,
+                output_cost_per_mtok: 0.30,
+                cached_input_cost_per_mtok: Some(0.01875),
+                cache_write_cost_per_mtok: None,
+                thinking_cost_per_mtok: None,
+                batch_discount: 0.50,
+                image_cost_per_token: None,
+                audio_cost_per_minute: None,
+            },
+        );
 
         Self { models }
     }

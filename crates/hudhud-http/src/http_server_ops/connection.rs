@@ -20,9 +20,7 @@ pub struct ParsedRequest {
 
 /// Parse an HTTP/1.1 request from a buffered TCP stream.
 /// Consumes request line, headers, and Content-Length body.
-pub fn parse_http_request(
-    stream: &mut std::net::TcpStream,
-) -> HudHudResult<ParsedRequest> {
+pub fn parse_http_request(stream: &mut std::net::TcpStream) -> HudHudResult<ParsedRequest> {
     stream
         .set_read_timeout(Some(std::time::Duration::from_secs(30)))
         .ok();
@@ -100,9 +98,13 @@ use std::os::unix::io::{FromRawFd, RawFd as RawHandle};
 use std::os::windows::io::{FromRawSocket, RawSocket as RawHandle};
 
 #[cfg(unix)]
-fn listener_from_handle(h: RawHandle) -> TcpListener { unsafe { TcpListener::from_raw_fd(h) } }
+fn listener_from_handle(h: RawHandle) -> TcpListener {
+    unsafe { TcpListener::from_raw_fd(h) }
+}
 #[cfg(windows)]
-fn listener_from_handle(h: RawHandle) -> TcpListener { unsafe { TcpListener::from_raw_socket(h) } }
+fn listener_from_handle(h: RawHandle) -> TcpListener {
+    unsafe { TcpListener::from_raw_socket(h) }
+}
 
 pub(crate) fn accept_loop(fd: RawHandle, state: Arc<Mutex<ServerState>>) {
     loop {
@@ -326,7 +328,12 @@ fn run_websocket_loop(mut stream: std::net::TcpStream, sec_ws_key: &str) {
     }
 }
 
-pub fn write_response(stream: &mut std::net::TcpStream, status: u16, content_type: &str, body: &str) {
+pub fn write_response(
+    stream: &mut std::net::TcpStream,
+    status: u16,
+    content_type: &str,
+    body: &str,
+) {
     let reason = match status {
         200 => "OK",
         201 => "Created",

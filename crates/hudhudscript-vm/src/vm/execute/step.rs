@@ -1,5 +1,6 @@
 #![allow(unused_imports)]
 
+use super::module_ops::*;
 use super::*;
 
 impl VM {
@@ -23,7 +24,11 @@ impl VM {
         #[cfg(feature = "telemetry")]
         if let Some(instr) = instructions.get(ip) {
             if let Some(name) = crate::vm::telemetry::fused_name(instr) {
-                *self.telemetry.fusion_executed_by_opcode.entry(name).or_insert(0) += 1;
+                *self
+                    .telemetry
+                    .fusion_executed_by_opcode
+                    .entry(name)
+                    .or_insert(0) += 1;
             }
         }
         // ── P7.3 Packed fast-dispatch ─────────────────────────
@@ -49,7 +54,11 @@ impl VM {
                 }
                 let prev = self.telemetry.last_dense;
                 if prev != 0xFFFF {
-                    *self.telemetry.opcode_bigrams.entry((prev, dense as u16)).or_insert(0) += 1;
+                    *self
+                        .telemetry
+                        .opcode_bigrams
+                        .entry((prev, dense as u16))
+                        .or_insert(0) += 1;
                 }
                 self.telemetry.last_dense = dense as u16;
             }
@@ -239,7 +248,11 @@ impl VM {
                     }
                 }
                 let mut ctx = crate::vm::execute::StepContext {
-                    instructions, constants, bytecode, ip, ip_ref,
+                    instructions,
+                    constants,
+                    bytecode,
+                    ip,
+                    ip_ref,
                     chunk_ptr: std::ptr::null(),
                 };
                 return self.step_int_slot_super(instr, &mut ctx);
@@ -254,7 +267,11 @@ impl VM {
                     }
                 }
                 let mut ctx = crate::vm::execute::StepContext {
-                    instructions, constants, bytecode, ip, ip_ref,
+                    instructions,
+                    constants,
+                    bytecode,
+                    ip,
+                    ip_ref,
                     chunk_ptr: std::ptr::null(),
                 };
                 return self.step_int_slot_super(instr, &mut ctx);
@@ -269,7 +286,11 @@ impl VM {
                     }
                 }
                 let mut ctx = crate::vm::execute::StepContext {
-                    instructions, constants, bytecode, ip, ip_ref,
+                    instructions,
+                    constants,
+                    bytecode,
+                    ip,
+                    ip_ref,
                     chunk_ptr: std::ptr::null(),
                 };
                 return self.step_int_slot_super(instr, &mut ctx);
@@ -310,7 +331,14 @@ impl VM {
                     return Ok(StepAction::Jumped);
                 }
                 // Non-Int → fall through to general handler
-                let mut ctx = StepContext { instructions, constants, bytecode, ip, ip_ref, chunk_ptr: self.current_chunk_ptr };
+                let mut ctx = StepContext {
+                    instructions,
+                    constants,
+                    bytecode,
+                    ip,
+                    ip_ref,
+                    chunk_ptr: self.current_chunk_ptr,
+                };
                 return self.step_branch(instr, &mut ctx);
             }
 
@@ -353,7 +381,8 @@ impl VM {
                         self.registers[*reg as usize] = Value16::int(r);
                     } else {
                         let big = Value16::bigint(
-                            num_bigint::BigInt::from(x) + num_bigint::BigInt::from(*imm as i64));
+                            num_bigint::BigInt::from(x) + num_bigint::BigInt::from(*imm as i64),
+                        );
                         self.registers[*reg as usize] = big;
                     }
                     *ip_ref = (ip as i64).wrapping_add(*offset as i64) as usize;
@@ -368,7 +397,8 @@ impl VM {
                         self.registers[*reg as usize] = Value16::int(r);
                     } else {
                         let big = Value16::bigint(
-                            num_bigint::BigInt::from(x) + num_bigint::BigInt::from(*imm as i64));
+                            num_bigint::BigInt::from(x) + num_bigint::BigInt::from(*imm as i64),
+                        );
                         self.registers[*reg as usize] = big;
                     }
                     *ip_ref = (ip as i64).wrapping_add(*offset as i64) as usize;
@@ -382,7 +412,8 @@ impl VM {
                         self.registers[*reg as usize] = Value16::int(r);
                     } else {
                         let big = Value16::bigint(
-                            num_bigint::BigInt::from(x) - num_bigint::BigInt::from(*imm as i64));
+                            num_bigint::BigInt::from(x) - num_bigint::BigInt::from(*imm as i64),
+                        );
                         self.registers[*reg as usize] = big;
                     }
                     *ip_ref = (ip as i64).wrapping_add(*offset as i64) as usize;
@@ -391,13 +422,22 @@ impl VM {
             }
 
             // ── P1: Loop condition (IntCmpRRJumpIfFalse / IntCmpIJumpIfTrue) ──
-            Instruction::IntCmpRRJumpIfFalse { src1, src2, op, offset } => {
+            Instruction::IntCmpRRJumpIfFalse {
+                src1,
+                src2,
+                op,
+                offset,
+            } => {
                 let a = self.registers[*src1 as usize];
                 let b = self.registers[*src2 as usize];
                 if let (Some(x), Some(y)) = (a.as_int(), b.as_int()) {
                     let cond = match *op {
-                        0 => x < y,  1 => x <= y,  2 => x > y,
-                        3 => x >= y, 4 => x == y, 5 => x != y,
+                        0 => x < y,
+                        1 => x <= y,
+                        2 => x > y,
+                        3 => x >= y,
+                        4 => x == y,
+                        5 => x != y,
                         _ => false,
                     };
                     if !cond {
@@ -408,7 +448,14 @@ impl VM {
                     return Ok(StepAction::Jumped);
                 }
                 // Non-Int operands → fall through to general handler
-                let mut ctx = StepContext { instructions, constants, bytecode, ip, ip_ref, chunk_ptr: self.current_chunk_ptr };
+                let mut ctx = StepContext {
+                    instructions,
+                    constants,
+                    bytecode,
+                    ip,
+                    ip_ref,
+                    chunk_ptr: self.current_chunk_ptr,
+                };
                 return self.step_branch(instr, &mut ctx);
             }
 
@@ -419,13 +466,15 @@ impl VM {
                 let idx_val = self.registers[*idx as usize];
                 let a = acc_val.as_number_fast().unwrap_or(0.0);
                 let b = mul_val.as_number_fast().unwrap_or(0.0);
-                let c = self.registers[*arr as usize].as_array()
+                let c = self.registers[*arr as usize]
+                    .as_array()
                     .and_then(|av| {
                         let i = crate::vm::index_helpers::numeric_index_i64(idx_val)
                             .and_then(crate::vm::index_helpers::index_i64_to_usize)
                             .unwrap_or(0);
                         av.get(i).and_then(|v| v.as_number_fast())
-                    }).unwrap_or(0.0);
+                    })
+                    .unwrap_or(0.0);
                 self.registers[*acc as usize] = Value16::number(a * b + c);
                 *ip_ref = ip + 1;
                 return Ok(StepAction::Jumped);
@@ -439,7 +488,9 @@ impl VM {
                     .and_then(crate::vm::index_helpers::index_i64_to_usize)
                     .unwrap_or(0);
                 if let Some(arr) = self.registers[*obj as usize].as_array_mut() {
-                    if i >= arr.len() { arr.resize(i + 1, Value16::null()); }
+                    if i >= arr.len() {
+                        arr.resize(i + 1, Value16::null());
+                    }
                     arr[i] = new_val;
                 }
                 *ip_ref = ip + 1;
@@ -447,18 +498,25 @@ impl VM {
             }
 
             // ── P1: StrCharEqRR — palindrome/revcomp char comparison ──
-            Instruction::StrCharEqRR { dst, src_s, src_i, src_j } => {
+            Instruction::StrCharEqRR {
+                dst,
+                src_s,
+                src_i,
+                src_j,
+            } => {
                 let s_val = self.registers[*src_s as usize];
-                let ni = crate::vm::index_helpers::numeric_index_i64(
-                    self.registers[*src_i as usize],
-                ).and_then(crate::vm::index_helpers::index_i64_to_usize);
-                let nj = crate::vm::index_helpers::numeric_index_i64(
-                    self.registers[*src_j as usize],
-                ).and_then(crate::vm::index_helpers::index_i64_to_usize);
+                let ni =
+                    crate::vm::index_helpers::numeric_index_i64(self.registers[*src_i as usize])
+                        .and_then(crate::vm::index_helpers::index_i64_to_usize);
+                let nj =
+                    crate::vm::index_helpers::numeric_index_i64(self.registers[*src_j as usize])
+                        .and_then(crate::vm::index_helpers::index_i64_to_usize);
                 let eq = if let (Some(s), Some(i), Some(j)) = (s_val.as_str(), ni, nj) {
                     let bytes = s.as_bytes();
                     i < bytes.len() && j < bytes.len() && bytes[i] == bytes[j]
-                } else { false };
+                } else {
+                    false
+                };
                 self.registers[*dst as usize] = Value16::bool_(eq);
                 *ip_ref = ip + 1;
                 return Ok(StepAction::Jumped);
@@ -466,8 +524,9 @@ impl VM {
 
             // ── P1: LoadNumConst — float constant load ──
             Instruction::LoadNumConst { dst, const_idx } => {
-                self.registers[*dst as usize] =
-                    Value16::number(f64::from_bits(bytecode.numeric_constants[*const_idx as usize]));
+                self.registers[*dst as usize] = Value16::number(f64::from_bits(
+                    bytecode.numeric_constants[*const_idx as usize],
+                ));
                 *ip_ref = ip + 1;
                 return Ok(StepAction::Jumped);
             }
@@ -475,18 +534,29 @@ impl VM {
             // ── P2.3: IntSubCall1/IntAddCall1 inline — fib's #1 unpacked source ──
             Instruction::IntSubCall1(_) | Instruction::IntAddCall1(_) => {
                 let mut ctx = crate::vm::execute::StepContext {
-                    instructions, constants, bytecode, ip, ip_ref,
+                    instructions,
+                    constants,
+                    bytecode,
+                    ip,
+                    ip_ref,
                     chunk_ptr: self.current_chunk_ptr,
                 };
                 return self.step_super_instructions(instr, &mut ctx);
             }
 
             // ── P2.3: LoadGlobal/StoreGlobal/ClosureSlot inline ──
-            Instruction::LoadGlobal { .. } | Instruction::StoreGlobal { .. }
-            | Instruction::DeclGlobal { .. } | Instruction::StoreGlobalConst { .. }
-            | Instruction::LoadClosureSlot { .. } | Instruction::StoreClosureSlot { .. } => {
+            Instruction::LoadGlobal { .. }
+            | Instruction::StoreGlobal { .. }
+            | Instruction::DeclGlobal { .. }
+            | Instruction::StoreGlobalConst { .. }
+            | Instruction::LoadClosureSlot { .. }
+            | Instruction::StoreClosureSlot { .. } => {
                 let mut ctx = crate::vm::execute::StepContext {
-                    instructions, constants, bytecode, ip, ip_ref,
+                    instructions,
+                    constants,
+                    bytecode,
+                    ip,
+                    ip_ref,
                     chunk_ptr: self.current_chunk_ptr,
                 };
                 return self.step_variables(instr, &mut ctx);
@@ -495,7 +565,11 @@ impl VM {
             // ── P2.3: IntModCmpI inline — higher_order's #1 unpacked source (2M) ──
             Instruction::IntModCmpI { .. } => {
                 let mut ctx = crate::vm::execute::StepContext {
-                    instructions, constants, bytecode, ip, ip_ref,
+                    instructions,
+                    constants,
+                    bytecode,
+                    ip,
+                    ip_ref,
                     chunk_ptr: self.current_chunk_ptr,
                 };
                 return self.step_int_cmp(instr, &mut ctx);
@@ -503,9 +577,16 @@ impl VM {
 
             // ── P2.3: MethodCall inline — method_dispatch's 33% unpacked source ──
             Instruction::MethodCall { .. } => {
-                #[cfg(feature = "telemetry")] { self.telemetry.site_call_count += 1; }
+                #[cfg(feature = "telemetry")]
+                {
+                    self.telemetry.site_call_count += 1;
+                }
                 let mut ctx = crate::vm::execute::StepContext {
-                    instructions, constants, bytecode, ip, ip_ref,
+                    instructions,
+                    constants,
+                    bytecode,
+                    ip,
+                    ip_ref,
                     chunk_ptr: self.current_chunk_ptr,
                 };
                 return self.step_methods_async_generator(instr, &mut ctx);
@@ -514,7 +595,11 @@ impl VM {
             // ── P2.3: MakeArray/MakeArray2 inline — binary_trees 34% unpacked ──
             Instruction::MakeArray { .. } | Instruction::MakeArray2 { .. } => {
                 let mut ctx = crate::vm::execute::StepContext {
-                    instructions, constants, bytecode, ip, ip_ref,
+                    instructions,
+                    constants,
+                    bytecode,
+                    ip,
+                    ip_ref,
                     chunk_ptr: self.current_chunk_ptr,
                 };
                 return self.step_int_slot_super(instr, &mut ctx);
@@ -523,7 +608,11 @@ impl VM {
             // ── P2.3: GetProperty/SetProperty inline — method_dispatch/binary_trees 33% unpacked ──
             Instruction::GetProperty { .. } | Instruction::SetProperty { .. } => {
                 let mut ctx = crate::vm::execute::StepContext {
-                    instructions, constants, bytecode, ip, ip_ref,
+                    instructions,
+                    constants,
+                    bytecode,
+                    ip,
+                    ip_ref,
                     chunk_ptr: self.current_chunk_ptr,
                 };
                 return self.step_classes_modules(instr, &mut ctx);
@@ -531,9 +620,16 @@ impl VM {
 
             // ── P3.3: Call inline — bypasses dispatch_unpacked entirely ──
             Instruction::Call { .. } => {
-                #[cfg(feature = "telemetry")] { self.telemetry.site_call_count += 1; }
+                #[cfg(feature = "telemetry")]
+                {
+                    self.telemetry.site_call_count += 1;
+                }
                 let mut ctx = crate::vm::execute::StepContext {
-                    instructions, constants, bytecode, ip, ip_ref,
+                    instructions,
+                    constants,
+                    bytecode,
+                    ip,
+                    ip_ref,
                     chunk_ptr: self.current_chunk_ptr,
                 };
                 return self.step_call_load(instr, &mut ctx);
@@ -565,7 +661,11 @@ impl VM {
             self.telemetry.unpacked_dispatch_count += 1;
             self.telemetry.last_dense = 0xFFFF;
             let name = crate::vm::telemetry::instruction_name(instr);
-            *self.telemetry.unpacked_opcode_counts.entry(name).or_insert(0) += 1;
+            *self
+                .telemetry
+                .unpacked_opcode_counts
+                .entry(name)
+                .or_insert(0) += 1;
         }
         match instr {
             // LoadNumConst/LoadIntConst → LoadNumConst/LoadIntConst handled elsewhere
@@ -575,7 +675,7 @@ impl VM {
             | Instruction::JumpIfTrue { .. }
             | Instruction::TailCall { .. }
             | Instruction::CallSpread(_)
-            | Instruction::MethodCallSpread(_) => self.step_collections_calls(instr, ctx),
+            | Instruction::MethodCallSpread { .. } => self.step_collections_calls(instr, ctx),
 
             Instruction::EnumDecl(_)
             | Instruction::MatchVariant(_)
@@ -609,9 +709,11 @@ impl VM {
             Instruction::ClassDecl(_)
             | Instruction::TraitCheck(_)
             | Instruction::NewInstance { .. }
-            | Instruction::PropertySubAssign { .. }
-            | Instruction::LoadModule(_)
-            | Instruction::DefineFunction(_) => self.step_classes_modules(instr, ctx),
+            | Instruction::PropertySubAssign { .. } => self.step_classes_modules(instr, ctx),
+
+            Instruction::LoadModule(_) | Instruction::DefineFunction(_) => {
+                self.step_module_ops(instr, ctx)
+            }
 
             | Instruction::Await { .. }
             | Instruction::SuperCall { .. }

@@ -288,6 +288,3 @@ fn test_loop_step_block_scope_shadowing() {
         "Loop step block scope shadowing: outer_val must be 10, not mutated to 20"
     );
 }
-
-
-

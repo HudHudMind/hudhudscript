@@ -55,13 +55,17 @@ pub fn word_at_position(source: &str, pos: Position) -> Option<String> {
     }
 
     // Walk backwards to find word start
-    let start = line.get(..col).unwrap_or(line)
+    let start = line
+        .get(..col)
+        .unwrap_or(line)
         .rfind(|c: char| !c.is_alphanumeric() && c != '_')
         .map(|i| i + 1)
         .unwrap_or(0);
 
     // Walk forwards to find word end
-    let end = line.get(col..).unwrap_or("")
+    let end = line
+        .get(col..)
+        .unwrap_or("")
         .find(|c: char| !c.is_alphanumeric() && c != '_')
         .map(|i| col + i)
         .unwrap_or(line.len());

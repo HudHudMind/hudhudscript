@@ -23,31 +23,58 @@ pub fn sprintf(fmt: &str, args: &[FmtArg]) -> Result<String, String> {
                 '%' => result.push('%'),
                 's' => {
                     if arg_idx >= args.len() {
-                        return Err(format!("printf: not enough arguments (need arg {})", arg_idx + 1));
+                        return Err(format!(
+                            "printf: not enough arguments (need arg {})",
+                            arg_idx + 1
+                        ));
                     }
                     match &args[arg_idx] {
                         FmtArg::Str(s) => result.push_str(s),
-                        other => return Err(format!("printf: arg {} expected string, got {:?}", arg_idx + 1, other)),
+                        other => {
+                            return Err(format!(
+                                "printf: arg {} expected string, got {:?}",
+                                arg_idx + 1,
+                                other
+                            ))
+                        }
                     }
                     arg_idx += 1;
                 }
                 'd' => {
                     if arg_idx >= args.len() {
-                        return Err(format!("printf: not enough arguments (need arg {})", arg_idx + 1));
+                        return Err(format!(
+                            "printf: not enough arguments (need arg {})",
+                            arg_idx + 1
+                        ));
                     }
                     match &args[arg_idx] {
                         FmtArg::Int(n) => result.push_str(&n.to_string()),
-                        other => return Err(format!("printf: arg {} expected int, got {:?}", arg_idx + 1, other)),
+                        other => {
+                            return Err(format!(
+                                "printf: arg {} expected int, got {:?}",
+                                arg_idx + 1,
+                                other
+                            ))
+                        }
                     }
                     arg_idx += 1;
                 }
                 'f' => {
                     if arg_idx >= args.len() {
-                        return Err(format!("printf: not enough arguments (need arg {})", arg_idx + 1));
+                        return Err(format!(
+                            "printf: not enough arguments (need arg {})",
+                            arg_idx + 1
+                        ));
                     }
                     match &args[arg_idx] {
                         FmtArg::Float(n) => result.push_str(&format!("{:.6}", n)),
-                        other => return Err(format!("printf: arg {} expected float, got {:?}", arg_idx + 1, other)),
+                        other => {
+                            return Err(format!(
+                                "printf: arg {} expected float, got {:?}",
+                                arg_idx + 1,
+                                other
+                            ))
+                        }
                     }
                     arg_idx += 1;
                 }

@@ -1,0 +1,276 @@
+// ═══════════════════════════════════════════════════════════
+// Realm of Hud — TUI Dungeon Crawler (v1.1 — Command Queue)
+// Kullanim: cargo run --bin hudhud -- run examples/02-sop/realm_of_hud.hudhud
+// ═══════════════════════════════════════════════════════════
+
+use tui
+
+// --- ROLLER ---
+role Fighter   { can attack, can defend }
+role Trader    { can buy, can sell }
+role Monster   { can roar, can smash }
+role Lootable  { can loot }
+role Healer    { can heal }
+
+// --- SUBJECT'LER ---
+subject Knight has Fighter {
+    state name: "Sir Lancelot",
+    state health: 100, state max_health: 100,
+    state power: 35, state gold: 40, state potions: 3,
+    state kills: 0, state room: 0
+
+    on attack(self, target) {
+        let dmg = self.power
+        target.health = target.health - dmg
+        self.mark_hit(dmg)
+    }
+    on defend(self) { self.health = self.health + 10 }
+    on use_potion(self) {
+        self.health = self.health + 30
+        self.potions = self.potions - 1
+    }
+}
+
+subject NPC has Trader, Healer {
+    state name: "Bilge Merlin", state gold: 500, state potions: 15
+    on buy(self, customer) {
+        customer.gold = customer.gold - 25; self.gold = self.gold + 25
+        self.potions = self.potions - 1; customer.potions = customer.potions + 1
+    }
+    on heal(self, target) { target.health = target.health + 40 }
+    on sell(self, c) {}
+}
+
+subject Troll has Monster, Lootable {
+    state name: "Magara Trolu", state health: 80, state power: 22, state loot_gold: 50
+    on roar(self) {}
+    on smash(self, target) { target.health = target.health - self.power }
+    on loot(self, looter) { looter.gold = looter.gold + self.loot_gold; looter.kills = looter.kills + 1; self.loot_gold = 0 }
+}
+
+subject Goblin has Monster, Lootable {
+    state name: "Goblin", state health: 45, state power: 14, state loot_gold: 25
+    on roar(self) {}
+    on smash(self, target) { target.health = target.health - self.power }
+    on loot(self, looter) { looter.gold = looter.gold + self.loot_gold; looter.kills = looter.kills + 1; self.loot_gold = 0 }
+}
+
+subject Dragon has Monster, Lootable {
+    state name: "Ejderha Drakar", state health: 90, state power: 25, state loot_gold: 150
+    on roar(self) {}
+    on smash(self, target) { target.health = target.health - self.power }
+    on loot(self, looter) { looter.gold = looter.gold + self.loot_gold; looter.kills = looter.kills + 1; self.loot_gold = 0 }
+}
+
+subject Chest has Lootable {
+    state name: "Sandik", state loot_gold: 40, state opened: 0
+    on loot(self, looter) { self.opened = 1; looter.gold = looter.gold + self.loot_gold; self.loot_gold = 0 }
+}
+
+subject KnightLog of Knight {
+    state hits: 0, state damage_dealt: 0
+    on mark_hit(self, dmg) { self.hits = self.hits + 1; self.damage_dealt = self.damage_dealt + dmg }
+}
+compose Knight { on attack: combine [KnightLog] }
+
+relation Knight <-> NPC    { trust: 85 }
+relation Knight <-> Troll  { hostility: 60 }
+relation Knight <-> Dragon { hostility: 100 }
+
+let knight = spawn Knight; let npc = spawn NPC; let troll = spawn Troll
+let goblin = spawn Goblin; let dragon = spawn Dragon; let chest = spawn Chest
+
+// --- ODA SISTEMI ---
+let room_names = ["Koy Meydani","Karanlik Orman","Goblin Inzivasi","Dag Etekleri","Magara Girisi","Troll Magarasi","Kopru Basi","Ejderha Ini","Hazine Odasi"]
+let room_desc  = ["Merlin'in evi. Guvenli.","Sik agaclar... Sandik var!","Kucuk yaratiklar!","Dik kayaliklar.","Magara agzindan soguk hava.","Karanlik ve nemli.","Ucurum uzerinde kopru.","Lav golcukleri... Ejderha!","Altin dolu buyuk salon!"]
+let room_north = [0,0,0, 1,0,0, 4,0,0]; let room_south = [0,4,0, 0,7,0, 0,0,0]
+let room_east  = [2,3,0, 5,0,0, 8,0,0]; let room_west  = [0,0,1, 0,0,4, 0,7,0]
+let room_event = [4,0,1, 5,5,2, 5,3,5]  // 0=chest 1=goblin 2=troll 3=dragon 4=npc 5=empty
+let event_done = [0,0,0, 0,0,0, 0,0,0]
+
+// --- PATH STACK ---
+let path_stack = ["."]; let stack_depth = 1
+
+// --- STATE ---
+let current_room = 0; let game_running = 1; let combat_active = 0
+let combat_enemy = 0  // 1=goblin 2=troll 3=dragon
+let status_text = "[↑↓←→]gez [e]tkiles [a]saldir [d]savun [p]iksir [q]cik"
+let msg_buf = "  Hos geldin " + knight.name + "!\n  Ejderha hazinesi magarada!\n  "
+
+// --- TUI INIT ---
+tui.init()
+
+while (game_running) {
+    // --- SCENE TEXT ---
+    let rname = room_names[current_room]
+    let rdesc = room_desc[current_room]
+    let scene = "📍 " + rname + "\n" + rdesc
+    if (combat_active == 1) {
+        if (combat_enemy == 1) { scene = scene + "\n\n⚔️ Goblin ile savastasin!" }
+        if (combat_enemy == 2) { scene = scene + "\n\n⚔️ Troll ile savastasin!" }
+        if (combat_enemy == 3) { scene = scene + "\n\n🔥 EJDERHA ILE SAVAS!" }
+    }
+
+    // --- NAV TEXT ---
+    let nav = ""
+    if (room_north[current_room] > 0) { nav = nav + " [↑]Kuzey" }
+    if (room_south[current_room] > 0) { nav = nav + " [↓]Guney" }
+    if (room_east[current_room] > 0)  { nav = nav + " [→]Dogu" }
+    if (room_west[current_room] > 0)  { nav = nav + " [←]Bati" }
+    if (nav == "") { nav = " Cikmaz sokak!" }
+    let hp_pct = knight.health * 100 / knight.max_health
+    let stats = "HP: " + knight.health + "/" + knight.max_health + "\nAltin: " + knight.gold + "\nIksir: " + knight.potions + "\nOldurme: " + knight.kills
+
+    // --- QUEUE TUM WIDGET'LAR ---
+    let sz = tui.size()
+    let vs = tui.split({ direction:"vertical", constraints:[{type:"length",value:3},{type:"min",value:5},{type:"length",value:3}], area:sz })
+
+    tui.block({ title:" Realm of Hud ", borders:"all", border_style:{fg:"cyan"}, area:vs[0] })
+    tui.paragraph({ text:"⚔️ " + knight.name + " | Oda " + (current_room+1) + "/9 | " + rname, style:{fg:"yellow",bold:1}, area:vs[0] })
+
+    let hs = tui.split({ direction:"horizontal", constraints:[{type:"percentage",value:55},{type:"percentage",value:45}], area:vs[1] })
+    tui.block({ title:" Sahne ", borders:"all", border_style:{fg:"green"}, area:hs[0] })
+    tui.paragraph({ text:scene, area:hs[0] })
+
+    let rs = tui.split({ direction:"vertical", constraints:[{type:"length",value:7},{type:"length",value:4},{type:"min",value:3}], area:hs[1] })
+    tui.block({ title:" " + knight.name + " ", borders:"all", border_style:{fg:"yellow"}, area:rs[0] })
+    tui.paragraph({ text:stats, area:rs[0] })
+    tui.gauge({ value:hp_pct, max:100, label:"HP", style:{fg:"red"}, area:rs[1] })
+    tui.block({ title:" Log ", borders:"all", border_style:{fg:"blue"}, area:rs[2] })
+    tui.paragraph({ text:msg_buf, area:rs[2] })
+
+    let bs = tui.split({ direction:"horizontal", constraints:[{type:"percentage",value:60},{type:"percentage",value:40}], area:vs[2] })
+    tui.paragraph({ text:"Yon:" + nav, style:{fg:"white"}, area:bs[0] })
+    let ctrl = "[e]tkiles [a]saldir [d]savun [p]iksir [q]cik"
+    if (combat_active == 1) {
+        ctrl = "⚔️ SAVAS: [a]saldir [d]savun [p]iksir [r]kac"
+        nav = " (savas sirasinda hareket YOK)"
+    }
+    tui.paragraph({ text:ctrl, style:{fg:"gray"}, area:bs[1] })
+
+    // --- TEK FRAME'DE CIZ ---
+    tui.draw()
+
+    // --- INPUT ---
+    let ev = tui.poll_event(120)
+    if (ev != null) {
+        let c = ev["code"]
+        if (c == "q") { game_running = 0; msg_buf = msg_buf + "Cikis\n  " }
+
+        // Hareket (sadece savas disinda)
+        if (combat_active == 0) {
+            if (c == "up" || c == "w") {
+                if (room_north[current_room] > 0) {
+                    current_room = room_north[current_room]
+                    msg_buf = msg_buf + "↑ " + room_names[current_room] + "\n  "
+                }
+            }
+            if (c == "down" || c == "s") {
+                if (room_south[current_room] > 0) {
+                    current_room = room_south[current_room]
+                    msg_buf = msg_buf + "↓ " + room_names[current_room] + "\n  "
+                }
+            }
+            if (c == "right" || c == "d") {
+                if (room_east[current_room] > 0) {
+                    current_room = room_east[current_room]
+                    msg_buf = msg_buf + "→ " + room_names[current_room] + "\n  "
+                }
+            }
+            if (c == "left" || c == "a") {
+                if (room_west[current_room] > 0) {
+                    current_room = room_west[current_room]
+                    msg_buf = msg_buf + "← " + room_names[current_room] + "\n  "
+                }
+            }
+        }
+
+        // Etkilesim
+        if (c == "e" && combat_active == 0) {
+            let evt = room_event[current_room]
+            let done = event_done[current_room]
+
+            if (evt == 4 && done == 0) {
+                npc.heal(knight)
+                if (knight.gold >= 25) { npc.buy(knight) }
+                event_done[current_room] = 1
+                msg_buf = msg_buf + "Merlin: Hos geldin! +40 HP\n  "
+            }
+            if (evt == 0 && done == 0) {
+                if (chest.opened == 0) { chest.loot(knight) }
+                event_done[current_room] = 1
+                msg_buf = msg_buf + "Sandik acildi! +40 altin\n  "
+            }
+            if (evt == 1 && done == 0) {
+                goblin.health = 45; combat_active = 1; combat_enemy = 1
+                event_done[current_room] = 1
+                msg_buf = msg_buf + "Goblin belirdi!\n  "
+            }
+            if (evt == 2 && done == 0) {
+                troll.health = 80; combat_active = 1; combat_enemy = 2
+                event_done[current_room] = 1
+                msg_buf = msg_buf + "Troll belirdi!\n  "
+            }
+            if (evt == 3) {
+                if (knight.kills < 2) {
+                    msg_buf = msg_buf + "Once " + (2 - knight.kills) + " yaratik daha yen!\n  "
+                }
+                if (knight.kills >= 2 && done == 0) {
+                    combat_active = 1; combat_enemy = 3
+                    event_done[current_room] = 1
+                    msg_buf = msg_buf + "EJDERHA UYANDI!\n  "
+                }
+            }
+        }
+
+        // Savas
+        if (combat_active == 1) {
+            if (c == "a") {
+                if (combat_enemy == 1) { knight.attack(goblin)
+                    if (goblin.health <= 0) { goblin.loot(knight); combat_active = 0; msg_buf = msg_buf + "Goblin oldu! +" + 25 + " altin\n  " }
+                    if (goblin.health > 0) { goblin.smash(knight) }
+                }
+                if (combat_enemy == 2) { knight.attack(troll)
+                    if (troll.health <= 0) { troll.loot(knight); combat_active = 0; msg_buf = msg_buf + "Troll oldu! +50 altin\n  " }
+                    if (troll.health > 0) { troll.smash(knight) }
+                }
+                if (combat_enemy == 3) { knight.attack(dragon)
+                    if (dragon.health <= 0) { dragon.loot(knight); combat_active = 0; game_running = 0; msg_buf = msg_buf + "EJDERHA OLDU!!!\n  " }
+                    if (dragon.health > 0) { dragon.smash(knight) }
+                }
+            }
+            if (c == "d") { knight.defend()
+                if (combat_enemy == 1) { goblin.smash(knight) }
+                if (combat_enemy == 2) { troll.smash(knight) }
+                if (combat_enemy == 3) { dragon.smash(knight) }
+                msg_buf = msg_buf + "Savunma! +10 HP\n  "
+            }
+            if (c == "p") {
+                if (knight.potions > 0) { knight.use_potion()
+                    if (combat_enemy == 1) { goblin.smash(knight) }
+                    if (combat_enemy == 2) { troll.smash(knight) }
+                    if (combat_enemy == 3) { dragon.smash(knight) }
+                    msg_buf = msg_buf + "Iksir! +30 HP\n  "
+                }
+            }
+            if (c == "r") { knight.health = knight.health - 10; combat_active = 0; msg_buf = msg_buf + "Kacis! -10 HP\n  " }
+        }
+
+        // Olum
+        if (knight.health <= 0) { game_running = 0; msg_buf = msg_buf + "OLDUN...\n  "; knight.health = 0 }
+    }
+}
+
+tui.restore()
+
+let result = ""
+if (knight.kills >= 3) { result = "👑 EFSANEVI ZAFER!" }
+if (knight.kills == 2) { result = "⚔️ Iyi savastin ama ejderha..." }
+if (knight.kills < 2) { result = "💀 Basaramadin..." }
+if (knight.health <= 0) { result = "💀 OLDUN..." }
+
+print("")
+print("=== REALM OF HUD ===")
+print(knight.name + " — " + result)
+print("HP:" + knight.health + " Altin:" + knight.gold + " Oldurme:" + knight.kills + " Vurus:" + knight.hits)
+print("")

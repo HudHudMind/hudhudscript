@@ -273,10 +273,7 @@ pub enum Stmt {
         span: Span,
     },
     /// Despawn a subject instance: despawn hero
-    Despawn {
-        name: String,
-        span: Span,
-    },
+    Despawn { name: String, span: Span },
 
     /// Send a message to a subject: send message to target
     Send {

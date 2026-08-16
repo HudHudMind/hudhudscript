@@ -9,7 +9,12 @@ use std::collections::HashMap;
 /// Handles 25+ string methods: length, split, trim, toUpperCase, toLowerCase,
 /// indexOf, contains, replace, substring, slice, concat, startsWith, endsWith,
 /// trimStart, trimEnd, repeat, padStart, padEnd, match, matchAll, replaceRegex.
-pub fn call_string_method(s: &str, method: &str, args: &[Value16], is_ascii: bool) -> SharedResult<Value16> {
+pub fn call_string_method(
+    s: &str,
+    method: &str,
+    args: &[Value16],
+    is_ascii: bool,
+) -> SharedResult<Value16> {
     match method {
         "length" => {
             let len = if is_ascii { s.len() } else { s.chars().count() };

@@ -56,13 +56,9 @@ pub enum AgentEvent {
         action: String,
     },
     /// Workflow kaydedildi
-    WorkflowRegistered {
-        workflow_id: String,
-    },
+    WorkflowRegistered { workflow_id: String },
     /// Workflow tamamlandı
-    WorkflowCompleted {
-        workflow_id: String,
-    },
+    WorkflowCompleted { workflow_id: String },
     /// Kullanıcı tanımlı özel event
     Custom {
         agent_id: String,

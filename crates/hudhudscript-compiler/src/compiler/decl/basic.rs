@@ -7,7 +7,10 @@ impl Compiler {
         alias: Option<&String>,
     ) -> CompileResult<()> {
         let alias_sym = alias.map(|a| sym(a));
-        let base_dir = self.module_base_dir.as_ref().map(|p| p.to_string_lossy().into_owned());
+        let base_dir = self
+            .module_base_dir
+            .as_ref()
+            .map(|p| p.to_string_lossy().into_owned());
         let idx = self
             .bytecode
             .add_load_module_payload(hudhudscript_bytecode::LoadModulePayload {
@@ -24,8 +27,8 @@ impl Compiler {
         name: &str,
         fields: &[(String, Expr)],
     ) -> CompileResult<()> {
-        use std::collections::HashMap;
         use hudhudscript_ast::Expr;
+        use std::collections::HashMap;
         let mut agent_obj = hudhudscript_bytecode::ObjMap::default();
         agent_obj.insert("name".to_string(), Value16::string(name.to_string()));
 
@@ -46,7 +49,10 @@ impl Compiler {
         let idx = self.bytecode.add_constant(Value16::object(agent_obj));
 
         let obj_reg = crate::compiler::regalloc::temp_reg();
-        self.bytecode.push_instr(Instruction::LoadConst { dst: obj_reg, const_idx: idx as u16 });
+        self.bytecode.push_instr(Instruction::LoadConst {
+            dst: obj_reg,
+            const_idx: idx as u16,
+        });
 
         if let Some(expr) = dynamic_provider_expr {
             self.compile_expr(expr)?;
@@ -59,7 +65,7 @@ impl Compiler {
             });
         }
 
-        self.bytecode.push_move(255, obj_reg );
+        self.bytecode.push_move(255, obj_reg);
         self.emit_decl_store("agent", name, 255);
         Ok(())
     }
@@ -109,7 +115,14 @@ impl Compiler {
             provider_obj.insert(normalized_key, val);
         }
         let idx = self.bytecode.add_constant(Value16::object(provider_obj));
-        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_move(255, tr ); }
+        {
+            let tr = crate::compiler::regalloc::temp_reg();
+            self.bytecode.push_instr(Instruction::LoadConst {
+                dst: tr,
+                const_idx: idx as u16,
+            });
+            self.bytecode.push_move(255, tr);
+        }
         self.emit_decl_store("provider", name, 255);
         Ok(())
     }

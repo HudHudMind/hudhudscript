@@ -1,0 +1,12 @@
+// HudHudScript — Fonksiyonlar
+fn add(a, b) {
+    return a + b;
+}
+
+fn factorial(n) {
+    if (n <= 1) { return 1; }
+    return n * factorial(n - 1);
+}
+
+print("add(3, 4) = " + add(3, 4));
+print("factorial(5) = " + factorial(5));

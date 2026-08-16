@@ -13,15 +13,12 @@ fn runtime_error(msg: impl Into<String>) -> Error {
 
 /// `Web.markdown(md_text)` → HTML string.
 pub fn to_html(args: &[Value16]) -> HudHudResult<Value16> {
-    let md = args
-        .first()
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| {
-            Error::new(
-                ErrorCode::RuntimeTypeError,
-                "Web.markdown: expected string argument".to_string(),
-            )
-        })?;
+    let md = args.first().and_then(|v| v.as_str()).ok_or_else(|| {
+        Error::new(
+            ErrorCode::RuntimeTypeError,
+            "Web.markdown: expected string argument".to_string(),
+        )
+    })?;
     let blocks = hudhudscript_markdown::markdown::parse_blocks(md);
     let mut html = String::new();
     for block in blocks {
@@ -34,12 +31,7 @@ fn block_to_html(block: &Block, out: &mut String) {
     match block {
         Block::Heading { level, content } => {
             let tag = format!("h{}", (*level).min(6).max(1));
-            out.push_str(&format!(
-                "<{}>{}</{}>\n",
-                tag,
-                render_inline(content),
-                tag
-            ));
+            out.push_str(&format!("<{}>{}</{}>\n", tag, render_inline(content), tag));
         }
         Block::Paragraph(text) => {
             out.push_str(&format!("<p>{}</p>\n", render_inline(text)));
@@ -57,39 +49,27 @@ fn block_to_html(block: &Block, out: &mut String) {
         Block::UnorderedList(items) => {
             out.push_str("<ul>\n");
             for item in items {
-                out.push_str(&format!(
-                    "<li>{}</li>\n",
-                    render_inline(item)
-                ));
+                out.push_str(&format!("<li>{}</li>\n", render_inline(item)));
             }
             out.push_str("</ul>\n");
         }
         Block::OrderedList(items) => {
             out.push_str("<ol>\n");
             for item in items {
-                out.push_str(&format!(
-                    "<li>{}</li>\n",
-                    render_inline(item)
-                ));
+                out.push_str(&format!("<li>{}</li>\n", render_inline(item)));
             }
             out.push_str("</ol>\n");
         }
         Block::Table { headers, rows } => {
             out.push_str("<table>\n<thead>\n<tr>\n");
             for h in headers {
-                out.push_str(&format!(
-                    "<th>{}</th>\n",
-                    render_inline(h)
-                ));
+                out.push_str(&format!("<th>{}</th>\n", render_inline(h)));
             }
             out.push_str("</tr>\n</thead>\n<tbody>\n");
             for row in rows {
                 out.push_str("<tr>\n");
                 for cell in row {
-                    out.push_str(&format!(
-                        "<td>{}</td>\n",
-                        render_inline(cell)
-                    ));
+                    out.push_str(&format!("<td>{}</td>\n", render_inline(cell)));
                 }
                 out.push_str("</tr>\n");
             }
@@ -130,10 +110,7 @@ fn render_inline(text: &str) -> String {
             continue;
         }
         // Italic: *text* or _text_
-        if (chars[i] == '*' || chars[i] == '_')
-            && !(i + 1 < len
-                && chars[i + 1] == chars[i])
-        {
+        if (chars[i] == '*' || chars[i] == '_') && !(i + 1 < len && chars[i + 1] == chars[i]) {
             let marker = chars[i];
             i += 1;
             let mut content = String::new();
@@ -246,4 +223,3 @@ fn html_escape(s: &str) -> String {
     }
     out
 }
-

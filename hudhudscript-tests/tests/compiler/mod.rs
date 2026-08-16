@@ -13,6 +13,7 @@ mod test_controlflow;
 //mod vm_parity_tests; (stack VM)
 mod b5_local_direct_regs_test;
 mod duplicate_function_test;
+mod g2_jump_if_true_parity_test;
 mod index_regression_tests;
 mod p2_self_add_test;
 mod p3_call_arg_move_test;
@@ -23,10 +24,8 @@ mod sop_class_tests;
 mod vm_perf_bench;
 mod vm_regression_kimi;
 mod vm_tco_tests;
-mod g2_jump_if_true_parity_test;
 // G3: disabled — fusion_emitted field only exists on exp/perf-agent branch.
 // Re-enable when G3 telemetry-gated fusion counter is implemented and merged.
+mod deep_nested_scope_tests;
 mod g3_fusion_emit_tests;
 mod unparenthesized_control_flow_tests;
-mod deep_nested_scope_tests;
-

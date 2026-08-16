@@ -4,9 +4,12 @@ pub(super) use crate::bytecode::{
     Bytecode, FunctionChunk, FunctionData, Instruction, SymId, Value16,
 };
 pub(super) use crate::error::{compile_codes, CompileResult, SourcePosition};
-pub(super) use hudhudscript_ast::{BinaryOp, Decl, Expr, Literal, Span, Stmt, GateBranchAst, GateTargetAst, LoopItemAst, StepGateAst, ChainTargetAst, ChainLinkAst};
-pub(super) use std::collections::{HashMap, HashSet};
+pub(super) use hudhudscript_ast::{
+    BinaryOp, ChainLinkAst, ChainTargetAst, Decl, Expr, GateBranchAst, GateTargetAst, Literal,
+    LoopItemAst, Span, StepGateAst, Stmt,
+};
 use rustc_hash::FxHashMap;
+pub(super) use std::collections::{HashMap, HashSet};
 pub(super) use std::sync::Arc;
 
 mod expr;
@@ -109,7 +112,8 @@ pub struct Compiler {
     /// Maps loop_name → Vec<LoopItemAst>.
     pub(super) attach_step_queue: HashMap<String, Vec<LoopItemAst>>,
     /// A3: Attached loops pending injection per chain.
-    pub(super) attach_loop_queue: HashMap<String, Vec<(String, Option<ChainTargetAst>, Option<ChainTargetAst>)>>,
+    pub(super) attach_loop_queue:
+        HashMap<String, Vec<(String, Option<ChainTargetAst>, Option<ChainTargetAst>)>>,
     /// Stack of active loop/switch break targets.
     pub(super) break_targets: Vec<crate::compiler::target::BreakTarget>,
     /// G12: etkin f-loop bağlamları (iç içe döngü v1'de reddedildiği için
@@ -151,11 +155,11 @@ fn span_pos(span: &Span) -> SourcePosition {
 
 pub mod decl;
 mod decl_core;
-mod decl_precompute;
 mod decl_expr;
 mod decl_function;
-mod target_impl;
+mod decl_precompute;
 mod p4b_prepass;
+mod target_impl;
 
 pub use decl::*;
 pub use decl_core::*;

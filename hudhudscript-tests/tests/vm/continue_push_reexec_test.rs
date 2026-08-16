@@ -73,23 +73,45 @@ let final_iter = iter;
     // deg[0] must stay 2 — previously it would grow to 3008+ due to corruption
     let deg0 = vm.get_variable("final_deg0").expect("final_deg0 not found");
     let deg0_val = deg0.as_number().expect("deg0 should be number");
-    assert!((deg0_val - 2.0).abs() < 1e-10, "deg[0] should be 2, got {}", deg0_val);
+    assert!(
+        (deg0_val - 2.0).abs() < 1e-10,
+        "deg[0] should be 2, got {}",
+        deg0_val
+    );
 
     // deg[1] must stay 2
     let deg1 = vm.get_variable("final_deg1").expect("final_deg1 not found");
     let deg1_val = deg1.as_number().expect("deg1 should be number");
-    assert!((deg1_val - 2.0).abs() < 1e-10, "deg[1] should be 2, got {}", deg1_val);
+    assert!(
+        (deg1_val - 2.0).abs() < 1e-10,
+        "deg[1] should be 2, got {}",
+        deg1_val
+    );
 
     // eto length should stay 4
-    let eto_len = vm.get_variable("final_eto_len").expect("final_eto_len not found");
+    let eto_len = vm
+        .get_variable("final_eto_len")
+        .expect("final_eto_len not found");
     let eto_len_val = eto_len.as_number().expect("eto_len should be number");
-    assert!((eto_len_val - 4.0).abs() < 1e-10, "len(eto) should be 4, got {}", eto_len_val);
+    assert!(
+        (eto_len_val - 4.0).abs() < 1e-10,
+        "len(eto) should be 4, got {}",
+        eto_len_val
+    );
 
     // iter should be ≤ 4 (bounded, not re-executed)
     let iter_val = vm.get_variable("final_iter").expect("final_iter not found");
     let iter_num = iter_val.as_number().expect("iter should be number");
-    assert!(iter_num <= 4.0, "iter should be <= 4 (bounded), got {}", iter_num);
-    assert!(iter_num >= 1.0, "iter should be >= 1 (executed), got {}", iter_num);
+    assert!(
+        iter_num <= 4.0,
+        "iter should be <= 4 (bounded), got {}",
+        iter_num
+    );
+    assert!(
+        iter_num >= 1.0,
+        "iter should be >= 1 (executed), got {}",
+        iter_num
+    );
 }
 
 #[test]
@@ -119,7 +141,11 @@ let val2 = values[2];
 
     let len_vals = vm.get_variable("len_vals").expect("len_vals not found");
     let len_val = len_vals.as_number().expect("len_vals should be number");
-    assert!((len_val - 4.0).abs() < 1e-10, "values should have 4 elements, got {}", len_val);
+    assert!(
+        (len_val - 4.0).abs() < 1e-10,
+        "values should have 4 elements, got {}",
+        len_val
+    );
 
     let v0 = vm.get_variable("val0").expect("val0 not found");
     assert!((v0.as_number().expect("number") - 0.0).abs() < 1e-10);

@@ -1,25 +1,36 @@
-use hudhudscript_ast::*;
-use hudhudscript_bytecode::{Instruction, Value16, SymId};
 use crate::compile_codes;
-use crate::compiler::{Compiler, CompileTarget};
 use crate::compiler::helpers::jump_off;
 use crate::compiler::regalloc::RegAlloc;
+use crate::compiler::{CompileTarget, Compiler};
 use crate::CompileResult;
+use hudhudscript_ast::*;
+use hudhudscript_bytecode::{Instruction, SymId, Value16};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 fn jump_off_i16(site: usize, target: usize) -> CompileResult<i16> {
     i16::try_from(jump_off(site, target)).map_err(|_| {
-        compile_codes::generic(format!("conditional jump out of range: site={site}, target={target}"))
+        compile_codes::generic(format!(
+            "conditional jump out of range: site={site}, target={target}"
+        ))
     })
 }
 
 impl Compiler {
     pub(super) fn compile_decl_loop(
-        &mut self, name: &str, items: &[LoopItemAst], mode: &RunModeAst, goal: Option<&GoalSpecAst>,
+        &mut self,
+        name: &str,
+        items: &[LoopItemAst],
+        mode: &RunModeAst,
+        goal: Option<&GoalSpecAst>,
     ) -> CompileResult<()> {
         let chunk_name = format!("__loop::{}", name);
-        if items.is_empty() { return Err(compile_codes::generic(format!("loop '{}' must have at least one item", name))); }
+        if items.is_empty() {
+            return Err(compile_codes::generic(format!(
+                "loop '{}' must have at least one item",
+                name
+            )));
+        }
         let is_cyclic = matches!(mode, RunModeAst::Cyclic);
         let is_until_converged = matches!(mode, RunModeAst::UntilConverged);
         if is_cyclic || is_until_converged {
@@ -28,51 +39,106 @@ impl Compiler {
             for item in items {
                 if let LoopItemAst::InlineStep(s) = item {
                     if let Decl::Step { gate: Some(g), .. } = s.as_ref() {
-                        for t in g.branches.iter().map(|b| &b.target).chain(std::iter::once(&g.else_target)) {
-                            if matches!(t, GateTargetAst::Done | GateTargetAst::Fail) { has_terminal = true; break; }
+                        for t in g
+                            .branches
+                            .iter()
+                            .map(|b| &b.target)
+                            .chain(std::iter::once(&g.else_target))
+                        {
+                            if matches!(t, GateTargetAst::Done | GateTargetAst::Fail) {
+                                has_terminal = true;
+                                break;
+                            }
                         }
                     }
                 }
             }
             if !has_terminal {
-                let mode_name = if is_cyclic { "cyclic" } else { "until_converged" };
-                return Err(compile_codes::generic(format!("{mode_name} loop: requires at least one done/fail terminal target")));
+                let mode_name = if is_cyclic {
+                    "cyclic"
+                } else {
+                    "until_converged"
+                };
+                return Err(compile_codes::generic(format!(
+                    "{mode_name} loop: requires at least one done/fail terminal target"
+                )));
             }
         }
-        let times_n: Option<u64> = match mode { RunModeAst::Times(n) => Some(*n), _ => None };
-        let until_expr: Option<&Expr> = match mode { RunModeAst::Until(ref e) => Some(e), _ => None };
+        let times_n: Option<u64> = match mode {
+            RunModeAst::Times(n) => Some(*n),
+            _ => None,
+        };
+        let until_expr: Option<&Expr> = match mode {
+            RunModeAst::Until(ref e) => Some(e),
+            _ => None,
+        };
 
         let mut step_names: Vec<String> = Vec::new();
         let mut loop_refs: Vec<String> = Vec::new();
-        { let mut seen: HashSet<&str> = HashSet::new();
-        for item in items {
-            if let LoopItemAst::InlineStep(s) = item {
-                if let Decl::Step { name: sn, .. } = s.as_ref() {
-                    if !seen.insert(sn.as_str()) { return Err(compile_codes::generic(format!("loop '{}': duplicate step '{}'", name, sn))); }
-                    step_names.push(sn.clone());
+        {
+            let mut seen: HashSet<&str> = HashSet::new();
+            for item in items {
+                if let LoopItemAst::InlineStep(s) = item {
+                    if let Decl::Step { name: sn, .. } = s.as_ref() {
+                        if !seen.insert(sn.as_str()) {
+                            return Err(compile_codes::generic(format!(
+                                "loop '{}': duplicate step '{}'",
+                                name, sn
+                            )));
+                        }
+                        step_names.push(sn.clone());
+                    }
                 }
             }
-        }}
-        for item in items {
-            if let LoopItemAst::InlineStep(s) = item { if let Decl::Step { gate: Some(g), .. } = s.as_ref() {
-                for t in g.branches.iter().map(|b| &b.target).chain(std::iter::once(&g.else_target)) {
-                    match t { GateTargetAst::Loop(ln) | GateTargetAst::LoopStep(ln, _) => { if !loop_refs.contains(ln) { loop_refs.push(ln.clone()); } } _ => {} }
-                }
-            }}
         }
-        { let funcs = self.bytecode.functions.borrow();
-          for ln in &loop_refs {
-              let fn_name = format!("__loop::{}", ln);
-              if !self.bytecode.has_function(&fn_name) { return Err(compile_codes::generic(format!("gate target: loop '{}' not found", ln))); }
-          }
+        for item in items {
+            if let LoopItemAst::InlineStep(s) = item {
+                if let Decl::Step { gate: Some(g), .. } = s.as_ref() {
+                    for t in g
+                        .branches
+                        .iter()
+                        .map(|b| &b.target)
+                        .chain(std::iter::once(&g.else_target))
+                    {
+                        match t {
+                            GateTargetAst::Loop(ln) | GateTargetAst::LoopStep(ln, _) => {
+                                if !loop_refs.contains(ln) {
+                                    loop_refs.push(ln.clone());
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            }
+        }
+        {
+            let funcs = self.bytecode.functions.borrow();
+            for ln in &loop_refs {
+                let fn_name = format!("__loop::{}", ln);
+                if !self.bytecode.has_function(&fn_name) {
+                    return Err(compile_codes::generic(format!(
+                        "gate target: loop '{}' not found",
+                        ln
+                    )));
+                }
+            }
         }
 
         // FAZ G: collect AttachGate items before the callback
-        let mut attach_gates: HashMap<String, Vec<(Vec<GateBranchAst>, GateTargetAst)>> = HashMap::new();
+        let mut attach_gates: HashMap<String, Vec<(Vec<GateBranchAst>, GateTargetAst)>> =
+            HashMap::new();
         for item in items {
-            if let LoopItemAst::AttachGate { gate: gname, step: sname } = item {
+            if let LoopItemAst::AttachGate {
+                gate: gname,
+                step: sname,
+            } = item
+            {
                 if let Some((branches, else_target)) = self.gate_registry.get(gname) {
-                    attach_gates.entry(sname.clone()).or_default().push((branches.clone(), else_target.clone()));
+                    attach_gates
+                        .entry(sname.clone())
+                        .or_default()
+                        .push((branches.clone(), else_target.clone()));
                 }
             }
         }
@@ -81,14 +147,25 @@ impl Compiler {
         let mut resolved_items: Vec<LoopItemAst> = Vec::new();
         for item in items {
             match item {
-                LoopItemAst::UseStep { name, alias, args: _ } => {
+                LoopItemAst::UseStep {
+                    name,
+                    alias,
+                    args: _,
+                } => {
                     if let Some((params, body, gate)) = self.step_registry.get(name).cloned() {
                         let alias_name = alias.clone().unwrap_or_else(|| name.clone());
                         resolved_items.push(LoopItemAst::InlineStep(Box::new(Decl::Step {
-                            name: alias_name, params, body, gate, span: hudhudscript_ast::Span::default()
+                            name: alias_name,
+                            params,
+                            body,
+                            gate,
+                            span: hudhudscript_ast::Span::default(),
                         })));
                     } else {
-                        return Err(compile_codes::generic(format!("use step: unknown step '{}'", name)));
+                        return Err(compile_codes::generic(format!(
+                            "use step: unknown step '{}'",
+                            name
+                        )));
                     }
                 }
                 _ => resolved_items.push(item.clone()),
@@ -97,15 +174,22 @@ impl Compiler {
 
         // Rebuild step_names from resolved items (includes UseStep + already-injected AttachStep)
         step_names.clear();
-        { let mut seen: HashSet<&str> = HashSet::new();
-        for item in &resolved_items {
-            if let LoopItemAst::InlineStep(s) = item {
-                if let Decl::Step { name: sn, .. } = s.as_ref() {
-                    if !seen.insert(sn.as_str()) { return Err(compile_codes::generic(format!("loop '{}': duplicate step '{}'", name, sn))); }
-                    step_names.push(sn.clone());
+        {
+            let mut seen: HashSet<&str> = HashSet::new();
+            for item in &resolved_items {
+                if let LoopItemAst::InlineStep(s) = item {
+                    if let Decl::Step { name: sn, .. } = s.as_ref() {
+                        if !seen.insert(sn.as_str()) {
+                            return Err(compile_codes::generic(format!(
+                                "loop '{}': duplicate step '{}'",
+                                name, sn
+                            )));
+                        }
+                        step_names.push(sn.clone());
+                    }
                 }
             }
-        }}
+        }
 
         // Pass goal info for goal_error() builtin
         let local_goal = goal.map(|g| g.clone());
@@ -295,55 +379,111 @@ impl Compiler {
         // FAZ F: register step names for cross-loop selector lookup
         self.loop_step_names.insert(name.to_string(), step_names);
 
-        if self.bytecode.has_function(&chunk_name) { return Err(compile_codes::generic(format!("duplicate loop: '{}'", name))); }
+        if self.bytecode.has_function(&chunk_name) {
+            return Err(compile_codes::generic(format!(
+                "duplicate loop: '{}'",
+                name
+            )));
+        }
         self.bytecode.add_function(chunk_name, Arc::new(chunk));
         Ok(())
     }
 
     // ── Chain (R3: on_done/on_fail branching) ───────────────────────
     pub(super) fn compile_decl_chain(
-        &mut self, name: &str, links: &[ChainLinkAst], _mode: &RunModeAst,
+        &mut self,
+        name: &str,
+        links: &[ChainLinkAst],
+        _mode: &RunModeAst,
     ) -> CompileResult<()> {
         let chunk_name = format!("__chain::{}", name);
-        if links.is_empty() { return Err(compile_codes::generic(format!("chain '{}' must have at least one link", name))); }
-        for link in links { if let Some(inline) = &link.inline_loop { if let Decl::Loop { name: ln, items, mode: lm, .. } = inline.as_ref() { self.compile_decl_loop(ln, items, lm, None)?; } } }
-
-        let local_links: Vec<ChainLinkAst> = links.iter().map(|l| l.clone()).collect();
-        let chunk = self.compile_function_chunk_with(vec![], Some(chunk_name.clone()), false, |compiler| {
-            let ss = compiler.ct_sym("success");
-            let st = compiler.ct_sym("status");
-            let link_count = local_links.len();
-            for (i, link) in local_links.iter().enumerate() {
-                let is_last = i + 1 == link_count;
-                let sym = compiler.ct_sym(&format!("__loop::{}", link.loop_name));
-                let pi = compiler.ct_add_call_payload(sym, 1) as u16; // LOOP_ENTRY: selector arg
-                let call_dst = compiler.next_local_reg; compiler.next_local_reg += 1;
-                // P0: emit selector=0 (first step) as the entry argument
-                let sel_reg = compiler.next_local_reg; compiler.next_local_reg += 1;
-                let const_idx = compiler.ct_emit_int_const(0) as u16;
-                compiler.ct_emit(Instruction::LoadIntConst { dst: sel_reg, const_idx });
-                compiler.ct_emit(Instruction::Call { dst: call_dst, payload_idx: pi, first_arg: sel_reg, arg_count: 1 });
-                if is_last {
-                    // Last link: return child result (on_done/on_fail customize metadata)
-                    compiler.ct_emit(Instruction::Return { src: call_dst });
-                } else {
-                    let prop_dst = compiler.next_local_reg; compiler.next_local_reg += 1;
-                    compiler.ct_emit(Instruction::GetProperty { dst: prop_dst, obj: call_dst, prop_sym: ss.0 as u16 });
-                    let jmp_ip = compiler.bytecode.instructions.len();
-                    // success=true → on_done; false → on_fail (return child)
-                    compiler.ct_emit(Instruction::JumpIfTrue { src: prop_dst, offset: 0 });
-                    // Fail path: emit on_fail target
-                    emit_chain_target(compiler, &link.on_fail, call_dst, &ss, &st)?;
-                    // Success path: emit on_done target, patch JumpIfTrue to here
-                    let next_ip = compiler.bytecode.instructions.len();
-                    compiler.bytecode.instructions[jmp_ip] = Instruction::JumpIfTrue { src: prop_dst, offset: jump_off_i16(jmp_ip, next_ip)? };
-                    emit_chain_target(compiler, &link.on_done, call_dst, &ss, &st)?;
+        if links.is_empty() {
+            return Err(compile_codes::generic(format!(
+                "chain '{}' must have at least one link",
+                name
+            )));
+        }
+        for link in links {
+            if let Some(inline) = &link.inline_loop {
+                if let Decl::Loop {
+                    name: ln,
+                    items,
+                    mode: lm,
+                    ..
+                } = inline.as_ref()
+                {
+                    self.compile_decl_loop(ln, items, lm, None)?;
                 }
             }
-            Ok(())
-        })?;
+        }
 
-        if self.bytecode.has_function(&chunk_name) { return Err(compile_codes::generic(format!("duplicate chain: '{}'", name))); }
+        let local_links: Vec<ChainLinkAst> = links.iter().map(|l| l.clone()).collect();
+        let chunk = self.compile_function_chunk_with(
+            vec![],
+            Some(chunk_name.clone()),
+            false,
+            |compiler| {
+                let ss = compiler.ct_sym("success");
+                let st = compiler.ct_sym("status");
+                let link_count = local_links.len();
+                for (i, link) in local_links.iter().enumerate() {
+                    let is_last = i + 1 == link_count;
+                    let sym = compiler.ct_sym(&format!("__loop::{}", link.loop_name));
+                    let pi = compiler.ct_add_call_payload(sym, 1) as u16; // LOOP_ENTRY: selector arg
+                    let call_dst = compiler.next_local_reg;
+                    compiler.next_local_reg += 1;
+                    // P0: emit selector=0 (first step) as the entry argument
+                    let sel_reg = compiler.next_local_reg;
+                    compiler.next_local_reg += 1;
+                    let const_idx = compiler.ct_emit_int_const(0) as u16;
+                    compiler.ct_emit(Instruction::LoadIntConst {
+                        dst: sel_reg,
+                        const_idx,
+                    });
+                    compiler.ct_emit(Instruction::Call {
+                        dst: call_dst,
+                        payload_idx: pi,
+                        first_arg: sel_reg,
+                        arg_count: 1,
+                    });
+                    if is_last {
+                        // Last link: return child result (on_done/on_fail customize metadata)
+                        compiler.ct_emit(Instruction::Return { src: call_dst });
+                    } else {
+                        let prop_dst = compiler.next_local_reg;
+                        compiler.next_local_reg += 1;
+                        compiler.ct_emit(Instruction::GetProperty {
+                            dst: prop_dst,
+                            obj: call_dst,
+                            prop_sym: ss.0 as u16,
+                        });
+                        let jmp_ip = compiler.bytecode.instructions.len();
+                        // success=true → on_done; false → on_fail (return child)
+                        compiler.ct_emit(Instruction::JumpIfTrue {
+                            src: prop_dst,
+                            offset: 0,
+                        });
+                        // Fail path: emit on_fail target
+                        emit_chain_target(compiler, &link.on_fail, call_dst, &ss, &st)?;
+                        // Success path: emit on_done target, patch JumpIfTrue to here
+                        let next_ip = compiler.bytecode.instructions.len();
+                        compiler.bytecode.instructions[jmp_ip] = Instruction::JumpIfTrue {
+                            src: prop_dst,
+                            offset: jump_off_i16(jmp_ip, next_ip)?,
+                        };
+                        emit_chain_target(compiler, &link.on_done, call_dst, &ss, &st)?;
+                    }
+                }
+                Ok(())
+            },
+        )?;
+
+        if self.bytecode.has_function(&chunk_name) {
+            return Err(compile_codes::generic(format!(
+                "duplicate chain: '{}'",
+                name
+            )));
+        }
         self.bytecode.add_function(chunk_name, Arc::new(chunk));
         Ok(())
     }
@@ -351,52 +491,125 @@ impl Compiler {
     pub(super) fn compile_run_loop(&mut self, name: &str) -> CompileResult<()> {
         let const_idx = self.ct_emit_int_const(0) as u16;
         let fn_name = format!("__loop::{}", name);
-        { if !self.bytecode.has_function(&fn_name) { return Err(compile_codes::generic(format!("run loop '{}': loop not found", name))); } }
-        let sym = self.ct_sym(&fn_name); let payload_idx = self.ct_add_call_payload(sym, 1);
-        let sel_reg = self.next_local_reg; self.next_local_reg += 1;
-        self.ct_emit(Instruction::LoadIntConst { dst: sel_reg, const_idx: const_idx });
-        let dst = self.next_local_reg; self.next_local_reg += 1;
-        self.ct_emit(Instruction::Call { dst, payload_idx: payload_idx as u16, first_arg: sel_reg, arg_count: 1 });
+        {
+            if !self.bytecode.has_function(&fn_name) {
+                return Err(compile_codes::generic(format!(
+                    "run loop '{}': loop not found",
+                    name
+                )));
+            }
+        }
+        let sym = self.ct_sym(&fn_name);
+        let payload_idx = self.ct_add_call_payload(sym, 1);
+        let sel_reg = self.next_local_reg;
+        self.next_local_reg += 1;
+        self.ct_emit(Instruction::LoadIntConst {
+            dst: sel_reg,
+            const_idx: const_idx,
+        });
+        let dst = self.next_local_reg;
+        self.next_local_reg += 1;
+        self.ct_emit(Instruction::Call {
+            dst,
+            payload_idx: payload_idx as u16,
+            first_arg: sel_reg,
+            arg_count: 1,
+        });
         Ok(())
     }
 
     pub(super) fn compile_run_chain(&mut self, name: &str) -> CompileResult<()> {
         let fn_name = format!("__chain::{}", name);
-        { if !self.bytecode.has_function(&fn_name) { return Err(compile_codes::generic(format!("run chain '{}': chain not found", name))); } }
-        let sym = self.ct_sym(&fn_name); let payload_idx = self.ct_add_call_payload(sym, 0);
-        let dst = self.next_local_reg; self.next_local_reg += 1;
-        self.ct_emit(Instruction::Call { dst, payload_idx: payload_idx as u16, first_arg: 0, arg_count: 0 });
+        {
+            if !self.bytecode.has_function(&fn_name) {
+                return Err(compile_codes::generic(format!(
+                    "run chain '{}': chain not found",
+                    name
+                )));
+            }
+        }
+        let sym = self.ct_sym(&fn_name);
+        let payload_idx = self.ct_add_call_payload(sym, 0);
+        let dst = self.next_local_reg;
+        self.next_local_reg += 1;
+        self.ct_emit(Instruction::Call {
+            dst,
+            payload_idx: payload_idx as u16,
+            first_arg: 0,
+            arg_count: 0,
+        });
         Ok(())
     }
 }
 
 // ── Gate target emission ─────────────────────────────────────────────
 fn emit_gate_target(
-    compiler: &mut Compiler, target: &GateTargetAst, result_reg: u8,
-    step_ips: &HashMap<String, usize>, loop_payloads: &HashMap<String, u16>,
-    current_step: &str, step_fixups: &mut Vec<(usize, String)>,
-    ss: &SymId, st: &SymId,
-    next_step: Option<&String>, has_loop_mode: bool,
+    compiler: &mut Compiler,
+    target: &GateTargetAst,
+    result_reg: u8,
+    step_ips: &HashMap<String, usize>,
+    loop_payloads: &HashMap<String, u16>,
+    current_step: &str,
+    step_fixups: &mut Vec<(usize, String)>,
+    ss: &SymId,
+    st: &SymId,
+    next_step: Option<&String>,
+    has_loop_mode: bool,
 ) -> CompileResult<()> {
     match target {
-        GateTargetAst::Done => { emit_setprop(compiler, true, result_reg, ss); emit_setprop_str(compiler, "done", result_reg, st); compiler.ct_emit(Instruction::Return { src: result_reg }); }
-        GateTargetAst::Fail => { emit_setprop(compiler, false, result_reg, ss); emit_setprop_str(compiler, "failed", result_reg, st); compiler.ct_emit(Instruction::Return { src: result_reg }); }
+        GateTargetAst::Done => {
+            emit_setprop(compiler, true, result_reg, ss);
+            emit_setprop_str(compiler, "done", result_reg, st);
+            compiler.ct_emit(Instruction::Return { src: result_reg });
+        }
+        GateTargetAst::Fail => {
+            emit_setprop(compiler, false, result_reg, ss);
+            emit_setprop_str(compiler, "failed", result_reg, st);
+            compiler.ct_emit(Instruction::Return { src: result_reg });
+        }
         GateTargetAst::Step(sn) => {
             let ip = compiler.bytecode.instructions.len();
-            if let Some(&target_ip) = step_ips.get(sn) { compiler.ct_emit(Instruction::Jump(jump_off(ip, target_ip))); }
-            else { compiler.ct_emit(Instruction::Jump(0)); step_fixups.push((ip, sn.clone())); }
+            if let Some(&target_ip) = step_ips.get(sn) {
+                compiler.ct_emit(Instruction::Jump(jump_off(ip, target_ip)));
+            } else {
+                compiler.ct_emit(Instruction::Jump(0));
+                step_fixups.push((ip, sn.clone()));
+            }
         }
         GateTargetAst::Retry => {
             // FP6: bounded retry — __attempt initialized to 0 at loop start, max 3
             let att_sym = compiler.ct_sym("__attempt");
-            let att_reg = compiler.next_local_reg; compiler.next_local_reg += 1;
-            compiler.ct_emit(Instruction::GetProperty { dst: att_reg, obj: result_reg, prop_sym: att_sym.0 as u16 });
-            compiler.ct_emit(Instruction::IntAddI { dst: att_reg, src: att_reg, imm: 1 });
-            compiler.ct_emit(Instruction::SetProperty { dst: result_reg, obj: result_reg, val: att_reg, prop_sym: att_sym.0 as u16 });
-            let bound_reg = compiler.next_local_reg; compiler.next_local_reg += 1;
-            compiler.ct_emit(Instruction::IntCmpI { dst: bound_reg, src: att_reg, imm: 3, op: 3 });
+            let att_reg = compiler.next_local_reg;
+            compiler.next_local_reg += 1;
+            compiler.ct_emit(Instruction::GetProperty {
+                dst: att_reg,
+                obj: result_reg,
+                prop_sym: att_sym.0 as u16,
+            });
+            compiler.ct_emit(Instruction::IntAddI {
+                dst: att_reg,
+                src: att_reg,
+                imm: 1,
+            });
+            compiler.ct_emit(Instruction::SetProperty {
+                dst: result_reg,
+                obj: result_reg,
+                val: att_reg,
+                prop_sym: att_sym.0 as u16,
+            });
+            let bound_reg = compiler.next_local_reg;
+            compiler.next_local_reg += 1;
+            compiler.ct_emit(Instruction::IntCmpI {
+                dst: bound_reg,
+                src: att_reg,
+                imm: 3,
+                op: 3,
+            });
             let exceeded_ip = compiler.bytecode.instructions.len();
-            compiler.ct_emit(Instruction::JumpIfTrue { src: bound_reg, offset: 0 });
+            compiler.ct_emit(Instruction::JumpIfTrue {
+                src: bound_reg,
+                offset: 0,
+            });
             // Not exceeded: jump to step
             if let Some(&ip) = step_ips.get(current_step) {
                 let site_ip = compiler.bytecode.instructions.len();
@@ -404,7 +617,10 @@ fn emit_gate_target(
             }
             // Exceeded: escalate
             let esc_ip = compiler.bytecode.instructions.len();
-            compiler.bytecode.instructions[exceeded_ip] = Instruction::JumpIfTrue { src: bound_reg, offset: jump_off_i16(exceeded_ip, esc_ip)? };
+            compiler.bytecode.instructions[exceeded_ip] = Instruction::JumpIfTrue {
+                src: bound_reg,
+                offset: jump_off_i16(exceeded_ip, esc_ip)?,
+            };
             emit_setprop_str(compiler, "escalated", result_reg, st);
             compiler.ct_emit(Instruction::Return { src: result_reg });
         }
@@ -412,53 +628,135 @@ fn emit_gate_target(
             if let Some(&pi) = loop_payloads.get(ln) {
                 // P0: emit selector=0 for first step entry
                 let const_idx = compiler.ct_emit_int_const(0) as u16;
-                let sel_reg = compiler.next_local_reg; compiler.next_local_reg += 1;
-                compiler.ct_emit(Instruction::LoadIntConst { dst: sel_reg, const_idx });
-                compiler.ct_emit(Instruction::Call { dst: result_reg, payload_idx: pi, first_arg: sel_reg, arg_count: 1 });
+                let sel_reg = compiler.next_local_reg;
+                compiler.next_local_reg += 1;
+                compiler.ct_emit(Instruction::LoadIntConst {
+                    dst: sel_reg,
+                    const_idx,
+                });
+                compiler.ct_emit(Instruction::Call {
+                    dst: result_reg,
+                    payload_idx: pi,
+                    first_arg: sel_reg,
+                    arg_count: 1,
+                });
                 compiler.ct_emit(Instruction::Return { src: result_reg });
+            } else {
+                return Err(compile_codes::generic(format!(
+                    "gate target: loop '{}' not found",
+                    ln
+                )));
             }
-            else { return Err(compile_codes::generic(format!("gate target: loop '{}' not found", ln))); }
         }
         GateTargetAst::LoopStep(ln, sn) => {
             // FAZ F: pass step index as entry selector
             if let Some(&pi) = loop_payloads.get(ln) {
                 // Look up step index from the target loop's step names
-                let step_idx = match compiler.loop_step_names.get(ln).and_then(|names| names.iter().position(|n| n == sn)) {
+                let step_idx = match compiler
+                    .loop_step_names
+                    .get(ln)
+                    .and_then(|names| names.iter().position(|n| n == sn))
+                {
                     Some(idx) => idx as u8,
-                    None => return Err(compile_codes::generic(format!("gate target: loop '{}' has no step '{}'", ln, sn))),
+                    None => {
+                        return Err(compile_codes::generic(format!(
+                            "gate target: loop '{}' has no step '{}'",
+                            ln, sn
+                        )))
+                    }
                 };
                 // P0: always emit selector, even for step 0
-                let idx_reg = compiler.next_local_reg; compiler.next_local_reg += 1;
+                let idx_reg = compiler.next_local_reg;
+                compiler.next_local_reg += 1;
                 let ci = compiler.ct_emit_int_const(step_idx as i64) as u16;
-                compiler.ct_emit(Instruction::LoadIntConst { dst: idx_reg, const_idx: ci });
-                compiler.ct_emit(Instruction::Call { dst: result_reg, payload_idx: pi, first_arg: idx_reg, arg_count: 1 });
+                compiler.ct_emit(Instruction::LoadIntConst {
+                    dst: idx_reg,
+                    const_idx: ci,
+                });
+                compiler.ct_emit(Instruction::Call {
+                    dst: result_reg,
+                    payload_idx: pi,
+                    first_arg: idx_reg,
+                    arg_count: 1,
+                });
                 compiler.ct_emit(Instruction::Return { src: result_reg });
             } else {
-                return Err(compile_codes::generic(format!("gate target: loop '{}' not found for step '{}'", ln, sn)));
+                return Err(compile_codes::generic(format!(
+                    "gate target: loop '{}' not found for step '{}'",
+                    ln, sn
+                )));
             }
         }
         GateTargetAst::Continue => {
             let ip = compiler.bytecode.instructions.len();
             if let Some(ns) = next_step {
-                if let Some(&target_ip) = step_ips.get(ns.as_str()) { compiler.ct_emit(Instruction::Jump(jump_off(ip, target_ip))); }
-                else { compiler.ct_emit(Instruction::Jump(0)); step_fixups.push((ip, ns.clone())); }
+                if let Some(&target_ip) = step_ips.get(ns.as_str()) {
+                    compiler.ct_emit(Instruction::Jump(jump_off(ip, target_ip)));
+                } else {
+                    compiler.ct_emit(Instruction::Jump(0));
+                    step_fixups.push((ip, ns.clone()));
+                }
             } else if has_loop_mode {
-                compiler.ct_emit(Instruction::Jump(0)); step_fixups.push((ip, "__iteration_done__".to_string()));
+                compiler.ct_emit(Instruction::Jump(0));
+                step_fixups.push((ip, "__iteration_done__".to_string()));
             } else {
                 compiler.ct_emit(Instruction::Return { src: result_reg });
             }
         }
-        GateTargetAst::Pause => { emit_setprop_str(compiler, "paused", result_reg, st); compiler.ct_emit(Instruction::Return { src: result_reg }); }
-        GateTargetAst::Approval => { emit_setprop_str(compiler, "awaiting_approval", result_reg, st); compiler.ct_emit(Instruction::Return { src: result_reg }); }
-        GateTargetAst::Escalate => { emit_setprop_str(compiler, "escalated", result_reg, st); compiler.ct_emit(Instruction::Return { src: result_reg }); }
+        GateTargetAst::Pause => {
+            emit_setprop_str(compiler, "paused", result_reg, st);
+            compiler.ct_emit(Instruction::Return { src: result_reg });
+        }
+        GateTargetAst::Approval => {
+            emit_setprop_str(compiler, "awaiting_approval", result_reg, st);
+            compiler.ct_emit(Instruction::Return { src: result_reg });
+        }
+        GateTargetAst::Escalate => {
+            emit_setprop_str(compiler, "escalated", result_reg, st);
+            compiler.ct_emit(Instruction::Return { src: result_reg });
+        }
     }
     Ok(())
 }
-fn emit_setprop(compiler: &mut Compiler, val: bool, obj: u8, psym: &SymId) { let ci = compiler.ct_emit_const(Value16::bool_(val)); let t = compiler.next_local_reg; compiler.next_local_reg += 1; compiler.ct_emit(Instruction::LoadConst { dst: t, const_idx: ci as u16 }); compiler.ct_emit(Instruction::SetProperty { dst: obj, obj, val: t, prop_sym: psym.0 as u16 }); }
-fn emit_setprop_str(compiler: &mut Compiler, val: &str, obj: u8, psym: &SymId) { let ci = compiler.ct_emit_const(Value16::string(val.to_string())); let t = compiler.next_local_reg; compiler.next_local_reg += 1; compiler.ct_emit(Instruction::LoadConst { dst: t, const_idx: ci as u16 }); compiler.ct_emit(Instruction::SetProperty { dst: obj, obj, val: t, prop_sym: psym.0 as u16 }); }
+fn emit_setprop(compiler: &mut Compiler, val: bool, obj: u8, psym: &SymId) {
+    let ci = compiler.ct_emit_const(Value16::bool_(val));
+    let t = compiler.next_local_reg;
+    compiler.next_local_reg += 1;
+    compiler.ct_emit(Instruction::LoadConst {
+        dst: t,
+        const_idx: ci as u16,
+    });
+    compiler.ct_emit(Instruction::SetProperty {
+        dst: obj,
+        obj,
+        val: t,
+        prop_sym: psym.0 as u16,
+    });
+}
+fn emit_setprop_str(compiler: &mut Compiler, val: &str, obj: u8, psym: &SymId) {
+    let ci = compiler.ct_emit_const(Value16::string(val.to_string()));
+    let t = compiler.next_local_reg;
+    compiler.next_local_reg += 1;
+    compiler.ct_emit(Instruction::LoadConst {
+        dst: t,
+        const_idx: ci as u16,
+    });
+    compiler.ct_emit(Instruction::SetProperty {
+        dst: obj,
+        obj,
+        val: t,
+        prop_sym: psym.0 as u16,
+    });
+}
 
 // R3: chain target emission
-fn emit_chain_target(compiler: &mut Compiler, target: &ChainTargetAst, child_reg: u8, ss: &SymId, st: &SymId) -> CompileResult<()> {
+fn emit_chain_target(
+    compiler: &mut Compiler,
+    target: &ChainTargetAst,
+    child_reg: u8,
+    ss: &SymId,
+    st: &SymId,
+) -> CompileResult<()> {
     match target {
         ChainTargetAst::Next => {
             // No-op: caller continues to next link after this returns
@@ -475,11 +773,20 @@ fn emit_chain_target(compiler: &mut Compiler, target: &ChainTargetAst, child_reg
             let fn_name = format!("__loop::{}", ln);
             let sym = compiler.ct_sym(&fn_name);
             let pi = compiler.ct_add_call_payload(sym, 1) as u16; // LOOP_ENTRY: selector arg
-            // P0: emit selector=0 for first step
-            let sel_reg = compiler.next_local_reg; compiler.next_local_reg += 1;
+                                                                  // P0: emit selector=0 for first step
+            let sel_reg = compiler.next_local_reg;
+            compiler.next_local_reg += 1;
             let const_idx = compiler.ct_emit_int_const(0) as u16;
-            compiler.ct_emit(Instruction::LoadIntConst { dst: sel_reg, const_idx });
-            compiler.ct_emit(Instruction::Call { dst: child_reg, payload_idx: pi, first_arg: sel_reg, arg_count: 1 });
+            compiler.ct_emit(Instruction::LoadIntConst {
+                dst: sel_reg,
+                const_idx,
+            });
+            compiler.ct_emit(Instruction::Call {
+                dst: child_reg,
+                payload_idx: pi,
+                first_arg: sel_reg,
+                arg_count: 1,
+            });
             compiler.ct_emit(Instruction::Return { src: child_reg });
         }
     }

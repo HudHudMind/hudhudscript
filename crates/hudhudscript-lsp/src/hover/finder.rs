@@ -33,8 +33,7 @@ impl<'a> AstVisitor for HoverFinder<'a> {
 
 /// Search the parsed AST for a declaration matching `name`.
 pub fn symbol_info_for(name: &str, source: &str) -> Option<HoverInfo> {
-    let ast = match crate::server::helpers::isolate(|| parse(source))?
-    {
+    let ast = match crate::server::helpers::isolate(|| parse(source))? {
         Ok(ast) => ast,
         Err(_) => return None,
     };

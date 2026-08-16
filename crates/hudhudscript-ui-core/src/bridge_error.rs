@@ -1,5 +1,3 @@
-
-
 /// Bridge error type
 #[derive(Debug, Clone)]
 pub enum BridgeError {

@@ -11,7 +11,10 @@ thread_local! {
 
 /// Extract host and port from a URL string, then check the sandbox network
 /// policy.  Returns `Err(ToolError::SecurityViolation)` when access is denied.
-pub(crate) fn check_url_against_sandbox(url_str: &str, cfg: &SandboxConfig) -> Result<(), ToolError> {
+pub(crate) fn check_url_against_sandbox(
+    url_str: &str,
+    cfg: &SandboxConfig,
+) -> Result<(), ToolError> {
     let parsed = url::Url::parse(url_str)
         .map_err(|e| ToolError::InvalidArguments(format!("invalid URL '{}': {}", url_str, e)))?;
 

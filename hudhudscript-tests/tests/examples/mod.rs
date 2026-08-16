@@ -38,7 +38,7 @@ fn collect_hudhud_files(dir: &Path) -> Vec<PathBuf> {
 fn examples_dir() -> PathBuf {
     // hudhud-script-tests lives next to hudhud-script; examples/ is inside hudhud-script
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    // Go up one level from hudhud-script-tests to the parent, then into hudhud-script/examples
+    // Go up one level from hudhud-script-tests to the parent, then into examples
     let workspace_root = manifest_dir.parent().expect("manifest dir has no parent");
     let examples = workspace_root.join("hudhud-script").join("examples");
     if examples.is_dir() {

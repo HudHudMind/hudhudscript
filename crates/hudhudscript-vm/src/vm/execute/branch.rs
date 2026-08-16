@@ -151,14 +151,26 @@ impl VM {
                         if let Some(a) = v.to_bigint_value() {
                             let b = num_bigint::BigInt::from(*imm as i64);
                             match *op {
-                                0 => a < b, 1 => a <= b, 2 => a > b,
-                                3 => a >= b, 4 => a == b, 5 => a != b,
-                                _ => return Err(Self::runtime_error_with_pos(
-                                    &format!("IntCmpIJumpIfFalse: unknown op {}", op), bytecode, ip))
+                                0 => a < b,
+                                1 => a <= b,
+                                2 => a > b,
+                                3 => a >= b,
+                                4 => a == b,
+                                5 => a != b,
+                                _ => {
+                                    return Err(Self::runtime_error_with_pos(
+                                        &format!("IntCmpIJumpIfFalse: unknown op {}", op),
+                                        bytecode,
+                                        ip,
+                                    ))
+                                }
                             }
                         } else {
                             return Err(Self::runtime_error_with_pos(
-                                "IntCmpIJumpIfFalse: src not numeric", bytecode, ip))
+                                "IntCmpIJumpIfFalse: src not numeric",
+                                bytecode,
+                                ip,
+                            ));
                         }
                     }
                     _ => {
@@ -207,20 +219,20 @@ impl VM {
             Instruction::IntAddIJump { reg, imm, offset } => {
                 let (tag, p) = self.registers[*reg as usize].split_tag();
                 let result = match tag {
-                    ReprTag::Int => {
-                        match (p as i64).checked_add(*imm as i64) {
-                            Some(val) => (ReprTag::Int, val as u64),
-                            None => {
-                                let imm_v = Value16::int(*imm as i64);
-                                let big = Value16::bigint(
-                                    num_bigint::BigInt::from(p as i64) + num_bigint::BigInt::from(*imm as i64));
-                                self.record_bigint_promotion(Value16::int(p as i64), imm_v, big);
-                                self.registers[*reg as usize] = big;
-                                *ip_ref = (ip as i64).wrapping_add(*offset as i64) as usize;
-                                return Ok(StepAction::Jumped);
-                            }
+                    ReprTag::Int => match (p as i64).checked_add(*imm as i64) {
+                        Some(val) => (ReprTag::Int, val as u64),
+                        None => {
+                            let imm_v = Value16::int(*imm as i64);
+                            let big = Value16::bigint(
+                                num_bigint::BigInt::from(p as i64)
+                                    + num_bigint::BigInt::from(*imm as i64),
+                            );
+                            self.record_bigint_promotion(Value16::int(p as i64), imm_v, big);
+                            self.registers[*reg as usize] = big;
+                            *ip_ref = (ip as i64).wrapping_add(*offset as i64) as usize;
+                            return Ok(StepAction::Jumped);
                         }
-                    }
+                    },
                     ReprTag::Number => {
                         let val = f64::from_bits(p) + (*imm as f64);
                         (ReprTag::Number, val.to_bits())
@@ -242,20 +254,20 @@ impl VM {
                 self.loop_headers.pop();
                 let (tag, p) = self.registers[*reg as usize].split_tag();
                 let result = match tag {
-                    ReprTag::Int => {
-                        match (p as i64).checked_add(*imm as i64) {
-                            Some(val) => (ReprTag::Int, val as u64),
-                            None => {
-                                let imm_v = Value16::int(*imm as i64);
-                                let big = Value16::bigint(
-                                    num_bigint::BigInt::from(p as i64) + num_bigint::BigInt::from(*imm as i64));
-                                self.record_bigint_promotion(Value16::int(p as i64), imm_v, big);
-                                self.registers[*reg as usize] = big;
-                                *ip_ref = (ip as i64).wrapping_add(*offset as i64) as usize;
-                                return Ok(StepAction::Jumped);
-                            }
+                    ReprTag::Int => match (p as i64).checked_add(*imm as i64) {
+                        Some(val) => (ReprTag::Int, val as u64),
+                        None => {
+                            let imm_v = Value16::int(*imm as i64);
+                            let big = Value16::bigint(
+                                num_bigint::BigInt::from(p as i64)
+                                    + num_bigint::BigInt::from(*imm as i64),
+                            );
+                            self.record_bigint_promotion(Value16::int(p as i64), imm_v, big);
+                            self.registers[*reg as usize] = big;
+                            *ip_ref = (ip as i64).wrapping_add(*offset as i64) as usize;
+                            return Ok(StepAction::Jumped);
                         }
-                    }
+                    },
                     ReprTag::Number => {
                         let val = f64::from_bits(p) + (*imm as f64);
                         (ReprTag::Number, val.to_bits())
@@ -276,20 +288,20 @@ impl VM {
             Instruction::IntSubIJump { reg, imm, offset } => {
                 let (tag, p) = self.registers[*reg as usize].split_tag();
                 let result = match tag {
-                    ReprTag::Int => {
-                        match (p as i64).checked_sub(*imm as i64) {
-                            Some(val) => (ReprTag::Int, val as u64),
-                            None => {
-                                let imm_v = Value16::int(*imm as i64);
-                                let big = Value16::bigint(
-                                    num_bigint::BigInt::from(p as i64) - num_bigint::BigInt::from(*imm as i64));
-                                self.record_bigint_promotion(Value16::int(p as i64), imm_v, big);
-                                self.registers[*reg as usize] = big;
-                                *ip_ref = (ip as i64).wrapping_add(*offset as i64) as usize;
-                                return Ok(StepAction::Jumped);
-                            }
+                    ReprTag::Int => match (p as i64).checked_sub(*imm as i64) {
+                        Some(val) => (ReprTag::Int, val as u64),
+                        None => {
+                            let imm_v = Value16::int(*imm as i64);
+                            let big = Value16::bigint(
+                                num_bigint::BigInt::from(p as i64)
+                                    - num_bigint::BigInt::from(*imm as i64),
+                            );
+                            self.record_bigint_promotion(Value16::int(p as i64), imm_v, big);
+                            self.registers[*reg as usize] = big;
+                            *ip_ref = (ip as i64).wrapping_add(*offset as i64) as usize;
+                            return Ok(StepAction::Jumped);
                         }
-                    }
+                    },
                     ReprTag::Number => {
                         let val = f64::from_bits(p) - (*imm as f64);
                         (ReprTag::Number, val.to_bits())
@@ -358,14 +370,26 @@ impl VM {
                         if let Some(a) = v.to_bigint_value() {
                             let b = num_bigint::BigInt::from(*imm as i64);
                             match *op {
-                                0 => a < b, 1 => a <= b, 2 => a > b,
-                                3 => a >= b, 4 => a == b, 5 => a != b,
-                                _ => return Err(Self::runtime_error_with_pos(
-                                    &format!("IntCmpIJumpIfTrue: unknown op {}", op), bytecode, ip))
+                                0 => a < b,
+                                1 => a <= b,
+                                2 => a > b,
+                                3 => a >= b,
+                                4 => a == b,
+                                5 => a != b,
+                                _ => {
+                                    return Err(Self::runtime_error_with_pos(
+                                        &format!("IntCmpIJumpIfTrue: unknown op {}", op),
+                                        bytecode,
+                                        ip,
+                                    ))
+                                }
                             }
                         } else {
                             return Err(Self::runtime_error_with_pos(
-                                "IntCmpIJumpIfTrue: src not numeric", bytecode, ip))
+                                "IntCmpIJumpIfTrue: src not numeric",
+                                bytecode,
+                                ip,
+                            ));
                         }
                     }
                     _ => {
@@ -427,8 +451,16 @@ pub(crate) fn cmp_rr_generic(v1: Value16, v2: Value16, op: u8) -> Result<bool, &
         (ReprTag::Number, ReprTag::Number)
         | (ReprTag::Number, ReprTag::Int)
         | (ReprTag::Int, ReprTag::Number) => {
-            let a = if t1 == ReprTag::Int { p1 as i64 as f64 } else { f64::from_bits(p1) };
-            let b = if t2 == ReprTag::Int { p2 as i64 as f64 } else { f64::from_bits(p2) };
+            let a = if t1 == ReprTag::Int {
+                p1 as i64 as f64
+            } else {
+                f64::from_bits(p1)
+            };
+            let b = if t2 == ReprTag::Int {
+                p2 as i64 as f64
+            } else {
+                f64::from_bits(p2)
+            };
             match op {
                 0 => a < b,
                 1 => a <= b,
@@ -446,7 +478,11 @@ pub(crate) fn cmp_rr_generic(v1: Value16, v2: Value16, op: u8) -> Result<bool, &
         // merdivene düşer.
         (ReprTag::InlineString, ReprTag::InlineString) if op == 4 || op == 5 => {
             let eq = v1.0 == v2.0;
-            if op == 4 { eq } else { !eq }
+            if op == 4 {
+                eq
+            } else {
+                !eq
+            }
         }
         _ => {
             if let (Some(a), Some(b)) = (v1.to_bigint_value(), v2.to_bigint_value()) {
@@ -493,4 +529,3 @@ pub(crate) fn cmp_rr_generic(v1: Value16, v2: Value16, op: u8) -> Result<bool, &
     };
     Ok(cond)
 }
-

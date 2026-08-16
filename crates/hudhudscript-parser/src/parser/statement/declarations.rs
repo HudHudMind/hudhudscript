@@ -278,7 +278,10 @@ pub fn parse_block_or_stmt(pair: Pair<Rule>) -> ParseResult<Stmt> {
             if let Some(stmt) = parse_statement(pair)? {
                 Ok(stmt)
             } else {
-                Err(parse_codes::invalid_syntax("Expected statement or block", span))
+                Err(parse_codes::invalid_syntax(
+                    "Expected statement or block",
+                    span,
+                ))
             }
         }
     }

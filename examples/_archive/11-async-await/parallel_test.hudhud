@@ -1,0 +1,45 @@
+// Parallel council test — API key olmadan Ollama ile test
+provider OllamaA {
+    baseUrl: "http://192.168.1.7:11434/v1",
+    apiKey: "",
+    type: "ollama",
+    model: "qwen2.5-coder:3b"
+}
+
+provider OllamaB {
+    baseUrl: "http://192.168.1.7:11434/v1",
+    apiKey: "",
+    type: "ollama",
+    model: "granite-code:3b"
+}
+
+agent UyeA {
+    provider: OllamaA,
+    role: "developer"
+}
+
+agent UyeB {
+    provider: OllamaB,
+    role: "reviewer"
+}
+
+council ParalelKonsey {
+    members: [UyeA, UyeB],
+    strategy: "parallel"
+}
+
+yaz("=== Parallel Council Başlıyor ===")
+let baslangic = Date.now()
+
+let sonuc = ParalelKonsey.call({
+    prompt: "1+1 kaçtır? Sadece sayıyı yaz."
+})
+
+yaz("Strateji: " + sonuc.strategy)
+yaz("Üye sayısı: " + sonuc.member_count)
+
+herbir(sonuc.responses içinde cevap) {
+    yaz("[" + cevap.agent + " / " + cevap.role + "]: " + cevap.response)
+}
+
+yaz("Karar: " + sonuc.decision)

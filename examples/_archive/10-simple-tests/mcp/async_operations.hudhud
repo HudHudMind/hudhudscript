@@ -1,0 +1,203 @@
+// Async Operations Test
+// Tests asynchronous operation patterns in HudHudScript
+
+print("=== Async Operations Test ===");
+print("");
+
+// Test 1: Promise-like Pattern Simulation
+print("Test 1: Promise Pattern Simulation");
+var promise1 = {
+    id: "promise-001",
+    state: "pending",
+    value: null,
+    error: null
+};
+
+print("Promise ID: " + promise1.id);
+print("Initial state: " + promise1.state);
+
+// Simulate async resolution
+promise1.state = "resolved";
+promise1.value = "Operation completed successfully";
+print("Final state: " + promise1.state);
+print("Value: " + promise1.value);
+print("");
+
+// Test 2: Multiple Async Operations
+print("Test 2: Multiple Async Operations");
+var operations = [
+    { id: 1, name: "fetch_data", state: "pending", duration: 100 },
+    { id: 2, name: "process_data", state: "pending", duration: 200 },
+    { id: 3, name: "save_data", state: "pending", duration: 150 }
+];
+
+print("Total operations: " + operations.length);
+var k = 0;
+while (k < operations.length) {
+    var op = operations[k];
+    print("  Operation " + op.id + " (" + op.name + "): " + op.state);
+    k = k + 1;
+}
+print("");
+
+// Simulate execution
+print("Executing operations...");
+var m = 0;
+while (m < operations.length) {
+    operations[m].state = "running";
+    m = m + 1;
+}
+
+// Simulate completion
+var n = 0;
+while (n < operations.length) {
+    operations[n].state = "completed";
+    print("  ✓ " + operations[n].name + " completed");
+    n = n + 1;
+}
+print("");
+
+// Test 3: Async Error Handling
+print("Test 3: Async Error Handling");
+var asyncOp = {
+    id: "async-001",
+    operation: "database_query",
+    state: "pending",
+    retries: 0,
+    maxRetries: 3
+};
+
+print("Operation: " + asyncOp.operation);
+print("Max retries: " + asyncOp.maxRetries);
+
+// Simulate failure and retry
+asyncOp.state = "failed";
+asyncOp.retries = 1;
+print("Attempt 1: failed, retrying...");
+
+asyncOp.retries = 2;
+print("Attempt 2: failed, retrying...");
+
+asyncOp.state = "completed";
+asyncOp.retries = 3;
+print("Attempt 3: success!");
+print("");
+
+// Test 4: Callback Pattern Simulation
+print("Test 4: Callback Pattern Simulation");
+var callback = {
+    operation: "api_call",
+    onSuccess: "handleSuccess",
+    onError: "handleError",
+    status: "executing"
+};
+
+print("Operation: " + callback.operation);
+print("Success handler: " + callback.onSuccess);
+print("Error handler: " + callback.onError);
+
+callback.status = "success";
+print("Status: " + callback.status);
+print("Calling: " + callback.onSuccess);
+print("");
+
+// Test 5: Async Queue Simulation
+print("Test 5: Async Queue Simulation");
+var queue = {
+    name: "task_queue",
+    pending: 5,
+    running: 2,
+    completed: 10,
+    failed: 1
+};
+
+print("Queue: " + queue.name);
+print("  Pending: " + queue.pending);
+print("  Running: " + queue.running);
+print("  Completed: " + queue.completed);
+print("  Failed: " + queue.failed);
+
+var total = queue.pending + queue.running + queue.completed + queue.failed;
+print("  Total: " + total);
+print("");
+
+// Test 6: Timeout Simulation
+print("Test 6: Timeout Simulation");
+var timedOp = {
+    operation: "slow_query",
+    timeout: 5000,
+    elapsed: 0,
+    state: "running"
+};
+
+print("Operation: " + timedOp.operation);
+print("Timeout: " + timedOp.timeout + "ms");
+
+timedOp.elapsed = 3000;
+print("Elapsed: " + timedOp.elapsed + "ms");
+
+timedOp.elapsed = 6000;
+timedOp.state = "timeout";
+print("Elapsed: " + timedOp.elapsed + "ms");
+print("Status: " + timedOp.state + " (exceeded timeout)");
+print("");
+
+// Test 7: Parallel Execution Simulation
+print("Test 7: Parallel Execution Simulation");
+var parallel = [
+    { id: "task-1", name: "fetch_users", state: "running", progress: 0 },
+    { id: "task-2", name: "fetch_products", state: "running", progress: 0 },
+    { id: "task-3", name: "fetch_orders", state: "running", progress: 0 }
+];
+
+print("Running " + parallel.length + " tasks in parallel:");
+var p = 0;
+while (p < parallel.length) {
+    parallel[p].progress = 50;
+    print("  " + parallel[p].name + ": " + parallel[p].progress + "%");
+    p = p + 1;
+}
+
+print("");
+print("All tasks progressing...");
+var q = 0;
+while (q < parallel.length) {
+    parallel[q].progress = 100;
+    parallel[q].state = "completed";
+    print("  ✓ " + parallel[q].name + ": " + parallel[q].progress + "%");
+    q = q + 1;
+}
+print("");
+
+// Test 8: Async Chain Simulation
+print("Test 8: Async Chain Simulation");
+var chain = {
+    steps: [
+        { name: "authenticate", state: "pending" },
+        { name: "fetch_data", state: "pending" },
+        { name: "transform", state: "pending" },
+        { name: "save", state: "pending" }
+    ],
+    currentStep: 0
+};
+
+print("Async chain with " + chain.steps.length + " steps:");
+var r = 0;
+while (r < chain.steps.length) {
+    chain.currentStep = r;
+    chain.steps[r].state = "running";
+    print("  Step " + (r + 1) + ": " + chain.steps[r].name + " - running");
+    
+    chain.steps[r].state = "completed";
+    print("  Step " + (r + 1) + ": " + chain.steps[r].name + " - completed");
+    r = r + 1;
+}
+print("");
+
+print("✅ Async Operations test completed");
+print("");
+print("Note: These tests simulate async patterns.");
+print("Real async operations require:");
+print("1. Tokio runtime integration");
+print("2. Promise/Future support in interpreter");
+print("3. Async/await syntax support");

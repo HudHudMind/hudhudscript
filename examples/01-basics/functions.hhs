@@ -1,0 +1,48 @@
+// HudHudScript — Function Definitions and Calls
+// Demonstrates function declarations, recursion, and control flow
+
+// Simple addition function
+fn add(a, b) {
+    return a + b;
+}
+
+// Factorial using recursion
+fn factorial(n) {
+    if (n <= 1) {
+        return 1;
+    }
+    return n * factorial(n - 1);
+}
+
+// Fibonacci sequence
+fn fibonacci(n) {
+    if (n <= 0) {
+        return 0;
+    }
+    if (n == 1) {
+        return 1;
+    }
+    return fibonacci(n - 1) + fibonacci(n - 2);
+}
+
+// Function with local variables and a loop
+fn sum_range(start, end) {
+    let total = 0;
+    let i = start;
+    while (i <= end) {
+        total = total + i;
+        i = i + 1;
+    }
+    return total;
+}
+
+// Using the functions
+let result = add(3, 4);
+let fact5 = factorial(5);
+let fib10 = fibonacci(10);
+let range_sum = sum_range(1, 100);
+
+print(result);
+print(fact5);
+print(fib10);
+print(range_sum);

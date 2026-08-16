@@ -19,20 +19,30 @@ impl VM {
         field_sym: &hudhudscript_bytecode::SymId,
     ) -> CompileResult<Value16> {
         #[cfg(feature = "telemetry")]
-        { self.telemetry.property_lookup_count += 1; }
+        {
+            self.telemetry.property_lookup_count += 1;
+        }
         let sym = hudhudscript_bytecode::SymId(field_sym.0);
 
         // SOP: subject instance state read — always reads from live instance
         if let Some(inner) = obj.as_object() {
-            if inner.get(&hudhudscript_bytecode::well_known::wk().type_).and_then(|v| v.as_string()).as_deref()
+            if inner
+                .get(&hudhudscript_bytecode::well_known::wk().type_)
+                .and_then(|v| v.as_string())
+                .as_deref()
                 == Some("subject_instance")
             {
                 let field = hudhudscript_bytecode::interner::resolve(
-                    hudhudscript_bytecode::interner::SymbolId(sym.0));
-                if let Some(instance_id) = inner.get(&hudhudscript_bytecode::well_known::wk().instance_id).and_then(|v| v.as_string()) {
+                    hudhudscript_bytecode::interner::SymbolId(sym.0),
+                );
+                if let Some(instance_id) = inner
+                    .get(&hudhudscript_bytecode::well_known::wk().instance_id)
+                    .and_then(|v| v.as_string())
+                {
                     if let Some(inst) = self.subject_instances.get(&instance_id) {
-                        if let Some(view_name) =
-                            inner.get(&hudhudscript_bytecode::well_known::wk().view_name).and_then(|v| v.as_string())
+                        if let Some(view_name) = inner
+                            .get(&hudhudscript_bytecode::well_known::wk().view_name)
+                            .and_then(|v| v.as_string())
                         {
                             if let Some(view_state) = inst.views.get(&view_name) {
                                 if let Some(val) = view_state.get(&field) {
@@ -81,37 +91,50 @@ impl VM {
                 Ok(val)
             } else if hudhudscript_bytecode::interner::resolve_with(
                 hudhudscript_bytecode::interner::SymbolId(sym.0),
-                |field| field.starts_with("__"))
-            {
+                |field| field.starts_with("__"),
+            ) {
                 Ok(Value16::null())
             } else {
                 Err(compile_codes::runtime_error(format!(
                     "Property '{}' not found on {} instance",
                     hudhudscript_bytecode::interner::resolve(
-                        hudhudscript_bytecode::interner::SymbolId(sym.0)),
+                        hudhudscript_bytecode::interner::SymbolId(sym.0)
+                    ),
                     inst.class_name
                 )))
             }
         } else if let Some(map) = obj.as_object() {
             // Issue #438: mcp.ServerName => return MCP server proxy object.
-            if map.get(&hudhudscript_bytecode::well_known::wk().module).and_then(|v| v.as_string()).as_deref() == Some("mcp")
-                && !map.get(&hudhudscript_bytecode::well_known::wk().server).is_some()
+            if map
+                .get(&hudhudscript_bytecode::well_known::wk().module)
+                .and_then(|v| v.as_string())
+                .as_deref()
+                == Some("mcp")
+                && !map
+                    .get(&hudhudscript_bytecode::well_known::wk().server)
+                    .is_some()
                 && !hudhudscript_bytecode::interner::resolve_with(
                     hudhudscript_bytecode::interner::SymbolId(sym.0),
-                    |f| f.starts_with("__"))
+                    |f| f.starts_with("__"),
+                )
                 && hudhudscript_bytecode::interner::resolve_with(
                     hudhudscript_bytecode::interner::SymbolId(sym.0),
-                    |f| f != "call")
+                    |f| f != "call",
+                )
             {
                 let field = hudhudscript_bytecode::interner::resolve(
-                    hudhudscript_bytecode::interner::SymbolId(sym.0));
+                    hudhudscript_bytecode::interner::SymbolId(sym.0),
+                );
                 let mut proxy = hudhudscript_bytecode::ObjMap::default();
                 proxy.insert("__module".to_string(), Value16::string("mcp"));
                 proxy.insert("__server".to_string(), Value16::string(field.clone()));
                 return Ok(Value16::object(proxy));
             }
 
-            let is_env = map.get(&hudhudscript_bytecode::well_known::wk().hudhud_env).and_then(|v| v.as_bool()) == Some(true);
+            let is_env = map
+                .get(&hudhudscript_bytecode::well_known::wk().hudhud_env)
+                .and_then(|v| v.as_bool())
+                == Some(true);
 
             // ISSUE-9c: avoid cloning the whole object map on every property read.
             // Walk __parent__ chain using borrowed references only.
@@ -121,15 +144,21 @@ impl VM {
                 if let Some(val) = m.get(&sym) {
                     return Ok(*val);
                 }
-                let field = hudhudscript_bytecode::interner::resolve(hudhudscript_bytecode::interner::SymbolId(sym.0));
+                let field = hudhudscript_bytecode::interner::resolve(
+                    hudhudscript_bytecode::interner::SymbolId(sym.0),
+                );
                 if field.starts_with("__") {
                     return Ok(Value16::null());
                 }
-                current = m.get(&hudhudscript_bytecode::well_known::wk().parent).and_then(|p| p.as_object());
+                current = m
+                    .get(&hudhudscript_bytecode::well_known::wk().parent)
+                    .and_then(|p| p.as_object());
             }
 
             if is_env {
-                let field = hudhudscript_bytecode::interner::resolve(hudhudscript_bytecode::interner::SymbolId(sym.0));
+                let field = hudhudscript_bytecode::interner::resolve(
+                    hudhudscript_bytecode::interner::SymbolId(sym.0),
+                );
                 if let Ok(live) = std::env::var(&field) {
                     return Ok(Value16::string(live));
                 }
@@ -138,10 +167,14 @@ impl VM {
 
             Err(compile_codes::runtime_error(format!(
                 "Property '{}' not found on object",
-                hudhudscript_bytecode::interner::resolve(hudhudscript_bytecode::interner::SymbolId(sym.0))
+                hudhudscript_bytecode::interner::resolve(
+                    hudhudscript_bytecode::interner::SymbolId(sym.0)
+                )
             )))
         } else {
-            let field = hudhudscript_bytecode::interner::resolve(hudhudscript_bytecode::interner::SymbolId(sym.0));
+            let field = hudhudscript_bytecode::interner::resolve(
+                hudhudscript_bytecode::interner::SymbolId(sym.0),
+            );
             match crate::vm::operations::helpers::eval_member_access(obj, &field) {
                 Ok(result) => Ok(result),
                 Err(e) => Err(compile_codes::runtime_error(e.to_string())),

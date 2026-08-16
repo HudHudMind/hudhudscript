@@ -115,7 +115,11 @@ impl TypeChecker {
                 if expr_type.is_compatible_with(&Type::Number) || expr_type == &Type::Any {
                     Ok(expr_type.clone())
                 } else {
-                    let op_str = if matches!(op, UnaryOp::PostIncrement) { "++" } else { "--" };
+                    let op_str = if matches!(op, UnaryOp::PostIncrement) {
+                        "++"
+                    } else {
+                        "--"
+                    };
                     Err(type_codes::invalid_operator(
                         op_str.to_string(),
                         format!("{}", expr_type),

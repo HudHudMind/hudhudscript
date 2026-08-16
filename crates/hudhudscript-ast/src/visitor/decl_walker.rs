@@ -197,26 +197,38 @@ pub(crate) fn walk_decl_children(visitor: &mut impl AstVisitor, decl: &Decl) -> 
             for item in items {
                 match item {
                     crate::stmt::decl::LoopItemAst::InlineStep(s) => {
-                        if walk_decl_children(visitor, s) == VisitControl::Stop { return VisitControl::Stop; }
+                        if walk_decl_children(visitor, s) == VisitControl::Stop {
+                            return VisitControl::Stop;
+                        }
                     }
                     _ => {}
                 }
             }
         }
         Decl::Step { body, gate, .. } => {
-            if walk_stmts_check(visitor, body) == VisitControl::Stop { return VisitControl::Stop; }
+            if walk_stmts_check(visitor, body) == VisitControl::Stop {
+                return VisitControl::Stop;
+            }
             if let Some(ref g) = gate {
                 for b in &g.branches {
-                    if walk_expr(visitor, &b.cond) == VisitControl::Stop { return VisitControl::Stop; }
+                    if walk_expr(visitor, &b.cond) == VisitControl::Stop {
+                        return VisitControl::Stop;
+                    }
                 }
             }
         }
         Decl::Gate { branches, .. } => {
             for branch in branches {
-                if walk_expr(visitor, &branch.cond) == VisitControl::Stop { return VisitControl::Stop; }
+                if walk_expr(visitor, &branch.cond) == VisitControl::Stop {
+                    return VisitControl::Stop;
+                }
             }
         }
-        Decl::Chain { .. } | Decl::AttachStep { .. } | Decl::AttachLoop { .. } | Decl::RunLoop { .. } | Decl::RunChain { .. } => {}
+        Decl::Chain { .. }
+        | Decl::AttachStep { .. }
+        | Decl::AttachLoop { .. }
+        | Decl::RunLoop { .. }
+        | Decl::RunChain { .. } => {}
     }
     VisitControl::Continue
 }

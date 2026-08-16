@@ -194,10 +194,13 @@ pub fn dispatch(method: &str, args: &[Value16]) -> HudHudResult<Value16> {
             let file_path = require_str(args, 0, "patch.apply")?;
             let search = require_str(args, 1, "patch.apply")?;
             let replace = require_str(args, 2, "patch.apply")?;
-            let r = patch::patch_apply(&file_path, &search, &replace)
-                .map_err(|e| runtime_error(e))?;
+            let r =
+                patch::patch_apply(&file_path, &search, &replace).map_err(|e| runtime_error(e))?;
             let mut obj = hudhudscript_bytecode::ObjMap::default();
-            obj.insert("replacements".to_string(), Value16::int(r.replacements as i64));
+            obj.insert(
+                "replacements".to_string(),
+                Value16::int(r.replacements as i64),
+            );
             obj.insert("modified".to_string(), Value16::bool_(r.modified));
             Ok(Value16::object(obj))
         }

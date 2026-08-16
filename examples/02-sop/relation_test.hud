@@ -1,0 +1,55 @@
+// Relation API — pratik kullanim
+role Fighter { can attack }
+
+subject Knight has Fighter {
+    state name: "Lancelot", state health: 100, state power: 30
+}
+subject Hero has Fighter {
+    state name: "Aragorn", state health: 120, state power: 35
+}
+subject Troll has Fighter {
+    state name: "Groth", state health: 200
+}
+
+relation Knight <-> Hero  { friendship: 80 }
+relation Hero  <-> Troll  { hostility: 100 }
+
+let knight = spawn Knight
+let hero   = spawn Hero
+let troll  = spawn Troll
+
+print("=== RELATION: PRATIK KULLANIM ===")
+print("")
+
+// ═══ get_relation(a, b) → iliski objesi dondurur ═══
+let rel = get_relation(knight, hero)
+let friendship = rel.friendship
+print("Knight-Hero dostluk: " + friendship)
+
+let rel2 = get_relation(hero, troll)
+let hostility = rel2.hostility
+print("Hero-Troll dusmanlik: " + hostility)
+print("")
+
+// ═══ Savasta relation kullanimi ═══
+print(">>> SAVAS BASLIYOR <<<")
+
+// Hero Troll'e saldiriyor — dusmanlik varsa bonus
+let power = hero.power
+let bonus = hostility * power / 100
+let total_dmg = power + bonus
+troll.health = troll.health - total_dmg
+print("Hero saldiriyor: " + power + " + " + bonus + " (dusmanlik %" + hostility + ") = " + total_dmg + " hasar!")
+print("Troll HP: " + troll.health)
+print("")
+
+// Knight Hero'ya yardima geliyor — dostluk varsa bonus
+let power2 = knight.power
+let bonus2 = friendship * power2 / 100
+let total_dmg2 = power2 + bonus2
+troll.health = troll.health - total_dmg2
+print("Knight saldiriyor: " + power2 + " + " + bonus2 + " (dostluk %" + friendship + ") = " + total_dmg2 + " hasar!")
+print("Troll HP: " + troll.health)
+print("")
+
+print("=== RELATION ILE DINAMIK SAVAS TAMAM ===")

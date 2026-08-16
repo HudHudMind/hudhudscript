@@ -124,7 +124,9 @@ impl DatabaseTool {
                 })
             }
 
-            DatabaseBackend::Mysql => Err(DatabaseError::ConnectionFailed("MySQL: enable db feature".into())),
+            DatabaseBackend::Mysql => Err(DatabaseError::ConnectionFailed(
+                "MySQL: enable db feature".into(),
+            )),
             DatabaseBackend::Sqlite => {
                 let pool = sqlx::sqlite::SqlitePoolOptions::new()
                     .max_connections(self.config.max_connections.unwrap_or(1))
@@ -183,7 +185,9 @@ impl DatabaseTool {
             DatabaseBackend::Postgres => {
                 "SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename"
             }
-            DatabaseBackend::Mysql => Err(DatabaseError::ConnectionFailed("MySQL: enable db feature".into())),
+            DatabaseBackend::Mysql => Err(DatabaseError::ConnectionFailed(
+                "MySQL: enable db feature".into(),
+            )),
             DatabaseBackend::Sqlite => {
                 "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
             }

@@ -1,8 +1,11 @@
-use hudhudscript_vm::{VM, OutputLocale, SandboxConfig};
-use hudhudscript_compiler::Compiler;
-use hudhudscript_runtime::provider::{ProviderRegistry, Provider, LLMRequest, LLMResponse, ProviderInfo, ProviderType, ProviderError, TokenUsage};
-use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
+use hudhudscript_compiler::Compiler;
+use hudhudscript_runtime::provider::{
+    LLMRequest, LLMResponse, Provider, ProviderError, ProviderInfo, ProviderRegistry, ProviderType,
+    TokenUsage,
+};
+use hudhudscript_vm::{OutputLocale, SandboxConfig, VM};
+use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Clone)]
 struct MockSystemProvider {
@@ -23,7 +26,11 @@ impl Provider for MockSystemProvider {
         *self.recorded_request.lock().unwrap() = Some(request);
         Ok(LLMResponse {
             content: "mock response".to_string(),
-            tokens_used: TokenUsage { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
+            tokens_used: TokenUsage {
+                prompt_tokens: 0,
+                completion_tokens: 0,
+                total_tokens: 0,
+            },
             model: "mock-model".to_string(),
             finish_reason: "stop".to_string(),
             tool_calls: None,
@@ -63,9 +70,14 @@ fn execute_script(script: &str, provider: Arc<MockSystemProvider>) {
 
     let mut registry = ProviderRegistry::new();
 
-    let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
     rt.block_on(async {
-        registry.register("mock_provider".to_string(), provider.clone()).await;
+        registry
+            .register("mock_provider".to_string(), provider.clone())
+            .await;
     });
 
     let mut vm = VM::new();
@@ -189,7 +201,10 @@ fn test_explicit_system_prompt_order() {
     // Ensure order
     let role_idx = system_prompt.find("Role text").unwrap();
     let call_idx = system_prompt.find("Call system text").unwrap();
-    assert!(role_idx < call_idx, "Role should appear before explicit call system prompt");
+    assert!(
+        role_idx < call_idx,
+        "Role should appear before explicit call system prompt"
+    );
 }
 
 #[test]
@@ -228,8 +243,14 @@ fn test_provider_system_context_compose_order() {
     let prov_idx = system_prompt.find("Provider system text").unwrap();
     let role_idx = system_prompt.find("Agent role text").unwrap();
     let call_idx = system_prompt.find("Call system text").unwrap();
-    assert!(prov_idx < role_idx, "Provider system should appear before agent role");
-    assert!(role_idx < call_idx, "Agent role should appear before explicit call system prompt");
+    assert!(
+        prov_idx < role_idx,
+        "Provider system should appear before agent role"
+    );
+    assert!(
+        role_idx < call_idx,
+        "Agent role should appear before explicit call system prompt"
+    );
 }
 
 #[test]
@@ -306,13 +327,21 @@ fn test_nested_imported_agent_system_context() {
     // Compile and run author.hudhud
     let mut compiler = Compiler::new();
     compiler.set_module_base_dir(temp_dir.clone());
-    let stmts = hudhudscript_parser::parse(&std::fs::read_to_string(temp_dir.join("author.hudhud")).unwrap()).unwrap();
+    let stmts = hudhudscript_parser::parse(
+        &std::fs::read_to_string(temp_dir.join("author.hudhud")).unwrap(),
+    )
+    .unwrap();
     let bytecode = compiler.compile(&stmts).unwrap();
 
     let mut registry = ProviderRegistry::new();
-    let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
     rt.block_on(async {
-        registry.register("mock_provider".to_string(), mock.clone()).await;
+        registry
+            .register("mock_provider".to_string(), mock.clone())
+            .await;
     });
 
     let mut vm = VM::new();

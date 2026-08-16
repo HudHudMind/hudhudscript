@@ -33,7 +33,10 @@ fn test_int_min_div_neg1_no_panic() {
     let b = Value16(hudhudscript_bytecode::Repr::new_inline(tb, pb));
     let result = hudhudscript_vm::vm::bigint_arith::int_div(a, b).unwrap();
     assert!(result.is_bigint(), "i64::MIN / -1 should be BigInt");
-    assert_eq!(result.as_bigint().unwrap().to_string(), "9223372036854775808");
+    assert_eq!(
+        result.as_bigint().unwrap().to_string(),
+        "9223372036854775808"
+    );
 }
 
 #[test]
@@ -50,11 +53,31 @@ fn test_int_min_mod_neg1_no_panic() {
 fn test_normal_div_unchanged() {
     let a = Value16::int(10);
     let b = Value16::int(3);
-    assert_eq!(hudhudscript_vm::vm::bigint_arith::int_div(a, b).unwrap().as_int(), Some(3));
-    assert_eq!(hudhudscript_vm::vm::bigint_arith::int_mod(a, b).unwrap().as_int(), Some(1));
+    assert_eq!(
+        hudhudscript_vm::vm::bigint_arith::int_div(a, b)
+            .unwrap()
+            .as_int(),
+        Some(3)
+    );
+    assert_eq!(
+        hudhudscript_vm::vm::bigint_arith::int_mod(a, b)
+            .unwrap()
+            .as_int(),
+        Some(1)
+    );
     let a = Value16::int(-10);
-    assert_eq!(hudhudscript_vm::vm::bigint_arith::int_div(a, b).unwrap().as_int(), Some(-3));
-    assert_eq!(hudhudscript_vm::vm::bigint_arith::int_mod(a, b).unwrap().as_int(), Some(-1));
+    assert_eq!(
+        hudhudscript_vm::vm::bigint_arith::int_div(a, b)
+            .unwrap()
+            .as_int(),
+        Some(-3)
+    );
+    assert_eq!(
+        hudhudscript_vm::vm::bigint_arith::int_mod(a, b)
+            .unwrap()
+            .as_int(),
+        Some(-1)
+    );
 }
 
 #[test]

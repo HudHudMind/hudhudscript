@@ -8,7 +8,6 @@ pub struct LoopPayload {
     pub end: u32,
 }
 
-
 /// Payload for `Instruction::EnumDecl(u32)` (CROSS-2a).
 ///
 /// Stored externally so the instruction carries only a compact `u32`
@@ -143,7 +142,9 @@ pub mod builtin_method {
     }
 }
 
-fn call_payload_sentinel() -> u32 { u32::MAX }
+fn call_payload_sentinel() -> u32 {
+    u32::MAX
+}
 
 /// Payload for the 4 two-symbol instructions (CROSS-2d).
 ///
@@ -187,8 +188,12 @@ pub struct SuperInstrPayload {
     pub arg_reg: u8,
 }
 
-fn default_call_dst() -> u32 { 255 }
-fn default_arg_reg() -> u8 { 1 }
+fn default_call_dst() -> u32 {
+    255
+}
+fn default_arg_reg() -> u8 {
+    1
+}
 
 /// GÖREV 5: compare+jump side-table payload for IntLtRRJumpIfFalse /
 /// IntLeRRJumpIfFalse packed dispatch.  Stores two register indices and

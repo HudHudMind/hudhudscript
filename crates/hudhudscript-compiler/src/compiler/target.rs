@@ -6,7 +6,6 @@ pub enum BreakTarget {
     Switch { jumps: Vec<usize> },
 }
 
-
 pub trait CompileTarget {
     // ── Instruction emission ─────────────────────────────────────────────
     /// Append an instruction to the output stream.
@@ -34,8 +33,12 @@ pub trait CompileTarget {
     /// exact `i64` matches.
     fn ct_emit_int_const(&mut self, val: i64) -> u32;
     /// B8: global int/numeric constant snapshots (for inliner remap).
-    fn ct_int_constants(&self) -> &[i64] { &[] }
-    fn ct_numeric_constants(&self) -> &[u64] { &[] }
+    fn ct_int_constants(&self) -> &[i64] {
+        &[]
+    }
+    fn ct_numeric_constants(&self) -> &[u64] {
+        &[]
+    }
     /// Intern a symbol name and return its index (Issue #1032 P1).
     /// Used for variable/property names in LoadVar, StoreVar, DeclVar, etc.
     fn ct_intern(&mut self, name: &str) -> u32;
@@ -64,7 +67,10 @@ pub trait CompileTarget {
             self.ct_emit(Instruction::Move { dst, src: reg });
         } else {
             let sym = self.ct_intern(name);
-            self.ct_emit(Instruction::LoadGlobal { dst, sym: sym as u16 });
+            self.ct_emit(Instruction::LoadGlobal {
+                dst,
+                sym: sym as u16,
+            });
         }
     }
     fn ct_emit_store_var(&mut self, name: &str) {
@@ -75,7 +81,10 @@ pub trait CompileTarget {
             self.ct_emit(Instruction::Move { dst: reg, src });
         } else {
             let sym = self.ct_intern(name);
-            self.ct_emit(Instruction::StoreGlobal { src, sym: sym as u16 });
+            self.ct_emit(Instruction::StoreGlobal {
+                src,
+                sym: sym as u16,
+            });
         }
     }
 
@@ -90,7 +99,6 @@ pub trait CompileTarget {
     fn ct_pop_break_target(&mut self) -> BreakTarget;
     /// Emit a break instruction or a jump depending on the nearest target.
     fn ct_emit_break(&mut self);
-
 
     /// Register a loop header payload (CROSS-2b) and return the `u32`
     /// index for `Instruction::LoopBegin(idx)`.  The compiler emits
@@ -196,7 +204,13 @@ pub trait CompileTarget {
     /// Register an optional-symbol payload and return its pool index
     /// (CROSS-2d).
     fn ct_add_opt_sym_payload(&mut self, sym: Option<SymId>) -> u32;
-    fn ct_add_super_instr_payload(&mut self, call_idx: u32, slot: u32, imm: i16, offset: i32) -> u32;
+    fn ct_add_super_instr_payload(
+        &mut self,
+        call_idx: u32,
+        slot: u32,
+        imm: i16,
+        offset: i32,
+    ) -> u32;
     /// Add a packed compare+jump payload (GÖREV 5) and return its index.
     fn ct_add_cmp_jump_payload(&mut self, src1: u8, src2: u8, target: u32) -> u32;
 
@@ -223,7 +237,12 @@ pub trait CompileTarget {
     }
     /// P4: record call-site argument types for a function.
     /// Called when compiling a Call expression with known argument types.
-    fn ct_record_call_site_types(&mut self, _fn_name: &str, _args: &[(String, crate::compiler::expr::ExprType)]) {}
+    fn ct_record_call_site_types(
+        &mut self,
+        _fn_name: &str,
+        _args: &[(String, crate::compiler::expr::ExprType)],
+    ) {
+    }
     /// P4a: get pre-declared parameter names for a function.
     fn ct_get_fn_param_names(&self, _fn_name: &str) -> Option<Vec<String>> {
         None
@@ -338,10 +357,14 @@ pub trait CompileTarget {
 
     /// Return the next local register index so that RegAlloc can start
     /// above local variable registers, preventing runtime aliasing.
-    fn ct_next_local_reg(&self) -> u8 { 0 }
+    fn ct_next_local_reg(&self) -> u8 {
+        0
+    }
 
     /// ISSUE-1: Return the last allocated match register (for patch sites).
-    fn ct_match_reg(&self) -> u8 { 0 }
+    fn ct_match_reg(&self) -> u8 {
+        0
+    }
     /// Store the match-value register for use by ct_compile_match_pattern.
     fn ct_set_match_reg(&mut self, _reg: u8) {}
     /// Patch only the offset of a JumpIfFalse at `ip`, preserving src.

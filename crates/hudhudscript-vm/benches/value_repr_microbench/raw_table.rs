@@ -158,7 +158,7 @@ pub fn raw_table() {
     eprintln!("═════════════════════════════════════════════════\n");
 }
 
-fn build_pool_a() -> Vec<hudhudscript_bytecode::Value> {
+fn build_pool_a() -> Vec<hudhudscript_bytecode::Value16> {
     (0..16)
         .map(|i| {
             if i % 3 == 0 {

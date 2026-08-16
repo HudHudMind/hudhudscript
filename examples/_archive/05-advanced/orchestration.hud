@@ -1,0 +1,161 @@
+// HudHudScript — Swarm and Council Orchestration
+// Issue #36: Comprehensive sample library
+//
+// Demonstrates multi-agent orchestration with swarms and councils.
+// Note: Inline task definitions inside agent bodies and council member
+// blocks with role assignments are aspirational syntax — agents use
+// key-value metadata, and task logic is in standalone functions.
+
+// ============================================================
+// 1. Providers
+// ============================================================
+
+provider gpt4 {
+    type: "openai",
+    model: "gpt-4",
+    api_key: "sk-your-key",
+    max_tokens: 2048
+}
+
+provider claude {
+    type: "anthropic",
+    model: "claude-3-opus",
+    api_key: "sk-ant-your-key",
+    max_tokens: 2048
+}
+
+// ============================================================
+// 2. Individual agents (metadata-only declarations)
+// ============================================================
+
+agent DataCollector {
+    role: "data_collection",
+    intent: "Gather raw data from configured sources",
+    provider: "gpt4"
+}
+
+agent DataAnalyser {
+    role: "data_analysis",
+    intent: "Identify trends and insights in raw data",
+    provider: "claude"
+}
+
+agent ReportWriter {
+    role: "report_generation",
+    intent: "Turn analysis results into clear written reports",
+    provider: "gpt4"
+}
+
+agent QualityReviewer {
+    role: "quality_assurance",
+    intent: "Review outputs for accuracy and clarity",
+    provider: "gpt4"
+}
+
+// ============================================================
+// 3. Task functions (standalone)
+// ============================================================
+
+fn collect(source) {
+    print("DataCollector: collecting from " + source);
+    return "Raw data from " + source;
+}
+
+fn analyse(raw_data) {
+    print("DataAnalyser: analysing data");
+    return "Analysis of: " + raw_data;
+}
+
+fn write_report(analysis, format) {
+    print("ReportWriter: writing report in " + format + " format");
+    return "Report (" + format + "): " + analysis;
+}
+
+fn review_content(content) {
+    print("QualityReviewer: reviewing content");
+    return "Reviewed: " + content;
+}
+
+// ============================================================
+// 4. Swarm — parallel execution of homogeneous agents
+// ============================================================
+
+swarm CollectionSwarm {
+    agents: ["DataCollector", "DataCollector", "DataCollector"],
+    strategy: "parallel"
+}
+
+swarm AnalysisSwarm {
+    agents: ["DataAnalyser", "DataAnalyser"],
+    strategy: "parallel"
+}
+
+// ============================================================
+// 5. Council — heterogeneous agents with governance
+// ============================================================
+
+council EditorialCouncil {
+    id: "council.editorial.1",
+    name: "Editorial Review Council",
+    constitution: "cons.quality.v1",
+    members: ["lead_writer", "senior_reviewer", "qa_specialist"],
+    rules: ["rule.quality.1", "rule.accuracy.1"]
+}
+
+// ============================================================
+// 6. Sequential pipeline using standalone functions
+// ============================================================
+
+print("=== Starting Pipeline ===");
+
+// Step 1: Collect data
+let raw_data = collect("https://api.example.com/data");
+print("Step 1 complete — data collected");
+print(raw_data);
+
+// Step 2: Analyse data
+let analysis = analyse(raw_data);
+print("Step 2 complete — analysis done");
+print(analysis);
+
+// Step 3: Write report
+let report = write_report(analysis, "markdown");
+print("Step 3 complete — report written");
+print(report);
+
+// Step 4: Quality review
+let feedback = review_content(report);
+print("Step 4 complete — quality review done");
+print(feedback);
+
+// ============================================================
+// 7. Swarm and council info
+// ============================================================
+
+print("=== Swarm Info ===");
+print("CollectionSwarm defined with 3 DataCollector agents");
+print("AnalysisSwarm defined with 2 DataAnalyser agents");
+
+print("=== Council ===");
+print("EditorialCouncil defined with 3 members");
+
+// ============================================================
+// 8. Turkish keywords — orchestration in Turkish
+// ============================================================
+
+print("=== Türkçe Orkestrasyon ===");
+
+ajan VeriToplama {
+    rol: "veri_toplama",
+    intent: "Ham veri topla"
+}
+
+fn topla(kaynak) {
+    print("VeriToplama: " + kaynak + " kaynağından veri toplanıyor");
+    return "Toplanan veri: " + kaynak;
+}
+
+let veri = topla("veritabani");
+print(veri);
+
+print("Orchestration demo complete.");

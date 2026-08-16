@@ -2,7 +2,7 @@
 
 use hudhudscript_bytecode::Value16;
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyList, PyBool, PyFloat, PyString};
+use pyo3::types::{PyBool, PyDict, PyFloat, PyList, PyString};
 
 pub fn py_to_value(obj: &Bound<'_, PyAny>) -> PyResult<Value16> {
     if let Ok(dict) = obj.downcast::<PyDict>() {
@@ -14,7 +14,10 @@ pub fn py_to_value(obj: &Bound<'_, PyAny>) -> PyResult<Value16> {
         }
         Ok(Value16::object(map))
     } else if let Ok(list) = obj.downcast::<PyList>() {
-        let items: Vec<Value16> = list.iter().map(|v| py_to_value(&v)).collect::<PyResult<_>>()?;
+        let items: Vec<Value16> = list
+            .iter()
+            .map(|v| py_to_value(&v))
+            .collect::<PyResult<_>>()?;
         Ok(Value16::array(items))
     } else if let Ok(b) = obj.extract::<bool>() {
         Ok(Value16::bool_(b))
@@ -50,7 +53,9 @@ pub fn value_to_py(py: Python<'_>, val: &Value16) -> PyResult<PyObject> {
     } else if let Some(obj) = val.as_object() {
         let dict = PyDict::new(py);
         for (k, v) in obj.iter() {
-            let key_str = hudhudscript_bytecode::interner::resolve(hudhudscript_bytecode::interner::SymbolId(k.0));
+            let key_str = hudhudscript_bytecode::interner::resolve(
+                hudhudscript_bytecode::interner::SymbolId(k.0),
+            );
             dict.set_item(key_str, value_to_py(py, v)?)?;
         }
         Ok(dict.into())

@@ -6,8 +6,8 @@ use hudhudscript_ast::{Decl, Decorator, Expr, Stmt};
 use pest::iterators::Pair;
 
 use crate::error::{parse_codes, ParseResult};
-use crate::parser::{pair_to_span, parse_expression, parse_statement};
 use crate::parser::statement::declarations::parse_block;
+use crate::parser::{pair_to_span, parse_expression, parse_statement};
 use crate::pest_parser::Rule;
 
 /// Parse a subject declaration
@@ -38,9 +38,12 @@ pub fn parse_subject_decl(pair: Pair<Rule>) -> ParseResult<Stmt> {
     for pair in inner {
         match pair.as_rule() {
             Rule::of_clause => {
-                of_subject = Some(pair.into_inner().next()
-                    .map(|p| p.as_str().to_string())
-                    .unwrap_or_default());
+                of_subject = Some(
+                    pair.into_inner()
+                        .next()
+                        .map(|p| p.as_str().to_string())
+                        .unwrap_or_default(),
+                );
             }
             Rule::has_clause => {
                 for ident in pair.into_inner() {
@@ -67,7 +70,10 @@ pub fn parse_subject_decl(pair: Pair<Rule>) -> ParseResult<Stmt> {
                             // on attack(...) { ... } directly inside subject body
                             let span = pair_to_span(&member);
                             let stmt = parse_ability_decl(member)?;
-                            if let Stmt::Decl(Decl::Ability { name, params, body, .. }) = stmt {
+                            if let Stmt::Decl(Decl::Ability {
+                                name, params, body, ..
+                            }) = stmt
+                            {
                                 capabilities.push(name.clone());
                                 ability_defs.push(hudhudscript_ast::SubjectAbilityDef {
                                     name,
@@ -447,9 +453,12 @@ pub fn parse_decorated_subject_decl(pair: Pair<Rule>) -> ParseResult<Stmt> {
                 found_name = true;
             }
             Rule::of_clause => {
-                of_subject = Some(p.into_inner().next()
-                    .map(|ident| ident.as_str().to_string())
-                    .unwrap_or_default());
+                of_subject = Some(
+                    p.into_inner()
+                        .next()
+                        .map(|ident| ident.as_str().to_string())
+                        .unwrap_or_default(),
+                );
             }
             Rule::has_clause => {
                 for ident in p.into_inner() {
@@ -475,7 +484,10 @@ pub fn parse_decorated_subject_decl(pair: Pair<Rule>) -> ParseResult<Stmt> {
                         Rule::ability_decl => {
                             let span = pair_to_span(&member);
                             let stmt = parse_ability_decl(member)?;
-                            if let Stmt::Decl(Decl::Ability { name, params, body, .. }) = stmt {
+                            if let Stmt::Decl(Decl::Ability {
+                                name, params, body, ..
+                            }) = stmt
+                            {
                                 capabilities.push(name.clone());
                                 ability_defs.push(hudhudscript_ast::SubjectAbilityDef {
                                     name,

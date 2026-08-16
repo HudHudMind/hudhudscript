@@ -200,6 +200,5 @@ fn get_is_tty() -> bool {
     false
 }
 
-
 mod tui;
 use tui::*;

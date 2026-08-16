@@ -19,8 +19,10 @@ pub fn setup_provider_registry(
     let registry = ProviderRegistry::new();
     let budget = tokenomics_budget;
 
-    let rt =
-        tokio::runtime::Builder::new_current_thread().enable_all().build().map_err(|e| format!("Failed to create runtime: {}", e))?;
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .map_err(|e| format!("Failed to create runtime: {}", e))?;
 
     rt.block_on(async {
         // ── OpenAI ──────────────────────────────────────────────────────────
@@ -41,7 +43,15 @@ pub fn setup_provider_registry(
                     Ok(p) => {
                         let p = Arc::new(p);
                         if let Some(ref b) = budget {
-                            registry.register_with_tokenomics("openai".to_string(), p.clone(), Some(b.max_tokens_per_call), Some(b.max_tokens_per_day), None).await;
+                            registry
+                                .register_with_tokenomics(
+                                    "openai".to_string(),
+                                    p.clone(),
+                                    Some(b.max_tokens_per_call),
+                                    Some(b.max_tokens_per_day),
+                                    None,
+                                )
+                                .await;
                         } else {
                             registry.register("openai".to_string(), p.clone()).await;
                         }
@@ -80,7 +90,15 @@ pub fn setup_provider_registry(
                     Ok(p) => {
                         let p = Arc::new(p);
                         if let Some(ref b) = budget {
-                            registry.register_with_tokenomics("anthropic".to_string(), p.clone(), Some(b.max_tokens_per_call), Some(b.max_tokens_per_day), None).await;
+                            registry
+                                .register_with_tokenomics(
+                                    "anthropic".to_string(),
+                                    p.clone(),
+                                    Some(b.max_tokens_per_call),
+                                    Some(b.max_tokens_per_day),
+                                    None,
+                                )
+                                .await;
                         } else {
                             registry.register("anthropic".to_string(), p.clone()).await;
                         }
@@ -119,7 +137,15 @@ pub fn setup_provider_registry(
             Ok(p) => {
                 let p = Arc::new(p);
                 if let Some(ref b) = budget {
-                    registry.register_with_tokenomics("ollama".to_string(), p.clone(), Some(b.max_tokens_per_call), Some(b.max_tokens_per_day), None).await;
+                    registry
+                        .register_with_tokenomics(
+                            "ollama".to_string(),
+                            p.clone(),
+                            Some(b.max_tokens_per_call),
+                            Some(b.max_tokens_per_day),
+                            None,
+                        )
+                        .await;
                 } else {
                     registry.register("ollama".to_string(), p.clone()).await;
                 }
@@ -154,7 +180,15 @@ pub fn setup_provider_registry(
                         Ok(p) => {
                             let p = Arc::new(p);
                             if let Some(ref b) = budget {
-                                registry.register_with_tokenomics(name.to_string(), p.clone(), Some(b.max_tokens_per_call), Some(b.max_tokens_per_day), None).await;
+                                registry
+                                    .register_with_tokenomics(
+                                        name.to_string(),
+                                        p.clone(),
+                                        Some(b.max_tokens_per_call),
+                                        Some(b.max_tokens_per_day),
+                                        None,
+                                    )
+                                    .await;
                             } else {
                                 registry.register(name.to_string(), p.clone()).await;
                             }
@@ -207,27 +241,41 @@ pub async fn setup_mcp_clients(
     let mut clients = std::collections::HashMap::new();
 
     if servers.is_empty() {
-        if debug { println!("⚠ No MCP servers in hudhud.toml [mcp.servers]"); }
+        if debug {
+            println!("⚠ No MCP servers in hudhud.toml [mcp.servers]");
+        }
         return Ok(clients);
     }
 
     let max_servers = 128usize;
     for (name, config) in servers {
-        if name.trim().is_empty() { continue; }
-        if clients.len() >= max_servers { break; }
-        if debug { println!("🔌 MCP server '{}'...", name); }
+        if name.trim().is_empty() {
+            continue;
+        }
+        if clients.len() >= max_servers {
+            break;
+        }
+        if debug {
+            println!("🔌 MCP server '{}'...", name);
+        }
 
         let transport = TransportConfig::stdio(config.command.clone(), config.args.clone());
         match McpClient::connect_initialized(transport, std::time::Duration::from_secs(5)).await {
             Ok(client) => {
-                if debug { println!("  ✓ '{}' connected", name); }
+                if debug {
+                    println!("  ✓ '{}' connected", name);
+                }
                 clients.insert(name.clone(), client);
             }
             Err(e) => {
-                if debug { eprintln!("  ⚠ '{}': {}", name, e); }
+                if debug {
+                    eprintln!("  ⚠ '{}': {}", name, e);
+                }
             }
         }
     }
-    if debug && !clients.is_empty() { println!("✓ {} MCP server(s)", clients.len()); }
+    if debug && !clients.is_empty() {
+        println!("✓ {} MCP server(s)", clients.len());
+    }
     Ok(clients)
 }

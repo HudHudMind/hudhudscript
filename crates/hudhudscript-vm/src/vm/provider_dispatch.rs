@@ -13,7 +13,7 @@
 //! use tool calling through the exact same iteration logic. Each
 //! runtime provides its own `ProviderContext::call_tool_handler` to
 //! bridge the script-function dispatch (interpreter walks AST closures,
-//! VM invokes bytecode chunks via CallbackInvoker).
+//! VM invokes bytecode chunks through the canonical continuation driver).
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -161,7 +161,12 @@ where
         // Re-derive provider config for the follow-up (keep original temp/max_tokens)
         let orig_config = context.provider_extract_config(config)?;
         let follow_up_system_prompt = context.provider_build_system_context(&orig_config)?;
-        let follow_up = build_follow_up_request(&orig_config, &follow_up_prompt, &tools, follow_up_system_prompt);
+        let follow_up = build_follow_up_request(
+            &orig_config,
+            &follow_up_prompt,
+            &tools,
+            follow_up_system_prompt,
+        );
 
         let provider = context.provider_get_provider()?;
         response = call_provider_async(provider, follow_up, context.provider_default_timeout())?;
@@ -211,10 +216,7 @@ fn call_provider_async(
     let call_fut = async move {
         match tokio::time::timeout(timeout_duration, provider.call(request)).await {
             Ok(result) => result.map_err(|e| format!("{}", e)),
-            Err(_) => Err(format!(
-                "Provider call timed out after {}s",
-                timeout_secs
-            )),
+            Err(_) => Err(format!("Provider call timed out after {}s", timeout_secs)),
         }
     };
     let result = crate::vm::provider::block_on_provider(call_fut);

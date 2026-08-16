@@ -193,6 +193,14 @@ impl crate::vm::VM {
                     hit_return = false;
                     break;
                 }
+                Ok(StepAction::DeferredCall) => {
+                    if self.pending_vm_call.is_none() {
+                        return Err(crate::vm::call_state::deferred_call_without_request());
+                    }
+                    local_ip += 1;
+                    hit_return = false;
+                    break;
+                }
                 Ok(StepAction::Break) => {
                     break;
                 }

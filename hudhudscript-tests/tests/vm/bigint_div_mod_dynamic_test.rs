@@ -34,16 +34,22 @@ fn run_err_msg(source: &str) -> Option<String> {
 fn bigint_mod_by_zero_errors_with_correct_message() {
     let source = "let a = 1000000000000000000; let r = a % 0;";
     let msg = run_err_msg(source).expect("should error");
-    assert!(msg.contains("Modulo by zero"),
-        "Expected 'Modulo by zero' in error, got: {}", msg);
+    assert!(
+        msg.contains("Modulo by zero"),
+        "Expected 'Modulo by zero' in error, got: {}",
+        msg
+    );
 }
 
 #[test]
 fn bigint_div_by_zero_errors_with_correct_message() {
     let source = "let a = 1000000000000000000; let r = a / 0;";
     let msg = run_err_msg(source).expect("should error");
-    assert!(msg.contains("Division by zero"),
-        "Expected 'Division by zero' in error, got: {}", msg);
+    assert!(
+        msg.contains("Division by zero"),
+        "Expected 'Division by zero' in error, got: {}",
+        msg
+    );
 }
 
 #[test]
@@ -54,8 +60,11 @@ let b = 0;
 let r = a % b;
 "#;
     let msg = run_err_msg(source).expect("should error");
-    assert!(msg.contains("Modulo by zero"),
-        "Expected 'Modulo by zero', got: {}", msg);
+    assert!(
+        msg.contains("Modulo by zero"),
+        "Expected 'Modulo by zero', got: {}",
+        msg
+    );
 }
 
 #[test]
@@ -66,8 +75,11 @@ let b = 0;
 let r = a / b;
 "#;
     let msg = run_err_msg(source).expect("should error");
-    assert!(msg.contains("Division by zero"),
-        "Expected 'Division by zero', got: {}", msg);
+    assert!(
+        msg.contains("Division by zero"),
+        "Expected 'Division by zero', got: {}",
+        msg
+    );
 }
 
 // C10.2: non-numeric Dynamic → caught at runtime. Arrays/strings with
@@ -94,7 +106,10 @@ let check = 333333333333333333;
     let vm = run(source).expect("BigInt / nonzero should succeed");
     let r = vm.get_variable("r").expect("r not found");
     let check = vm.get_variable("check").expect("check not found");
-    assert_eq!(r.as_number().unwrap() as i64, check.as_number().unwrap() as i64);
+    assert_eq!(
+        r.as_number().unwrap() as i64,
+        check.as_number().unwrap() as i64
+    );
 }
 
 #[test]
@@ -108,7 +123,10 @@ let check = 0;
     let vm = run(source).expect("BigInt % nonzero should succeed");
     let r = vm.get_variable("r").expect("r not found");
     let check = vm.get_variable("check").expect("check not found");
-    assert_eq!(r.as_number().unwrap() as i64, check.as_number().unwrap() as i64);
+    assert_eq!(
+        r.as_number().unwrap() as i64,
+        check.as_number().unwrap() as i64
+    );
 }
 
 #[test]
@@ -121,5 +139,8 @@ let check = 333333333333333333;
     let vm = run(source).expect("BigInt / 3 via imm should succeed");
     let r = vm.get_variable("r").expect("r not found");
     let check = vm.get_variable("check").expect("check not found");
-    assert_eq!(r.as_number().unwrap() as i64, check.as_number().unwrap() as i64);
+    assert_eq!(
+        r.as_number().unwrap() as i64,
+        check.as_number().unwrap() as i64
+    );
 }

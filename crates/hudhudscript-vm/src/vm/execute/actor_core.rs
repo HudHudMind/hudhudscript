@@ -328,8 +328,13 @@ impl VM {
                         // 1. Toml'dan eksik field'ları doldur
                         if let Some(toml_fields) = self.toml_providers.get(&name) {
                             for (k, v) in toml_fields {
-                                let is_timeout_key = k == "timeout" || k == "timeout_secs" || k == "timeout_seconds";
-                                if is_timeout_key && (merged.contains_key("timeout") || merged.contains_key("timeout_secs") || merged.contains_key("timeout_seconds")) {
+                                let is_timeout_key =
+                                    k == "timeout" || k == "timeout_secs" || k == "timeout_seconds";
+                                if is_timeout_key
+                                    && (merged.contains_key("timeout")
+                                        || merged.contains_key("timeout_secs")
+                                        || merged.contains_key("timeout_seconds"))
+                                {
                                     continue;
                                 }
                                 merged.entry(k.clone()).or_insert_with(|| {

@@ -107,19 +107,29 @@ fn is_ident(expr: &Expr, name: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use hudhudscript_ast::*;
     use crate::compiler::stmt_shared::assignment_fusions::{try_fma_pattern, try_self_sub_int};
+    use hudhudscript_ast::*;
 
     fn ident(name: &str) -> Expr {
         Expr::Identifier(name.to_string(), Span::default())
     }
 
     fn mul(l: Expr, r: Expr) -> Expr {
-        Expr::Binary { left: Box::new(l), op: BinaryOp::Mul, right: Box::new(r), span: Span::default() }
+        Expr::Binary {
+            left: Box::new(l),
+            op: BinaryOp::Mul,
+            right: Box::new(r),
+            span: Span::default(),
+        }
     }
 
     fn add(l: Expr, r: Expr) -> Expr {
-        Expr::Binary { left: Box::new(l), op: BinaryOp::Add, right: Box::new(r), span: Span::default() }
+        Expr::Binary {
+            left: Box::new(l),
+            op: BinaryOp::Add,
+            right: Box::new(r),
+            span: Span::default(),
+        }
     }
 
     #[test]
@@ -169,15 +179,25 @@ mod tests {
         let ast = hudhudscript_parser::parse(src).unwrap();
         let mut compiler = Compiler::new();
         let bc = compiler.compile(&ast).unwrap();
-        
-        let horner = bc.get_function("horner_test")
+
+        let horner = bc
+            .get_function("horner_test")
             .expect("horner_test function not found");
-        
+
         let mut has_fma = false;
         for instr in &horner.instructions {
-            if let hudhudscript_bytecode::Instruction::NumMulAddIndexed { acc: _a, mul, arr, idx: _i } = instr {
+            if let hudhudscript_bytecode::Instruction::NumMulAddIndexed {
+                acc: _a,
+                mul,
+                arr,
+                idx: _i,
+            } = instr
+            {
                 has_fma = true;
-                assert_ne!(*mul, *arr, "NumMulAddIndexed mul and arr must be different registers (both {mul})");
+                assert_ne!(
+                    *mul, *arr,
+                    "NumMulAddIndexed mul and arr must be different registers (both {mul})"
+                );
             }
         }
         assert!(has_fma, "NumMulAddIndexed not emitted for horner pattern");
@@ -188,7 +208,12 @@ mod tests {
     }
 
     fn sub(l: Expr, r: Expr) -> Expr {
-        Expr::Binary { left: Box::new(l), op: BinaryOp::Sub, right: Box::new(r), span: Span::default() }
+        Expr::Binary {
+            left: Box::new(l),
+            op: BinaryOp::Sub,
+            right: Box::new(r),
+            span: Span::default(),
+        }
     }
 
     #[test]

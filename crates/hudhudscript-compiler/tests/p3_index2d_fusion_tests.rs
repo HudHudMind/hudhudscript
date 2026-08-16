@@ -1,9 +1,9 @@
 // P3: 2D index fusion tests — verify Index2D/IndexAssign2D emission
 // for IndexArray/IndexAssignArray patterns introduced in P1.
 
+use hudhudscript_bytecode::Instruction;
 use hudhudscript_compiler::Compiler;
 use hudhudscript_parser::parse;
-use hudhudscript_bytecode::Instruction;
 
 fn compile_instructions(src: &str) -> Vec<Instruction> {
     let ast = parse(src).expect("parse failed");
@@ -25,7 +25,9 @@ where
 
 #[test]
 fn index2d_from_indexarray_reads() {
-    let insns = compile_instructions("fn f() { let m = [[1,2],[3,4]]; let i = 0; let j = 1; return m[i][j]; } let x = f();");
+    let insns = compile_instructions(
+        "fn f() { let m = [[1,2],[3,4]]; let i = 0; let j = 1; return m[i][j]; } let x = f();",
+    );
     assert!(
         has_instruction(&insns, |i| matches!(i, Instruction::Index2D { .. })),
         "IndexArray+IndexArray must fuse to Index2D in function body, got none"
@@ -34,7 +36,8 @@ fn index2d_from_indexarray_reads() {
 
 #[test]
 fn index2d_from_generic_index_reads() {
-    let insns = compile_instructions("fn f(m, i, j) { return m[i][j]; } let x = f([[1,2],[3,4]], 0, 1);");
+    let insns =
+        compile_instructions("fn f(m, i, j) { return m[i][j]; } let x = f([[1,2],[3,4]], 0, 1);");
     assert!(
         has_instruction(&insns, |i| matches!(i, Instruction::Index2D { .. })),
         "Index+Index must fuse to Index2D, got none"
@@ -44,7 +47,7 @@ fn index2d_from_generic_index_reads() {
 #[test]
 fn index_assign2d_from_mixed_indexarray_assign() {
     let insns = compile_instructions(
-        "fn f() { let dp = [[0,0],[0,0]]; let i = 0; let j = 1; dp[i][j] = 42; } f();"
+        "fn f() { let dp = [[0,0],[0,0]]; let i = 0; let j = 1; dp[i][j] = 42; } f();",
     );
     assert!(
         has_instruction(&insns, |i| matches!(i, Instruction::IndexAssign2D { .. })),

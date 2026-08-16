@@ -21,7 +21,10 @@ fn test_truthy_parity_int() {
         if (!1) { res = res + 1000; }
     "#;
     let vm = run(code);
-    assert_eq!(vm.get_variable("res").and_then(|v| v.as_number()), Some(101.0)); // 1 + 100
+    assert_eq!(
+        vm.get_variable("res").and_then(|v| v.as_number()),
+        Some(101.0)
+    ); // 1 + 100
 }
 
 #[test]
@@ -34,7 +37,10 @@ fn test_truthy_parity_string() {
         if (!"hello") { res = res + 1000; }
     "#;
     let vm = run(code);
-    assert_eq!(vm.get_variable("res").and_then(|v| v.as_number()), Some(101.0));
+    assert_eq!(
+        vm.get_variable("res").and_then(|v| v.as_number()),
+        Some(101.0)
+    );
 }
 
 #[test]
@@ -45,5 +51,8 @@ fn test_truthy_parity_null() {
         if (!null) { res = res + 100; }
     "#;
     let vm = run(code);
-    assert_eq!(vm.get_variable("res").and_then(|v| v.as_number()), Some(100.0));
+    assert_eq!(
+        vm.get_variable("res").and_then(|v| v.as_number()),
+        Some(100.0)
+    );
 }

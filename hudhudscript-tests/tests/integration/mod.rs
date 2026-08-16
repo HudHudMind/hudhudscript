@@ -73,5 +73,5 @@ mod web_framework_vm_test;
 pub static EVENT_BUS_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 mod m3_persona_swarm_council_test;
 mod nested_provider_import_agent_call_test;
-mod provider_system_context_test;
 mod provider_agent_timeout_test;
+mod provider_system_context_test;

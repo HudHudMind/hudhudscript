@@ -1,0 +1,8 @@
+// Sample 12: escalation gate target
+loop resilient {
+  step s {
+    gate G { when true -> escalate else -> done }
+  }
+}
+
+run loop resilient

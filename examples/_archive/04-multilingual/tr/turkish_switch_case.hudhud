@@ -1,0 +1,53 @@
+// Türkçe Switch-Case Örneği
+// Çok yönlü dallanma gösterimi
+
+var gün = 3
+
+seç (gün) {
+  durum 1:
+    yazdır("Pazartesi")
+  durum 2:
+    yazdır("Salı")
+  durum 3:
+    yazdır("Çarşamba")
+  durum 4:
+    yazdır("Perşembe")
+  durum 5:
+    yazdır("Cuma")
+  durum 6:
+    yazdır("Cumartesi")
+  durum 7:
+    yazdır("Pazar")
+  varsayılan:
+    yazdır("Geçersiz gün")
+}
+
+// Not ile switch
+var not = 85
+
+seç (not) {
+  durum 90:
+    yazdır("Pekiyi")
+  durum 80:
+    yazdır("İyi")
+  durum 70:
+    yazdır("Orta")
+  durum 60:
+    yazdır("Geçer")
+  varsayılan:
+    yazdır("Kaldı")
+}
+
+// Metin eşleştirme
+var komut = "başlat"
+
+seç (komut) {
+  durum "başlat":
+    yazdır("Başlatılıyor...")
+  durum "durdur":
+    yazdır("Durduruluyor...")
+  durum "yeniden başlat":
+    yazdır("Yeniden başlatılıyor...")
+  varsayılan:
+    yazdır("Bilinmeyen komut")
+}

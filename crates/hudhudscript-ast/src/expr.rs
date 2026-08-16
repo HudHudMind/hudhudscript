@@ -96,10 +96,7 @@ pub enum Expr {
     },
 
     /// Perform an agent action: perform Worker.double(21)
-    Perform {
-        action: Box<Expr>,
-        span: Span,
-    },
+    Perform { action: Box<Expr>, span: Span },
 
     /// Member access: obj.field
     Member {

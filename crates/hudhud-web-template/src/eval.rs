@@ -106,8 +106,7 @@ fn eval_node(
                             "index".to_string(),
                             Value16::number(child_state.index as f64),
                         );
-                        local_ctx
-                            .insert("loop".to_string(), Value16::object(loop_obj));
+                        local_ctx.insert("loop".to_string(), Value16::object(loop_obj));
                         eval_nodes(body, &local_ctx, config, out, &mut child_state)?;
                     }
                 }
@@ -120,17 +119,13 @@ fn eval_node(
                     for (idx, ch) in s.chars().enumerate() {
                         child_state.index = idx + 1;
                         let mut local_ctx = ctx.clone();
-                        local_ctx.insert(
-                            var.clone(),
-                            Value16::string(ch.to_string()),
-                        );
+                        local_ctx.insert(var.clone(), Value16::string(ch.to_string()));
                         let mut loop_obj = hudhudscript_bytecode::ObjMap::default();
                         loop_obj.insert(
                             "index".to_string(),
                             Value16::number(child_state.index as f64),
                         );
-                        local_ctx
-                            .insert("loop".to_string(), Value16::object(loop_obj));
+                        local_ctx.insert("loop".to_string(), Value16::object(loop_obj));
                         eval_nodes(body, &local_ctx, config, out, &mut child_state)?;
                     }
                 }
@@ -140,21 +135,14 @@ fn eval_node(
         }
         Node::Include(path) => {
             let full_path = config.template_root.join(path);
-            let source = std::fs::read_to_string(&full_path).map_err(|e| {
-                format!("include {}: {}", full_path.display(), e)
-            })?;
+            let source = std::fs::read_to_string(&full_path)
+                .map_err(|e| format!("include {}: {}", full_path.display(), e))?;
             let tokens = lexer::lex(&source);
             let mut parser = super::parser::Parser::new(tokens);
-            let included_nodes = parser.parse().map_err(|e| {
-                format!("parse error in {}: {}", full_path.display(), e)
-            })?;
-            eval_nodes(
-                &included_nodes,
-                ctx,
-                config,
-                out,
-                loop_state,
-            )?;
+            let included_nodes = parser
+                .parse()
+                .map_err(|e| format!("parse error in {}: {}", full_path.display(), e))?;
+            eval_nodes(&included_nodes, ctx, config, out, loop_state)?;
         }
         Node::Extends(_) => {
             // Already handled by resolve_inheritance; skip.
@@ -169,10 +157,7 @@ fn eval_node(
 
 /// Resolve extends/blocks: if the template extends a base, load the base
 /// and substitute its blocks with child block definitions.
-fn resolve_inheritance(
-    nodes: Vec<Node>,
-    config: &EvalConfig,
-) -> Result<Vec<Node>, String> {
+fn resolve_inheritance(nodes: Vec<Node>, config: &EvalConfig) -> Result<Vec<Node>, String> {
     // Find extends and blocks
     let mut extends_path: Option<String> = None;
     let mut child_blocks: HashMap<String, Vec<Node>> = HashMap::new();
@@ -192,14 +177,13 @@ fn resolve_inheritance(
         Some(path) => {
             // Load base template
             let full_path = config.template_root.join(&path);
-            let source = std::fs::read_to_string(&full_path).map_err(|e| {
-                format!("extends {}: {}", full_path.display(), e)
-            })?;
+            let source = std::fs::read_to_string(&full_path)
+                .map_err(|e| format!("extends {}: {}", full_path.display(), e))?;
             let tokens = lexer::lex(&source);
             let mut parser = super::parser::Parser::new(tokens);
-            let base_nodes = parser.parse().map_err(|e| {
-                format!("parse error in {}: {}", full_path.display(), e)
-            })?;
+            let base_nodes = parser
+                .parse()
+                .map_err(|e| format!("parse error in {}: {}", full_path.display(), e))?;
 
             // Substitute blocks: traverse base, replace blocks with child definitions
             Ok(substitute_blocks(base_nodes, &child_blocks, config)?)
@@ -234,16 +218,14 @@ fn substitute_blocks(
             Node::Extends(path) => {
                 // Nested extends: load grandparent
                 let full_path = config.template_root.join(&path);
-                let source = std::fs::read_to_string(&full_path).map_err(|e| {
-                    format!("extends {}: {}", full_path.display(), e)
-                })?;
+                let source = std::fs::read_to_string(&full_path)
+                    .map_err(|e| format!("extends {}: {}", full_path.display(), e))?;
                 let tokens = lexer::lex(&source);
                 let mut parser = super::parser::Parser::new(tokens);
-                let grandparent = parser.parse().map_err(|e| {
-                    format!("parse error in {}: {}", full_path.display(), e)
-                })?;
-                let substituted =
-                    substitute_blocks(grandparent, blocks, config)?;
+                let grandparent = parser
+                    .parse()
+                    .map_err(|e| format!("parse error in {}: {}", full_path.display(), e))?;
+                let substituted = substitute_blocks(grandparent, blocks, config)?;
                 result.extend(substituted);
             }
             _ => result.push(node),
@@ -253,11 +235,7 @@ fn substitute_blocks(
 }
 
 /// Evaluate an expression → Value16.
-fn eval_expr(
-    expr: &Expr,
-    ctx: &Context,
-    loop_state: &LoopState,
-) -> Value16 {
+fn eval_expr(expr: &Expr, ctx: &Context, loop_state: &LoopState) -> Value16 {
     match expr {
         Expr::Ident(name) => ctx.get(name).cloned().unwrap_or(Value16::null()),
         Expr::String(s) => Value16::string(s.clone()),

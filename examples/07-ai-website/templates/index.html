@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>AI'ya Soru Sor</h2>
+<form id="soru-form">
+    <textarea name="question" id="question" rows="4" placeholder="Sorunuzu yazın..." required></textarea>
+    <button type="button" onclick="tekSor()">🤖 Tek AI Sor</button>
+    <button type="button" onclick="kurulSor()">👥 Kurul'a Sor (2 agent)</button>
+</form>
+<div id="cevap-alani" style="margin-top: 1.5rem;"></div>
+<p style="color: #6b7280; font-size: 0.9rem; margin-top: 1rem;">
+    Örnek: "Fransa'nın başkenti nedir?", "Kuantum bilgisayarlar nasıl çalışır?"
+</p>
+
+<script>
+function showLoading() {
+    document.getElementById('cevap-alani').innerHTML = '<div class="answer"><p>⏳ AI düşünüyor...</p></div>';
+}
+
+function sor(endpoint) {
+    var q = document.getElementById('question').value;
+    if (!q.trim()) { alert('Lütfen soru yazın'); return; }
+    showLoading();
+    fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'question=' + encodeURIComponent(q)
+    })
+    .then(r => r.text())
+    .then(html => {
+        var tmp = document.createElement('div');
+        tmp.innerHTML = html;
+        var answer = tmp.querySelector('.answer');
+        var stats = tmp.querySelector('.stats');
+        document.getElementById('cevap-alani').innerHTML = '';
+        if (answer) document.getElementById('cevap-alani').appendChild(answer);
+        if (stats) document.getElementById('cevap-alani').appendChild(stats);
+    })
+    .catch(e => {
+        document.getElementById('cevap-alani').innerHTML = '<p style="color:red">Hata: ' + e.message + '</p>';
+    });
+}
+
+function tekSor() { sor('/sor'); }
+function kurulSor() { sor('/kurul'); }
+</script>
+{% endblock %}

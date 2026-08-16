@@ -1,8 +1,8 @@
+use super::{get_is_tty, get_terminal_height, get_terminal_width, runtime_error};
 use hudhudscript_bytecode::Value16;
 use hudhudscript_errors::HudHudResult;
 use std::collections::HashMap;
 use std::io::Write;
-use super::{runtime_error, get_terminal_width, get_terminal_height, get_is_tty};
 
 // ── TUI Operations (Issue #1023) ───────────────────────────────────────────
 

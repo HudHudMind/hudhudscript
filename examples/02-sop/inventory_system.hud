@@ -1,0 +1,139 @@
+// ═══════════════════════════════════════════════════════════════
+// SOP + OOP Hibrit: Akıllı Stok Yönetim Sistemi
+// v0.5.23 — Harrison & Ossher SOP + OOP birlikte kullanım
+// ═══════════════════════════════════════════════════════════════
+
+// ═══ OOP KATMANI: Veri doğrulama ve dönüşüm ═══
+
+// Abstract base: tüm stok öğeleri için ortak arayüz
+abstract class StockItem {
+    public fn validate() { return true }
+    public fn label() { return "item" }
+    public fn min_stock() { return 10 }
+}
+
+// Concrete: fiziksel ürün
+class PhysicalProduct extends StockItem {
+    public fn label() { return "physical" }
+    public fn min_stock() { return 25 }
+    public fn weight_kg() { return 2 }
+}
+
+// Concrete: dijital ürün
+class DigitalProduct extends StockItem {
+    public fn label() { return "digital" }
+    public fn min_stock() { return 0 }
+    public fn license_type() { return "perpetual" }
+}
+
+// ═══ SOP KATMANI: Domain mantığı ═══
+
+// Base subject: depo
+subject Warehouse {
+    state total_items: 0, state alerts: 0, state location: "main"
+}
+
+// View: stok seviyesi izleme (of keyword)
+subject StockMonitor of Warehouse {
+    state low_stock_count: 0
+    on check_level(self, current, min_level) {
+        let is_low = current - min_level
+        self.low_stock_count = self.low_stock_count + 1
+    }
+}
+
+// View: denetim günlüğü
+subject AuditTrail of Warehouse {
+    state log_count: 0
+    on log_event(self, event) {
+        self.log_count = self.log_count + 1
+    }
+}
+
+// Effects (pure state mutation)
+effect on AddStock(target, amount) {
+    target.total_items = target.total_items + amount
+}
+
+effect on RemoveStock(target, amount) {
+    target.total_items = target.total_items - amount
+}
+
+effect on TriggerAlert(target) {
+    target.alerts = target.alerts + 1
+}
+
+// Abilities
+on restock(self, amount) {
+    AddStock(self, amount)
+    self.log_event("restock:" + amount)
+}
+
+on ship(self, amount) {
+    RemoveStock(self, amount)
+    self.log_event("ship:" + amount)
+}
+
+on check_inventory(self, current) {
+    self.check_level(current, 20)
+    TriggerAlert(self)
+}
+
+// Composition rules
+compose Warehouse {
+    on restock: combine [AuditTrail]
+    on ship:    combine [AuditTrail]
+    on check_inventory: combine [StockMonitor]
+}
+
+// ═══════════════════════════════════════════════
+// SIMULATION
+// ═══════════════════════════════════════════════
+
+let main_wh  = spawn Warehouse
+let aux_wh   = spawn Warehouse
+
+// OOP: ürün kataloğu oluştur
+let phone   = new PhysicalProduct()
+let ebook   = new DigitalProduct()
+let tablet  = new PhysicalProduct()
+
+print("=== STOK SISTEMI BASLADI ===")
+print("Urun tipleri:")
+print(phone.label())
+print(ebook.label())
+print(tablet.label())
+print("Min stok seviyeleri: phone=" + phone.min_stock() + " ebook=" + ebook.min_stock())
+print("")
+
+// SOP: depo operasyonları
+print(">>> Ana depoya 100 birim stok girisi")
+main_wh.restock(100)
+main_wh.check_inventory(100)
+
+print(">>> Ana depodan 85 birim sevkiyat")
+main_wh.ship(85)
+main_wh.check_inventory(15)
+
+print(">>> Yardimci depoya 30 birim stok girisi")
+aux_wh.restock(30)
+aux_wh.check_inventory(30)
+
+print(">>> Yardimci depodan 28 birim sevkiyat (dusuk stok!)")
+aux_wh.ship(28)
+aux_wh.check_inventory(2)
+
+// ── Sonuç raporu (view state read) ──
+print("")
+print("=== SONUC RAPORU ===")
+print("Ana depo: " + main_wh.total_items + " urun, " + main_wh.alerts + " uyari, " + main_wh.low_stock_count + " dusuk stok")
+print("Yardimci depo: " + aux_wh.total_items + " urun, " + aux_wh.alerts + " uyari, " + aux_wh.low_stock_count + " dusuk stok")
+print("Denetim: ana=" + main_wh.log_count + " olay, yardimci=" + aux_wh.log_count + " olay")
+
+// OOP: doğrulama
+print("")
+let valid = phone.validate()
+print("validate: ")
+print(valid)
+print("")
+print("SISTEM CALISIYOR — SOP (domain) + OOP (data) entegrasyonu basarili")

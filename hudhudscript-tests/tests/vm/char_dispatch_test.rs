@@ -20,14 +20,12 @@ fn has_char_dispatch(source: &str, _function_name: &str) -> bool {
     let mut compiler = Compiler::new();
     let bytecode = compiler.compile(&ast).expect("compile");
     let funcs = bytecode.functions.borrow();
-    funcs
-        .iter()
-        .any(|chunk| {
-            chunk
-                .instructions
-                .iter()
-                .any(|i| matches!(i, Instruction::CharDispatch { .. }))
-        })
+    funcs.iter().any(|chunk| {
+        chunk
+            .instructions
+            .iter()
+            .any(|i| matches!(i, Instruction::CharDispatch { .. }))
+    })
 }
 
 #[test]
@@ -66,11 +64,26 @@ let a = comp("A")
 let z = comp("Z")
 "#;
     let vm = compile_and_execute(source);
-    assert_eq!(vm.get_global("a").and_then(|v| v.as_string()), Some("T".to_string()));
-    assert_eq!(vm.get_global("c").and_then(|v| v.as_string()), Some("G".to_string()));
-    assert_eq!(vm.get_global("g").and_then(|v| v.as_string()), Some("C".to_string()));
-    assert_eq!(vm.get_global("t").and_then(|v| v.as_string()), Some("A".to_string()));
-    assert_eq!(vm.get_global("z").and_then(|v| v.as_string()), Some("?".to_string()));
+    assert_eq!(
+        vm.get_global("a").and_then(|v| v.as_string()),
+        Some("T".to_string())
+    );
+    assert_eq!(
+        vm.get_global("c").and_then(|v| v.as_string()),
+        Some("G".to_string())
+    );
+    assert_eq!(
+        vm.get_global("g").and_then(|v| v.as_string()),
+        Some("C".to_string())
+    );
+    assert_eq!(
+        vm.get_global("t").and_then(|v| v.as_string()),
+        Some("A".to_string())
+    );
+    assert_eq!(
+        vm.get_global("z").and_then(|v| v.as_string()),
+        Some("?".to_string())
+    );
 }
 
 #[test]
@@ -89,8 +102,14 @@ let a = comp("a")
 let t = comp("t")
 "#;
     let vm = compile_and_execute(source);
-    assert_eq!(vm.get_global("a").and_then(|v| v.as_string()), Some("t".to_string()));
-    assert_eq!(vm.get_global("t").and_then(|v| v.as_string()), Some("a".to_string()));
+    assert_eq!(
+        vm.get_global("a").and_then(|v| v.as_string()),
+        Some("t".to_string())
+    );
+    assert_eq!(
+        vm.get_global("t").and_then(|v| v.as_string()),
+        Some("a".to_string())
+    );
 }
 
 #[test]
@@ -120,8 +139,14 @@ let a = comp("A")
 let z = comp("Z")
 "#;
     let vm = compile_and_execute(source);
-    assert_eq!(vm.get_global("a").and_then(|v| v.as_string()), Some("T".to_string()));
-    assert_eq!(vm.get_global("z").and_then(|v| v.as_string()), Some("".to_string()));
+    assert_eq!(
+        vm.get_global("a").and_then(|v| v.as_string()),
+        Some("T".to_string())
+    );
+    assert_eq!(
+        vm.get_global("z").and_then(|v| v.as_string()),
+        Some("".to_string())
+    );
 }
 
 #[test]
@@ -165,6 +190,12 @@ let a = greet("A")
 let b = greet("B")
 "#;
     let vm = compile_and_execute(source);
-    assert_eq!(vm.get_global("a").and_then(|v| v.as_string()), Some("hiA".to_string()));
-    assert_eq!(vm.get_global("b").and_then(|v| v.as_string()), Some("hiB".to_string()));
+    assert_eq!(
+        vm.get_global("a").and_then(|v| v.as_string()),
+        Some("hiA".to_string())
+    );
+    assert_eq!(
+        vm.get_global("b").and_then(|v| v.as_string()),
+        Some("hiB".to_string())
+    );
 }

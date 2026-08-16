@@ -96,6 +96,8 @@ impl VM {
             call_stack_local_syms: Vec::with_capacity(64),
             owned_local_sym_refs: Vec::with_capacity(16),
             pending_call: None,
+            pending_vm_call: None,
+            vm_continuations: Vec::new(),
             pending_super_call: false,
             frame_stack: Vec::with_capacity(64),
             stack_frame_base: 0,
@@ -140,6 +142,9 @@ impl VM {
             json_obj: None,
             in_stm_context: false,
             current_tx: None,
+            module_load_context: Arc::new(parking_lot::Mutex::new(
+                crate::vm::module_load_context::ModuleLoadContext::default(),
+            )),
 
             debugger: None,
             current_file: None,

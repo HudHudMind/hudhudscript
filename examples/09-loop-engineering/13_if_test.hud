@@ -1,0 +1,11 @@
+// 13_if_test.hud — Loop step with unparenthesized if conditional check
+loop IfTest {
+    step run {
+        let cond = false;
+        if cond == true {
+            print("Executes unconditionally - conditional jump bypassed.");
+        }
+        gate check { when true -> done else -> done }
+    }
+}
+run loop IfTest;

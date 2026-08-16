@@ -1,0 +1,38 @@
+// Access Control Example
+// Demonstrates permission-based governance
+
+// Define a constitution (requires CreateConstitution permission)
+constitution SecurityPolicy {
+    description: "Security policy for the system",
+    laws: [
+        {
+            name: "AuthenticationRequired",
+            description: "All users must authenticate",
+            enforcement: mandatory,
+            rules: ["rule.auth"]
+        }
+    ]
+}
+
+// Create a council (requires CreateCouncil permission)
+council SecurityCouncil {
+    constitution: "SecurityPolicy",
+    members: [
+        { agent: "security_admin", role: "Judge" },
+        { agent: "security_officer", role: "Prosecutor" }
+    ],
+    rules: ["rule.auth"]
+}
+
+// Permission checks:
+// - CreateConstitution: Required to create SecurityPolicy
+// - CreateCouncil: Required to create SecurityCouncil
+// - ModifyConstitution: Required to update SecurityPolicy
+// - EnforceConstitution: Required to enforce laws
+// - ViewGovernance: Required to view structures
+
+// Agent with insufficient permissions will be denied
+// Agent with proper permissions can proceed
+
+print("Access control enforced")
+print("Only authorized agents can create governance structures")

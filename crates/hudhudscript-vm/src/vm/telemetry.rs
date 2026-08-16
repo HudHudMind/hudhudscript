@@ -76,7 +76,6 @@ pub struct Telemetry {
     pub site_call_count: u64,
     pub site_property_count: u64,
     pub site_index_count: u64,
-
     // ── G2: Site type counters ────────────────────────────────────
 }
 
@@ -140,10 +139,16 @@ impl Telemetry {
         self.string_index_clone_bytes = 0;
         self.loop_begin_end_count = 0;
         // P0: reset vecs by zeroing in-place (avoid re-alloc)
-        for v in self.opcode_counts.iter_mut() { *v = 0; }
-        for v in self.fallthrough_by_opcode.iter_mut() { *v = 0; }
+        for v in self.opcode_counts.iter_mut() {
+            *v = 0;
+        }
+        for v in self.fallthrough_by_opcode.iter_mut() {
+            *v = 0;
+        }
         self.opcode_bigrams.clear();
-        for v in self.alloc_count_by_kind.iter_mut() { *v = 0; }
+        for v in self.alloc_count_by_kind.iter_mut() {
+            *v = 0;
+        }
         self.last_dense = 0xFFFF;
         self.unpacked_opcode_counts.clear();
         self.property_lookup_count = 0;
@@ -204,8 +209,11 @@ impl Telemetry {
             loop_begin_end_count: self.loop_begin_end_count,
             opcode_counts: self.opcode_counts.clone(),
             fallthrough_by_opcode: self.fallthrough_by_opcode.clone(),
-            unpacked_opcode_counts: self.unpacked_opcode_counts.iter()
-                .map(|(k, v)| (k.to_string(), *v)).collect(),
+            unpacked_opcode_counts: self
+                .unpacked_opcode_counts
+                .iter()
+                .map(|(k, v)| (k.to_string(), *v))
+                .collect(),
             opcode_bigrams: self.opcode_bigrams.iter().map(|(k, v)| (*k, *v)).collect(),
             property_lookup_count: self.property_lookup_count,
             scope_cell_lookup_count: self.scope_cell_lookup_count,
@@ -216,9 +224,21 @@ impl Telemetry {
             gc_pause_ns_total: self.gc_pause_ns_total,
             gc_pause_ns_max: self.gc_pause_ns_max,
             gc_heap_bytes_after_sweep: self.gc_heap_bytes_after_sweep,
-            fusion_emitted_by_opcode: self.fusion_emitted_by_opcode.iter().map(|(k, v)| (k.to_string(), *v)).collect(),
-            fusion_executed_by_opcode: self.fusion_executed_by_opcode.iter().map(|(k, v)| (k.to_string(), *v)).collect(),
-            fusion_rejected_by_reason: self.fusion_rejected_by_reason.iter().map(|(k, v)| (k.to_string(), *v)).collect(),
+            fusion_emitted_by_opcode: self
+                .fusion_emitted_by_opcode
+                .iter()
+                .map(|(k, v)| (k.to_string(), *v))
+                .collect(),
+            fusion_executed_by_opcode: self
+                .fusion_executed_by_opcode
+                .iter()
+                .map(|(k, v)| (k.to_string(), *v))
+                .collect(),
+            fusion_rejected_by_reason: self
+                .fusion_rejected_by_reason
+                .iter()
+                .map(|(k, v)| (k.to_string(), *v))
+                .collect(),
             int_add_slow_count: self.int_add_slow_count,
             site_call_count: self.site_call_count,
             site_property_count: self.site_property_count,
@@ -496,7 +516,7 @@ pub fn instruction_name(instr: &hudhudscript_bytecode::Instruction) -> &'static 
         Instruction::ClassStaticDecl(_) => "ClassStaticDecl",
         Instruction::GetStatic(_) => "GetStatic",
         Instruction::SuperCall { .. } => "SuperCall",
-        Instruction::MethodCallSpread(_) => "MethodCallSpread",
+        Instruction::MethodCallSpread { .. } => "MethodCallSpread",
         Instruction::DestructObject(_) => "DestructObject",
         Instruction::IndexStringAscii { .. } => "IndexStringAscii",
         Instruction::MakeArray2 { .. } => "MakeArray2",

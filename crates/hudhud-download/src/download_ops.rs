@@ -4,9 +4,9 @@
 //! HTTP via `reqwest::blocking`. Resume support relies on the server
 //! advertising `Accept-Ranges: bytes` and honours the `Range` header.
 
+use crate::download_helpers;
 use hudhudscript_bytecode::Value16;
 use hudhudscript_errors::{Error, ErrorCode, HudHudResult};
-use crate::download_helpers;
 
 pub(crate) fn runtime_error(msg: impl Into<String>) -> Error {
     Error::new(ErrorCode::CompileRuntimeError, msg.into())
@@ -106,7 +106,8 @@ pub fn download_file(args: &[Value16]) -> HudHudResult<Value16> {
 
 pub fn download_file_with_progress(args: &[Value16]) -> HudHudResult<Value16> {
     let url = download_helpers::require_str(args, 0, "download.file_with_progress")?.to_string();
-    let output_path = download_helpers::require_str(args, 1, "download.file_with_progress")?.to_string();
+    let output_path =
+        download_helpers::require_str(args, 1, "download.file_with_progress")?.to_string();
 
     let client = download_helpers::build_client()?;
     let response = client
@@ -376,4 +377,3 @@ pub fn download_json(args: &[Value16]) -> HudHudResult<Value16> {
 
     Ok(download_helpers::serde_json_to_value16(&json_val))
 }
-

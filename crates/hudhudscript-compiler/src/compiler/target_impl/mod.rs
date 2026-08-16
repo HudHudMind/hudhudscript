@@ -18,7 +18,7 @@ impl CompileTarget for Compiler {
     ) -> CompileResult<Vec<usize>> {
         let r = crate::compiler::regalloc::temp_reg();
         self.last_match_reg = r;
-        self.bytecode.push_move(r, 255 );
+        self.bytecode.push_move(r, 255);
         self.compile_match_pattern_bytecode(pattern, r)
     }
     fn ct_compile_destructure_pattern(
@@ -63,8 +63,12 @@ impl CompileTarget for Compiler {
         self.emit_int_const(val)
     }
     /// B8: global snapshots (set before function body compilation)
-    fn ct_int_constants(&self) -> &[i64] { &self.global_int_constants }
-    fn ct_numeric_constants(&self) -> &[u64] { &self.global_numeric_constants }
+    fn ct_int_constants(&self) -> &[i64] {
+        &self.global_int_constants
+    }
+    fn ct_numeric_constants(&self) -> &[u64] {
+        &self.global_numeric_constants
+    }
     fn ct_intern(&mut self, name: &str) -> u32 {
         self.intern(name)
     }
@@ -119,13 +123,22 @@ impl CompileTarget for Compiler {
     fn ct_add_enum_decl_payload(&mut self, payload: hudhudscript_bytecode::EnumDeclPayload) -> u32 {
         self.add_enum_decl_payload(payload)
     }
-    fn ct_add_class_decl_payload(&mut self, payload: hudhudscript_bytecode::ClassDeclPayload) -> u32 {
+    fn ct_add_class_decl_payload(
+        &mut self,
+        payload: hudhudscript_bytecode::ClassDeclPayload,
+    ) -> u32 {
         self.add_class_decl_payload(payload)
     }
-    fn ct_add_trait_check_payload(&mut self, payload: hudhudscript_bytecode::TraitCheckPayload) -> u32 {
+    fn ct_add_trait_check_payload(
+        &mut self,
+        payload: hudhudscript_bytecode::TraitCheckPayload,
+    ) -> u32 {
         self.add_trait_check_payload(payload)
     }
-    fn ct_add_load_module_payload(&mut self, payload: hudhudscript_bytecode::LoadModulePayload) -> u32 {
+    fn ct_add_load_module_payload(
+        &mut self,
+        payload: hudhudscript_bytecode::LoadModulePayload,
+    ) -> u32 {
         let idx = self.bytecode.load_module_payloads.len() as u32;
         self.bytecode.load_module_payloads.push(payload);
         idx
@@ -134,13 +147,22 @@ impl CompileTarget for Compiler {
     fn ct_module_base_dir(&self) -> Option<&std::path::Path> {
         self.module_base_dir.as_deref()
     }
-    fn ct_add_define_function_payload(&mut self, payload: hudhudscript_bytecode::DefineFunctionPayload) -> u32 {
+    fn ct_add_define_function_payload(
+        &mut self,
+        payload: hudhudscript_bytecode::DefineFunctionPayload,
+    ) -> u32 {
         self.add_define_function_payload(payload)
     }
-    fn ct_add_class_static_decl_payload(&mut self, payload: hudhudscript_bytecode::ClassStaticDeclPayload) -> u32 {
+    fn ct_add_class_static_decl_payload(
+        &mut self,
+        payload: hudhudscript_bytecode::ClassStaticDeclPayload,
+    ) -> u32 {
         self.add_class_static_decl_payload(payload)
     }
-    fn ct_add_destruct_object_payload(&mut self, payload: hudhudscript_bytecode::DestructObjectPayload) -> u32 {
+    fn ct_add_destruct_object_payload(
+        &mut self,
+        payload: hudhudscript_bytecode::DestructObjectPayload,
+    ) -> u32 {
         self.add_destruct_object_payload(payload)
     }
     fn ct_add_call_payload(&mut self, sym: SymId, arg_count: u8) -> u32 {
@@ -152,7 +174,8 @@ impl CompileTarget for Compiler {
         arg_count: u8,
         builtin_idx: u32,
     ) -> u32 {
-        self.bytecode.add_call_payload_with_builtin(sym, arg_count, builtin_idx)
+        self.bytecode
+            .add_call_payload_with_builtin(sym, arg_count, builtin_idx)
     }
     fn ct_add_two_sym_payload(&mut self, first: u32, second: u32) -> u32 {
         self.add_two_sym_payload(first, second)
@@ -160,8 +183,15 @@ impl CompileTarget for Compiler {
     fn ct_add_opt_sym_payload(&mut self, sym: Option<SymId>) -> u32 {
         self.add_opt_sym_payload(sym)
     }
-    fn ct_add_super_instr_payload(&mut self, call_idx: u32, slot: u32, imm: i16, offset: i32) -> u32 {
-        self.bytecode.add_super_instr_payload(call_idx, slot, imm, offset)
+    fn ct_add_super_instr_payload(
+        &mut self,
+        call_idx: u32,
+        slot: u32,
+        imm: i16,
+        offset: i32,
+    ) -> u32 {
+        self.bytecode
+            .add_super_instr_payload(call_idx, slot, imm, offset)
     }
     fn ct_add_cmp_jump_payload(&mut self, src1: u8, src2: u8, target: u32) -> u32 {
         self.bytecode.add_cmp_jump_payload(src1, src2, target)
@@ -214,7 +244,8 @@ impl CompileTarget for Compiler {
     }
 
     fn ct_local_type(&self, name: &str) -> crate::compiler::expr::ExprType {
-        let local_ty = self.locals
+        let local_ty = self
+            .locals
             .iter()
             .rev()
             .find(|l| l.name == name)
@@ -281,9 +312,14 @@ impl CompileTarget for Compiler {
     fn ct_check_await(&self, span: &Span) -> CompileResult<()> {
         if let Some(ctx) = &self.fn_ctx {
             if !ctx.is_async {
-                let pos = SourcePosition { line: span.start.line, column: span.start.column };
+                let pos = SourcePosition {
+                    line: span.start.line,
+                    column: span.start.column,
+                };
                 return Err(compile_codes::generic_at(
-                    "await can only be used inside async functions".to_string(), pos));
+                    "await can only be used inside async functions".to_string(),
+                    pos,
+                ));
             }
         }
         Ok(())
@@ -309,19 +345,20 @@ impl CompileTarget for Compiler {
     }
     fn ct_patch_jump_offset(&mut self, ip: usize, offset: i16) {
         match &mut self.bytecode.instructions[ip] {
-            Instruction::JumpIfFalse { offset: ref mut off, .. } => *off = offset,
-            Instruction::JumpIfTrue { offset: ref mut off, .. } => *off = offset,
+            Instruction::JumpIfFalse {
+                offset: ref mut off,
+                ..
+            } => *off = offset,
+            Instruction::JumpIfTrue {
+                offset: ref mut off,
+                ..
+            } => *off = offset,
             Instruction::Jump(ref mut off) => *off = offset as i32,
             _ => {}
         }
     }
     // ── G12: f-loop bağlamı ──────────────────────────────────────────────
-    fn ct_floop_push(
-        &mut self,
-        slots: Vec<(String, u8)>,
-        consts: Vec<(u64, u8)>,
-        temp_base: u8,
-    ) {
+    fn ct_floop_push(&mut self, slots: Vec<(String, u8)>, consts: Vec<(u64, u8)>, temp_base: u8) {
         self.target_floop_push(slots, consts, temp_base);
     }
     fn ct_floop_pop(&mut self) {
@@ -356,7 +393,11 @@ impl CompileTarget for Compiler {
         // P3a: use inline registry (populated at declaration time, independent of RefCell)
         self.inline_function_chunks.get(name).cloned()
     }
-    fn ct_record_call_site_types(&mut self, fn_name: &str, args: &[(String, crate::compiler::expr::ExprType)]) {
+    fn ct_record_call_site_types(
+        &mut self,
+        fn_name: &str,
+        args: &[(String, crate::compiler::expr::ExprType)],
+    ) {
         // P4b: merge with existing types.
         // Rule: Unknown always wins. Conflicting known types → Unknown.
         // Only when ALL calls have the same known type do we keep it.
@@ -375,7 +416,8 @@ impl CompileTarget for Compiler {
             }
         } else {
             // First call: store as-is (even if Unknown — will be overridden by later calls)
-            self.call_site_param_types.insert(fn_name.to_string(), args.to_vec());
+            self.call_site_param_types
+                .insert(fn_name.to_string(), args.to_vec());
         }
     }
     fn ct_get_fn_param_names(&self, fn_name: &str) -> Option<Vec<String>> {

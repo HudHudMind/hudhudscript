@@ -36,9 +36,7 @@ fn url_decode(s: &str) -> String {
     let mut i = 0;
     while i < bytes.len() {
         if bytes[i] == b'%' && i + 2 < bytes.len() {
-            if let (Some(h1), Some(h2)) =
-                (hex_val(bytes[i + 1]), hex_val(bytes[i + 2]))
-            {
+            if let (Some(h1), Some(h2)) = (hex_val(bytes[i + 1]), hex_val(bytes[i + 2])) {
                 out.push((h1 << 4) | h2);
                 i += 3;
                 continue;
@@ -62,4 +60,3 @@ fn hex_val(b: u8) -> Option<u8> {
         _ => None,
     }
 }
-

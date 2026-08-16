@@ -57,7 +57,11 @@ impl Value16 {
                 return Value16(repr);
             }
         }
-        let kind = if s.is_ascii() { DynamicKind::StringAscii } else { DynamicKind::String };
+        let kind = if s.is_ascii() {
+            DynamicKind::StringAscii
+        } else {
+            DynamicKind::String
+        };
         gc::alloc(kind, DynamicData::String(s))
     }
 
@@ -73,7 +77,11 @@ impl Value16 {
                 return Value16(repr);
             }
         }
-        let kind = if s.is_ascii() { DynamicKind::StringAscii } else { DynamicKind::String };
+        let kind = if s.is_ascii() {
+            DynamicKind::StringAscii
+        } else {
+            DynamicKind::String
+        };
         gc::alloc(kind, DynamicData::String(s.to_string()))
     }
 
@@ -246,9 +254,15 @@ impl Value16 {
         I: IntoIterator<Item = (K, Value16)>,
         K: Into<crate::sym::SymId>,
     {
-        gc::alloc(DynamicKind::Object, DynamicData::Object(
-            items.into_iter().map(|(k, v)| (k.into(), v)).collect::<ObjMap>()
-        ))
+        gc::alloc(
+            DynamicKind::Object,
+            DynamicData::Object(
+                items
+                    .into_iter()
+                    .map(|(k, v)| (k.into(), v))
+                    .collect::<ObjMap>(),
+            ),
+        )
     }
 
     /// Create a Function value (heap allocated via DynamicObject).

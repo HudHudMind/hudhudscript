@@ -17,6 +17,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
+use crate::vm::call_state::{VmCallRequest, VmContinuation};
 use crate::vm::config_types::{OutputLocale, SandboxConfig};
 pub(crate) use crate::vm::machine_types::{CallFrame, ChunkCache};
 use crate::vm::registry::ModuleRegistry;
@@ -150,12 +151,12 @@ pub struct VM {
     /// `&self`-only `McpContext` trait impl can still clone out an
     /// `Arc<McpClient>` on demand.
     pub(crate) mcp_clients: Arc<Mutex<HashMap<String, Arc<McpClient>>>>,
-    /// Call depth tracking for recursion limit (Issue #965).
-    ///
-    /// Incremented on every `call_chunk` / `call_chunk_with_captures`,
-    /// decremented on return. If it reaches `max_call_depth` a graceful
-    /// `StackOverflow` error is returned instead of letting the Rust
-    /// process segfault from system stack exhaustion.
+    /// G08: circular module import guard state (shared with sub-VMs).
+    pub(crate) module_load_context:
+        Arc<parking_lot::Mutex<crate::vm::module_load_context::ModuleLoadContext>>,
+    /// Call depth tracking for the recursion limit (Issue #965). Frames
+    /// push/pop this on the trampoline; hitting `max_call_depth` returns
+    /// a graceful error instead of exhausting the OS stack.
     pub(crate) call_depth: usize,
     /// Maximum allowed call depth. Default:
     /// [`hudhudscript_errors::constants::MAX_CALL_DEPTH`] (2000).
@@ -216,19 +217,13 @@ pub struct VM {
     pub(crate) last_instance_mutation: Option<Box<Value16>>,
     /// Set of variable names declared as `const` (immutable after initial assignment)
     pub(crate) immutables: HashSet<hudhudscript_bytecode::interner::SymbolId>,
-    /// Symbol resolution cache: sym_id → resolved name.
     /// Avoids 30M+ interner::resolve calls in hot loops.
     pub(crate) sym_cache: FxHashMap<u32, String>,
-    /// Reverse symbol cache: name → sym_id. Avoids global interner lock
     /// in get_var_cloned hot path (IssUE-007). Uses RefCell for interior mutability.
     pub(crate) name_sym_cache: std::cell::RefCell<FxHashMap<String, u32>>,
-    /// Cached sym_id for "length" — most common property access.
     pub(crate) length_sym_id: u32,
-    /// Cached sym_id for "push" — most common array method.
     pub(crate) push_sym_id: u32,
-    /// Fast O(1) cache for Math object pointer equality check
     pub(crate) math_obj: Option<Value16>,
-    /// Fast O(1) cache for JSON object pointer equality check
     pub(crate) json_obj: Option<Value16>,
 
     /// Whether we are inside an `atomically()` block (#518)
@@ -278,25 +273,25 @@ pub struct VM {
     /// #892: Reverse mapping: store_name → (text → [entry_uuid]) for forget-by-content
     pub(crate) rag_text_to_ids: HashMap<String, HashMap<String, Vec<String>>>,
     /// Register file for register-based VM instructions.
-    /// 256 registers × 16 bytes = 4 KB, fits in L1 cache.
     /// Boxed so call/return can swap the entire bank via
     /// std::mem::swap (O(1) pointer exchange) instead of
     /// copying 256 Value16s (AÇIK-8 / PERF-REGSWAP).
     pub(crate) registers: crate::vm::register_arena::RegisterArena,
     /// Call-stack parallel to `call_stack_names`: each entry holds the
-    /// current function's `local_syms` (sym_id → slot mapping) from ChunkCache.
     /// Used by `get_var_cloned` / `upvalue_cell_for` for slot-based lookups.
     /// PERF-T2-3: raw pointer eliminates Arc::clone atomic refcount ops.
-    /// SAFETY: pointers come from Arc (ChunkCache) or Box::into_raw (run.rs /
     /// generator), all valid for the VM lifetime.
     pub(crate) call_stack_local_syms: Vec<*const Vec<(u32, usize, Option<usize>)>>,
     /// Owned local_syms allocations that must be freed on VM drop.
     /// Entries correspond to call_stack_local_syms slots created via
-    /// Box::into_raw (run.rs, generator) — ChunkCache Arc pointers are NOT
     /// included here because ChunkCache owns them.
     pub(crate) owned_local_sym_refs: Vec<*const Vec<(u32, usize, Option<usize>)>>,
     /// Pending call request set by execute_instructions on StepAction::Call
     pub(crate) pending_call: Option<(SymId, u32, u8, u8, u8, usize)>, // (func_sym, function_idx, arg_count, first_arg, dst, ip)
+    /// Heap-owned VM-to-VM request consumed only by the outer frame driver.
+    pub(crate) pending_vm_call: Option<Box<VmCallRequest>>,
+    /// Large multi-stage call state. `StepAction` carries only a marker/id.
+    pub(crate) vm_continuations: Vec<VmContinuation>,
     /// Flag: the next exec_call in the trampoline should set class_context on the pushed frame.
     pub(crate) pending_super_call: bool,
     /// T3-1-B: Trampoline call-frame stack.
@@ -378,22 +373,17 @@ pub struct VM {
     pub(crate) constant_root_chunks: FxHashSet<*const hudhudscript_bytecode::FunctionChunk>,
     /// Callee cache indexed by function-name sym_id.
     /// `(*const FunctionChunk, *const Vec<String> params)`.
-    /// Populated on first successful Call to that name; avoids repeated
-    /// Value::Function deep-clones + String allocs on recursive calls.
-    /// Invalidated by `invalidate_call_cache` when a binding changes.
-    /// PERF-T1-6: params stored as raw pointer (Box::into_raw) to eliminate
     /// Arc::clone atomic refcount ops on every recursive call.
-    /// G1.4.5 GC audit: *const FunctionChunk is safe — chunks are owned by
     /// Bytecode::functions (Arc), their constants are in gc_constant_roots
     /// (add_chunk_constants, run.rs:11), and cache is drained on VM drop.
-    pub(crate) call_cache: Vec<Option<(*const FunctionData, *const FunctionChunk, *const Vec<String>)>>,
+    pub(crate) call_cache: Vec<
+        Option<(
+            *const FunctionData,
+            *const FunctionChunk,
+            *const Vec<String>,
+        )>,
+    >,
 
-    /// ISSUE-5: single-entry inline cache for subject ability dispatch.
-    /// P2: ability inline cache — 2-entry PIC (polymorphic inline cache).
-    /// Each entry: (template, method, chunk, chunk_name).
-    /// On lookup, check entries in order; on miss, do full lookup and
-    /// insert into LRU position.  Avoids repeated String-key HashMap
-    /// lookup for hot ability call sequences.
     pub(crate) ability_cache: [(
         Option<(
             String,
@@ -406,120 +396,5 @@ pub struct VM {
 
     /// P3: pre-interned SymId for hot-path set_var/get_var in class method dispatch.
     pub(crate) this_sym: u32,
-    /// T5.2: Inline `this` storage — eliminates FxHashMap lookup for every self.x read.
     pub(crate) cur_this: Value16,
-}
-
-impl VM {
-    /// GATE-2: record BigInt promotion/allocation if operands were plain Int.
-    /// No-op when telemetry feature is disabled.
-    #[inline(always)]
-    pub(crate) fn record_bigint_promotion(&mut self,
-        a: Value16,
-        b: Value16,
-        result: Value16,
-    ) {
-        #[cfg(feature = "telemetry")]
-        if a.is_int() && b.is_int() && result.is_bigint() {
-            self.telemetry.bigint_promotion += 1;
-            self.telemetry.bigint_alloc += 1;
-        }
-        let _ = (a, b, result);
-    }
-}
-
-impl VM {
-    /// Return the last function return value (the result object).
-    pub fn last_return_value(&self) -> Value16 {
-        self.last_return
-    }
-
-    /// Snapshot of GATE-2 telemetry counters (telemetry feature only).
-    #[cfg(feature = "telemetry")]
-    pub fn telemetry_snapshot(&self) -> crate::vm::telemetry::TelemetrySnapshot {
-        let mut snap = self.telemetry.snapshot();
-        hudhudscript_bytecode::gc::take_telemetry_alloc_counts(&mut snap.alloc_count_by_kind);
-        hudhudscript_bytecode::gc::take_telemetry_gc_stats(
-            &mut snap.gc_cycle_count,
-            &mut snap.gc_mark_count,
-            &mut snap.gc_sweep_count,
-            &mut snap.gc_pause_ns_total,
-            &mut snap.gc_pause_ns_max,
-            &mut snap.gc_heap_bytes_after_sweep,
-        );
-        snap.int_add_slow_count = crate::vm::math_fast_paths::take_int_add_slow_count();
-        snap
-    }
-
-    /// P3: fast SymbolId-indexed top-level slot lookup.
-    /// `u32::MAX` means no slot.  Low byte = slot index, bit 8 = shared flag.
-    #[inline(always)]
-    pub(crate) fn main_slot_encoded(&self, sym_id: u32) -> Option<u32> {
-        let idx = sym_id as usize;
-        if idx < self.main_local_slots.len() {
-            let enc = self.main_local_slots[idx];
-            if enc != u32::MAX {
-                Some(enc)
-            } else {
-                None
-            }
-        } else {
-            None
-        }
-    }
-
-    #[inline(always)]
-    pub(crate) fn main_slot_decode(encoded: u32) -> (usize, bool) {
-        ((encoded & 0xFF) as usize, ((encoded >> 8) & 1) != 0)
-    }
-
-    #[inline(always)]
-    pub(crate) fn main_slot_shared_index(encoded: u32) -> usize {
-        (encoded >> 9) as usize
-    }
-}
-
-impl Drop for VM {
-    fn drop(&mut self) {
-        // PERF-T1-6: Free the leaked Box<Vec<String>> allocations in call_cache.
-        for entry in self.call_cache.drain(..) {
-            if let Some((_, _, params_ptr)) = entry {
-                if !params_ptr.is_null() {
-                    unsafe { drop(Box::from_raw(params_ptr as *mut Vec<String>)) };
-                }
-            }
-        }
-        // PERF-T2-3: Free owned local_sym_refs (run.rs / generator allocations).
-        for ptr in self.owned_local_sym_refs.drain(..) {
-            if !ptr.is_null() {
-                unsafe { drop(Box::from_raw(ptr as *mut Vec<(u32, usize, Option<usize>)>)) };
-            }
-        }
-    }
-}
-
-// SAFETY: VM contains raw pointers (*mut Value16 in RegisterArena,
-// *const FunctionChunk in call_cache) but they always point to data
-// owned by the same VM instance (arena Vec) or by the Bytecode
-// (FunctionChunk), both of which outlive any thread spawn.
-unsafe impl Send for VM {}
-
-
-pub struct HeapGuard {
-    prev: *mut hudhudscript_bytecode::gc::GcHeap,
-}
-
-impl HeapGuard {
-    pub fn new(vm: &mut VM) -> Self {
-        let heap_ptr = vm.gc_heap.as_mut() as *mut _;
-        let prev = hudhudscript_bytecode::gc::CURRENT_HEAP.with(|c| c.get());
-        hudhudscript_bytecode::gc::CURRENT_HEAP.with(|c| c.set(heap_ptr));
-        Self { prev }
-    }
-}
-
-impl Drop for HeapGuard {
-    fn drop(&mut self) {
-        hudhudscript_bytecode::gc::CURRENT_HEAP.with(|c| c.set(self.prev));
-    }
 }

@@ -4638,13 +4638,15 @@ fn test_parse_mixed_array() {
         hudhudscript_ast::Stmt::Let { value, .. } => match value {
             hudhudscript_ast::Expr::Array { elements, .. } => {
                 assert_eq!(elements.len(), 4);
-                assert!(matches!(
-                    elements[0],
-                    hudhudscript_ast::Expr::Literal(hudhudscript_ast::Literal::Number(_, _), _)
-                ) || matches!(
-                    elements[0],
-                    hudhudscript_ast::Expr::Literal(hudhudscript_ast::Literal::Int(_), _)
-                ));
+                assert!(
+                    matches!(
+                        elements[0],
+                        hudhudscript_ast::Expr::Literal(hudhudscript_ast::Literal::Number(_, _), _)
+                    ) || matches!(
+                        elements[0],
+                        hudhudscript_ast::Expr::Literal(hudhudscript_ast::Literal::Int(_), _)
+                    )
+                );
                 assert!(matches!(
                     elements[1],
                     hudhudscript_ast::Expr::Literal(hudhudscript_ast::Literal::String(_), _)

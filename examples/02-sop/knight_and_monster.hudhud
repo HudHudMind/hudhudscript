@@ -1,0 +1,421 @@
+// ═══════════════════════════════════════════════════════════
+// Knight & Monster — Interaktif SOP Oyunu (Terminal Input)
+// v1.0 — input/confirm ile oyuncu kontrollü, çok odalı macera
+// ═══════════════════════════════════════════════════════════
+
+// --- ROLLER ---
+role Fighter   { can attack, can defend, can flee }
+role Trader    { can buy, can sell }
+role Monster   { can roar, can smash, can rage }
+role Healer    { can heal, can revive }
+role Lootable  { can loot }
+
+// --- EFFECT'LER ---
+effect on CombatHit(attacker, target, dmg, flavor) {
+    print("  ⚔️ " + attacker + " → " + target + ": " + dmg + " hasar!" + flavor)
+}
+effect on MonsterRoar(name) {
+    print("  👹 " + name + " KÜKREDİ: ROOOAAARRR!")
+}
+effect on HealCast(healer, target, amount) {
+    print("  💚 " + healer + " iyileştirdi " + target + ": +" + amount + " HP")
+}
+effect on LootDrop(item, amount) {
+    print("  ✨ " + item + " x" + amount + " dustu!")
+}
+effect on RageMode(name) {
+    print("  🔥 " + name + " OFKELENDI! Gucu iki katına cıktı!")
+}
+
+// --- SUBJECT'LER ---
+subject Knight has Fighter {
+    state name: "Sir Lancelot",
+    state health: 120,
+    state max_health: 120,
+    state power: 35,
+    state armor: 40,
+    state gold: 50,
+    state potions: 3,
+    state kills: 0
+
+    on attack(self, target) {
+        let dmg = self.power
+        target.health = target.health - dmg
+        self.mark_hit(dmg)
+        CombatHit(self.name, target.name, dmg, "")
+    }
+    on defend(self) {
+        self.armor = self.armor + 10
+        self.health = self.health + 15
+        print("  🛡️ " + self.name + " savunmaya gecti! Zirh +10, HP +15 = " + self.health)
+    }
+    on flee(self) {
+        print("  🏃 " + self.name + " kacmaya calisiyor...")
+    }
+    on heal(self) {
+        let amt = 30
+        self.health = self.health + amt
+        self.potions = self.potions - 1
+        HealCast(self.name, self.name, amt)
+    }
+}
+
+subject NPC has Trader, Healer {
+    state name: "Bilge Merlin",
+    state gold: 999,
+    state potions: 20,
+    state heal_power: 50
+
+    on buy(self, customer) {
+        let cost = 20
+        customer.gold = customer.gold - cost
+        self.gold = self.gold + cost
+        self.potions = self.potions - 1
+        customer.potions = customer.potions + 1
+        print("  💰 " + customer.name + " iksir satin aldi! -" + cost + " altin")
+    }
+    on sell(self, customer) {
+        print("  🧙 " + self.name + ": \"Yolun acik olsun!\"")
+    }
+    on heal(self, target) {
+        target.health = target.health + self.heal_power
+        HealCast(self.name, target.name, self.heal_power)
+    }
+}
+
+subject Troll has Monster, Lootable {
+    state name: "Magara Trolu Groth",
+    state health: 120,
+    state max_health: 120,
+    state power: 20,
+    state loot_gold: 60,
+    state enraged: 0
+
+    on roar(self) { MonsterRoar(self.name) }
+    on smash(self, target) {
+        let dmg = self.power + 10
+        target.health = target.health - dmg
+        print("  💥 " + self.name + " ezici darbe! " + target.name + " -" + dmg + " HP")
+    }
+    on rage(self) {
+        self.enraged = 1
+        self.power = self.power * 2
+        RageMode(self.name)
+    }
+    on loot(self, looter) {
+        looter.gold = looter.gold + self.loot_gold
+        looter.kills = looter.kills + 1
+        LootDrop("Altin", self.loot_gold)
+        self.loot_gold = 0
+    }
+}
+
+subject Dragon has Monster, Lootable {
+    state name: "Alev Efendisi Drakar",
+    state health: 100,
+    state max_health: 100,
+    state power: 30,
+    state loot_gold: 200,
+    state enraged: 0
+
+    on roar(self) { MonsterRoar(self.name) }
+    on smash(self, target) {
+        let dmg = self.power + 15
+        target.health = target.health - dmg
+        print("  🔥 " + self.name + " alev puskurttu! " + target.name + " -" + dmg + " HP")
+    }
+    on rage(self) {
+        self.enraged = 1
+        self.power = self.power * 2
+        RageMode(self.name)
+    }
+    on loot(self, looter) {
+        looter.gold = looter.gold + self.loot_gold
+        looter.kills = looter.kills + 1
+        LootDrop("Altin", self.loot_gold)
+        self.loot_gold = 0
+    }
+}
+
+subject Chest has Lootable {
+    state name: "Gizemli Sandik",
+    state loot_gold: 35,
+    state opened: 0
+
+    on loot(self, looter) {
+        self.opened = 1
+        looter.gold = looter.gold + self.loot_gold
+        LootDrop("Altin", self.loot_gold)
+        self.loot_gold = 0
+    }
+}
+
+// --- VIEW ---
+subject KnightLog of Knight {
+    state hits: 0, state damage_dealt: 0
+    on mark_hit(self, dmg) {
+        self.hits = self.hits + 1
+        self.damage_dealt = self.damage_dealt + dmg
+    }
+}
+
+// --- COMPOSE ---
+compose Knight { on attack: combine [KnightLog] }
+
+// --- RELATION'LAR ---
+relation Knight <-> NPC    { trust: 80 }
+relation Knight <-> Troll  { hostility: 70 }
+relation Knight <-> Dragon { hostility: 100 }
+
+// --- SPAWN ---
+let knight = spawn Knight
+let npc    = spawn NPC
+let troll  = spawn Troll
+let dragon = spawn Dragon
+let chest  = spawn Chest
+
+// ═══════════════ OYUN ═══════════════
+print("")
+print("╔══════════════════════════════════════════════════╗")
+print("║       KNIGHT & MONSTER — v1.0                   ║")
+print("║   Terminal kontrollu SOP macerasi                ║")
+print("╚══════════════════════════════════════════════════╝")
+print("")
+
+let player_name = input("Kahramanin adi ne olsun? [Sir Lancelot]: ")
+knight.name = player_name
+
+print("")
+print("⚔️  Hos geldin, " + knight.name + "!")
+print("   HP: " + knight.health + " | Guc: " + knight.power)
+print("   Altin: " + knight.gold + " | Iksir: " + knight.potions)
+print("")
+
+// ═══════════════ BOLUM 1: KOY ═══════════════
+print(">>> BOLUM 1: KOY MEYDANI <<<")
+print("Koy meydaninda " + npc.name + " seni bekliyor.")
+print("")
+
+let shop_choice = input(npc.name + ": 'Iksir almak ister misin? (20 altin)' [e/h]: ")
+if (shop_choice == "e") {
+    npc.buy(knight)
+    print("")
+}
+npc.heal(knight)
+print("")
+
+// confirm → boolean, manuel int'e cevir
+let adv_ok = confirm("Maceraya cikmaya hazir misin?")
+let adventure_ready = 0
+if (adv_ok) { adventure_ready = 1 }
+if (adventure_ready == 0) {
+    print(knight.name + " koyde kaldi... OYUN BITTI.")
+}
+print("")
+
+// ═══════════════ BOLUM 2: ORMAN ═══════════════
+print(">>> BOLUM 2: KARANLIK ORMAN <<<")
+print("Ilerlerken bir sandik buldun!")
+let chest_ok = confirm("Sandigi acmak ister misin?")
+let open_chest = 0
+if (chest_ok) { open_chest = 1 }
+if (open_chest == 1) {
+    chest.loot(knight)
+}
+print("")
+
+print("Ormanin derinliklerinden sesler geliyor...")
+let forest_ok = confirm("Ormana dogru ilerle? (Dag yoluna sapmak icin 'h' de)")
+let go_forest = 0
+if (forest_ok) { go_forest = 1 }
+if (go_forest == 0) {
+    print("")
+    print(">>> DAG YOLU <<<")
+    print("Dar bir patikadan daga tirmaniyorsun...")
+    knight.health = knight.health - 10
+    print("⚠️ Yorgunluktan -10 HP! (HP: " + knight.health + ")")
+    print("Dagin zirvesinde ejderhanin ini var...")
+    print("")
+}
+
+// ═══════════════ BOLUM 3: TROLL SAVASI ═══════════════
+print(">>> BOLUM 3: TROLL KARSILASMASI <<<")
+print("Bir magara girisinde " + troll.name + " belirdi!")
+troll.roar()
+print("")
+
+let troll_alive = 1
+let battle_choice = input("Ne yapacaksin? (saldir/savun/kac/iksir): ")
+
+if (battle_choice == "kac") {
+    knight.flee()
+    knight.health = knight.health - 15
+    print("⚠️ Kacarken yaralandin! -15 HP (HP: " + knight.health + ")")
+    troll_alive = 0
+}
+
+if (battle_choice == "saldir") {
+    print("")
+    print("--- SAVAS BASLADI ---")
+    
+    // Round 1
+    print("⚡ Round 1:")
+    knight.attack(troll)
+    print("   Troll HP: " + troll.health)
+    if (troll.health > 0) {
+        troll.smash(knight)
+        print("   " + knight.name + " HP: " + knight.health)
+    }
+    print("")
+
+    let r2 = input("Round 2 — Ne yapacaksin? (saldir/savun/iksir): ")
+    if (r2 == "saldir") {
+        knight.attack(troll)
+        print("   Troll HP: " + troll.health)
+    }
+    if (r2 == "savun") { knight.defend() }
+    if (r2 == "iksir") {
+        if (knight.potions > 0) { knight.heal() }
+    }
+    if (troll.health > 0) {
+        if (troll.health < 50) { troll.rage() }
+        troll.smash(knight)
+        print("   " + knight.name + " HP: " + knight.health)
+    }
+    print("")
+
+    if (troll.health > 0) {
+        let r3 = input("Round 3 — Ne yapacaksin? (saldir/savun/iksir): ")
+        if (r3 == "saldir") {
+            knight.attack(troll)
+            print("   Troll HP: " + troll.health)
+        }
+        if (r3 == "savun") { knight.defend() }
+        if (r3 == "iksir") {
+            if (knight.potions > 0) { knight.heal() }
+        }
+        if (troll.health > 0) {
+            troll.smash(knight)
+            print("   " + knight.name + " HP: " + knight.health)
+        }
+        print("")
+    }
+}
+
+if (troll.health > 0) {
+    print(">>> SON VURUS <<<")
+    let fin_ok = confirm("Bitirici darbeyi vurmak ister misin?")
+    let finish = 0
+    if (fin_ok) { finish = 1 }
+    if (finish == 1) {
+        knight.attack(troll)
+    }
+}
+
+print("")
+if (troll.health <= 0) {
+    print("🐗 " + troll.name + " YENILDI!")
+    troll.loot(knight)
+    troll_alive = 0
+}
+print("")
+
+// ═══════════════ BOLUM 4: EJDERHA ═══════════════
+if (troll_alive == 0) {
+    print(">>> BOLUM 4: EJDERHA INI <<<")
+    print("Magaranin derinliklerinde bir kukreme duyuluyor...")
+    dragon.roar()
+    print("")
+
+    let face_ok = confirm(knight.name + ": Ejderhayla yuzlesmek ister misin? (HP: " + knight.health + ")")
+    let face_dragon = 0
+    if (face_ok) { face_dragon = 1 }
+
+    if (face_dragon == 1) {
+        print("")
+        print("--- EJDERHA SAVASI ---")
+        print("⚡ Round 1:")
+        dragon.smash(knight)
+        print("   " + knight.name + " HP: " + knight.health)
+        print("")
+
+        let d1 = input("Ne yapacaksin? (saldir/savun/iksir): ")
+        if (d1 == "saldir") {
+            knight.attack(dragon)
+            print("   Dragon HP: " + dragon.health)
+        }
+        if (d1 == "savun") { knight.defend() }
+        if (d1 == "iksir") {
+            if (knight.potions > 0) { knight.heal() }
+        }
+        print("")
+
+        if (dragon.health > 0 && knight.health > 0) {
+            print("⚡ Round 2:")
+            if (dragon.health < 100) { dragon.rage() }
+            dragon.smash(knight)
+            print("   " + knight.name + " HP: " + knight.health)
+            print("")
+
+            let d2 = input("Ne yapacaksin? (saldir/savun/iksir): ")
+            if (d2 == "saldir") {
+                knight.attack(dragon)
+                print("   Dragon HP: " + dragon.health)
+            }
+            if (d2 == "savun") { knight.defend() }
+            if (d2 == "iksir") {
+                if (knight.potions > 0) { knight.heal() }
+            }
+            print("")
+        }
+
+        if (dragon.health > 0 && knight.health > 0) {
+            print(">>> SON VURUS <<<")
+            let dfinal = input("SON SANS! (saldir/iksir): ")
+            if (dfinal == "saldir") {
+                knight.attack(dragon)
+                knight.attack(dragon)
+            }
+            if (dfinal == "iksir") {
+                if (knight.potions > 0) { knight.heal() }
+            }
+        }
+        print("")
+
+        if (dragon.health <= 0) {
+            print("🐉 " + dragon.name + " YENILDI!")
+            dragon.loot(knight)
+        }
+    }
+    if (face_dragon == 0) {
+        print(knight.name + " ejderhadan kacti... Bu seferlik.")
+    }
+}
+
+// ═══════════════ FINAL ═══════════════
+print("")
+print("╔══════════════════════════════════════════════════╗")
+print("║             MACERA SONU                         ║")
+print("╚══════════════════════════════════════════════════╝")
+print("")
+print("🏆 " + knight.name + " — Kahramanlik Raporu:")
+print("   HP:      " + knight.health + "/" + knight.max_health)
+print("   Vurus:   " + knight.hits)
+print("   Hasar:   " + knight.damage_dealt)
+print("   Altin:   " + knight.gold)
+print("   Iksir:   " + knight.potions)
+print("   Oldurme: " + knight.kills)
+print("")
+
+if (knight.kills >= 2) {
+    print("👑 EFSANEVİ ZAFER! Tum yaratiklar yenildi!")
+}
+if (knight.kills == 1) {
+    print("⚔️ Kismi zafer! Bir yaratik hala hayatta...")
+}
+if (knight.kills == 0) {
+    print("💀 " + knight.name + " bu seferlik basaramadi...")
+}
+
+print("")
+print("[OYUN BITTI]")

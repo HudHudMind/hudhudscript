@@ -1,0 +1,14 @@
+// HudHudScript — Öklid Algoritması
+
+fn gcd(a, b) {
+    while (b != 0) {
+        let t = b;
+        b = a % b;
+        a = t;
+    }
+    return a;
+}
+
+print("gcd(48, 18) = " + gcd(48, 18) + " (beklenen: 6)");
+print("gcd(1071, 462) = " + gcd(1071, 462) + " (beklenen: 21)");
+print("gcd(12345, 6789) = " + gcd(12345, 6789) + " (beklenen: 3)");

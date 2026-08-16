@@ -91,7 +91,11 @@ struct MockProvider {
 
 impl MockProvider {
     fn new(name: String, model: String, response: String) -> Self {
-        Self { name, model, response }
+        Self {
+            name,
+            model,
+            response,
+        }
     }
 }
 
@@ -126,7 +130,7 @@ impl Provider for MockProvider {
             tool_calls: None,
         })
     }
-    
+
     fn check_budget(&self, _tokens: usize) -> Result<(), ProviderError> {
         Ok(())
     }
@@ -162,19 +166,29 @@ let kontrol = agents.MantikAnalisti.veriyi_onayla(slogan);
 
     let mut interpreter = Interpreter::new();
     let registry = Arc::new(ProviderRegistry::new());
-    
+
     // Register "ollama" and "deepseek" types
     // The model must match what the agent being called declares. A registered
     // provider is only reused when it already serves the requested model —
     // LLMRequest carries no model field, so a mock advertising "gemma3" cannot
     // stand in for an agent asking for "gemma3:4b", and the call would fall
     // through to a real network provider.
-    let mock_ollama = Arc::new(MockProvider::new("Ollama".to_string(), "gemma3:4b".to_string(), "mock response".to_string()));
-    let mock_deepseek = Arc::new(MockProvider::new("DeepSeek".to_string(), "deepseek-v4-flash".to_string(), "mock response".to_string()));
-    
+    let mock_ollama = Arc::new(MockProvider::new(
+        "Ollama".to_string(),
+        "gemma3:4b".to_string(),
+        "mock response".to_string(),
+    ));
+    let mock_deepseek = Arc::new(MockProvider::new(
+        "DeepSeek".to_string(),
+        "deepseek-v4-flash".to_string(),
+        "mock response".to_string(),
+    ));
+
     registry.register("ollama".to_string(), mock_ollama).await;
-    registry.register("deepseek".to_string(), mock_deepseek).await;
-    
+    registry
+        .register("deepseek".to_string(), mock_deepseek)
+        .await;
+
     interpreter.set_provider_registry(registry);
 
     let ast = hudhudscript_parser::parse(main_src).unwrap();
@@ -188,23 +202,45 @@ let kontrol = agents.MantikAnalisti.veriyi_onayla(slogan);
 
     let slogan_content = slogan_val.as_string().unwrap();
     assert!(slogan_content.contains("slogan yazıldı"));
-    
+
     let kontrol_content = kontrol_val.as_string().unwrap();
     assert!(kontrol_content.contains("onaylandi"));
-    
+
     // Test 2: Namespace Object Provider Not Null
     let agents_val = interpreter.vm.get_variable("agents").unwrap();
     let agents_obj = agents_val.as_object().unwrap();
-    
+
     let metin_yazari = agents_obj.get("MetinYazari").unwrap().as_object().unwrap();
     let my_provider = metin_yazari.get("provider").unwrap();
     assert!(my_provider.is_object());
-    assert_eq!(my_provider.as_object().unwrap().get("type").unwrap().as_str().unwrap(), "ollama");
+    assert_eq!(
+        my_provider
+            .as_object()
+            .unwrap()
+            .get("type")
+            .unwrap()
+            .as_str()
+            .unwrap(),
+        "ollama"
+    );
 
-    let mantik_analisti = agents_obj.get("MantikAnalisti").unwrap().as_object().unwrap();
+    let mantik_analisti = agents_obj
+        .get("MantikAnalisti")
+        .unwrap()
+        .as_object()
+        .unwrap();
     let ma_provider = mantik_analisti.get("provider").unwrap();
     assert!(ma_provider.is_object());
-    assert_eq!(ma_provider.as_object().unwrap().get("type").unwrap().as_str().unwrap(), "deepseek");
+    assert_eq!(
+        ma_provider
+            .as_object()
+            .unwrap()
+            .get("type")
+            .unwrap()
+            .as_str()
+            .unwrap(),
+        "deepseek"
+    );
 }
 
 #[tokio::test]
@@ -212,7 +248,7 @@ async fn test_provider_namespace_export() {
     let temp_dir = TempDir::new().unwrap();
     let dir = temp_dir.path().to_path_buf();
     setup_test_files(&dir);
-    
+
     let main_src = r#"
 use "providers.hudhud" as providers;
 let ds_type = providers.DeepSeek.type;
@@ -220,26 +256,26 @@ let ollama_type = providers.OllamaLocal.type;
 "#;
     let main_path = dir.join("author.hudhud");
     fs::write(&main_path, main_src).unwrap();
-    
+
     let mut interpreter = Interpreter::new();
     let ast = hudhudscript_parser::parse(main_src).unwrap();
     let mut compiler = hudhudscript_compiler::Compiler::new();
     compiler.set_module_base_dir(dir.clone());
     let bc = compiler.compile(&ast).unwrap();
     interpreter.vm.execute(&bc).unwrap();
-    
+
     let providers_val = interpreter.vm.get_variable("providers").unwrap();
     let providers_obj = providers_val.as_object().unwrap();
-    
+
     assert!(providers_obj.contains_key("DeepSeek"));
     assert!(providers_obj.contains_key("OllamaLocal"));
-    
+
     let ds_type = interpreter.vm.get_variable("ds_type").unwrap();
     assert_eq!(ds_type.as_str().unwrap(), "deepseek");
-    
+
     let ollama_type = interpreter.vm.get_variable("ollama_type").unwrap();
     assert_eq!(ollama_type.as_str().unwrap(), "ollama");
-    
+
     // Assert not exported:
     assert!(!providers_obj.contains_key("env"));
     assert!(!providers_obj.contains_key("this"));

@@ -5,7 +5,9 @@ use hudhudscript_vm::VM;
 fn run(src: &str) -> Result<VM, String> {
     let stmts = hudhudscript_parser::parse(src).map_err(|e| format!("parse: {}", e))?;
     let mut compiler = hudhudscript_compiler::Compiler::new();
-    let bc = compiler.compile(&stmts).map_err(|e| format!("compile: {}", e))?;
+    let bc = compiler
+        .compile(&stmts)
+        .map_err(|e| format!("compile: {}", e))?;
     let mut vm = VM::new();
     vm.execute(&bc).map_err(|e| format!("{}", e))?;
     Ok(vm)
@@ -14,7 +16,8 @@ fn run(src: &str) -> Result<VM, String> {
 #[test]
 fn fazf_method_arg_called_once() {
     // ri() called exactly once per push — seed bumps from 0 to 1
-    let src = "let seed=0;fn ri(m){seed=seed+1;return seed;}let arr=[];arr.push(ri(10));return arr[0];";
+    let src =
+        "let seed=0;fn ri(m){seed=seed+1;return seed;}let arr=[];arr.push(ri(10));return arr[0];";
     let vm = run(src).unwrap();
     assert_eq!(vm.last_return_value().display_string(), "1");
 }

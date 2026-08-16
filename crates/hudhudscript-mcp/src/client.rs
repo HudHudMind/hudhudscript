@@ -6,7 +6,7 @@
 
 use crate::protocol::*;
 use crate::transport::config::TransportConfig;
-use crate::transport::{TransportSendHalf, TransportRecvHalf};
+use crate::transport::{TransportRecvHalf, TransportSendHalf};
 use anyhow::{Context, Result};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -108,7 +108,9 @@ impl McpClient {
     /// transport (the one passed to `from_transport`).
     pub async fn start_response_handler_compat(&self) {
         if let Some(shared) = &self.shared_transport {
-            let recv: TransportRecvHalf = Box::new(SharedTransportRecv { inner: shared.clone() });
+            let recv: TransportRecvHalf = Box::new(SharedTransportRecv {
+                inner: shared.clone(),
+            });
             self.spawn_response_handler(recv);
         }
     }
@@ -140,9 +142,13 @@ impl McpClient {
     /// Disconnect and clean up.
     pub async fn disconnect(&self) -> Result<()> {
         *self.state.write().await = ConnectionState::Disconnected;
-        if let Some(handle) = self.response_handle.lock().await.take() { handle.abort(); }
+        if let Some(handle) = self.response_handle.lock().await.take() {
+            handle.abort();
+        }
         let mut map = self.pending_requests.lock().await;
-        for (_, tx) in map.drain() { let _ = tx.send(Err("client disconnected".to_string())); }
+        for (_, tx) in map.drain() {
+            let _ = tx.send(Err("client disconnected".to_string()));
+        }
         Ok(())
     }
 
@@ -152,7 +158,13 @@ impl McpClient {
     pub async fn status_report(&self) -> Value {
         let state = self.state().await;
         let pending = self.pending_requests.lock().await.len();
-        let tool_count = self.tool_cache.read().await.as_ref().map(|t| t.len()).unwrap_or(0);
+        let tool_count = self
+            .tool_cache
+            .read()
+            .await
+            .as_ref()
+            .map(|t| t.len())
+            .unwrap_or(0);
         let info = self.server_info().await;
         let caps = self.server_capabilities().await;
         serde_json::json!({
@@ -206,10 +218,7 @@ impl McpClient {
         }
     }
 
-    async fn response_loop(
-        mut recv: TransportRecvHalf,
-        pending: SharedPending,
-    ) {
+    async fn response_loop(mut recv: TransportRecvHalf, pending: SharedPending) {
         loop {
             let response = match recv.receive().await {
                 Ok(r) => r,
@@ -240,15 +249,20 @@ impl McpClient {
         *self.state.write().await = ConnectionState::Connecting;
         let request = InitializeRequest {
             protocol_version: "2024-11-05".to_string(),
-            capabilities: ClientCapabilities { experimental: None, sampling: None },
+            capabilities: ClientCapabilities {
+                experimental: None,
+                sampling: None,
+            },
             client_info: ClientInfo {
                 name: "HudHudScript".to_string(),
                 version: env!("CARGO_PKG_VERSION").to_string(),
             },
         };
-        let response = self.send_request("initialize", Some(serde_json::to_value(request)?)).await?;
-        let init: InitializeResponse = serde_json::from_value(response)
-            .context("parse initialize response")?;
+        let response = self
+            .send_request("initialize", Some(serde_json::to_value(request)?))
+            .await?;
+        let init: InitializeResponse =
+            serde_json::from_value(response).context("parse initialize response")?;
 
         *self.server_capabilities.write().await = Some(init.capabilities.clone());
         *self.server_info.write().await = Some(init.server_info.clone());
@@ -259,7 +273,8 @@ impl McpClient {
     pub async fn list_tools(&self, cursor: Option<String>) -> Result<ToolsListResponse> {
         let params = cursor.map(|c| serde_json::json!({"cursor": c}));
         let response = self.send_request("tools/list", params).await?;
-        let tools_resp: ToolsListResponse = serde_json::from_value(response).context("parse tools/list")?;
+        let tools_resp: ToolsListResponse =
+            serde_json::from_value(response).context("parse tools/list")?;
         // MCP-42: Validate tool count and schemas.
         Self::validate_tools(&tools_resp.tools)?;
         // MCP-42: Cache tools for pre-call validation.
@@ -276,11 +291,19 @@ impl McpClient {
     /// MCP-42: Validate tool definitions returned by a server.
     fn validate_tools(tools: &[Tool]) -> Result<()> {
         if tools.len() > MAX_TOOLS_PER_SERVER {
-            anyhow::bail!("Server returned {} tools, max {}", tools.len(), MAX_TOOLS_PER_SERVER);
+            anyhow::bail!(
+                "Server returned {} tools, max {}",
+                tools.len(),
+                MAX_TOOLS_PER_SERVER
+            );
         }
         for t in tools {
-            if t.name.is_empty() { anyhow::bail!("Tool has empty name"); }
-            if t.name.len() > 128 { anyhow::bail!("Tool name too long: '{}'", t.name); }
+            if t.name.is_empty() {
+                anyhow::bail!("Tool has empty name");
+            }
+            if t.name.len() > 128 {
+                anyhow::bail!("Tool name too long: '{}'", t.name);
+            }
             if !t.input_schema.is_null() && !t.input_schema.is_object() {
                 anyhow::bail!("Tool '{}' has invalid inputSchema", t.name);
             }
@@ -288,7 +311,11 @@ impl McpClient {
         Ok(())
     }
 
-    pub async fn call_tool(&self, name: String, arguments: Option<serde_json::Value>) -> Result<ToolCallResponse> {
+    pub async fn call_tool(
+        &self,
+        name: String,
+        arguments: Option<serde_json::Value>,
+    ) -> Result<ToolCallResponse> {
         let params = serde_json::json!({"name": name, "arguments": arguments.unwrap_or(serde_json::json!({}))});
         let response = self.send_request("tools/call", Some(params)).await?;
         serde_json::from_value(response).context("parse tools/call")
@@ -296,25 +323,42 @@ impl McpClient {
 
     pub async fn list_resources(&self, cursor: Option<String>) -> Result<ResourcesListResponse> {
         let request = ResourcesListRequest { cursor };
-        let response = self.send_request("resources/list", Some(serde_json::to_value(request)?)).await?;
+        let response = self
+            .send_request("resources/list", Some(serde_json::to_value(request)?))
+            .await?;
         serde_json::from_value(response).context("parse resources/list")
     }
 
     pub async fn read_resource(&self, uri: String) -> Result<ResourceReadResponse> {
         let request = ResourceReadRequest { uri };
-        let response = self.send_request("resources/read", Some(serde_json::to_value(request)?)).await?;
+        let response = self
+            .send_request("resources/read", Some(serde_json::to_value(request)?))
+            .await?;
         serde_json::from_value(response).context("parse resources/read")
     }
 
-    async fn send_request(&self, method: &str, params: Option<serde_json::Value>) -> Result<serde_json::Value> {
+    async fn send_request(
+        &self,
+        method: &str,
+        params: Option<serde_json::Value>,
+    ) -> Result<serde_json::Value> {
         self.request_count.fetch_add(1, Ordering::SeqCst);
         let id = RequestId::new_number(self.request_id.fetch_add(1, Ordering::SeqCst) as i64);
-        let request = JsonRpcRequest { jsonrpc: "2.0".to_string(), id: id.clone(), method: method.to_string(), params };
+        let request = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            id: id.clone(),
+            method: method.to_string(),
+            params,
+        };
         let (tx, rx) = oneshot::channel::<PendingResult>();
         {
             let mut map = self.pending_requests.lock().await;
             if map.len() >= MAX_PENDING_REQUESTS {
-                anyhow::bail!("Too many pending MCP requests ({}/{})", map.len(), MAX_PENDING_REQUESTS);
+                anyhow::bail!(
+                    "Too many pending MCP requests ({}/{})",
+                    map.len(),
+                    MAX_PENDING_REQUESTS
+                );
             }
             map.insert(id.clone(), tx);
         }
@@ -324,7 +368,11 @@ impl McpClient {
             let json = serde_json::to_string(&request)?;
             if json.len() > MAX_REQUEST_SIZE {
                 self.pending_requests.lock().await.remove(&id);
-                anyhow::bail!("MCP request too large: {} bytes (max {})", json.len(), MAX_REQUEST_SIZE);
+                anyhow::bail!(
+                    "MCP request too large: {} bytes (max {})",
+                    json.len(),
+                    MAX_REQUEST_SIZE
+                );
             }
         }
 
@@ -337,13 +385,13 @@ impl McpClient {
             std::time::Duration::from_secs(DEFAULT_REQUEST_TIMEOUT_SECS),
             rx,
         )
-            .await
-            .map_err(|_| {
-                self.timeout_count.fetch_add(1, Ordering::SeqCst);
-                anyhow::anyhow!("Request timeout after {}s", DEFAULT_REQUEST_TIMEOUT_SECS)
-            })?
-            .context("Response channel closed")?
-            .map_err(|e| anyhow::anyhow!("{}", e))?;
+        .await
+        .map_err(|_| {
+            self.timeout_count.fetch_add(1, Ordering::SeqCst);
+            anyhow::anyhow!("Request timeout after {}s", DEFAULT_REQUEST_TIMEOUT_SECS)
+        })?
+        .context("Response channel closed")?
+        .map_err(|e| anyhow::anyhow!("{}", e))?;
         Ok(result)
     }
 }
@@ -380,7 +428,9 @@ impl McpClient {
     pub fn from_transport(transport: Box<dyn crate::transport::Transport>) -> Self {
         let shared: SharedTransport = Arc::new(tokio::sync::Mutex::new(transport));
         Self {
-            transport_send: tokio::sync::Mutex::new(Box::new(SharedTransportAdapter { inner: shared.clone() })),
+            transport_send: tokio::sync::Mutex::new(Box::new(SharedTransportAdapter {
+                inner: shared.clone(),
+            })),
             state: Arc::new(RwLock::new(ConnectionState::Disconnected)),
             request_id: Arc::new(AtomicU64::new(1)),
             server_capabilities: Arc::new(RwLock::new(None)),

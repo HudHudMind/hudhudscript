@@ -55,7 +55,9 @@ thread_local! {
 ///
 /// Issue #439: permission blocks are stored as a "permission" field containing
 /// an object with allow/deny/dangerous arrays.
-pub fn parse_agent_body(pair: Pair<Rule>) -> ParseResult<(Vec<(String, Expr)>, Vec<AgentActionDecl>)> {
+pub fn parse_agent_body(
+    pair: Pair<Rule>,
+) -> ParseResult<(Vec<(String, Expr)>, Vec<AgentActionDecl>)> {
     let mut fields = Vec::new();
     let mut actions = Vec::new();
 
@@ -156,7 +158,11 @@ fn parse_action_decl(pair: Pair<Rule>) -> ParseResult<AgentActionDecl> {
             }
             Rule::block => {
                 let block_stmt = parse_block(item)?;
-                if let Stmt::Block { statements: body_stmts, .. } = block_stmt {
+                if let Stmt::Block {
+                    statements: body_stmts,
+                    ..
+                } = block_stmt
+                {
                     return Ok(AgentActionDecl {
                         name,
                         params,
@@ -170,5 +176,8 @@ fn parse_action_decl(pair: Pair<Rule>) -> ParseResult<AgentActionDecl> {
         }
     }
 
-    Err(parse_codes::invalid_syntax("Expected action body block", span))
+    Err(parse_codes::invalid_syntax(
+        "Expected action body block",
+        span,
+    ))
 }

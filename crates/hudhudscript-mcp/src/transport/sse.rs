@@ -49,11 +49,18 @@ impl SseTransport {
             }
         });
 
-        Ok(Self { url, client, response_rx, _handle: handle, close_tx: Some(close_tx) })
+        Ok(Self {
+            url,
+            client,
+            response_rx,
+            _handle: handle,
+            close_tx: Some(close_tx),
+        })
     }
 
     async fn event_loop(
-        client: reqwest::Client, url: &str,
+        client: reqwest::Client,
+        url: &str,
         response_tx: mpsc::UnboundedSender<JsonRpcResponse>,
     ) {
         let retry = sse_retry_config();
@@ -65,7 +72,9 @@ impl SseTransport {
                 Ok(()) => break,
                 Err(_) => {
                     attempts += 1;
-                    if attempts > MAX_RECONNECT_ATTEMPTS { break; }
+                    if attempts > MAX_RECONNECT_ATTEMPTS {
+                        break;
+                    }
                     tokio::time::sleep(retry.delay_for_attempt(attempts - 1)).await;
                 }
             }
@@ -73,17 +82,23 @@ impl SseTransport {
     }
 
     async fn stream(
-        client: &reqwest::Client, url: &str,
+        client: &reqwest::Client,
+        url: &str,
         tx: &mpsc::UnboundedSender<JsonRpcResponse>,
         last_id: &mut Option<String>,
     ) -> Result<()> {
-        let mut req = client.get(url)
+        let mut req = client
+            .get(url)
             .header("Accept", "text/event-stream")
             .header("Cache-Control", "no-cache");
-        if let Some(ref id) = last_id { req = req.header("Last-Event-ID", id.as_str()); }
+        if let Some(ref id) = last_id {
+            req = req.header("Last-Event-ID", id.as_str());
+        }
 
         let resp = req.send().await?;
-        if !resp.status().is_success() { anyhow::bail!("SSE status {}", resp.status()); }
+        if !resp.status().is_success() {
+            anyhow::bail!("SSE status {}", resp.status());
+        }
 
         let mut stream = resp.bytes_stream();
         let mut buf = String::new();
@@ -99,7 +114,9 @@ impl SseTransport {
                     if !data.is_empty() {
                         let json = data.trim_end_matches('\n');
                         if let Ok(resp) = serde_json::from_str::<JsonRpcResponse>(json) {
-                            if tx.send(resp).is_err() { return Ok(()); }
+                            if tx.send(resp).is_err() {
+                                return Ok(());
+                            }
                         }
                         data.clear();
                     }
@@ -108,7 +125,9 @@ impl SseTransport {
                     data.push('\n');
                 } else if let Some(v) = line.strip_prefix("id:") {
                     let id = v.strip_prefix(' ').unwrap_or(v);
-                    if !id.contains('\0') { *last_id = Some(id.to_string()); }
+                    if !id.contains('\0') {
+                        *last_id = Some(id.to_string());
+                    }
                 }
             }
         }
@@ -133,13 +152,18 @@ impl Transport for SseTransport {
     }
 }
 
-pub struct SseSendHalf { url: String, client: reqwest::Client }
+pub struct SseSendHalf {
+    url: String,
+    client: reqwest::Client,
+}
 
 #[async_trait::async_trait]
 impl TransportSend for SseSendHalf {
     async fn send(&mut self, request: JsonRpcRequest) -> Result<()> {
         let resp = self.client.post(&self.url).json(&request).send().await?;
-        if !resp.status().is_success() { anyhow::bail!("SSE POST {}", resp.status()); }
+        if !resp.status().is_success() {
+            anyhow::bail!("SSE POST {}", resp.status());
+        }
         Ok(())
     }
 }
@@ -162,7 +186,9 @@ impl TransportRecv for SseRecvHalf {
 impl TransportSend for SseTransport {
     async fn send(&mut self, request: JsonRpcRequest) -> Result<()> {
         let resp = self.client.post(&self.url).json(&request).send().await?;
-        if !resp.status().is_success() { anyhow::bail!("SSE POST {}", resp.status()); }
+        if !resp.status().is_success() {
+            anyhow::bail!("SSE POST {}", resp.status());
+        }
         Ok(())
     }
 }

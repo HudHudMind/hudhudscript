@@ -230,7 +230,9 @@ fn stmt_to_symbol(stmt: &Stmt) -> Option<DocumentSymbol> {
 fn decl_to_symbol(decl: &Decl) -> Option<DocumentSymbol> {
     let (name, detail, kind, span) = match decl {
         Decl::Agent { name, span, .. } => (name.clone(), "agent", SymbolKind::CLASS, *span),
-        Decl::AgentAction { name, span, .. } => (name.clone(), "action", SymbolKind::FUNCTION, *span),
+        Decl::AgentAction { name, span, .. } => {
+            (name.clone(), "action", SymbolKind::FUNCTION, *span)
+        }
         Decl::Ability { name, span, .. } => (name.clone(), "method", SymbolKind::METHOD, *span),
         Decl::Action { name, span, .. } => (name.clone(), "action", SymbolKind::FUNCTION, *span),
         Decl::Tool { name, span, .. } => (name.clone(), "tool", SymbolKind::FUNCTION, *span),
@@ -272,7 +274,14 @@ fn decl_to_symbol(decl: &Decl) -> Option<DocumentSymbol> {
         Decl::Effect {
             event_name, span, ..
         } => (event_name.clone(), "effect", SymbolKind::EVENT, *span),
-        Decl::Compose { base_subject, span, .. } => (base_subject.clone(), "compose", SymbolKind::INTERFACE, *span),
+        Decl::Compose {
+            base_subject, span, ..
+        } => (
+            base_subject.clone(),
+            "compose",
+            SymbolKind::INTERFACE,
+            *span,
+        ),
         Decl::Import { module, span, .. } => (module.clone(), "import", SymbolKind::MODULE, *span),
         Decl::Entity { name, span, .. } => (name.clone(), "entity", SymbolKind::CLASS, *span),
         Decl::StateMachine { name, span, .. } => {

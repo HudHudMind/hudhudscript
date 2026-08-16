@@ -46,10 +46,7 @@ pub struct TelegramChannel {
 }
 
 impl TelegramChannel {
-    pub fn new(
-        bot_token: String,
-        allowed_chat_ids: HashSet<i64>,
-    ) -> Result<Self, ChannelError> {
+    pub fn new(bot_token: String, allowed_chat_ids: HashSet<i64>) -> Result<Self, ChannelError> {
         let client = Client::builder()
             .timeout(std::time::Duration::from_secs(10))
             .build()
@@ -65,10 +62,7 @@ impl TelegramChannel {
     }
 
     async fn get_updates(&self) -> Result<Vec<TelegramUpdate>, ChannelError> {
-        let url = format!(
-            "https://api.telegram.org/bot{}/getUpdates",
-            self.bot_token
-        );
+        let url = format!("https://api.telegram.org/bot{}/getUpdates", self.bot_token);
         let resp: GetUpdatesResponse = self
             .client
             .get(&url)
@@ -99,15 +93,9 @@ impl Channel for TelegramChannel {
     }
 
     async fn send(&self, msg: &OutboundMessage) -> Result<(), ChannelError> {
-        let url = format!(
-            "https://api.telegram.org/bot{}/sendMessage",
-            self.bot_token
-        );
+        let url = format!("https://api.telegram.org/bot{}/sendMessage", self.bot_token);
         for &chat_id in &self.allowed_chat_ids {
-            let params = [
-                ("chat_id", chat_id.to_string()),
-                ("text", msg.text.clone()),
-            ];
+            let params = [("chat_id", chat_id.to_string()), ("text", msg.text.clone())];
             self.client
                 .post(&url)
                 .form(&params)
@@ -131,10 +119,7 @@ impl Channel for TelegramChannel {
                     continue;
                 }
                 let text = msg.text.unwrap_or_default();
-                let reply_to = msg
-                    .reply_to_message
-                    .as_ref()
-                    .and_then(|m| m.text.clone());
+                let reply_to = msg.reply_to_message.as_ref().and_then(|m| m.text.clone());
                 messages.push(InboundMessage {
                     channel: "telegram".to_string(),
                     sender_id: msg.chat.id.to_string(),

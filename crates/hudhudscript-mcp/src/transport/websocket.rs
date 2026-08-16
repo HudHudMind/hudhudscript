@@ -7,6 +7,8 @@ pub struct WebSocketTransport {
 
 impl WebSocketTransport {
     pub fn new(url: &str) -> Self {
-        Self { url: url.to_string() }
+        Self {
+            url: url.to_string(),
+        }
     }
 }

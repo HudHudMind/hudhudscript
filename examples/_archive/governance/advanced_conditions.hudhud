@@ -1,0 +1,166 @@
+// Advanced Governance Conditions Example
+// Demonstrates IN operator, AND/OR logic, and complex expressions
+
+// Example 1: IN operator for role-based access control
+constitution RoleBasedAccess {
+    description: "Role-based access control using IN operator",
+    laws: [
+        {
+            name: "Authorized Roles",
+            description: "Only authorized roles can make requests",
+            enforcement: mandatory,
+            rules: ["role in [admin, moderator, developer]"]
+        }
+    ]
+}
+
+// Example 2: AND operator for range validation
+constitution TemperatureRange {
+    description: "Temperature must be within valid range",
+    laws: [
+        {
+            name: "Valid Temperature",
+            description: "Temperature must be between 0 and 1",
+            enforcement: mandatory,
+            rules: ["temperature >= 0 AND temperature <= 1"]
+        }
+    ]
+}
+
+// Example 3: OR operator for flexible access
+constitution FlexibleAccess {
+    description: "Allow access for admins or high priority requests",
+    laws: [
+        {
+            name: "Admin or High Priority",
+            description: "Allow if user is admin or request has high priority",
+            enforcement: mandatory,
+            rules: ["role == admin OR priority > 7"]
+        }
+    ]
+}
+
+// Example 4: Complex expressions with parentheses
+constitution ComplexValidation {
+    description: "Complex validation with grouped conditions",
+    laws: [
+        {
+            name: "Complex Access Rule",
+            description: "Allow if (admin or moderator) and active, or if priority is very high",
+            enforcement: mandatory,
+            rules: ["((role == admin OR role == moderator) AND status == active) OR priority > 9"]
+        }
+    ]
+}
+
+// Example 5: Multiple conditions with IN operator
+constitution StatusCodeValidation {
+    description: "Validate HTTP status codes",
+    laws: [
+        {
+            name: "Success Codes Only",
+            description: "Only allow success status codes",
+            enforcement: mandatory,
+            rules: ["status_code in [200, 201, 202, 204]"]
+        },
+        {
+            name: "No Client Errors",
+            description: "Warn about client error codes",
+            enforcement: advisory,
+            rules: ["status_code < 400 OR status_code >= 500"]
+        }
+    ]
+}
+
+// Example 6: Nested AND/OR logic
+constitution NestedLogic {
+    description: "Deeply nested logical conditions",
+    laws: [
+        {
+            name: "Complex Business Rule",
+            description: "Complex business logic with multiple conditions",
+            enforcement: mandatory,
+            rules: [
+                "(temperature > 0.5 AND temperature < 1.0) OR priority == high",
+                "role in [admin, moderator, user]",
+                "status == active OR (status == pending AND approval_count > 2)"
+            ]
+        }
+    ]
+}
+
+// Example 7: String matching with IN operator
+constitution EnvironmentValidation {
+    description: "Validate deployment environment",
+    laws: [
+        {
+            name: "Valid Environments",
+            description: "Only allow specific environments",
+            enforcement: mandatory,
+            rules: ["environment in [development, staging, production]"]
+        }
+    ]
+}
+
+// Example 8: Numeric ranges with AND
+constitution RateLimiting {
+    description: "Rate limiting rules",
+    laws: [
+        {
+            name: "Request Rate Limit",
+            description: "Requests per minute must be within limits",
+            enforcement: mandatory,
+            rules: ["requests_per_minute >= 1 AND requests_per_minute <= 100"]
+        },
+        {
+            name: "Token Limit",
+            description: "Token count must be reasonable",
+            enforcement: mandatory,
+            rules: ["max_tokens >= 10 AND max_tokens <= 4000"]
+        }
+    ]
+}
+
+// Example 9: Boolean flags with IN
+constitution FeatureFlags {
+    description: "Feature flag validation",
+    laws: [
+        {
+            name: "Valid Feature Flags",
+            description: "Feature flags must be boolean",
+            enforcement: mandatory,
+            rules: ["experimental_mode in [true, false]"]
+        }
+    ]
+}
+
+// Example 10: Mixed types in complex expression
+constitution ComprehensiveValidation {
+    description: "Comprehensive validation with all operators",
+    laws: [
+        {
+            name: "Full Validation",
+            description: "Complete validation with all condition types",
+            enforcement: mandatory,
+            rules: [
+                "role in [admin, moderator, user]",
+                "(temperature >= 0 AND temperature <= 1) OR priority > 5",
+                "status == active OR (status == pending AND approval_count >= 3)",
+                "environment in [development, staging, production]"
+            ]
+        }
+    ]
+}
+
+print("Advanced governance conditions loaded successfully!");
+print("Examples include:");
+print("  1. IN operator for role-based access");
+print("  2. AND operator for range validation");
+print("  3. OR operator for flexible access");
+print("  4. Complex expressions with parentheses");
+print("  5. Multiple conditions with IN operator");
+print("  6. Nested AND/OR logic");
+print("  7. String matching with IN");
+print("  8. Numeric ranges with AND");
+print("  9. Boolean flags with IN");
+print("  10. Comprehensive validation");

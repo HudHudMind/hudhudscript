@@ -257,7 +257,10 @@ pub fn unix_http(args: &[Value16]) -> HudHudResult<Value16> {
         result.insert("status".to_string(), Value16::number(0.0));
         result.insert("ok".to_string(), Value16::bool_(false));
         result.insert("body".to_string(), Value16::string(response));
-        result.insert("headers".to_string(), Value16::object(hudhudscript_bytecode::ObjMap::default()));
+        result.insert(
+            "headers".to_string(),
+            Value16::object(hudhudscript_bytecode::ObjMap::default()),
+        );
         result.insert("json".to_string(), Value16::null());
     }
 

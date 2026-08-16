@@ -214,10 +214,7 @@ pub fn apt_remove(args: &[Value16]) -> HudHudResult<Value16> {
 }
 
 pub fn apt_update(_args: &[Value16]) -> HudHudResult<Value16> {
-    run_cmd_result(
-        sudo_cmd("apt")?.args(["apt-get", "update"]),
-        "apt.update",
-    )
+    run_cmd_result(sudo_cmd("apt")?.args(["apt-get", "update"]), "apt.update")
 }
 
 pub fn apt_upgradable(_args: &[Value16]) -> HudHudResult<Value16> {

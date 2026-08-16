@@ -86,7 +86,9 @@ pub fn run_ui_with_config(
     };
     register_vm_stdlib_modules(&mut vm);
 
-    let rt = tokio::runtime::Builder::new_current_thread().enable_all().build()
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
         .map_err(|e| CliError::Runtime(format!("Failed to create runtime: {}", e)))?;
 
     rt.block_on(async {

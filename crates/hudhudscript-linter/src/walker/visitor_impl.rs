@@ -1,7 +1,7 @@
+use super::LintContext;
 use crate::rules;
 use hudhudscript_ast::visitor::{self, AstVisitor, VisitControl};
 use hudhudscript_ast::*;
-use super::LintContext;
 use hudhudscript_errors::ScopeManager;
 
 impl<'cfg> AstVisitor for LintContext<'cfg> {

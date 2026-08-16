@@ -22,15 +22,15 @@ pub enum Token {
     LBracket,
     RBracket,
     // Operators
-    Eq,     // ==
-    Neq,    // !=
-    Lt,     // <
-    Gt,     // >
-    Le,     // <=
-    Ge,     // >=
-    And,    // &&
-    Or,     // ||
-    Not,    // !
+    Eq,  // ==
+    Neq, // !=
+    Lt,  // <
+    Gt,  // >
+    Le,  // <=
+    Ge,  // >=
+    And, // &&
+    Or,  // ||
+    Not, // !
     // Keywords
     If,
     Elif,
@@ -159,15 +159,11 @@ pub fn lex(source: &str) -> Vec<Token> {
             if chars[pos].is_ascii_digit() {
                 flush_text(&mut text_buf, &mut tokens);
                 let mut num_str = String::new();
-                while pos < len
-                    && (chars[pos].is_ascii_digit() || chars[pos] == '.')
-                {
+                while pos < len && (chars[pos].is_ascii_digit() || chars[pos] == '.') {
                     num_str.push(chars[pos]);
                     pos += 1;
                 }
-                tokens.push(Token::Number(
-                    num_str.parse().unwrap_or(0.0),
-                ));
+                tokens.push(Token::Number(num_str.parse().unwrap_or(0.0)));
                 continue;
             }
 
@@ -289,9 +285,7 @@ pub fn lex(source: &str) -> Vec<Token> {
             if chars[pos].is_alphabetic() || chars[pos] == '_' {
                 flush_text(&mut text_buf, &mut tokens);
                 let mut ident = String::new();
-                while pos < len
-                    && (chars[pos].is_alphanumeric() || chars[pos] == '_')
-                {
+                while pos < len && (chars[pos].is_alphanumeric() || chars[pos] == '_') {
                     ident.push(chars[pos]);
                     pos += 1;
                 }

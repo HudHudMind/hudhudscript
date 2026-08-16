@@ -18,7 +18,10 @@ impl VM {
         let _ip_ref = &mut *ctx.ip_ref;
         match instr {
             Instruction::Index { dst, obj, idx } => {
-                #[cfg(feature = "telemetry")] { self.telemetry.site_index_count += 1; }
+                #[cfg(feature = "telemetry")]
+                {
+                    self.telemetry.site_index_count += 1;
+                }
                 let obj_val = &self.registers[*obj as usize];
                 let idx_val = &self.registers[*idx as usize];
 
@@ -43,7 +46,9 @@ impl VM {
                     }
                 } else if let Some(s) = obj_val.as_str() {
                     #[cfg(feature = "telemetry")]
-                    { self.telemetry.string_index_count += 1; }
+                    {
+                        self.telemetry.string_index_count += 1;
+                    }
                     let i = numeric_index_i64(*idx_val)
                         .and_then(index_i64_to_usize)
                         .ok_or_else(|| {
@@ -144,7 +149,9 @@ impl VM {
                     Self::runtime_error_with_pos("IndexStringAscii: expected string", bytecode, ip)
                 })?;
                 #[cfg(feature = "telemetry")]
-                { self.telemetry.string_index_count += 1; }
+                {
+                    self.telemetry.string_index_count += 1;
+                }
                 let i = numeric_index_i64(self.registers[*idx as usize])
                     .and_then(index_i64_to_usize)
                     .ok_or_else(|| {
@@ -195,7 +202,10 @@ impl VM {
                     if i >= arr.len() {
                         if i >= MAX_ARRAY_SIZE {
                             return Err(Self::runtime_error_with_pos(
-                                format!("Array index too large: {}", i), bytecode, ip));
+                                format!("Array index too large: {}", i),
+                                bytecode,
+                                ip,
+                            ));
                         }
                         arr.resize(i + 1, Value16::null());
                     }
@@ -235,7 +245,10 @@ impl VM {
                 if i >= arr.len() {
                     if i >= MAX_ARRAY_SIZE {
                         return Err(Self::runtime_error_with_pos(
-                            format!("Array index too large: {}", i), bytecode, ip));
+                            format!("Array index too large: {}", i),
+                            bytecode,
+                            ip,
+                        ));
                     }
                     arr.resize(i + 1, Value16::null());
                 }

@@ -1,7 +1,7 @@
 use crate::{
-    Bytecode, CallPayload, ClassDeclPayload, ClassStaticDeclPayload, DefineFunctionPayload,
-    DestructObjectPayload, EnumDeclPayload, LoadModulePayload, LoopPayload, OptSymPayload,
-    SuperInstrPayload, CmpJumpPayload, SymId, TraitCheckPayload, TwoSymPayload,
+    Bytecode, CallPayload, ClassDeclPayload, ClassStaticDeclPayload, CmpJumpPayload,
+    DefineFunctionPayload, DestructObjectPayload, EnumDeclPayload, LoadModulePayload, LoopPayload,
+    OptSymPayload, SuperInstrPayload, SymId, TraitCheckPayload, TwoSymPayload,
 };
 
 impl Bytecode {
@@ -127,7 +127,12 @@ impl Bytecode {
     #[inline]
     pub fn add_call_payload(&mut self, sym: SymId, arg_count: u8) -> u32 {
         let idx = self.call_payloads.len() as u32;
-        self.call_payloads.push(CallPayload { sym, arg_count, function_idx: u32::MAX, builtin_method_idx: u32::MAX });
+        self.call_payloads.push(CallPayload {
+            sym,
+            arg_count,
+            function_idx: u32::MAX,
+            builtin_method_idx: u32::MAX,
+        });
         idx
     }
 
@@ -223,7 +228,8 @@ impl Bytecode {
     #[inline]
     pub fn add_cmp_jump_payload(&mut self, src1: u8, src2: u8, target: u32) -> u32 {
         let idx = self.cmp_jump_payloads.len() as u32;
-        self.cmp_jump_payloads.push(CmpJumpPayload { src1, src2, target });
+        self.cmp_jump_payloads
+            .push(CmpJumpPayload { src1, src2, target });
         idx
     }
 

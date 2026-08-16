@@ -377,8 +377,12 @@ pub(crate) fn active_locale_tag() -> Option<String> {
 /// G1: "E0182" short_code + locale → çevrili başlık/açıklama. Bulunamazsa None.
 pub fn localized_by_short_code(short_code: &str, locale: &str) -> Option<LocalizedErrorEntry> {
     let num = short_code.strip_prefix('E')?.parse::<u32>().ok()?;
-    if num == 0 { return None; }
+    if num == 0 {
+        return None;
+    }
     let code = ErrorCode(num);
-    if locale == "en" { return None; }
+    if locale == "en" {
+        return None;
+    }
     Some(localized_error_entry(code, locale))
 }

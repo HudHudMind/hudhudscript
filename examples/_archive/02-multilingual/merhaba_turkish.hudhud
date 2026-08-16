@@ -1,0 +1,51 @@
+// Türkçe HudHudScript Programı
+// Turkish HudHudScript Program
+
+// Değişken tanımlama
+tanım dil = "Türkçe"
+tanım selam = "Merhaba, Dünya!"
+print(dil)
+print(selam)
+
+// Koşul yapıları (if-else)
+tanım skor = 85
+
+eğer (skor >= 90) {
+    print("Not: A")
+} değilse ama (skor >= 80) {
+    print("Not: B")
+} değilse ama (skor >= 70) {
+    print("Not: C")
+} değilse {
+    print("Not: F")
+}
+
+// Döngü (while loop)
+tanım sayaç = 1
+iken (sayaç <= 5) {
+    print(sayaç)
+    sayaç = sayaç + 1
+}
+
+// Fonksiyon
+işlev topla(a, b) {
+    dön a + b
+}
+
+print("3 + 7 =")
+print(topla(3, 7))
+
+// Sınıf (Class)
+sınıf Hayvan {
+    constructor(isim, ses) {
+        this.isim = isim
+        this.ses = ses
+    }
+
+    konuş() {
+        dön this.isim + " der ki: " + this.ses
+    }
+}
+
+tanım kedi = yeni Hayvan("Tekir", "Miyav!")
+print(kedi.konuş())

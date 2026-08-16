@@ -114,7 +114,9 @@ pub fn format_agent_system_context(agent_obj: &hudhudscript_bytecode::ObjMap) ->
     Some(out)
 }
 
-pub fn format_provider_system_context(provider_obj: &hudhudscript_bytecode::ObjMap) -> Option<String> {
+pub fn format_provider_system_context(
+    provider_obj: &hudhudscript_bytecode::ObjMap,
+) -> Option<String> {
     let fields = [
         "system",
         "system_prompt",
@@ -177,13 +179,16 @@ pub fn compose_system_prompt(parts: Vec<String>) -> Option<String> {
 mod tests {
     use super::*;
     use hudhudscript_bytecode::Value16;
-    use hudhudscript_governance::{Constitution, Law, EnforcementLevel};
+    use hudhudscript_governance::{Constitution, EnforcementLevel, Law};
     use std::collections::HashMap;
 
     #[test]
     fn test_format_agent_system_context() {
         let mut obj = hudhudscript_bytecode::ObjMap::default();
-        obj.insert("role".to_string(), Value16::string("Sen yaratıcı bir içerik yazarısın."));
+        obj.insert(
+            "role".to_string(),
+            Value16::string("Sen yaratıcı bir içerik yazarısın."),
+        );
 
         let result = format_agent_system_context(&obj).unwrap();
         assert!(result.contains("[Agent Role]"));
@@ -195,7 +200,7 @@ mod tests {
         let parts = vec![
             "[Constitution]".to_string(),
             "[Agent Role]".to_string(),
-            "Call system text".to_string()
+            "Call system text".to_string(),
         ];
 
         let result = compose_system_prompt(parts).unwrap();
@@ -226,14 +231,17 @@ mod tests {
         vm.active_constitution = Some("SafeAI".to_string());
 
         let mut laws = HashMap::new();
-        laws.insert("NoLie".to_string(), Law {
-            id: "NoLie".to_string(),
-            constitution_id: "cons.SafeAI".to_string(),
-            name: "NoLie".to_string(),
-            description: "Yalan söyleme.".to_string(),
-            enforcement_level: EnforcementLevel::Mandatory,
-            conditions: vec![],
-        });
+        laws.insert(
+            "NoLie".to_string(),
+            Law {
+                id: "NoLie".to_string(),
+                constitution_id: "cons.SafeAI".to_string(),
+                name: "NoLie".to_string(),
+                description: "Yalan söyleme.".to_string(),
+                enforcement_level: EnforcementLevel::Mandatory,
+                conditions: vec![],
+            },
+        );
 
         let cons = Constitution {
             id: "cons.SafeAI".to_string(),

@@ -55,8 +55,8 @@ fn deserialize_session(data: &str) -> hudhudscript_bytecode::ObjMap {
 
 /// Sign data with HMAC-SHA256, return base64(signature).
 fn sign(data: &str, secret: &str) -> String {
-    let mut mac = HmacSha256::new_from_slice(secret.as_bytes())
-        .expect("HMAC can take key of any size");
+    let mut mac =
+        HmacSha256::new_from_slice(secret.as_bytes()).expect("HMAC can take key of any size");
     mac.update(data.as_bytes());
     let result = mac.finalize();
     B64.encode(result.into_bytes())
@@ -150,10 +150,7 @@ pub fn session_set(args: &[Value16]) -> HudHudResult<Value16> {
 
     let data = serialize_session(obj);
     let cookie_value = encode_session_cookie(&data, secret);
-    let cookie_header = format!(
-        "session={}; Path=/; HttpOnly; SameSite=Lax",
-        cookie_value
-    );
+    let cookie_header = format!("session={}; Path=/; HttpOnly; SameSite=Lax", cookie_value);
 
     // Add to response cookies
     let mut new_cookies: Vec<Value16> = Vec::new();
@@ -180,4 +177,3 @@ pub fn session_set(args: &[Value16]) -> HudHudResult<Value16> {
 }
 
 // ── Unit tests ─────────────────────────────────────────────────────────
-

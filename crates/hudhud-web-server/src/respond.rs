@@ -9,22 +9,38 @@ fn runtime_error(msg: impl Into<String>) -> Error {
     Error::new(ErrorCode::CompileRuntimeError, msg.into())
 }
 fn type_error(expected: &str, got: &str, context: &str) -> Error {
-    Error::new(ErrorCode::RuntimeTypeError, format!("{}: expected {}, got {}", context, expected, got))
+    Error::new(
+        ErrorCode::RuntimeTypeError,
+        format!("{}: expected {}, got {}", context, expected, got),
+    )
 }
 
 /// `Web.respond(req_or_conn, response_obj)` → sends response and closes connection.
 pub fn respond(args: &[Value16]) -> HudHudResult<Value16> {
-    let req = args.first().and_then(|v| v.as_object()).ok_or_else(||
-        type_error("object", "", "Web.respond"))?;
-    let resp = args.get(1).and_then(|v| v.as_object()).ok_or_else(||
-        type_error("object", "", "Web.respond:response"))?;
+    let req = args
+        .first()
+        .and_then(|v| v.as_object())
+        .ok_or_else(|| type_error("object", "", "Web.respond"))?;
+    let resp = args
+        .get(1)
+        .and_then(|v| v.as_object())
+        .ok_or_else(|| type_error("object", "", "Web.respond:response"))?;
 
-    let conn_id = req.get("conn_id").and_then(|v| v.as_number()).ok_or_else(||
-        runtime_error("Web.respond: request missing conn_id".to_string()))? as u64;
+    let conn_id = req
+        .get("conn_id")
+        .and_then(|v| v.as_number())
+        .ok_or_else(|| runtime_error("Web.respond: request missing conn_id".to_string()))?
+        as u64;
 
-    let status = resp.get("status").and_then(|v| v.as_number()).unwrap_or(200.0) as u16;
+    let status = resp
+        .get("status")
+        .and_then(|v| v.as_number())
+        .unwrap_or(200.0) as u16;
     let body = resp.get("body").and_then(|v| v.as_str()).unwrap_or("");
-    let content_type = resp.get("content_type").and_then(|v| v.as_str()).unwrap_or("text/html; charset=utf-8");
+    let content_type = resp
+        .get("content_type")
+        .and_then(|v| v.as_str())
+        .unwrap_or("text/html; charset=utf-8");
 
     // Collect additional headers from response
     let mut extra_headers: Vec<(String, String)> = Vec::new();
@@ -48,11 +64,19 @@ pub fn respond(args: &[Value16]) -> HudHudResult<Value16> {
     // Get the stream and write response
     let mut stream = {
         let mut reg = conn_registry().lock().unwrap();
-        reg.remove(&conn_id).ok_or_else(||
-            runtime_error(format!("Web.respond: connection {} not found", conn_id)))?
+        reg.remove(&conn_id).ok_or_else(|| {
+            runtime_error(format!("Web.respond: connection {} not found", conn_id))
+        })?
     };
 
-    write_response_with_cookies(&mut stream, status, content_type, body, &extra_headers, &cookies);
+    write_response_with_cookies(
+        &mut stream,
+        status,
+        content_type,
+        body,
+        &extra_headers,
+        &cookies,
+    );
 
     let _ = stream.flush();
     Ok(Value16::null())
@@ -68,17 +92,27 @@ fn write_response_with_cookies(
     cookies: &[String],
 ) {
     let reason = match status {
-        200 => "OK", 201 => "Created", 204 => "No Content",
-        301 => "Moved Permanently", 302 => "Found", 304 => "Not Modified",
-        400 => "Bad Request", 401 => "Unauthorized", 403 => "Forbidden",
-        404 => "Not Found", 405 => "Method Not Allowed",
+        200 => "OK",
+        201 => "Created",
+        204 => "No Content",
+        301 => "Moved Permanently",
+        302 => "Found",
+        304 => "Not Modified",
+        400 => "Bad Request",
+        401 => "Unauthorized",
+        403 => "Forbidden",
+        404 => "Not Found",
+        405 => "Method Not Allowed",
         500 => "Internal Server Error",
         _ => "OK",
     };
 
     let mut header_block = format!(
         "HTTP/1.1 {} {}\r\nContent-Type: {}\r\nContent-Length: {}\r\n",
-        status, reason, content_type, body.len()
+        status,
+        reason,
+        content_type,
+        body.len()
     );
 
     for (k, v) in extra_headers {

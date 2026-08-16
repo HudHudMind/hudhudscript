@@ -1,0 +1,40 @@
+// HudHudScript — Council: Güvenlik Konseyi
+// Council ile subject'leri yönetme
+
+role Guard { can patrol, can arrest }
+role Inspector { can investigate, can report }
+
+subject Officer has Guard {
+    state badge: 4012,
+    state patrols: 0
+}
+subject Detective has Inspector {
+    state cases: 0,
+    state solved: 0
+}
+
+council SecurityCouncil {
+    quorum: 2,
+    members: ["Officer", "Detective"],
+    rules: ["majority-vote", "weekly-report"]
+}
+
+relation Officer <-> Detective { trust: 80, cases_shared: 0 }
+
+spawn Officer; spawn Detective;
+
+print("=== Security Council Aktif ===");
+print("Quorum: 2 | Üyeler: Officer, Detective");
+print("Kurallar: majority-vote, weekly-report");
+print("");
+
+let patrols = 0; let cases = 0;
+
+patrols = patrols + 3;
+print("Officer 3 devriye tamamladı (toplam: " + patrols + ")");
+
+cases = cases + 1;
+print("Detective 1 vaka açtı (toplam: " + cases + ")");
+
+print("");
+print("Council oturumu: 2/2 üye hazır → karar alınabilir ✓");

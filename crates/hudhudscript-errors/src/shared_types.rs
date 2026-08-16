@@ -62,7 +62,13 @@ pub struct GeneratorState<V> {
 impl<V: Clone> GeneratorState<V> {
     /// Create a new lazy generator state from a channel receiver.
     pub fn new(receiver: mpsc::Receiver<V>) -> Self {
-        Self { receiver, pending: std::collections::VecDeque::new(), buffered: Vec::new(), done: false, yield_id: None }
+        Self {
+            receiver,
+            pending: std::collections::VecDeque::new(),
+            buffered: Vec::new(),
+            done: false,
+            yield_id: None,
+        }
     }
 
     /// Advance the generator by one step, returning the next value or `None`
@@ -125,6 +131,12 @@ impl<V> fmt::Debug for GeneratorState<V> {
 impl<V: Send + 'static> From<Vec<V>> for GeneratorState<V> {
     fn from(values: Vec<V>) -> Self {
         let (_tx, rx) = mpsc::sync_channel(0);
-        Self { receiver: rx, pending: values.into(), buffered: Vec::new(), done: false, yield_id: None }
+        Self {
+            receiver: rx,
+            pending: values.into(),
+            buffered: Vec::new(),
+            done: false,
+            yield_id: None,
+        }
     }
 }

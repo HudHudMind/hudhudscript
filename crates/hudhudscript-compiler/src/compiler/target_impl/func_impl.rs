@@ -3,7 +3,6 @@
 use super::*;
 
 impl Compiler {
-
     pub fn compile_arrow(
         &mut self,
         params: &[String],
@@ -34,11 +33,13 @@ impl Compiler {
                 name: hudhudscript_bytecode::SymId(name_sym.0),
                 chunk_name: anon_name.clone(),
             });
-            self.bytecode.push_instr(Instruction::DefineFunction(payload_idx));
+            self.bytecode
+                .push_instr(Instruction::DefineFunction(payload_idx));
             let tr = crate::compiler::regalloc::temp_reg();
             let sym = name_sym.0 as u16;
-            self.bytecode.push_instr(Instruction::LoadGlobal { dst: tr, sym });
-            self.bytecode.push_move(255, tr );
+            self.bytecode
+                .push_instr(Instruction::LoadGlobal { dst: tr, sym });
+            self.bytecode.push_move(255, tr);
         } else {
             let func_val = Value16::function(FunctionData {
                 name: anon_name.clone(),
@@ -48,7 +49,14 @@ impl Compiler {
                 captures: Default::default(),
             });
             let idx = self.bytecode.add_constant(func_val);
-            { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_move(255, tr ); }
+            {
+                let tr = crate::compiler::regalloc::temp_reg();
+                self.bytecode.push_instr(Instruction::LoadConst {
+                    dst: tr,
+                    const_idx: idx as u16,
+                });
+                self.bytecode.push_move(255, tr);
+            }
         }
         Ok(())
     }
@@ -64,7 +72,8 @@ impl Compiler {
         span: Span,
     ) -> CompileResult<()> {
         // P4a: store param names for type propagation
-        self.fn_param_names.insert(name.to_string(), params.to_vec());
+        self.fn_param_names
+            .insert(name.to_string(), params.to_vec());
         // FUNCTION0003: duplicate function detection
         if let Some(scope) = self.declared_fns.last_mut() {
             let line = span.start.line;
@@ -106,9 +115,9 @@ impl Compiler {
         let name_sym_id = hudhudscript_bytecode::interner::intern(name).0;
         let chunk_arc = Arc::new(chunk);
         // P3a: register for compiler-side inlining
-        self.inline_function_chunks.insert(name.to_string(), Arc::clone(&chunk_arc));
-        self.bytecode
-            .add_function(name.to_string(), chunk_arc);
+        self.inline_function_chunks
+            .insert(name.to_string(), Arc::clone(&chunk_arc));
+        self.bytecode.add_function(name.to_string(), chunk_arc);
 
         if has_fn_captures {
             // Closure: DefineFunction handler runtime'da upvalue_cell_for() çağırır
@@ -117,7 +126,8 @@ impl Compiler {
                 name: hudhudscript_bytecode::SymId(name_sym_id),
                 chunk_name: name.to_string(),
             });
-            self.bytecode.push_instr(Instruction::DefineFunction(payload_idx));
+            self.bytecode
+                .push_instr(Instruction::DefineFunction(payload_idx));
         } else {
             let func_val = Value16::function(FunctionData {
                 name: name.to_string(),
@@ -128,7 +138,10 @@ impl Compiler {
             });
             let idx = self.bytecode.add_constant(func_val);
             let tr = crate::compiler::regalloc::temp_reg();
-            self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 });
+            self.bytecode.push_instr(Instruction::LoadConst {
+                dst: tr,
+                const_idx: idx as u16,
+            });
             self.bytecode.push_instr(Instruction::StoreGlobal {
                 src: tr,
                 sym: name_sym_id as u16,

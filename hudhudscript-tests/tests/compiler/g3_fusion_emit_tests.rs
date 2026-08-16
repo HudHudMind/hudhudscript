@@ -32,7 +32,12 @@ macro_rules! assert_emits {
     ($src:expr, $variant:pat, $name:expr) => {
         let bc = compile($src);
         let n = count_instrs(&bc, |i| matches!(i, $variant));
-        assert!(n > 0, "{} EMİT EDİLMEDİ — fusion öldü (kaynak: {})", $name, $src);
+        assert!(
+            n > 0,
+            "{} EMİT EDİLMEDİ — fusion öldü (kaynak: {})",
+            $name,
+            $src
+        );
     };
 }
 
@@ -277,7 +282,10 @@ fn g3_property_sub_assign_local_object_correct() {
     let bc = compile("fn p(y) { var o = {x: 10}; o.x = o.x - y; return o.x }\nvar sonuc = p(3)");
     let mut vm = VM::new();
     vm.execute(&bc).expect("execute PropertySubAssign repro");
-    let got = vm.get_variable("sonuc").and_then(|v| v.as_int()).unwrap_or(-999);
+    let got = vm
+        .get_variable("sonuc")
+        .and_then(|v| v.as_int())
+        .unwrap_or(-999);
     assert_eq!(got, 7, "o.x = 10 - 3 = 7 olmalı");
 }
 
@@ -289,6 +297,9 @@ fn g3_property_sub_assign_result_used_later() {
     );
     let mut vm = VM::new();
     vm.execute(&bc).expect("execute double PropertySubAssign");
-    let got = vm.get_variable("sonuc").and_then(|v| v.as_int()).unwrap_or(-999);
+    let got = vm
+        .get_variable("sonuc")
+        .and_then(|v| v.as_int())
+        .unwrap_or(-999);
     assert_eq!(got, 40, "100 - 30 - 30 = 40 olmalı");
 }

@@ -25,6 +25,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 pub mod app;
+pub mod bridge_error;
 pub mod components;
 pub mod event;
 pub mod layout;
@@ -32,7 +33,6 @@ pub mod navigation;
 pub mod state;
 pub mod theme;
 pub mod widget;
-pub mod bridge_error;
 pub use bridge_error::BridgeError;
 
 // ── Widget Types ────────────────────────────────────────────────────

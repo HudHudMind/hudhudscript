@@ -11,11 +11,17 @@ fn vm_run_and_get(code: &str, var: &str) -> (hudhudscript_vm::VM, hudhudscript_b
     let bytecode = compiler.compile(&ast).expect("compile failed");
     let mut vm = VM::new();
     vm.execute(&bytecode).expect("VM execution failed");
-    let val = vm.get_variable(var).cloned().unwrap_or_else(|| panic!("variable \'{}\' not found", var));
+    let val = vm
+        .get_variable(var)
+        .cloned()
+        .unwrap_or_else(|| panic!("variable \'{}\' not found", var));
     (vm, val)
 }
 
-fn assert_string((_vm, val): (hudhudscript_vm::VM, hudhudscript_bytecode::Value16), expected: &str) {
+fn assert_string(
+    (_vm, val): (hudhudscript_vm::VM, hudhudscript_bytecode::Value16),
+    expected: &str,
+) {
     match val.as_str() {
         Some(s) => assert_eq!(s, expected, "Expected '{}', got '{}'", expected, s),
         other => panic!("Expected String(\"{}\"), got {:?}", expected, other),
@@ -138,7 +144,8 @@ fn test_vm_exec_output() {
 
 #[test]
 fn test_vm_exec_lines() {
-    let tuple = vm_run_and_get(r#"var x = exec.lines("echo hello");"#, "x"); match tuple.1.as_array() {
+    let tuple = vm_run_and_get(r#"var x = exec.lines("echo hello");"#, "x");
+    match tuple.1.as_array() {
         Some(arr) => assert!(!arr.is_empty()),
         other => panic!("Expected array, got {:?}", other),
     }

@@ -1,0 +1,22 @@
+// 04_cross_loop.hud — cross-loop target
+loop first_loop {
+  step first_step {
+    result.next = true
+
+    gate first_gate {
+      when result.next == true -> loop second_loop
+      else -> fail
+    }
+  }
+}
+
+loop second_loop {
+  step second_step {
+    result.code = 0
+
+    gate second_gate {
+      when result.code == 0 -> done
+      else -> fail
+    }
+  }
+}

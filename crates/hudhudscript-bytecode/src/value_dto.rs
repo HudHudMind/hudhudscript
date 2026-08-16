@@ -87,9 +87,7 @@ impl From<ValueDto> for Value16 {
             ValueDto::Number(n) => Value16::number(n),
             ValueDto::String(s) => Value16::string(s),
             ValueDto::Array(arr) => Value16::array(arr.into_iter().map(|x| x.into()).collect()),
-            ValueDto::Object(obj) => {
-                Value16::object(obj.into_iter().map(|(k, v)| (k, v.into())))
-            }
+            ValueDto::Object(obj) => Value16::object(obj.into_iter().map(|(k, v)| (k, v.into()))),
             ValueDto::Function(fd) => Value16::function(*fd),
             ValueDto::Class(cd) => Value16::class(*cd),
             ValueDto::Instance(inst) => Value16::instance(*inst),

@@ -22,7 +22,7 @@ pub fn stack_effect(inst: &Instruction) -> Option<i32> {
         | SuperCall { .. }
         | NewInstance { .. }
         | CallSpread(_)
-        | MethodCallSpread(_)
+        | MethodCallSpread { .. }
         | MakeGenerator { .. }
         | Spawn { .. }
         | Despawn { .. }

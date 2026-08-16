@@ -1,0 +1,11 @@
+// Sample 08: bounded retry with escalate after max attempts
+loop resilient {
+  step s {
+    gate G {
+      when true -> retry
+      else -> done
+    }
+  }
+}
+
+run loop resilient

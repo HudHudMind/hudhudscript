@@ -6,7 +6,7 @@ use std::fs;
 
 fn sample_path(name: &str) -> String {
     format!(
-        "/home/onur/HudHudMind/hudhud-script/examples/09-loop-engineering/{}",
+        "../examples/09-loop-engineering/{}",
         name
     )
 }

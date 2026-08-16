@@ -60,7 +60,10 @@ pub fn parse(args: &[Value16]) -> HudHudResult<Value16> {
         if line.starts_with('[') && line.ends_with(']') {
             current_section = line[1..line.len() - 1].trim().to_string();
             if !result.contains_key(&current_section) {
-                result.insert(current_section.clone(), Value16::object(hudhudscript_bytecode::ObjMap::default()));
+                result.insert(
+                    current_section.clone(),
+                    Value16::object(hudhudscript_bytecode::ObjMap::default()),
+                );
             }
         } else if let Some((key, val)) = line.split_once('=') {
             let key = key.trim().to_string();

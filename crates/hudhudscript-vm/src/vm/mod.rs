@@ -60,8 +60,9 @@ use std::collections::{HashMap, HashSet};
 // remaining atomic is `AtomicBool` via the fully-qualified path used in
 // the cancellation token field (see `cancellation_token` below).
 use std::sync::Arc;
-pub(crate) mod types;
+pub(crate) mod module_load_context;
 pub(crate) mod opcode_spec;
+pub(crate) mod types;
 pub(crate) use crate::vm::types::*;
 
 // ── Packed-instruction opcode constants for fast dispatch ────────────
@@ -81,7 +82,6 @@ pub(crate) mod builtin_object_extra;
 pub(crate) mod builtin_system;
 pub(crate) mod builtin_system_extra;
 pub(crate) mod builtin_value;
-pub(crate) mod callback;
 pub(crate) mod chunk;
 pub(crate) mod class_ops;
 pub(crate) mod config_types;
@@ -117,6 +117,7 @@ pub mod governance_ops;
 pub mod host_access;
 pub(crate) mod index_helpers;
 pub use host_access::{AccessDecision as HostAccessDecision, HostAccessPolicy};
+pub(crate) mod call_state;
 pub mod json;
 pub mod map;
 pub(crate) mod math_fast_paths;
@@ -140,6 +141,7 @@ pub fn provider_bridge_block_on<T: Send + 'static>(
 ) -> T {
     provider::block_on_provider(fut)
 }
+pub(crate) mod frame_lifecycle;
 pub(crate) mod register_arena;
 pub mod registry;
 pub(crate) mod run;
@@ -147,15 +149,17 @@ pub(crate) mod scope;
 pub mod set;
 pub mod sop_types;
 pub mod string;
-pub(crate) mod trampoline;
-pub(crate) mod util;
 #[cfg(feature = "telemetry")]
 pub mod telemetry;
+pub(crate) mod trampoline;
+pub(crate) mod util;
 
 pub use crate::vm::config_types::{OutputLocale, SandboxConfig};
 use crate::vm::prepack::{prepack_instructions, PACK_SENTINEL};
 use crate::vm::registry::{BuiltinFn, ModuleRegistry};
 
 pub mod machine;
+pub(crate) mod machine_support;
 mod machine_types;
+pub(crate) mod method_dispatch;
 pub use machine::VM;

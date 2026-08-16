@@ -50,7 +50,12 @@ impl Script {
 
     /// Call a top-level function with arguments, return result as Python value.
     #[pyo3(signature = (func_name, *args))]
-    fn call(&mut self, py: Python<'_>, func_name: &str, args: &Bound<'_, PyTuple>) -> PyResult<PyObject> {
+    fn call(
+        &mut self,
+        py: Python<'_>,
+        func_name: &str,
+        args: &Bound<'_, PyTuple>,
+    ) -> PyResult<PyObject> {
         let mut hud_args = Vec::new();
         for arg in args.iter() {
             hud_args.push(convert::py_to_value(&arg)?);
@@ -65,12 +70,18 @@ impl Script {
         std::thread::spawn(move || {
             let ast = match hudhudscript_parser::parse(&code) {
                 Ok(a) => a,
-                Err(e) => { let _ = tx.send(Err(format!("Parse: {}", e))); return; }
+                Err(e) => {
+                    let _ = tx.send(Err(format!("Parse: {}", e)));
+                    return;
+                }
             };
             let mut compiler = Compiler::new();
             let bytecode = match compiler.compile(&ast) {
                 Ok(b) => b,
-                Err(e) => { let _ = tx.send(Err(format!("Compile: {}", e))); return; }
+                Err(e) => {
+                    let _ = tx.send(Err(format!("Compile: {}", e)));
+                    return;
+                }
             };
             let mut vm = VM::new();
             hudhudscript_vm::register_vm_stdlib_modules(&mut vm);
@@ -82,7 +93,8 @@ impl Script {
             hudhud_print::print_ops::start_capture();
             let result = (|| -> Result<Value16, String> {
                 vm.execute(&bytecode).map_err(|e| format!("{}", e))?;
-                vm.call_public(&fn_name, &hud_args, &bytecode).map_err(|e| format!("{}", e))
+                vm.call_public(&fn_name, &hud_args, &bytecode)
+                    .map_err(|e| format!("{}", e))
             })();
             let output = hudhud_print::print_ops::stop_capture().unwrap_or_default();
 
@@ -100,16 +112,20 @@ impl Script {
             Ok(Ok((_output, Some(val)))) => convert::value_to_py(py, &val),
             Ok(Ok((_, None))) => Ok(py.None()),
             Ok(Err(e)) => Err(pyo3::exceptions::PyRuntimeError::new_err(e)),
-            Err(mpsc::RecvTimeoutError::Timeout) => {
-                Err(pyo3::exceptions::PyTimeoutError::new_err("Script timed out"))
-            }
-            Err(mpsc::RecvTimeoutError::Disconnected) => {
-                Err(pyo3::exceptions::PyRuntimeError::new_err("Script thread crashed"))
-            }
+            Err(mpsc::RecvTimeoutError::Timeout) => Err(pyo3::exceptions::PyTimeoutError::new_err(
+                "Script timed out",
+            )),
+            Err(mpsc::RecvTimeoutError::Disconnected) => Err(
+                pyo3::exceptions::PyRuntimeError::new_err("Script thread crashed"),
+            ),
         }
     }
 
     fn __repr__(&self) -> String {
-        format!("Script({} chars, {} providers)", self.source.len(), self.providers.len())
+        format!(
+            "Script({} chars, {} providers)",
+            self.source.len(),
+            self.providers.len()
+        )
     }
 }

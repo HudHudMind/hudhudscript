@@ -25,7 +25,9 @@ pub struct ChainSymbol {
 /// Collect symbols from parsed AST statements. Pure compile-time — no runtime deps.
 pub fn collect_loop_symbols(stmts: &[Stmt]) -> LoopSymbolTable {
     let mut table = LoopSymbolTable {
-        loops: HashMap::new(), chains: HashMap::new(), errors: Vec::new(),
+        loops: HashMap::new(),
+        chains: HashMap::new(),
+        errors: Vec::new(),
     };
 
     for stmt in stmts {
@@ -42,11 +44,16 @@ pub fn collect_loop_symbols(stmts: &[Stmt]) -> LoopSymbolTable {
                     for item in items {
                         match item {
                             LoopItemAst::InlineStep(s) => {
-                                if let Decl::Step { name: sname, gate, .. } = s.as_ref() {
+                                if let Decl::Step {
+                                    name: sname, gate, ..
+                                } = s.as_ref()
+                                {
                                     steps.push(sname.clone());
                                     if let Some(g) = gate {
                                         gates.push(g.name.clone());
-                                        for b in &g.branches { targets.push(b.target.clone()); }
+                                        for b in &g.branches {
+                                            targets.push(b.target.clone());
+                                        }
                                         targets.push(g.else_target.clone());
                                     }
                                 }
@@ -54,19 +61,37 @@ pub fn collect_loop_symbols(stmts: &[Stmt]) -> LoopSymbolTable {
                             _ => {}
                         }
                     }
-                    table.loops.insert(name.clone(), LoopSymbol { name: name.clone(), steps, gates, targets });
+                    table.loops.insert(
+                        name.clone(),
+                        LoopSymbol {
+                            name: name.clone(),
+                            steps,
+                            gates,
+                            targets,
+                        },
+                    );
                 }
                 Decl::Chain { name, links, .. } => {
                     if table.chains.contains_key(name.as_str()) {
                         table.errors.push(format!("duplicate chain: '{}'", name));
                         continue;
                     }
-                    let link_names: Vec<String> = links.iter().map(|l| l.loop_name.clone()).collect();
-                    table.chains.insert(name.clone(), ChainSymbol { name: name.clone(), link_names });
+                    let link_names: Vec<String> =
+                        links.iter().map(|l| l.loop_name.clone()).collect();
+                    table.chains.insert(
+                        name.clone(),
+                        ChainSymbol {
+                            name: name.clone(),
+                            link_names,
+                        },
+                    );
                     // Collect nested inline loop declarations inside chain links
                     for link in links {
                         if let Some(inline) = &link.inline_loop {
-                            if let Decl::Loop { name: ln, items, .. } = inline.as_ref() {
+                            if let Decl::Loop {
+                                name: ln, items, ..
+                            } = inline.as_ref()
+                            {
                                 if table.loops.contains_key(ln.as_str()) {
                                     table.errors.push(format!("duplicate loop: '{}'", ln));
                                     continue;
@@ -76,17 +101,30 @@ pub fn collect_loop_symbols(stmts: &[Stmt]) -> LoopSymbolTable {
                                 let mut targets = Vec::new();
                                 for item in items {
                                     if let LoopItemAst::InlineStep(s) = item {
-                                        if let Decl::Step { name: sname, gate, .. } = s.as_ref() {
+                                        if let Decl::Step {
+                                            name: sname, gate, ..
+                                        } = s.as_ref()
+                                        {
                                             steps.push(sname.clone());
                                             if let Some(g) = gate {
                                                 gates.push(g.name.clone());
-                                                for b in &g.branches { targets.push(b.target.clone()); }
+                                                for b in &g.branches {
+                                                    targets.push(b.target.clone());
+                                                }
                                                 targets.push(g.else_target.clone());
                                             }
                                         }
                                     }
                                 }
-                                table.loops.insert(ln.clone(), LoopSymbol { name: ln.clone(), steps, gates, targets });
+                                table.loops.insert(
+                                    ln.clone(),
+                                    LoopSymbol {
+                                        name: ln.clone(),
+                                        steps,
+                                        gates,
+                                        targets,
+                                    },
+                                );
                             }
                         }
                     }
@@ -117,7 +155,10 @@ pub fn validate_loop_symbols(table: &LoopSymbolTable) -> Vec<String> {
                         errors.push(format!("loop '{}': unknown target loop '{}'", name, ln));
                     } else if let Some(target_loop) = table.loops.get(ln) {
                         if !target_loop.steps.contains(sn) {
-                            errors.push(format!("loop '{}': target loop '{}' has no step '{}'", name, ln, sn));
+                            errors.push(format!(
+                                "loop '{}': target loop '{}' has no step '{}'",
+                                name, ln, sn
+                            ));
                         }
                     }
                 }

@@ -130,7 +130,13 @@ impl VM {
                 ),
             ));
         }
-        self.call_chunk(&chunk, &chunk.params, args, bytecode, hudhudscript_bytecode::SymId(hudhudscript_bytecode::interner::intern(func_name).0))?;
+        self.call_chunk(
+            &chunk,
+            &chunk.params,
+            args,
+            bytecode,
+            hudhudscript_bytecode::SymId(hudhudscript_bytecode::interner::intern(func_name).0),
+        )?;
         Ok(self.registers[255])
     }
 

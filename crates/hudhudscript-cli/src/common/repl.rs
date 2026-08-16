@@ -44,7 +44,9 @@ pub fn run_repl(debug: bool, load_file: Option<PathBuf>) -> Result<(), CliError>
 
     // Keep a Tokio runtime alive for the whole REPL so async providers
     // (reqwest, tcp, ws) have a context when VM-side builtins call them.
-    let rt = tokio::runtime::Builder::new_current_thread().enable_all().build()
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
         .map_err(|e| CliError::Runtime(format!("Failed to create runtime: {}", e)))?;
     let _rt_guard = rt.enter();
 
@@ -64,8 +66,12 @@ pub fn run_repl(debug: bool, load_file: Option<PathBuf>) -> Result<(), CliError>
         match fs::read_to_string(&load_path) {
             Ok(source) => match parse(&source) {
                 Ok(ast) => {
-                    let canonical_script = fs::canonicalize(&load_path).unwrap_or(load_path.clone());
-                    let module_base = canonical_script.parent().unwrap_or(Path::new(".")).to_path_buf();
+                    let canonical_script =
+                        fs::canonicalize(&load_path).unwrap_or(load_path.clone());
+                    let module_base = canonical_script
+                        .parent()
+                        .unwrap_or(Path::new("."))
+                        .to_path_buf();
                     let mut compiler = hudhudscript_compiler::Compiler::new();
                     compiler.set_module_base_dir(module_base.clone());
                     match compiler.compile(&ast) {
@@ -239,7 +245,9 @@ fn show_vars(vm: &hudhudscript_vm::VM) {
     let mut user_vars: Vec<(String, String, String)> = vm
         .all_globals()
         .filter(|(sym, v)| {
-            let name = hudhudscript_bytecode::interner::resolve(hudhudscript_bytecode::interner::SymbolId(sym.0));
+            let name = hudhudscript_bytecode::interner::resolve(
+                hudhudscript_bytecode::interner::SymbolId(sym.0),
+            );
             !name.starts_with("__")
                 && !v
                     .as_object()
@@ -247,7 +255,9 @@ fn show_vars(vm: &hudhudscript_vm::VM) {
                     .unwrap_or(false)
         })
         .map(|(sym, value)| {
-            let name = hudhudscript_bytecode::interner::resolve(hudhudscript_bytecode::interner::SymbolId(sym.0));
+            let name = hudhudscript_bytecode::interner::resolve(
+                hudhudscript_bytecode::interner::SymbolId(sym.0),
+            );
             let type_name = vm_value_type_name(value).to_string();
             let display = format!("{:?}", value);
             let display = if display.len() > 80 {

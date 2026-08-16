@@ -215,18 +215,54 @@ fn try_index2d(
     // P3: also match IndexArray (P1) for nested fusion.
     // IndexStringAscii is intentionally NOT fused — string-of-strings is not a 2D pattern.
     let (mid, outer, idx1, inner2, dst, idx2) = match (&instructions[i], &instructions[i + 1]) {
-        (Instruction::Index { dst: m, obj: o, idx: i1 }, Instruction::Index { dst, obj: inn, idx: i2 }) => {
-            (*m, *o, *i1, *inn, *dst, *i2)
-        }
-        (Instruction::IndexArray { dst: m, obj: o, idx: i1 }, Instruction::IndexArray { dst, obj: inn, idx: i2 }) => {
-            (*m, *o, *i1, *inn, *dst, *i2)
-        }
-        (Instruction::Index { dst: m, obj: o, idx: i1 }, Instruction::IndexArray { dst, obj: inn, idx: i2 }) => {
-            (*m, *o, *i1, *inn, *dst, *i2)
-        }
-        (Instruction::IndexArray { dst: m, obj: o, idx: i1 }, Instruction::Index { dst, obj: inn, idx: i2 }) => {
-            (*m, *o, *i1, *inn, *dst, *i2)
-        }
+        (
+            Instruction::Index {
+                dst: m,
+                obj: o,
+                idx: i1,
+            },
+            Instruction::Index {
+                dst,
+                obj: inn,
+                idx: i2,
+            },
+        ) => (*m, *o, *i1, *inn, *dst, *i2),
+        (
+            Instruction::IndexArray {
+                dst: m,
+                obj: o,
+                idx: i1,
+            },
+            Instruction::IndexArray {
+                dst,
+                obj: inn,
+                idx: i2,
+            },
+        ) => (*m, *o, *i1, *inn, *dst, *i2),
+        (
+            Instruction::Index {
+                dst: m,
+                obj: o,
+                idx: i1,
+            },
+            Instruction::IndexArray {
+                dst,
+                obj: inn,
+                idx: i2,
+            },
+        ) => (*m, *o, *i1, *inn, *dst, *i2),
+        (
+            Instruction::IndexArray {
+                dst: m,
+                obj: o,
+                idx: i1,
+            },
+            Instruction::Index {
+                dst,
+                obj: inn,
+                idx: i2,
+            },
+        ) => (*m, *o, *i1, *inn, *dst, *i2),
         _ => return false,
     };
     if mid == inner2 {
@@ -250,20 +286,52 @@ fn try_index_assign2d(
     // P3: also match IndexArray (P1) for nested fusion
     match (&instructions[i], &instructions[i + 1]) {
         (
-            Instruction::Index { dst: row, obj: outer, idx: idx1 },
-            Instruction::IndexAssign { obj: inner, idx: idx2, val },
+            Instruction::Index {
+                dst: row,
+                obj: outer,
+                idx: idx1,
+            },
+            Instruction::IndexAssign {
+                obj: inner,
+                idx: idx2,
+                val,
+            },
         )
         | (
-            Instruction::IndexArray { dst: row, obj: outer, idx: idx1 },
-            Instruction::IndexAssignArray { obj: inner, idx: idx2, val },
+            Instruction::IndexArray {
+                dst: row,
+                obj: outer,
+                idx: idx1,
+            },
+            Instruction::IndexAssignArray {
+                obj: inner,
+                idx: idx2,
+                val,
+            },
         )
         | (
-            Instruction::Index { dst: row, obj: outer, idx: idx1 },
-            Instruction::IndexAssignArray { obj: inner, idx: idx2, val },
+            Instruction::Index {
+                dst: row,
+                obj: outer,
+                idx: idx1,
+            },
+            Instruction::IndexAssignArray {
+                obj: inner,
+                idx: idx2,
+                val,
+            },
         )
         | (
-            Instruction::IndexArray { dst: row, obj: outer, idx: idx1 },
-            Instruction::IndexAssign { obj: inner, idx: idx2, val },
+            Instruction::IndexArray {
+                dst: row,
+                obj: outer,
+                idx: idx1,
+            },
+            Instruction::IndexAssign {
+                obj: inner,
+                idx: idx2,
+                val,
+            },
         ) => {
             if *row == *inner {
                 instructions[i] = Instruction::IndexAssign2D {
@@ -465,7 +533,11 @@ fn property_assign_match(instructions: &[Instruction], i: usize) -> Option<(Inst
                 return Some((fused, false));
             }
             // Kuyruktaki Move{dst: obj, src: set_dst}'i de yut.
-            if let Some(Instruction::Move { dst: mv_dst, src: mv_src }) = instructions.get(i + 3) {
+            if let Some(Instruction::Move {
+                dst: mv_dst,
+                src: mv_src,
+            }) = instructions.get(i + 3)
+            {
                 if *mv_dst == *obj && *mv_src == *set_dst {
                     return Some((fused, true));
                 }

@@ -68,7 +68,7 @@ print(boss.health)
 
 #[test]
 fn sop_npc_rpg_compiles() {
-    let source = include_str!("../../../hudhud-script/examples/05-advanced/sop_npc_rpg.hud");
+    let source = include_str!("../../../examples/05-advanced/sop_npc_rpg.hud");
     let ast = parse(source).expect("parse");
     let mut compiler = Compiler::new();
     let _bytecode = compiler.compile(&ast).expect("compile");
@@ -77,7 +77,7 @@ fn sop_npc_rpg_compiles() {
 #[test]
 fn sop_npc_rpg_executes() {
     // Full NPC RPG execute test — self.power, self.stamina, target.health all working
-    let source = include_str!("../../../hudhud-script/examples/05-advanced/sop_npc_rpg.hud");
+    let source = include_str!("../../../examples/05-advanced/sop_npc_rpg.hud");
     let ast = parse(source).expect("parse");
     let mut compiler = Compiler::new();
     let bytecode = compiler.compile(&ast).expect("compile");

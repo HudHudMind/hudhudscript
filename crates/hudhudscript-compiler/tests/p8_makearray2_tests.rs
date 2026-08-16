@@ -1,8 +1,8 @@
 // P8: MakeArray2 fast path tests.
 
+use hudhudscript_bytecode::Instruction;
 use hudhudscript_compiler::Compiler;
 use hudhudscript_parser::parse;
-use hudhudscript_bytecode::Instruction;
 
 fn compile_instructions(src: &str) -> Vec<Instruction> {
     let ast = parse(src).expect("parse failed");
@@ -60,5 +60,9 @@ fn makearray2_runtime_correct() {
     let bc = c.compile(&ast).expect("compile");
     let mut vm = hudhudscript_vm::VM::with_locale(hudhudscript_vm::VM::detect_locale(src));
     let result = vm.execute(&bc);
-    assert!(result.is_ok(), "MakeArray2 runtime must work: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "MakeArray2 runtime must work: {:?}",
+        result.err()
+    );
 }

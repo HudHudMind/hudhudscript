@@ -327,4 +327,5 @@ impl ErrorCode {
     pub const VcsInvalidOperation: ErrorCode = ErrorCode(321);
     pub const VcsMergeConflict: ErrorCode = ErrorCode(322);
     pub const VcsParseError: ErrorCode = ErrorCode(323);
-    pub const TypeNonExhaustiveMatch: ErrorCode = ErrorCode(324);}
+    pub const TypeNonExhaustiveMatch: ErrorCode = ErrorCode(324);
+}

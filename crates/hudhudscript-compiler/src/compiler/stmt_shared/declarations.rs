@@ -20,17 +20,35 @@ pub(super) fn compile_stmt_part2(
             default,
             ..
         } => {
-            let r = crate::compiler::expr::compile_reg::compile_expr_to_reg(target, value, &mut RegAlloc::new_with_base(target.ct_next_local_reg())?);
-            target.emit_move(255, r );
+            let r = crate::compiler::expr::compile_reg::compile_expr_to_reg(
+                target,
+                value,
+                &mut RegAlloc::new_with_base(target.ct_next_local_reg())?,
+            );
+            target.emit_move(255, r);
             let mut end_jumps: Vec<usize> = Vec::new();
-            target.ct_push_break_target(crate::compiler::target::BreakTarget::Switch { jumps: Vec::new() });
+            target.ct_push_break_target(crate::compiler::target::BreakTarget::Switch {
+                jumps: Vec::new(),
+            });
 
             for case in cases {
-                let case_reg = crate::compiler::expr::compile_reg::compile_expr_to_reg(target, &case.value, &mut RegAlloc::new_with_base(target.ct_next_local_reg())?);
+                let case_reg = crate::compiler::expr::compile_reg::compile_expr_to_reg(
+                    target,
+                    &case.value,
+                    &mut RegAlloc::new_with_base(target.ct_next_local_reg())?,
+                );
                 let cmp_reg = crate::compiler::regalloc::temp_reg();
-                target.ct_emit(Instruction::IntCmp { dst: cmp_reg, src1: 255, src2: case_reg, op: 4 });
+                target.ct_emit(Instruction::IntCmp {
+                    dst: cmp_reg,
+                    src1: 255,
+                    src2: case_reg,
+                    op: 4,
+                });
                 let skip = target.ct_current_ip();
-                target.ct_emit(Instruction::JumpIfFalse { src: cmp_reg, offset: 0 });
+                target.ct_emit(Instruction::JumpIfFalse {
+                    src: cmp_reg,
+                    offset: 0,
+                });
                 for s in &case.body {
                     compile_stmt_shared(target, s)?;
                 }
@@ -38,7 +56,13 @@ pub(super) fn compile_stmt_part2(
                 target.ct_emit(Instruction::Jump(0));
                 end_jumps.push(jmp);
                 let next = target.ct_current_ip();
-                target.ct_patch(skip, Instruction::JumpIfFalse { src: cmp_reg, offset: jump_off(skip, next) as i16 });
+                target.ct_patch(
+                    skip,
+                    Instruction::JumpIfFalse {
+                        src: cmp_reg,
+                        offset: jump_off(skip, next) as i16,
+                    },
+                );
             }
             // Default case
             if let Some(default_body) = default {
@@ -50,12 +74,13 @@ pub(super) fn compile_stmt_part2(
             for jmp in end_jumps {
                 target.ct_patch(jmp, Instruction::Jump(jump_off(jmp, end)));
             }
-            if let crate::compiler::target::BreakTarget::Switch { jumps } = target.ct_pop_break_target() {
+            if let crate::compiler::target::BreakTarget::Switch { jumps } =
+                target.ct_pop_break_target()
+            {
                 for jmp in jumps {
                     target.ct_patch(jmp, Instruction::Jump(jump_off(jmp, end)));
                 }
             }
-
         }
 
         // Issue #244: try-catch-finally
@@ -92,7 +117,8 @@ pub(super) fn compile_stmt_part2(
             finally_block,
             ..
         } => {
-            let has_catch = catch_clause.is_some(); let has_finally = finally_block.is_some();
+            let has_catch = catch_clause.is_some();
+            let has_finally = finally_block.is_some();
 
             // Reserve FinallyBegin slot (patched once finally_ip is known).
             let finally_start_slot = if has_finally {
@@ -103,9 +129,17 @@ pub(super) fn compile_stmt_part2(
                 None
             };
 
-            let try_start = if has_catch { let ts = target.ct_current_ip(); target.ct_emit(Instruction::TryBegin(0)); Some(ts) } else { None };
+            let try_start = if has_catch {
+                let ts = target.ct_current_ip();
+                target.ct_emit(Instruction::TryBegin(0));
+                Some(ts)
+            } else {
+                None
+            };
             compile_stmt_shared(target, try_block)?;
-            if has_catch { target.ct_emit(Instruction::TryEnd); }
+            if has_catch {
+                target.ct_emit(Instruction::TryEnd);
+            }
 
             // Jump over the catch clause.  With finally, we jump to the finally
             // entry (patched later); without finally, we jump to the end.
@@ -114,7 +148,9 @@ pub(super) fn compile_stmt_part2(
 
             // Catch block (or Pop if none).
             let catch_start = target.ct_current_ip();
-            if let Some(ts) = try_start { target.ct_patch(ts, Instruction::TryBegin(jump_off(ts, catch_start))); }
+            if let Some(ts) = try_start {
+                target.ct_patch(ts, Instruction::TryBegin(jump_off(ts, catch_start)));
+            }
             if let Some(catch) = catch_clause {
                 target.ct_declare_local(&catch.param, false)?;
                 target.ct_emit_store_var(&catch.param);
@@ -135,7 +171,10 @@ pub(super) fn compile_stmt_part2(
                 let finally_ip = target.ct_current_ip();
                 // Backpatch the FinallyBegin with the real finally entry IP.
                 let fslot = finally_start_slot.expect("has_finally implies slot was reserved");
-                target.ct_patch(fslot, Instruction::FinallyBegin(jump_off(fslot, finally_ip)));
+                target.ct_patch(
+                    fslot,
+                    Instruction::FinallyBegin(jump_off(fslot, finally_ip)),
+                );
                 // Both the normal-try and normal-catch exits route here.
                 target.ct_patch(
                     jump_after_try,
@@ -166,7 +205,11 @@ pub(super) fn compile_stmt_part2(
 
         // Issue #244: throw
         Stmt::Throw { value, .. } => {
-            let r = crate::compiler::expr::compile_reg::compile_expr_to_reg(target, value, &mut RegAlloc::new_with_base(target.ct_next_local_reg())?);
+            let r = crate::compiler::expr::compile_reg::compile_expr_to_reg(
+                target,
+                value,
+                &mut RegAlloc::new_with_base(target.ct_next_local_reg())?,
+            );
             target.ct_emit(Instruction::Throw { src: r });
         }
 
@@ -208,10 +251,14 @@ pub(super) fn compile_stmt_part2(
 
         Stmt::Match { value, arms, .. } => {
             {
-            let r = crate::compiler::expr::compile_reg::compile_expr_to_reg(target, value, &mut RegAlloc::new_with_base(target.ct_next_local_reg())?);
-            target.emit_move(255, r );
-            target.ct_set_match_reg(255);
-        }
+                let r = crate::compiler::expr::compile_reg::compile_expr_to_reg(
+                    target,
+                    value,
+                    &mut RegAlloc::new_with_base(target.ct_next_local_reg())?,
+                );
+                target.emit_move(255, r);
+                target.ct_set_match_reg(255);
+            }
             let mut end_jumps: Vec<usize> = Vec::new();
             let arm_count = arms.len();
             for (arm_idx, arm) in arms.iter().enumerate() {
@@ -220,8 +267,7 @@ pub(super) fn compile_stmt_part2(
                 // Issue #1011: Duplicate the match value for non-last arms so that
                 // if the pattern or guard fails, the value is still on the stack
                 // for the next arm to consume.
-                if !is_last {
-                }
+                if !is_last {}
 
                 let skip_positions = target.ct_compile_match_pattern(&arm.pattern)?;
 
@@ -229,9 +275,13 @@ pub(super) fn compile_stmt_part2(
                 let guard_skip = if let Some(guard_expr) = &arm.guard {
                     let gr = crate::compiler::regalloc::temp_reg();
                     {
-            let r = crate::compiler::expr::compile_reg::compile_expr_to_reg(target, guard_expr, &mut RegAlloc::new_with_base(target.ct_next_local_reg())?);
-            target.emit_move(gr, r );
-        }
+                        let r = crate::compiler::expr::compile_reg::compile_expr_to_reg(
+                            target,
+                            guard_expr,
+                            &mut RegAlloc::new_with_base(target.ct_next_local_reg())?,
+                        );
+                        target.emit_move(gr, r);
+                    }
                     let pos = target.ct_current_ip();
                     target.ct_emit(Instruction::JumpIfFalse { src: gr, offset: 0 });
                     Some((pos, gr))
@@ -243,8 +293,7 @@ pub(super) fn compile_stmt_part2(
                 // value that Dup left on the stack (the pattern consumed the top
                 // copy; the duplicate underneath is only needed when we jump to
                 // the next arm on failure).
-                if !is_last {
-                }
+                if !is_last {}
 
                 for s in &arm.body {
                     compile_stmt_shared(target, s)?;
@@ -258,7 +307,13 @@ pub(super) fn compile_stmt_part2(
                     target.ct_patch_jump_offset(skip, jump_off(skip, next) as i16);
                 }
                 if let Some((gs, gr)) = guard_skip {
-                    target.ct_patch(gs, Instruction::JumpIfFalse { src: gr, offset: jump_off(gs, next) as i16 });
+                    target.ct_patch(
+                        gs,
+                        Instruction::JumpIfFalse {
+                            src: gr,
+                            offset: jump_off(gs, next) as i16,
+                        },
+                    );
                 }
             }
             let end = target.ct_current_ip();
@@ -281,7 +336,9 @@ pub(super) fn compile_stmt_part2(
             let idx = target.ct_add_load_module_payload(hudhudscript_bytecode::LoadModulePayload {
                 path: path.clone(),
                 alias: Some(alias_sym),
-                base_dir: target.ct_module_base_dir().map(|p| p.to_string_lossy().into_owned()),
+                base_dir: target
+                    .ct_module_base_dir()
+                    .map(|p| p.to_string_lossy().into_owned()),
             });
             target.ct_emit(Instruction::LoadModule(idx));
         }
@@ -303,7 +360,9 @@ pub(super) fn compile_stmt_part2(
                     target.ct_add_load_module_payload(hudhudscript_bytecode::LoadModulePayload {
                         path: module_path.clone(),
                         alias: Some(alias_sym),
-                        base_dir: target.ct_module_base_dir().map(|p| p.to_string_lossy().into_owned()),
+                        base_dir: target
+                            .ct_module_base_dir()
+                            .map(|p| p.to_string_lossy().into_owned()),
                     });
                 target.ct_emit(Instruction::LoadModule(idx));
             }

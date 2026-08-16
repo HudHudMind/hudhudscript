@@ -80,12 +80,12 @@ fn apt_install_is_refused_without_the_grant() {
 fn apt_remove_and_update_are_refused_without_the_grant() {
     assert!(hudhud_apt::apt_ops::dispatch(
         hudhud_apt::apt_ops::ScriptMethodId::Remove,
-        &[hudhudscript_bytecode::Value16::string("unused-pkg".to_string())],
+        &[hudhudscript_bytecode::Value16::string(
+            "unused-pkg".to_string()
+        )],
     )
     .is_err());
-    assert!(hudhud_apt::apt_ops::dispatch(
-        hudhud_apt::apt_ops::ScriptMethodId::Update,
-        &[],
-    )
-    .is_err());
+    assert!(
+        hudhud_apt::apt_ops::dispatch(hudhud_apt::apt_ops::ScriptMethodId::Update, &[],).is_err()
+    );
 }

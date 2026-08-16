@@ -1,0 +1,63 @@
+// HudHudScript — Math Functions
+// Common mathematical utilities
+
+// Absolute value
+fn abs(x) {
+    if (x < 0) {
+        return -x;
+    }
+    return x;
+}
+
+print(abs(-5));
+print(abs(10));
+
+// Square (power of 2)
+fn square(x) {
+    return x * x;
+}
+
+print(square(7));
+
+// Cube
+fn cube(x) {
+    return x * x * x;
+}
+
+print(cube(3));
+
+// Sum of squares
+fn sum_of_squares(a, b) {
+    return square(a) + square(b);
+}
+
+print(sum_of_squares(3, 4));
+
+// Average
+fn average(a, b, c) {
+    return (a + b + c) / 3;
+}
+
+print(average(10, 20, 30));
+
+// Min of two
+fn min2(a, b) {
+    if (a < b) {
+        return a;
+    }
+    return b;
+}
+
+print(min2(5, 8));
+print(min2(12, 3));
+
+// Max of two
+fn max2(a, b) {
+    if (a > b) {
+        return a;
+    }
+    return b;
+}
+
+print(max2(5, 8));
+print(max2(12, 3));

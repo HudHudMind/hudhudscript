@@ -1,5 +1,5 @@
-use hudhudscript_bytecode::{Instruction, LoopPayload};
 use crate::optimizer::utils::adjust_jumps_after_remove_full;
+use hudhudscript_bytecode::{Instruction, LoopPayload};
 
 /// Fuse IntArith+Return patterns: IntAdd/Sub/Mul/Div+Return → IntXReturn,
 /// IntCmpI+Return → IntCmpIReturn. Returns true if a fusion was applied.
@@ -12,20 +12,28 @@ pub(crate) fn try_fuse_arith_return(
     use Instruction::*;
     let new_instr = match (&instructions[i], &instructions[i + 1]) {
         (IntAdd { dst, src1, src2 }, Return { src }) if *dst == *src => Some(IntAddReturn {
-            src1: *src1, src2: *src2,
+            src1: *src1,
+            src2: *src2,
         }),
         (IntSub { dst, src1, src2 }, Return { src }) if *dst == *src => Some(IntSubReturn {
-            src1: *src1, src2: *src2,
+            src1: *src1,
+            src2: *src2,
         }),
         (IntMul { dst, src1, src2 }, Return { src }) if *dst == *src => Some(IntMulReturn {
-            src1: *src1, src2: *src2,
+            src1: *src1,
+            src2: *src2,
         }),
         (IntDiv { dst, src1, src2 }, Return { src }) if *dst == *src => Some(IntDivReturn {
-            src1: *src1, src2: *src2,
+            src1: *src1,
+            src2: *src2,
         }),
-        (IntCmpI { dst, src, imm, op }, Return { src: ret_src }) if *dst == *ret_src => Some(IntCmpIReturn {
-            src: *src, imm: *imm, op: *op,
-        }),
+        (IntCmpI { dst, src, imm, op }, Return { src: ret_src }) if *dst == *ret_src => {
+            Some(IntCmpIReturn {
+                src: *src,
+                imm: *imm,
+                op: *op,
+            })
+        }
         (LoadConst { dst, const_idx }, Return { src }) if *dst == *src => Some(ReturnConst {
             const_idx: *const_idx,
         }),
@@ -135,15 +143,24 @@ pub(crate) fn instr_reads_reg(instr: &Instruction, reg: u8) -> bool {
         Throw { src } | Return { src } => *src == reg,
         IntCmp { src1, src2, .. } => *src1 == reg || *src2 == reg,
         IntCmpI { src, .. } => *src == reg,
-        IntAdd { src1, src2, .. } | IntSub { src1, src2, .. }
-        | IntMul { src1, src2, .. } | IntDiv { src1, src2, .. }
+        IntAdd { src1, src2, .. }
+        | IntSub { src1, src2, .. }
+        | IntMul { src1, src2, .. }
+        | IntDiv { src1, src2, .. }
         | IntMod { src1, src2, .. } => *src1 == reg || *src2 == reg,
-        IntAddI { src, .. } | IntSubI { src, .. } | IntMulI { src, .. }
-        | IntModI { src, .. } => *src == reg,
-        NumAdd { src1, src2, .. } | NumSub { src1, src2, .. }
-        | NumMul { src1, src2, .. } | NumDiv { src1, src2, .. }
+        IntAddI { src, .. } | IntSubI { src, .. } | IntMulI { src, .. } | IntModI { src, .. } => {
+            *src == reg
+        }
+        NumAdd { src1, src2, .. }
+        | NumSub { src1, src2, .. }
+        | NumMul { src1, src2, .. }
+        | NumDiv { src1, src2, .. }
         | NumMod { src1, src2, .. } => *src1 == reg || *src2 == reg,
-        Call { first_arg, arg_count, .. } => {
+        Call {
+            first_arg,
+            arg_count,
+            ..
+        } => {
             let f = *first_arg as usize;
             (f..f + *arg_count as usize).any(|r| r as u8 == reg)
         }
@@ -167,7 +184,13 @@ pub(crate) fn pack_cmp_jumps(
     cmp_jump_payloads: &mut Vec<hudhudscript_bytecode::CmpJumpPayload>,
 ) {
     for i in 0..instructions.len() {
-        if let Instruction::IntCmpRRJumpIfFalse { src1, src2, op, offset } = instructions[i] {
+        if let Instruction::IntCmpRRJumpIfFalse {
+            src1,
+            src2,
+            op,
+            offset,
+        } = instructions[i]
+        {
             let target = (i as i64).wrapping_add(offset as i64);
             if target < 0 {
                 continue;
@@ -188,7 +211,6 @@ pub(crate) fn pack_cmp_jumps(
         }
     }
 }
-
 
 /// G5 — MOVE birleştirme (copy coalescing): `Üretici{dst:t} + Move{d,t}`
 /// çiftinde `t` sonrasında ÖLÜyse üreticinin hedefi `d` yapılır, Move silinir.

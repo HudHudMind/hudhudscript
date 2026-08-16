@@ -1,0 +1,32 @@
+// SOP E-Commerce — direkt fonksiyon çağrısı (emit YASAK)
+
+subject Customer {
+    state balance: 500, state cart_total: 0
+}
+subject Shop {
+    state inventory: 100, state revenue: 0
+}
+
+effect on Charge(target, amount) {
+    target.balance = target.balance - amount
+}
+
+effect on Refund(target, amount) {
+    target.balance = target.balance + amount
+}
+
+on purchase(self, shop) {
+    Charge(self, 89)
+    shop.revenue = shop.revenue + 89
+}
+
+on refund(self, customer) {
+    Refund(customer, 50)
+}
+
+let buyer = spawn Customer
+let store = spawn Shop
+
+print("Before: Buyer=$" + buyer.balance + " Shop=$" + store.revenue)
+buyer.purchase(store)
+print("After:  Buyer=$" + buyer.balance + " Shop=$" + store.revenue)

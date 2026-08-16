@@ -1,9 +1,9 @@
 use super::*;
 
 use crate::bytecode::{Bytecode, FunctionChunk, FunctionData, Instruction, SymId, Value16};
-use crate::error::{compile_codes, CompileResult, SourcePosition};
-use crate::compiler::regalloc::RegAlloc;
 use crate::compiler::expr::compile_reg::compile_expr_to_reg;
+use crate::compiler::regalloc::RegAlloc;
+use crate::error::{compile_codes, CompileResult, SourcePosition};
 use hudhudscript_ast::{BinaryOp, Decl, Expr, Literal, Span, Stmt, UnaryOp};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -138,8 +138,7 @@ where
                     _ => ExprType::Unknown,
                 }
             }
-            hudhudscript_ast::UnaryOp::PostIncrement
-            | hudhudscript_ast::UnaryOp::PostDecrement => {
+            hudhudscript_ast::UnaryOp::PostIncrement | hudhudscript_ast::UnaryOp::PostDecrement => {
                 // i++/i-- returns the same type as the variable
                 infer_type_with_locals(inner, local_type)
             }
@@ -181,26 +180,27 @@ where
 pub(crate) fn emit_numeric_literal(target: &mut impl CompileTarget, n: f64) {
     let temp = crate::compiler::regalloc::temp_reg();
     // N4: genişletilmiş Int aralığı — i64::MAX'a kadar (BigInt overflow temeli)
-    if n.is_finite()
-        && n.fract() == 0.0
-        && n >= (i64::MIN as f64)
-        && n <= (i64::MAX as f64)
-    {
+    if n.is_finite() && n.fract() == 0.0 && n >= (i64::MIN as f64) && n <= (i64::MAX as f64) {
         let i = n as i64;
         let idx = target.ct_emit_int_const(i);
-        target.ct_emit(Instruction::LoadIntConst { dst: temp, const_idx: idx as u16 });
-        target.emit_move(255, temp );
+        target.ct_emit(Instruction::LoadIntConst {
+            dst: temp,
+            const_idx: idx as u16,
+        });
+        target.emit_move(255, temp);
     } else {
         let idx = target.ct_emit_num_const(n);
-        target.ct_emit(Instruction::LoadNumConst { dst: temp, const_idx: idx as u16 });
-        target.emit_move(255, temp );
+        target.ct_emit(Instruction::LoadNumConst {
+            dst: temp,
+            const_idx: idx as u16,
+        });
+        target.emit_move(255, temp);
     }
 }
 
 /// Shared expression compilation — the single source of truth for
 /// `compile_expr` logic used by both `Compiler` and `FunctionCompiler`.
-
 pub mod compile_complex;
 pub mod compile_complex_extra;
-pub mod compile_reg_binary;
 pub mod compile_reg;
+pub mod compile_reg_binary;

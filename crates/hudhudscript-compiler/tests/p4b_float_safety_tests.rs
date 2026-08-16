@@ -1,8 +1,8 @@
 // P4b: Correctness tests — String + Number must NOT emit NumAdd.
 
+use hudhudscript_bytecode::Instruction;
 use hudhudscript_compiler::Compiler;
 use hudhudscript_parser::parse;
-use hudhudscript_bytecode::Instruction;
 use hudhudscript_vm::VM;
 
 fn compile_instructions(src: &str) -> Vec<Instruction> {
@@ -29,7 +29,10 @@ fn unknown_param_plus_float_not_numadd() {
     // x is Unknown → must NOT emit NumAdd/NumAddI.
     // IntAdd/IntAddReturn/IntAddI are the safe fallback (pre-P4 behavior).
     assert!(
-        !has_instruction(&insns, |i| matches!(i, Instruction::NumAdd { .. } | Instruction::NumAddI { .. })),
+        !has_instruction(&insns, |i| matches!(
+            i,
+            Instruction::NumAdd { .. } | Instruction::NumAddI { .. }
+        )),
         "Unknown + Number must NOT emit NumAdd/NumAddI"
     );
 }
@@ -41,7 +44,10 @@ fn known_number_plus_float_emits_numadd() {
     // But we check that for known Number operands, NumAdd IS emitted.
     let insns2 = compile_instructions("let x = 3.14; let y = x + 1.0;");
     assert!(
-        has_instruction(&insns2, |i| matches!(i, Instruction::NumAdd { .. } | Instruction::NumAddI { .. })),
+        has_instruction(&insns2, |i| matches!(
+            i,
+            Instruction::NumAdd { .. } | Instruction::NumAddI { .. }
+        )),
         "Number + Number must emit NumAdd"
     );
 }

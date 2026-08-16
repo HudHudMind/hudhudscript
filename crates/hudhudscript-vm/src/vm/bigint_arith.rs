@@ -4,22 +4,26 @@ use std::cmp::Ordering;
 
 // ── Cold overflow promotion — #[cold] #[inline(never)] ──────────
 
-#[cold] #[inline(never)]
+#[cold]
+#[inline(never)]
 pub(crate) fn promote_mul(x: i64, y: i64) -> Value16 {
     Value16::bigint(num_bigint::BigInt::from(x) * num_bigint::BigInt::from(y))
 }
-#[cold] #[inline(never)]
+#[cold]
+#[inline(never)]
 pub(crate) fn promote_add(x: i64, y: i64) -> Value16 {
     Value16::bigint(num_bigint::BigInt::from(x) + num_bigint::BigInt::from(y))
 }
-#[cold] #[inline(never)]
+#[cold]
+#[inline(never)]
 pub(crate) fn promote_sub(x: i64, y: i64) -> Value16 {
     Value16::bigint(num_bigint::BigInt::from(x) - num_bigint::BigInt::from(y))
 }
 
 // ── Cold BigInt fallback — #[cold] #[inline(never)] ─────────────
 
-#[cold] #[inline(never)]
+#[cold]
+#[inline(never)]
 pub(crate) fn bigint_mul(a: Value16, b: Value16) -> Result<Value16, ErrorCode> {
     if let (Some(x), Some(y)) = (a.as_bigint(), b.as_bigint()) {
         return Ok(Value16::bigint_no_demote(x * y));
@@ -33,7 +37,8 @@ pub(crate) fn bigint_mul(a: Value16, b: Value16) -> Result<Value16, ErrorCode> {
     Err(ErrorCode(310))
 }
 
-#[cold] #[inline(never)]
+#[cold]
+#[inline(never)]
 pub(crate) fn bigint_add(a: Value16, b: Value16) -> Result<Value16, ErrorCode> {
     if let (Some(x), Some(y)) = (a.as_bigint(), b.as_bigint()) {
         return Ok(Value16::bigint_no_demote(x + y));
@@ -47,7 +52,8 @@ pub(crate) fn bigint_add(a: Value16, b: Value16) -> Result<Value16, ErrorCode> {
     Err(ErrorCode(310))
 }
 
-#[cold] #[inline(never)]
+#[cold]
+#[inline(never)]
 pub(crate) fn bigint_sub(a: Value16, b: Value16) -> Result<Value16, ErrorCode> {
     let x = a.to_bigint_value().ok_or(ErrorCode(310))?;
     let y = b.to_bigint_value().ok_or(ErrorCode(310))?;
@@ -56,7 +62,8 @@ pub(crate) fn bigint_sub(a: Value16, b: Value16) -> Result<Value16, ErrorCode> {
 
 // ── Cold BigInt division/modulo/comparison — #[cold] #[inline(never)] ─
 
-#[cold] #[inline(never)]
+#[cold]
+#[inline(never)]
 pub(crate) fn bigint_div(a: Value16, b: Value16) -> Result<Value16, ErrorCode> {
     let x = a.to_bigint_value().ok_or(ErrorCode(310))?;
     let y = b.to_bigint_value().ok_or(ErrorCode(310))?;
@@ -66,7 +73,8 @@ pub(crate) fn bigint_div(a: Value16, b: Value16) -> Result<Value16, ErrorCode> {
     Ok(Value16::bigint(x / y))
 }
 
-#[cold] #[inline(never)]
+#[cold]
+#[inline(never)]
 pub(crate) fn bigint_mod(a: Value16, b: Value16) -> Result<Value16, ErrorCode> {
     let x = a.to_bigint_value().ok_or(ErrorCode(310))?;
     let y = b.to_bigint_value().ok_or(ErrorCode(310))?;
@@ -76,7 +84,8 @@ pub(crate) fn bigint_mod(a: Value16, b: Value16) -> Result<Value16, ErrorCode> {
     Ok(Value16::bigint(x % y))
 }
 
-#[cold] #[inline(never)]
+#[cold]
+#[inline(never)]
 fn bigint_cmp(a: Value16, b: Value16) -> Result<Ordering, ErrorCode> {
     let x = a.to_bigint_value().ok_or(ErrorCode(310))?;
     let y = b.to_bigint_value().ok_or(ErrorCode(310))?;
@@ -102,15 +111,18 @@ macro_rules! int_binop {
                     }
                 }
                 // ── Cold: Number paths ──
-                (ReprTag::Number, ReprTag::Number) => {
-                    Ok(Value16::number($float_op(f64::from_bits(pa), f64::from_bits(pb))))
-                }
-                (ReprTag::Number, ReprTag::Int) => {
-                    Ok(Value16::number($float_op(f64::from_bits(pa), pb as i64 as f64)))
-                }
-                (ReprTag::Int, ReprTag::Number) => {
-                    Ok(Value16::number($float_op(pa as i64 as f64, f64::from_bits(pb))))
-                }
+                (ReprTag::Number, ReprTag::Number) => Ok(Value16::number($float_op(
+                    f64::from_bits(pa),
+                    f64::from_bits(pb),
+                ))),
+                (ReprTag::Number, ReprTag::Int) => Ok(Value16::number($float_op(
+                    f64::from_bits(pa),
+                    pb as i64 as f64,
+                ))),
+                (ReprTag::Int, ReprTag::Number) => Ok(Value16::number($float_op(
+                    pa as i64 as f64,
+                    f64::from_bits(pb),
+                ))),
                 // ── Cold: BigInt or mixed ──
                 _ => $bigint(a, b),
             }
@@ -129,7 +141,9 @@ pub fn int_div(a: Value16, b: Value16) -> Result<Value16, ErrorCode> {
     match (ta, tb) {
         (ReprTag::Int, ReprTag::Int) => {
             let y = pb as i64;
-            if y == 0 { return Err(ErrorCode(310)); }
+            if y == 0 {
+                return Err(ErrorCode(310));
+            }
             match (pa as i64).checked_div(y) {
                 Some(q) => Ok(Value16::int(q)),
                 None => Ok(Value16::bigint(
@@ -139,17 +153,23 @@ pub fn int_div(a: Value16, b: Value16) -> Result<Value16, ErrorCode> {
         }
         (ReprTag::Number, ReprTag::Number) => {
             let divisor = f64::from_bits(pb);
-            if divisor == 0.0 { return Err(ErrorCode(310)); }
+            if divisor == 0.0 {
+                return Err(ErrorCode(310));
+            }
             Ok(Value16::number(f64::from_bits(pa) / divisor))
         }
         (ReprTag::Number, ReprTag::Int) => {
             let y = pb as i64;
-            if y == 0 { return Err(ErrorCode(310)); }
+            if y == 0 {
+                return Err(ErrorCode(310));
+            }
             Ok(Value16::number(f64::from_bits(pa) / y as f64))
         }
         (ReprTag::Int, ReprTag::Number) => {
             let divisor = f64::from_bits(pb);
-            if divisor == 0.0 { return Err(ErrorCode(310)); }
+            if divisor == 0.0 {
+                return Err(ErrorCode(310));
+            }
             Ok(Value16::number(pa as i64 as f64 / divisor))
         }
         _ => bigint_div(a, b),
@@ -163,7 +183,9 @@ pub fn int_mod(a: Value16, b: Value16) -> Result<Value16, ErrorCode> {
     match (ta, tb) {
         (ReprTag::Int, ReprTag::Int) => {
             let y = pb as i64;
-            if y == 0 { return Err(ErrorCode(310)); }
+            if y == 0 {
+                return Err(ErrorCode(310));
+            }
             match (pa as i64).checked_rem(y) {
                 Some(r) => Ok(Value16::int(r)),
                 None => Ok(Value16::int(0)),
@@ -171,17 +193,23 @@ pub fn int_mod(a: Value16, b: Value16) -> Result<Value16, ErrorCode> {
         }
         (ReprTag::Number, ReprTag::Number) => {
             let divisor = f64::from_bits(pb);
-            if divisor == 0.0 { return Err(ErrorCode(310)); }
+            if divisor == 0.0 {
+                return Err(ErrorCode(310));
+            }
             Ok(Value16::number(f64::from_bits(pa) % divisor))
         }
         (ReprTag::Number, ReprTag::Int) => {
             let y = pb as i64;
-            if y == 0 { return Err(ErrorCode(310)); }
+            if y == 0 {
+                return Err(ErrorCode(310));
+            }
             Ok(Value16::number(f64::from_bits(pa) % y as f64))
         }
         (ReprTag::Int, ReprTag::Number) => {
             let divisor = f64::from_bits(pb);
-            if divisor == 0.0 { return Err(ErrorCode(310)); }
+            if divisor == 0.0 {
+                return Err(ErrorCode(310));
+            }
             Ok(Value16::number(pa as i64 as f64 % divisor))
         }
         _ => bigint_mod(a, b),

@@ -3,7 +3,6 @@
 use super::*;
 
 impl Compiler {
-
     pub fn emit(&mut self, instr: Instruction) {
         let max_reg = instr.max_register();
         if max_reg > self.current_max_register {
@@ -61,7 +60,10 @@ impl Compiler {
         self.bytecode.patch_char_dispatch_table(idx, table)
     }
     // CROSS-2a: declaration-payload registration for the Compiler.
-    pub fn add_enum_decl_payload(&mut self, payload: hudhudscript_bytecode::EnumDeclPayload) -> u32 {
+    pub fn add_enum_decl_payload(
+        &mut self,
+        payload: hudhudscript_bytecode::EnumDeclPayload,
+    ) -> u32 {
         self.bytecode.add_enum_decl_payload(payload)
     }
     pub fn add_class_decl_payload(
@@ -106,8 +108,14 @@ impl Compiler {
         self.bytecode.add_call_payload(sym, arg_count)
     }
     /// P6: add a call payload with a known builtin method ID.
-    pub fn add_call_payload_with_builtin(&mut self, sym: SymId, arg_count: u8, builtin_idx: u32) -> u32 {
-        self.bytecode.add_call_payload_with_builtin(sym, arg_count, builtin_idx)
+    pub fn add_call_payload_with_builtin(
+        &mut self,
+        sym: SymId,
+        arg_count: u8,
+        builtin_idx: u32,
+    ) -> u32 {
+        self.bytecode
+            .add_call_payload_with_builtin(sym, arg_count, builtin_idx)
     }
     pub fn add_two_sym_payload(&mut self, first: u32, second: u32) -> u32 {
         self.bytecode.add_two_sym_payload(first, second)

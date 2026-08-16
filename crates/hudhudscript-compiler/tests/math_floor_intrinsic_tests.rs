@@ -2,9 +2,9 @@
 // These tests verify that the compiler emits IntDiv/IntDivI for
 // Math.floor(int / int) and does NOT emit MethodCall for the floor call.
 
+use hudhudscript_bytecode::Instruction;
 use hudhudscript_compiler::Compiler;
 use hudhudscript_parser::parse;
-use hudhudscript_bytecode::Instruction;
 
 fn compile_instructions(src: &str) -> Vec<Instruction> {
     let ast = parse(src).expect("parse failed");
@@ -66,10 +66,7 @@ fn math_floor_float_no_int_div() {
     let has_int_div = has_instruction(&insns, |i| {
         matches!(i, Instruction::IntDiv { .. } | Instruction::IntDivI { .. })
     });
-    assert!(
-        !has_int_div,
-        "Math.floor(3.7) must NOT emit IntDiv/IntDivI"
-    );
+    assert!(!has_int_div, "Math.floor(3.7) must NOT emit IntDiv/IntDivI");
 }
 
 #[test]
@@ -78,10 +75,7 @@ fn math_floor_single_int_no_intdiv() {
     let has_int_div = has_instruction(&insns, |i| {
         matches!(i, Instruction::IntDiv { .. } | Instruction::IntDivI { .. })
     });
-    assert!(
-        !has_int_div,
-        "Math.floor(single_int) must NOT emit IntDiv"
-    );
+    assert!(!has_int_div, "Math.floor(single_int) must NOT emit IntDiv");
 }
 
 #[test]

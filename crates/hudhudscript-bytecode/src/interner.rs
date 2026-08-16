@@ -55,14 +55,20 @@ impl Interner {
     /// Borrow the interned string. Lifetime is bound to `&self`, so the
     /// `&str` is only usable while the (read-)lock on the interner is held.
     pub fn resolve(&self, id: SymbolId) -> &str {
-        self.to_str.get(id.0 as usize).map(|s| &**s).unwrap_or("<???>")
+        self.to_str
+            .get(id.0 as usize)
+            .map(|s| &**s)
+            .unwrap_or("<???>")
     }
 
     /// Cheap `Arc<str>` clone — atomic increment only, no allocation.
     /// Preferred over `resolve`+`to_string` for hot paths that need to
     /// outlive the interner lock.
     pub fn resolve_arc(&self, id: SymbolId) -> Arc<str> {
-        self.to_str.get(id.0 as usize).map(Arc::clone).unwrap_or_else(|| Arc::from("<???>"))
+        self.to_str
+            .get(id.0 as usize)
+            .map(Arc::clone)
+            .unwrap_or_else(|| Arc::from("<???>"))
     }
 }
 
@@ -149,20 +155,38 @@ pub fn snapshot() -> Vec<String> {
         .unwrap_or_default()
 }
 
-/// COMPILE0002: Restore the interner from a snapshot.
-/// After this call, `resolve(SymbolId(i))` returns `snapshot[i]` for all `i < snapshot.len()`.
-/// Required for `.hudb` execution: bytecode-local symbol IDs must resolve
-/// to the same strings they had at compile time.
+/// COMPILE0002: Restore or reconcile the interner with a snapshot.
+/// After this call, `resolve(SymbolId(i))` returns `snapshot[i]` for all
+/// `i < snapshot.len()`. An existing interner is accepted only when the
+/// overlapping ID range is identical; a compatible shorter table is extended.
+/// This permits bytecode round trips in a live process without silently
+/// reassigning any already-published symbol ID.
 pub fn restore(snapshot: Vec<String>) -> Result<(), String> {
     let mut guard = GLOBAL_INTERNER.write();
-    if let Some(ref interner) = *guard {
-        if interner.to_str.len() > 0 {
-            return Err(format!(
-                "interner::restore: already populated ({} symbols)",
-                interner.to_str.len()
-            ));
+    if let Some(interner) = guard.as_mut() {
+        let overlap = interner.to_str.len().min(snapshot.len());
+        for (index, expected) in snapshot.iter().take(overlap).enumerate() {
+            let actual = &interner.to_str[index];
+            if actual.as_ref() != expected {
+                return Err(format!(
+                    "interner::restore: symbol {} mismatch (existing '{}', snapshot '{}')",
+                    index, actual, expected
+                ));
+            }
         }
+
+        for (index, value) in snapshot.iter().enumerate().skip(overlap) {
+            let assigned = interner.intern(value);
+            if assigned.0 as usize != index {
+                return Err(format!(
+                    "interner::restore: snapshot symbol '{}' expected index {}, got {}",
+                    value, index, assigned.0
+                ));
+            }
+        }
+        return Ok(());
     }
+
     let mut interner = Interner::new();
     for s in &snapshot {
         interner.intern(s);

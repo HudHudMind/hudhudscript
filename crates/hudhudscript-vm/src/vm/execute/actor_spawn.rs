@@ -119,12 +119,19 @@ impl VM {
         ctx: &mut StepContext<'_>,
     ) -> CompileResult<StepAction> {
         if let Instruction::ViewAs { obj, view_sym } = instr {
-            let view_name = ctx.bytecode.symbols.get(*view_sym as usize)
-                .cloned().unwrap_or_else(|| "unknown".to_string());
+            let view_name = ctx
+                .bytecode
+                .symbols
+                .get(*view_sym as usize)
+                .cloned()
+                .unwrap_or_else(|| "unknown".to_string());
             let instance = self.registers[*obj as usize];
             if let Some(map) = instance.as_object() {
                 let mut new_map = map.clone();
-                new_map.insert(hudhudscript_bytecode::SymId::from("__view_name"), Value16::string(view_name));
+                new_map.insert(
+                    hudhudscript_bytecode::SymId::from("__view_name"),
+                    Value16::string(view_name),
+                );
                 self.registers[*obj as usize] = Value16::object(new_map);
             }
         }

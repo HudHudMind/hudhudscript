@@ -3,7 +3,6 @@
 use super::*;
 
 impl Compiler {
-
     pub fn compile_mcp_server(
         &mut self,
         mcp_decl: &hudhudscript_ast::McpServerDecl,

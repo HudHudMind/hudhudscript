@@ -30,7 +30,8 @@ fn g4_neg_int_parity() {
 
 #[test]
 fn g4_neg_bigint_parity() {
-    let vm = run_vm("let x = 9223372036854775807 + 1; let y = -x; if (y < 0) { return 1; } return 0;");
+    let vm =
+        run_vm("let x = 9223372036854775807 + 1; let y = -x; if (y < 0) { return 1; } return 0;");
     assert_eq!(vm.last_return_value().display_string(), "1");
 }
 
@@ -61,7 +62,9 @@ fn g4_not_truthy_parity() {
 
 #[test]
 fn g4_array_push_parity() {
-    let vm = run_vm("let a = []; a.push(1); a.push(2); a.push(3); if (a[2] == 3) { return 1; } return 0;");
+    let vm = run_vm(
+        "let a = []; a.push(1); a.push(2); a.push(3); if (a[2] == 3) { return 1; } return 0;",
+    );
     assert_eq!(vm.last_return_value().display_string(), "1");
 }
 
@@ -69,7 +72,9 @@ fn g4_array_push_parity() {
 
 #[test]
 fn g4_strcat_parity() {
-    let vm = run_vm(r#"let x = "hello" + " " + "world"; if (x == "hello world") { return 1; } return 0;"#);
+    let vm = run_vm(
+        r#"let x = "hello" + " " + "world"; if (x == "hello world") { return 1; } return 0;"#,
+    );
     assert_eq!(vm.last_return_value().display_string(), "1");
 }
 

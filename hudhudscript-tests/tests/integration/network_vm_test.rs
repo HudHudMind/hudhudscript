@@ -24,8 +24,16 @@ fn test_vm_tcp_listen_returns_object_with_stub_transport() {
         var has_addr = server.address != null;
     "#;
     let vm = vm_run(code);
-    assert!(vm.get_variable("has_fd").and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool()) == Some(true));
-    assert!(vm.get_variable("has_addr").and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool()) == Some(true));
+    assert!(
+        vm.get_variable("has_fd")
+            .and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool())
+            == Some(true)
+    );
+    assert!(
+        vm.get_variable("has_addr")
+            .and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool())
+            == Some(true)
+    );
 }
 
 #[test]
@@ -40,8 +48,16 @@ fn test_vm_tcp_listen_returns_object_real_socket() {
         var has_addr = server.address != null;
     "#;
     let vm = vm_run(code);
-    assert!(vm.get_variable("has_fd").and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool()) == Some(true));
-    assert!(vm.get_variable("has_addr").and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool()) == Some(true));
+    assert!(
+        vm.get_variable("has_fd")
+            .and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool())
+            == Some(true)
+    );
+    assert!(
+        vm.get_variable("has_addr")
+            .and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool())
+            == Some(true)
+    );
 }
 
 // ── UDP tests (#675) ────────────────────────────────────────────────
@@ -54,8 +70,16 @@ fn test_vm_udp_bind_returns_object_with_stub_transport() {
         var has_addr = sock.address != null;
     "#;
     let vm = vm_run(code);
-    assert!(vm.get_variable("has_fd").and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool()) == Some(true));
-    assert!(vm.get_variable("has_addr").and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool()) == Some(true));
+    assert!(
+        vm.get_variable("has_fd")
+            .and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool())
+            == Some(true)
+    );
+    assert!(
+        vm.get_variable("has_addr")
+            .and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool())
+            == Some(true)
+    );
 }
 
 #[test]
@@ -70,8 +94,16 @@ fn test_vm_udp_bind_returns_object_real_socket() {
         var has_addr = sock.address != null;
     "#;
     let vm = vm_run(code);
-    assert!(vm.get_variable("has_fd").and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool()) == Some(true));
-    assert!(vm.get_variable("has_addr").and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool()) == Some(true));
+    assert!(
+        vm.get_variable("has_fd")
+            .and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool())
+            == Some(true)
+    );
+    assert!(
+        vm.get_variable("has_addr")
+            .and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool())
+            == Some(true)
+    );
 }
 
 // ── Unix domain socket tests (#676) ─────────────────────────────────
@@ -97,8 +129,16 @@ fn test_vm_ws_serve_returns_server_with_stub_transport() {
         var has_addr = server.address != null;
     "#;
     let vm = vm_run(code);
-    assert!(vm.get_variable("has_id").and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool()) == Some(true));
-    assert!(vm.get_variable("has_addr").and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool()) == Some(true));
+    assert!(
+        vm.get_variable("has_id")
+            .and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool())
+            == Some(true)
+    );
+    assert!(
+        vm.get_variable("has_addr")
+            .and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool())
+            == Some(true)
+    );
 }
 
 #[test]
@@ -113,8 +153,16 @@ fn test_vm_ws_serve_returns_server_real_socket() {
         var has_addr = server.address != null;
     "#;
     let vm = vm_run(code);
-    assert!(vm.get_variable("has_id").and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool()) == Some(true));
-    assert!(vm.get_variable("has_addr").and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool()) == Some(true));
+    assert!(
+        vm.get_variable("has_id")
+            .and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool())
+            == Some(true)
+    );
+    assert!(
+        vm.get_variable("has_addr")
+            .and_then(|v: &hudhudscript_bytecode::Value16| v.as_bool())
+            == Some(true)
+    );
 }
 
 #[test]

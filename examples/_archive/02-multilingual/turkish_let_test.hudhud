@@ -1,0 +1,23 @@
+// Test both "tanım" and "değişken" keywords in Turkish
+
+// Using "tanım" (definition)
+tanım isim = "Ahmet"
+tanım yaş = 30
+
+eğer (yaş >= 18) {
+    yazdır("Yetişkin: " + isim)
+}
+
+// Using "değişken" (variable)
+değişken şehir = "İstanbul"
+değişken nüfus = 15000000
+
+eğer (nüfus > 1000000) {
+    yazdır("Büyük şehir: " + şehir)
+}
+
+// Mixed usage
+tanım ülke = "Türkiye"
+değişken başkent = "Ankara"
+
+yazdır(ülke + " başkenti: " + başkent)

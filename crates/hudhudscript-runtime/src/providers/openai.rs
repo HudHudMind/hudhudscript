@@ -1,7 +1,7 @@
 //! OpenAI Provider Implementation
 
 use crate::provider::*;
-use crate::providers::http_client::{shared_http_client, send_with_retry};
+use crate::providers::http_client::{send_with_retry, shared_http_client};
 use reqwest::Client;
 use serde_json::json;
 use std::sync::Arc;
@@ -178,9 +178,12 @@ impl Provider for OpenAIProvider {
         let api_key = self.config.api_key.as_ref().ok_or_else(|| {
             ProviderError::NotConfigured("OpenAI API key is required".to_string())
         })?;
-        let timeout_secs = request.timeout_secs.or(self.config.timeout_secs).unwrap_or(crate::provider::types::DEFAULT_PROVIDER_TIMEOUT_SECS);
+        let timeout_secs = request
+            .timeout_secs
+            .or(self.config.timeout_secs)
+            .unwrap_or(crate::provider::types::DEFAULT_PROVIDER_TIMEOUT_SECS);
         let timeout_duration = std::time::Duration::from_secs(timeout_secs);
-        
+
         let build_req =
             || {
                 self.client

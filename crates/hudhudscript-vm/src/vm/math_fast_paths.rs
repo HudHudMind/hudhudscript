@@ -46,8 +46,16 @@ macro_rules! int_math_op {
                 // promotion, the reason `$slow` exists, was never hit there.
                 // `split_tag` already ran once above; do not repeat it (H.6.1).
                 (ReprTag::Int | ReprTag::Number, ReprTag::Int | ReprTag::Number) => {
-                    let x = if ta == ReprTag::Int { pa as i64 as f64 } else { f64::from_bits(pa) };
-                    let y = if tb == ReprTag::Int { pb as i64 as f64 } else { f64::from_bits(pb) };
+                    let x = if ta == ReprTag::Int {
+                        pa as i64 as f64
+                    } else {
+                        f64::from_bits(pa)
+                    };
+                    let y = if tb == ReprTag::Int {
+                        pb as i64 as f64
+                    } else {
+                        f64::from_bits(pb)
+                    };
                     Ok(Value16::number($float_op(x, y)))
                 }
                 _ => $slow(a, b),
@@ -73,9 +81,33 @@ macro_rules! int_math_op {
     };
 }
 
-int_math_op!(do_int_add, do_int_add_slow, checked_add, promote_add, |x:f64,y:f64| x+y, bigint_add, true);
-int_math_op!(do_int_sub, do_int_sub_slow, checked_sub, promote_sub, |x:f64,y:f64| x-y, bigint_sub, false);
-int_math_op!(do_int_mul, do_int_mul_slow, checked_mul, promote_mul, |x:f64,y:f64| x*y, bigint_mul, false);
+int_math_op!(
+    do_int_add,
+    do_int_add_slow,
+    checked_add,
+    promote_add,
+    |x: f64, y: f64| x + y,
+    bigint_add,
+    true
+);
+int_math_op!(
+    do_int_sub,
+    do_int_sub_slow,
+    checked_sub,
+    promote_sub,
+    |x: f64, y: f64| x - y,
+    bigint_sub,
+    false
+);
+int_math_op!(
+    do_int_mul,
+    do_int_mul_slow,
+    checked_mul,
+    promote_mul,
+    |x: f64, y: f64| x * y,
+    bigint_mul,
+    false
+);
 
 macro_rules! int_math_op_i {
     ($name:ident, $slow:ident, $checked:ident, $promote:ident, $float_op:expr, $bigint:ident) => {
@@ -118,6 +150,27 @@ macro_rules! int_math_op_i {
     };
 }
 
-int_math_op_i!(do_int_add_i, do_int_add_slow_i, checked_add, promote_add, |x:f64,y:f64| x+y, bigint_add);
-int_math_op_i!(do_int_sub_i, do_int_sub_slow_i, checked_sub, promote_sub, |x:f64,y:f64| x-y, bigint_sub);
-int_math_op_i!(do_int_mul_i, do_int_mul_slow_i, checked_mul, promote_mul, |x:f64,y:f64| x*y, bigint_mul);
+int_math_op_i!(
+    do_int_add_i,
+    do_int_add_slow_i,
+    checked_add,
+    promote_add,
+    |x: f64, y: f64| x + y,
+    bigint_add
+);
+int_math_op_i!(
+    do_int_sub_i,
+    do_int_sub_slow_i,
+    checked_sub,
+    promote_sub,
+    |x: f64, y: f64| x - y,
+    bigint_sub
+);
+int_math_op_i!(
+    do_int_mul_i,
+    do_int_mul_slow_i,
+    checked_mul,
+    promote_mul,
+    |x: f64, y: f64| x * y,
+    bigint_mul
+);

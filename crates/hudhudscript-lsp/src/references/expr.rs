@@ -121,7 +121,12 @@ pub(crate) fn collect_expr(expr: &Expr, name: &str, uri: &Url, out: &mut Vec<Loc
             collect_expr(instance, name, uri, out);
         }
 
-        Expr::Ternary { condition, true_expr, false_expr, .. } => {
+        Expr::Ternary {
+            condition,
+            true_expr,
+            false_expr,
+            ..
+        } => {
             collect_expr(condition, name, uri, out);
             collect_expr(true_expr, name, uri, out);
             collect_expr(false_expr, name, uri, out);

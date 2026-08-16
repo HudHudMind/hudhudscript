@@ -46,8 +46,18 @@ impl Formatter {
             Expr::Index { object, index, .. } => {
                 format!("{}[{}]", self.format_expr(object), self.format_expr(index))
             }
-            Expr::Ternary { condition, true_expr, false_expr, .. } => {
-                format!("{} ? {} : {}", self.format_expr(condition), self.format_expr(true_expr), self.format_expr(false_expr))
+            Expr::Ternary {
+                condition,
+                true_expr,
+                false_expr,
+                ..
+            } => {
+                format!(
+                    "{} ? {} : {}",
+                    self.format_expr(condition),
+                    self.format_expr(true_expr),
+                    self.format_expr(false_expr)
+                )
             }
             Expr::Array { elements, .. } => {
                 let elements_str = elements
@@ -144,7 +154,11 @@ impl Formatter {
                     format!("spawn {}({})", subject_name, formatted_args.join(", "))
                 }
             }
-            Expr::ViewAs { instance, view_name, .. } => {
+            Expr::ViewAs {
+                instance,
+                view_name,
+                ..
+            } => {
                 format!("view {} as {}", self.format_expr(instance), view_name)
             }
         }

@@ -57,7 +57,12 @@ impl crate::vm::VM {
         method: &str,
         args: Vec<Value16>,
         bytecode: &Bytecode,
-    ) -> CompileResult<Value16> {
+        call_site: crate::vm::call_state::DeferredCallSite,
+    ) -> CompileResult<crate::vm::call_state::MethodDispatchOutcome> {
+        use crate::vm::call_state::{
+            deferred_method_in_immediate_context, ArrayCallbackOperation, MethodDispatchOutcome,
+        };
+
         // Mutating methods: handle in-place (O(1)), compute return value
         // before/during mutation, store modified array in last_instance_mutation
         // for WriteBackReceiver writeback, and return early.
@@ -69,7 +74,7 @@ impl crate::vm::VM {
                     }
                 }
                 self.last_instance_mutation = Some(Box::new(receiver));
-                return Ok(receiver);
+                return Ok(MethodDispatchOutcome::Immediate(receiver));
             }
             "pop" => {
                 let ret = if let Some(vec) = receiver.as_array_mut() {
@@ -83,7 +88,7 @@ impl crate::vm::VM {
                     Value16::null()
                 };
                 self.last_instance_mutation = Some(Box::new(receiver));
-                return Ok(ret);
+                return Ok(MethodDispatchOutcome::Immediate(ret));
             }
             "shift" => {
                 let ret = if let Some(vec) = receiver.as_array_mut() {
@@ -96,7 +101,7 @@ impl crate::vm::VM {
                     Value16::null()
                 };
                 self.last_instance_mutation = Some(Box::new(receiver));
-                return Ok(ret);
+                return Ok(MethodDispatchOutcome::Immediate(ret));
             }
             "unshift" => {
                 if let Some(vec) = receiver.as_array_mut() {
@@ -105,7 +110,7 @@ impl crate::vm::VM {
                     vec.extend(old);
                 }
                 self.last_instance_mutation = Some(Box::new(receiver));
-                return Ok(receiver);
+                return Ok(MethodDispatchOutcome::Immediate(receiver));
             }
             _ => {}
         }
@@ -115,16 +120,17 @@ impl crate::vm::VM {
 
         // Non-callback methods (length/join/slice/concat/reverse/flat/indexOf/contains).
         if let Some(result) = crate::vm::array::call_array_method(arr, method, &args) {
-            return result;
+            return result.map(MethodDispatchOutcome::Immediate);
         }
 
-        // Callback-dependent methods (map/filter/reduce/forEach/find/
-        // some/every) route through the same shared implementation (Kural 7).
-        let mut invoker = crate::vm::callback::VmCallbackInvoker { vm: self, bytecode };
-        if let Some(result) =
-            crate::vm::array::call_array_method_with_callback(arr, method, &args, &mut invoker)
-        {
-            return result;
+        if ArrayCallbackOperation::from_name(method).is_some() {
+            return self.start_array_callback_sequence(
+                arr.to_vec(),
+                method,
+                &args,
+                bytecode,
+                call_site,
+            );
         }
 
         Err(compile_codes::runtime_error(format!(
@@ -160,45 +166,46 @@ impl crate::vm::VM {
 
     /// Companion to [`VM::property_function_value`] — binds `this` to the
     /// receiver, then calls through the shared function-value entry point.
+    /// G06A: with a call site the chunk is scheduled for the outer frame
+    /// loop (capture cells preserved); without one the legacy synchronous
+    /// path is kept for immediate-only callers.
     pub(crate) fn call_property_function(
         &mut self,
         receiver: &Value16,
         f: Value16,
         args: Vec<Value16>,
         bytecode: &Bytecode,
-    ) -> CompileResult<Value16> {
-        self.with_this_context(receiver, None, |this| {
-            this.call_value_as_function(&f, args, bytecode)
-        })
-    }
+        call_site: crate::vm::call_state::DeferredCallSite,
+    ) -> CompileResult<crate::vm::call_state::MethodDispatchOutcome> {
+        use crate::vm::call_state::{MethodDispatchOutcome, ReceiverContext};
 
-    /// Call a Value as a function (used by map/filter/reduce/etc.)
-    pub(crate) fn call_value_as_function(
-        &mut self,
-        func: &Value16,
-        args: Vec<Value16>,
-        bytecode: &Bytecode,
-    ) -> CompileResult<Value16> {
-        if let Some(func_data) = func.as_function_data() {
-            let chunk_name = &func_data.chunk_name;
-            let params = &func_data.params;
-            let captures = &func_data.captures;
-            // B1: use reference directly, no clone needed (call_chunk_with_captures takes &)
+        {
+            let func_data = f.as_function_data().ok_or_else(|| {
+                compile_codes::runtime_error(format!("Expected function, got {:?}", f))
+            })?;
             let chunk = bytecode
-                .get_function(chunk_name)
+                .get_function(&func_data.chunk_name)
                 .ok_or_else(|| {
                     compile_codes::runtime_error(format!(
                         "Function chunk not found: {}",
-                        chunk_name
+                        func_data.chunk_name
                     ))
                 })?;
-            let chunk_sym = func_data.chunk_sym;
-            self.call_chunk_with_captures(&chunk, params, &args, bytecode, hudhudscript_bytecode::SymId(chunk_sym), captures)
-        } else {
-            Err(compile_codes::runtime_error(format!(
-                "Expected function, got {:?}",
-                func
-            )))
+            let captures: rustc_hash::FxHashMap<String, Arc<parking_lot::RwLock<Value16>>> =
+                func_data
+                    .captures
+                    .iter()
+                    .map(|(key, cell)| (key.clone(), Arc::clone(cell)))
+                    .collect();
+            let context = ReceiverContext::new(*receiver, None, true);
+            return self.schedule_deferred_chunk_call(
+                chunk,
+                hudhudscript_bytecode::SymId(func_data.chunk_sym),
+                args,
+                captures,
+                Some(context),
+                call_site,
+            );
         }
     }
 

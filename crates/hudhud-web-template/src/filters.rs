@@ -184,12 +184,7 @@ fn format_unix_timestamp(secs: i64) -> String {
 
     format!(
         "{:04}-{:02}-{:02} {:02}:{:02}:{:02}",
-        y,
-        month,
-        day,
-        hours,
-        minutes,
-        secs_rem
+        y, month, day, hours, minutes, secs_rem
     )
 }
 
@@ -221,4 +216,3 @@ fn month_day_from_doy(y: i64, doy: u32) -> (u32, u32) {
     }
     (12, 31)
 }
-

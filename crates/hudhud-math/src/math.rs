@@ -256,7 +256,9 @@ pub fn powmod(args: &[Value16]) -> HudHudResult<Value16> {
         .as_int()
         .ok_or_else(|| runtime_error("Math.powmod: mod must be an integer".to_string()))?;
     if modulus <= 0 {
-        return Err(runtime_error("Math.powmod: mod must be positive".to_string()));
+        return Err(runtime_error(
+            "Math.powmod: mod must be positive".to_string(),
+        ));
     }
     let result = modular_pow(base, exp, modulus);
     Ok(Value16::int(result))

@@ -16,29 +16,38 @@ impl VM {
             Instruction::IntAdd { dst, src1, src2 } => {
                 let a = self.registers[*src1 as usize];
                 let b = self.registers[*src2 as usize];
-                self.registers[*dst as usize] = crate::vm::math_fast_paths::do_int_add(a, b).map_err(|e| compile_codes::runtime_error(format!("{}", e)))?;
+                self.registers[*dst as usize] = crate::vm::math_fast_paths::do_int_add(a, b)
+                    .map_err(|e| compile_codes::runtime_error(format!("{}", e)))?;
             }
             Instruction::IntSub { dst, src1, src2 } => {
                 let a = self.registers[*src1 as usize];
                 let b = self.registers[*src2 as usize];
-                self.registers[*dst as usize] = crate::vm::math_fast_paths::do_int_sub(a, b).map_err(|e| compile_codes::runtime_error(format!("{}", e)))?;
+                self.registers[*dst as usize] = crate::vm::math_fast_paths::do_int_sub(a, b)
+                    .map_err(|e| compile_codes::runtime_error(format!("{}", e)))?;
             }
             Instruction::IntMul { dst, src1, src2 } => {
                 let a = self.registers[*src1 as usize];
                 let b = self.registers[*src2 as usize];
-                self.registers[*dst as usize] = crate::vm::math_fast_paths::do_int_mul(a, b).map_err(|e| compile_codes::runtime_error(format!("{}", e)))?;
+                self.registers[*dst as usize] = crate::vm::math_fast_paths::do_int_mul(a, b)
+                    .map_err(|e| compile_codes::runtime_error(format!("{}", e)))?;
             }
             Instruction::IntAddI { dst, src, imm } => {
                 let a = self.registers[*src as usize];
-                self.registers[*dst as usize] = crate::vm::math_fast_paths::do_int_add_i(a, *imm as i64).map_err(|e| compile_codes::runtime_error(format!("{}", e)))?;
+                self.registers[*dst as usize] =
+                    crate::vm::math_fast_paths::do_int_add_i(a, *imm as i64)
+                        .map_err(|e| compile_codes::runtime_error(format!("{}", e)))?;
             }
             Instruction::IntSubI { dst, src, imm } => {
                 let a = self.registers[*src as usize];
-                self.registers[*dst as usize] = crate::vm::math_fast_paths::do_int_sub_i(a, *imm as i64).map_err(|e| compile_codes::runtime_error(format!("{}", e)))?;
+                self.registers[*dst as usize] =
+                    crate::vm::math_fast_paths::do_int_sub_i(a, *imm as i64)
+                        .map_err(|e| compile_codes::runtime_error(format!("{}", e)))?;
             }
             Instruction::IntMulI { dst, src, imm } => {
                 let a = self.registers[*src as usize];
-                self.registers[*dst as usize] = crate::vm::math_fast_paths::do_int_mul_i(a, *imm as i64).map_err(|e| compile_codes::runtime_error(format!("{}", e)))?;
+                self.registers[*dst as usize] =
+                    crate::vm::math_fast_paths::do_int_mul_i(a, *imm as i64)
+                        .map_err(|e| compile_codes::runtime_error(format!("{}", e)))?;
             }
             Instruction::IntDivI { dst, src, imm } => {
                 if *imm == 0 {
@@ -53,7 +62,8 @@ impl VM {
                     ReprTag::Int => match (payload as i64).checked_div(*imm as i64) {
                         Some(q) => Value16::int(q),
                         None => Value16::bigint(
-                            num_bigint::BigInt::from(payload as i64) / num_bigint::BigInt::from(*imm as i64),
+                            num_bigint::BigInt::from(payload as i64)
+                                / num_bigint::BigInt::from(*imm as i64),
                         ),
                     },
                     ReprTag::Number => Value16::number(f64::from_bits(payload) / (*imm as f64)),
@@ -68,7 +78,7 @@ impl VM {
                                 } else {
                                     "IntDivI: src not numeric"
                                 };
-                                return Err(Self::runtime_error_with_pos(msg, bytecode, ip))
+                                return Err(Self::runtime_error_with_pos(msg, bytecode, ip));
                             }
                         }
                     }
@@ -107,7 +117,7 @@ impl VM {
                                 } else {
                                     "IntModI: src not numeric"
                                 };
-                                return Err(Self::runtime_error_with_pos(msg, bytecode, ip))
+                                return Err(Self::runtime_error_with_pos(msg, bytecode, ip));
                             }
                         }
                     }

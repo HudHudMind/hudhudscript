@@ -1,0 +1,20 @@
+// 02_two_steps.hud — two-step loop with step transition
+loop two_steps {
+  step prepare {
+    result.ready = true
+
+    gate prepare_gate {
+      when result.ready == true -> second_step
+      else -> fail
+    }
+  }
+
+  step second_step {
+    result.code = 0
+
+    gate second_gate {
+      when result.code == 0 -> done
+      else -> fail
+    }
+  }
+}

@@ -38,19 +38,32 @@ impl Compiler {
                 }
             }
             Stmt::Return { value, .. } => {
-                if let Some(v) = value { self.p4b_walk_expr(v, scope); }
+                if let Some(v) = value {
+                    self.p4b_walk_expr(v, scope);
+                }
             }
             Stmt::Block { statements, .. } => {
                 // P4b: block does not create child scope (assignments must propagate up)
-                for s in statements { self.p4b_walk_stmt(s, scope); }
+                for s in statements {
+                    self.p4b_walk_stmt(s, scope);
+                }
             }
-            Stmt::If { condition, then_branch, else_branch, .. } => {
+            Stmt::If {
+                condition,
+                then_branch,
+                else_branch,
+                ..
+            } => {
                 self.p4b_walk_expr(condition, scope);
                 // P4b: if body uses same scope (mutations affect outer scope)
                 self.p4b_walk_stmt(then_branch, scope);
-                if let Some(e) = else_branch { self.p4b_walk_stmt(e, scope); }
+                if let Some(e) = else_branch {
+                    self.p4b_walk_stmt(e, scope);
+                }
             }
-            Stmt::While { condition, body, .. } => {
+            Stmt::While {
+                condition, body, ..
+            } => {
                 self.p4b_walk_expr(condition, scope);
                 // P4b: while body uses same scope (mutations affect outer scope)
                 self.p4b_walk_stmt(body, scope);
@@ -59,11 +72,17 @@ impl Compiler {
                 self.p4b_walk_expr(iterable, scope);
                 self.p4b_walk_stmt(body, scope);
             }
-            Stmt::Function { name, params, body, .. } => {
+            Stmt::Function {
+                name, params, body, ..
+            } => {
                 // Function scope: add all params as Unknown to block outer leaks
                 let mut inner = scope.child();
-                for p in params { inner.insert(p.clone(), ExprType::Unknown); }
-                for s in body { self.p4b_walk_stmt(s, &mut inner); }
+                for p in params {
+                    inner.insert(p.clone(), ExprType::Unknown);
+                }
+                for s in body {
+                    self.p4b_walk_stmt(s, &mut inner);
+                }
             }
             _ => {}
         }
@@ -97,7 +116,9 @@ impl Compiler {
                     }
                 }
                 self.p4b_walk_expr(callee, scope);
-                for a in args { self.p4b_walk_expr(a, scope); }
+                for a in args {
+                    self.p4b_walk_expr(a, scope);
+                }
             }
             Expr::Binary { left, right, .. } => {
                 self.p4b_walk_expr(left, scope);
@@ -109,7 +130,9 @@ impl Compiler {
                 self.p4b_walk_expr(index, scope);
             }
             Expr::Array { elements, .. } => {
-                for e in elements { self.p4b_walk_expr(e, scope); }
+                for e in elements {
+                    self.p4b_walk_expr(e, scope);
+                }
             }
             _ => {}
         }
@@ -133,10 +156,22 @@ struct Scope {
 }
 
 impl Scope {
-    fn new() -> Self { Scope { locals: HashMap::new() } }
-    fn child(&self) -> Self { Scope { locals: self.locals.clone() } }
-    fn insert(&mut self, name: String, ty: ExprType) { self.locals.insert(name, ty); }
-    fn lookup(&self, name: &str) -> Option<ExprType> { self.locals.get(name).copied() }
+    fn new() -> Self {
+        Scope {
+            locals: HashMap::new(),
+        }
+    }
+    fn child(&self) -> Self {
+        Scope {
+            locals: self.locals.clone(),
+        }
+    }
+    fn insert(&mut self, name: String, ty: ExprType) {
+        self.locals.insert(name, ty);
+    }
+    fn lookup(&self, name: &str) -> Option<ExprType> {
+        self.locals.get(name).copied()
+    }
     /// P4b: update type on reassignment. Degrade to Unknown if type changed or uncertain.
     fn update_or_degrade(&mut self, name: &str, new_ty: ExprType) {
         if new_ty == ExprType::Unknown {

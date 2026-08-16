@@ -89,7 +89,7 @@ pub fn bench_array_clone(c: &mut Criterion) {
 }
 
 pub fn bench_fib_mix(c: &mut Criterion) {
-    let pool_a: Vec<hudhudscript_bytecode::Value> = (0..16)
+    let pool_a: Vec<hudhudscript_bytecode::Value16> = (0..16)
         .map(|i| {
             if i % 3 == 0 {
                 a_make_number(i as f64)
@@ -100,7 +100,7 @@ pub fn bench_fib_mix(c: &mut Criterion) {
             }
         })
         .collect();
-    let pool_b = (0..16)
+    let pool_b: Vec<super::variant_b::ReprArc> = (0..16)
         .map(|i| {
             if i % 3 == 0 {
                 b_make_number(i as f64)
@@ -111,7 +111,7 @@ pub fn bench_fib_mix(c: &mut Criterion) {
             }
         })
         .collect();
-    let pool_c = (0..16)
+    let pool_c: Vec<super::variant_c::ReprManual> = (0..16)
         .map(|i| {
             if i % 3 == 0 {
                 c_make_number(i as f64)

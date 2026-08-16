@@ -1,0 +1,292 @@
+// Complete Integration Example
+// Demonstrates all connection types in HudHudScript
+
+agent CompleteIntegration {
+    let provider = "openai";
+    
+    // ========================================
+    // 1. LLM PROVIDER CONNECTION
+    // ========================================
+    function askAI(question) {
+        print("🤖 Asking AI: " + question);
+        let response = this.call(question);
+        print("✓ AI Response: " + response.content);
+        return response.content;
+    }
+    
+    // ========================================
+    // 2. POSTGRESQL CONNECTION
+    // ========================================
+    function queryDatabase(sql) {
+        print("🗄️  Querying PostgreSQL: " + sql);
+        let result = mcp.call("postgres", "query", {
+            sql: sql
+        });
+        print("✓ Database result received");
+        return result;
+    }
+    
+    function getUsers() {
+        return queryDatabase("SELECT * FROM users LIMIT 10");
+    }
+    
+    function insertUser(name, email) {
+        return queryDatabase(
+            "INSERT INTO users (name, email) VALUES ('" + name + "', '" + email + "')"
+        );
+    }
+    
+    // ========================================
+    // 3. REDIS CACHE CONNECTION
+    // ========================================
+    function cacheGet(key) {
+        print("💾 Getting from cache: " + key);
+        let result = mcp.call("redis", "get", {
+            key: key
+        });
+        if (result) {
+            print("✓ Cache hit!");
+        } else {
+            print("⚠ Cache miss");
+        }
+        return result;
+    }
+    
+    function cacheSet(key, value, ttl) {
+        print("💾 Setting cache: " + key);
+        return mcp.call("redis", "set", {
+            key: key,
+            value: value,
+            ttl: ttl
+        });
+    }
+    
+    // ========================================
+    // 4. REST API CONNECTION
+    // ========================================
+    function fetchAPI(url) {
+        print("🌐 Fetching API: " + url);
+        let result = mcp.call("fetch", "get", {
+            url: url
+        });
+        print("✓ API response received");
+        return result;
+    }
+    
+    function postAPI(url, data) {
+        print("🌐 Posting to API: " + url);
+        return mcp.call("fetch", "post", {
+            url: url,
+            body: data,
+            headers: {
+                "Content-Type": "application/json"
+            }
+        });
+    }
+    
+    // ========================================
+    // 5. MONGODB CONNECTION
+    // ========================================
+    function mongoFind(collection, query) {
+        print("🍃 MongoDB find: " + collection);
+        let result = mcp.call("mongodb", "find", {
+            collection: collection,
+            query: query
+        });
+        print("✓ MongoDB result received");
+        return result;
+    }
+    
+    function mongoInsert(collection, document) {
+        print("🍃 MongoDB insert: " + collection);
+        return mcp.call("mongodb", "insert", {
+            collection: collection,
+            document: document
+        });
+    }
+    
+    // ========================================
+    // 6. FILE SYSTEM CONNECTION
+    // ========================================
+    function readFile(path) {
+        print("📁 Reading file: " + path);
+        let content = mcp.call("filesystem", "read_file", {
+            path: path
+        });
+        print("✓ File read successfully");
+        return content;
+    }
+    
+    function writeFile(path, content) {
+        print("📁 Writing file: " + path);
+        return mcp.call("filesystem", "write_file", {
+            path: path,
+            content: content
+        });
+    }
+    
+    // ========================================
+    // 7. WEBHOOK CONNECTION
+    // ========================================
+    function sendWebhook(url, message) {
+        print("🔔 Sending webhook: " + url);
+        return mcp.call("fetch", "post", {
+            url: url,
+            body: {
+                text: message
+            }
+        });
+    }
+    
+    function notifySlack(message) {
+        let webhookUrl = env("SLACK_WEBHOOK_URL");
+        return sendWebhook(webhookUrl, message);
+    }
+    
+    // ========================================
+    // 8. GIT CONNECTION
+    // ========================================
+    function gitCommit(message) {
+        print("📝 Git commit: " + message);
+        return mcp.call("git", "commit", {
+            message: message
+        });
+    }
+    
+    function gitPush() {
+        print("⬆️  Git push");
+        return mcp.call("git", "push", {});
+    }
+    
+    // ========================================
+    // COMPLETE WORKFLOW EXAMPLE
+    // ========================================
+    function runCompleteWorkflow() {
+        print("=================================");
+        print("🚀 Starting Complete Workflow");
+        print("=================================");
+        print("");
+        
+        // Step 1: Fetch data from API
+        print("Step 1: Fetch data from external API");
+        let apiData = fetchAPI("https://api.github.com");
+        print("");
+        
+        // Step 2: Analyze with AI
+        print("Step 2: Analyze data with AI");
+        let analysis = askAI("Summarize this data in one sentence: " + JSON.stringify(apiData));
+        print("");
+        
+        // Step 3: Store in PostgreSQL
+        print("Step 3: Store in PostgreSQL");
+        insertUser("AI Agent", "agent@example.com");
+        print("");
+        
+        // Step 4: Cache the result
+        print("Step 4: Cache the result in Redis");
+        cacheSet("latest_analysis", analysis, 3600);
+        print("");
+        
+        // Step 5: Store in MongoDB
+        print("Step 5: Store in MongoDB");
+        mongoInsert("analyses", {
+            timestamp: Date.now(),
+            analysis: analysis,
+            source: "github_api"
+        });
+        print("");
+        
+        // Step 6: Write to file
+        print("Step 6: Write to file");
+        writeFile("./output/analysis.txt", analysis);
+        print("");
+        
+        // Step 7: Commit to git
+        print("Step 7: Commit to git");
+        gitCommit("Add analysis: " + analysis);
+        print("");
+        
+        // Step 8: Send notification
+        print("Step 8: Send Slack notification");
+        notifySlack("Workflow completed! Analysis: " + analysis);
+        print("");
+        
+        print("=================================");
+        print("✅ Workflow Complete!");
+        print("=================================");
+        
+        return {
+            status: "success",
+            analysis: analysis
+        };
+    }
+    
+    // ========================================
+    // CACHED API PATTERN
+    // ========================================
+    function getCachedData(key, apiUrl) {
+        // Try cache first
+        let cached = cacheGet(key);
+        if (cached) {
+            return cached;
+        }
+        
+        // Fetch from API
+        let data = fetchAPI(apiUrl);
+        
+        // Cache for 1 hour
+        cacheSet(key, data, 3600);
+        
+        return data;
+    }
+    
+    // ========================================
+    // DATABASE + AI PATTERN
+    // ========================================
+    function analyzeUsers() {
+        // Get users from database
+        let users = getUsers();
+        
+        // Analyze with AI
+        let analysis = askAI("Analyze these users and provide insights: " + JSON.stringify(users));
+        
+        // Store analysis
+        mongoInsert("user_analyses", {
+            timestamp: Date.now(),
+            analysis: analysis
+        });
+        
+        return analysis;
+    }
+    
+    // ========================================
+    // MULTI-DATABASE AGGREGATION
+    // ========================================
+    function aggregateAllData() {
+        print("📊 Aggregating data from all sources...");
+        
+        // PostgreSQL
+        let pgData = queryDatabase("SELECT COUNT(*) as user_count FROM users");
+        
+        // MongoDB
+        let mongoData = mongoFind("products", {});
+        
+        // Redis
+        let cacheStats = cacheGet("stats");
+        
+        // API
+        let apiData = fetchAPI("https://api.example.com/stats");
+        
+        return {
+            postgres: pgData,
+            mongodb: mongoData,
+            cache: cacheStats,
+            api: apiData
+        };
+    }
+    
+    // Run the complete workflow
+    print("🎯 HudHudScript Complete Integration Demo");
+    print("");
+    runCompleteWorkflow();
+}

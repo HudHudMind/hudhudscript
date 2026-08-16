@@ -15,20 +15,30 @@ mod raw_handle {
 }
 #[cfg(windows)]
 mod raw_handle {
-    pub use std::os::windows::io::{AsRawSocket as AsRaw, FromRawSocket as FromRaw, RawSocket as Raw};
+    pub use std::os::windows::io::{
+        AsRawSocket as AsRaw, FromRawSocket as FromRaw, RawSocket as Raw,
+    };
 }
 use raw_handle::{AsRaw, FromRaw, Raw};
 
 // Platform-specific TcpListener handle access
 #[cfg(unix)]
-fn listener_handle(l: &TcpListener) -> Raw { l.as_raw_fd() }
+fn listener_handle(l: &TcpListener) -> Raw {
+    l.as_raw_fd()
+}
 #[cfg(windows)]
-fn listener_handle(l: &TcpListener) -> Raw { l.as_raw_socket() }
+fn listener_handle(l: &TcpListener) -> Raw {
+    l.as_raw_socket()
+}
 
 #[cfg(unix)]
-fn listener_from_handle(h: Raw) -> TcpListener { unsafe { TcpListener::from_raw_fd(h) } }
+fn listener_from_handle(h: Raw) -> TcpListener {
+    unsafe { TcpListener::from_raw_fd(h) }
+}
 #[cfg(windows)]
-fn listener_from_handle(h: Raw) -> TcpListener { unsafe { TcpListener::from_raw_socket(h) } }
+fn listener_from_handle(h: Raw) -> TcpListener {
+    unsafe { TcpListener::from_raw_socket(h) }
+}
 
 pub(crate) fn server_listen(args: &[Value16]) -> HudHudResult<Value16> {
     let (host, port, routes_from_server) = match args.first() {

@@ -1,0 +1,11 @@
+// 03_else_fail.hud — loop where gate falls through to fail
+loop fail_path {
+  step only_step {
+    result.code = 9
+
+    gate only_gate {
+      when result.code == 0 -> done
+      else -> fail
+    }
+  }
+}

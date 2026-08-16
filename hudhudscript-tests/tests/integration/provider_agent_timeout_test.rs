@@ -1,8 +1,11 @@
-use hudhudscript_vm::{VM, OutputLocale, SandboxConfig};
-use hudhudscript_compiler::Compiler;
-use hudhudscript_runtime::provider::{ProviderRegistry, Provider, LLMRequest, LLMResponse, ProviderInfo, ProviderType, ProviderError, TokenUsage};
-use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
+use hudhudscript_compiler::Compiler;
+use hudhudscript_runtime::provider::{
+    LLMRequest, LLMResponse, Provider, ProviderError, ProviderInfo, ProviderRegistry, ProviderType,
+    TokenUsage,
+};
+use hudhudscript_vm::{OutputLocale, SandboxConfig, VM};
+use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Clone)]
 struct MockProvider {
@@ -23,7 +26,11 @@ impl Provider for MockProvider {
         *self.recorded_timeout.lock().unwrap() = request.timeout_secs;
         Ok(LLMResponse {
             content: format!("Timeout was: {:?}", request.timeout_secs),
-            tokens_used: TokenUsage { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
+            tokens_used: TokenUsage {
+                prompt_tokens: 0,
+                completion_tokens: 0,
+                total_tokens: 0,
+            },
             model: "mock-model".to_string(),
             finish_reason: "stop".to_string(),
             tool_calls: None,
@@ -56,15 +63,24 @@ impl Provider for MockProvider {
     }
 }
 
-fn execute_script_with_vm(script: &str, provider: Arc<MockProvider>, setup_vm: impl FnOnce(&mut VM)) -> Result<(), hudhudscript_errors::Error> {
+fn execute_script_with_vm(
+    script: &str,
+    provider: Arc<MockProvider>,
+    setup_vm: impl FnOnce(&mut VM),
+) -> Result<(), hudhudscript_errors::Error> {
     let mut compiler = Compiler::new();
     let stmts = hudhudscript_parser::parse(script).unwrap();
     let bytecode = compiler.compile(&stmts).unwrap();
 
     let registry = ProviderRegistry::new();
-    let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
     rt.block_on(async {
-        registry.register("mock_provider".to_string(), provider.clone()).await;
+        registry
+            .register("mock_provider".to_string(), provider.clone())
+            .await;
     });
 
     let mut vm = VM::new();
@@ -151,7 +167,8 @@ fn test_runtime_provider_timeout_secs_used_when_no_agent_or_provider_timeout() {
     // Test with custom runtime default
     execute_script_with_vm(script, mock.clone(), |vm| {
         vm.with_provider_timeout_secs(180);
-    }).unwrap();
+    })
+    .unwrap();
     assert_eq!(*mock.recorded_timeout.lock().unwrap(), Some(180));
 }
 
@@ -177,7 +194,8 @@ fn test_toml_provider_timeout_and_script_override() {
         prov_config.insert("timeout".to_string(), "123".to_string());
         toml_providers.insert("MyProv".to_string(), prov_config);
         vm.set_toml_providers(toml_providers);
-    }).unwrap();
+    })
+    .unwrap();
     assert_eq!(*mock.recorded_timeout.lock().unwrap(), Some(123));
 
     // Script overrides TOML
@@ -200,7 +218,8 @@ fn test_toml_provider_timeout_and_script_override() {
         prov_config.insert("timeout".to_string(), "123".to_string());
         toml_providers.insert("MyProv".to_string(), prov_config);
         vm.set_toml_providers(toml_providers);
-    }).unwrap();
+    })
+    .unwrap();
     assert_eq!(*mock.recorded_timeout.lock().unwrap(), Some(45));
 }
 
@@ -232,7 +251,8 @@ fn test_invalid_timeout_values_fail_clearly() {
         prov_config.insert("timeout".to_string(), "abc".to_string());
         toml_providers.insert("MyProv".to_string(), prov_config);
         vm.set_toml_providers(toml_providers);
-    }).unwrap_err();
+    })
+    .unwrap_err();
     assert!(format!("{:?}", err2).contains("Invalid provider config timeout"));
 
     // 3. String "0" in TOML
@@ -242,7 +262,8 @@ fn test_invalid_timeout_values_fail_clearly() {
         prov_config.insert("timeout".to_string(), "0".to_string());
         toml_providers.insert("MyProv".to_string(), prov_config);
         vm.set_toml_providers(toml_providers);
-    }).unwrap_err();
+    })
+    .unwrap_err();
     assert!(format!("{:?}", err3).contains("Invalid provider config timeout"));
     assert!(format!("{:?}", err3).contains("expected positive seconds"));
 }

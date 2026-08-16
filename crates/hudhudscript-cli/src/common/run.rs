@@ -1,15 +1,15 @@
-use hudhudscript_bytecode::Value16;
-use crate::common::{detect_locale, load_hudhud_config_with_path, CliError, HudHudConfig};
 use crate::common::provider::setup_provider_registry;
+#[cfg(feature = "telemetry")]
+use crate::common::telemetry_writer::write_telemetry_json;
+use crate::common::{detect_locale, load_hudhud_config_with_path, CliError, HudHudConfig};
+use hudhudscript_bytecode::Value16;
 use hudhudscript_compiler::{Bytecode, Compiler};
 use hudhudscript_deploy_core::adapters::{create_adapter, Adapter};
 use hudhudscript_formatter::Formatter;
-#[cfg(feature = "telemetry")]
-use crate::common::telemetry_writer::write_telemetry_json;
 use hudhudscript_mcp::{McpClient, TransportConfig};
+use hudhudscript_modules::ModuleLoader;
 use hudhudscript_parser::{parse, parse_lang_directive, parse_with_recovery};
 use hudhudscript_vm::{OutputLocale, VM};
-use hudhudscript_modules::ModuleLoader;
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -248,8 +248,14 @@ pub fn run_file_vm_with_config(
     // Provider registry: shared with REPL (Kural 7 — single source).
     // Uses OLLAMA_BASE_URL env var for ollama endpoint; no hardcoded model/URL.
     match setup_provider_registry(debug, None) {
-        Ok(registry) => { vm.set_provider_registry(registry); }
-        Err(e) => { if debug { eprintln!("Provider registry: {}", e); } }
+        Ok(registry) => {
+            vm.set_provider_registry(registry);
+        }
+        Err(e) => {
+            if debug {
+                eprintln!("Provider registry: {}", e);
+            }
+        }
     }
 
     // HOST-4: apply [host_access] policy to VM
@@ -279,12 +285,19 @@ pub fn run_file_vm_with_config(
             if needs_mcp {
                 match crate::common::provider::setup_mcp_clients(&config.mcp.servers, debug).await {
                     Ok(mcp_clients) => {
-                        for (name, client) in mcp_clients { vm.register_mcp_client(name, client); }
+                        for (name, client) in mcp_clients {
+                            vm.register_mcp_client(name, client);
+                        }
                     }
-                    Err(e) => { if debug { eprintln!("⚠ MCP: {}", e); } }
+                    Err(e) => {
+                        if debug {
+                            eprintln!("⚠ MCP: {}", e);
+                        }
+                    }
                 }
             }
-            let result = vm.execute(&bytecode)
+            let result = vm
+                .execute(&bytecode)
                 .map_err(|e| CliError::Runtime(format!("VM error: {}", e)));
             vm.shutdown_mcp_clients().await;
             result
@@ -360,8 +373,16 @@ fn run_bytecode_with_config(
             println!("     [{}] {:?}", i, instruction);
         }
         println!("   Functions:");
-        for (name, chunk) in bytecode.function_names.borrow().iter().map(|(n, &i)| (n.clone(), bytecode.functions.borrow()[i].clone())) {
-            println!("     Function: {} (local_count={}, local_names={:?})", name, chunk.local_count, chunk.local_names);
+        for (name, chunk) in bytecode
+            .function_names
+            .borrow()
+            .iter()
+            .map(|(n, &i)| (n.clone(), bytecode.functions.borrow()[i].clone()))
+        {
+            println!(
+                "     Function: {} (local_count={}, local_names={:?})",
+                name, chunk.local_count, chunk.local_names
+            );
             for (i, instruction) in chunk.instructions.iter().enumerate() {
                 println!("       [{}] {:?}", i, instruction);
             }
@@ -472,12 +493,30 @@ fn build_config_value(config: &HudHudConfig) -> Value16 {
 
     // [runtime]
     let mut runtime = hudhudscript_bytecode::ObjMap::default();
-    runtime.insert("max_recursion".to_string(), Value16::int(config.runtime.max_recursion as i64));
-    runtime.insert("fuel_limit".to_string(), Value16::int(config.runtime.fuel_limit as i64));
-    runtime.insert("allow_network".to_string(), Value16::bool_(config.runtime.allow_network));
-    runtime.insert("allow_process".to_string(), Value16::bool_(config.runtime.allow_process));
-    runtime.insert("allow_insecure_http".to_string(), Value16::bool_(config.runtime.allow_insecure_http));
-    runtime.insert("allow_privileged".to_string(), Value16::bool_(config.runtime.allow_privileged));
+    runtime.insert(
+        "max_recursion".to_string(),
+        Value16::int(config.runtime.max_recursion as i64),
+    );
+    runtime.insert(
+        "fuel_limit".to_string(),
+        Value16::int(config.runtime.fuel_limit as i64),
+    );
+    runtime.insert(
+        "allow_network".to_string(),
+        Value16::bool_(config.runtime.allow_network),
+    );
+    runtime.insert(
+        "allow_process".to_string(),
+        Value16::bool_(config.runtime.allow_process),
+    );
+    runtime.insert(
+        "allow_insecure_http".to_string(),
+        Value16::bool_(config.runtime.allow_insecure_http),
+    );
+    runtime.insert(
+        "allow_privileged".to_string(),
+        Value16::bool_(config.runtime.allow_privileged),
+    );
     root.insert("runtime".to_string(), Value16::object(runtime));
 
     // [providers]

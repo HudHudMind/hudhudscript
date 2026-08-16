@@ -7,7 +7,9 @@ fn run(src: &str) -> Result<String, String> {
     let ast = hudhudscript_parser::parse(src).unwrap();
     let mut compiler = hudhudscript_compiler::Compiler::new();
     let bc = compiler.compile(&ast).unwrap();
-    vm.execute(&bc).map(|_| vm.last_return_value().display_string()).map_err(|e| format!("{}", e))
+    vm.execute(&bc)
+        .map(|_| vm.last_return_value().display_string())
+        .map_err(|e| format!("{}", e))
 }
 
 #[test]
@@ -34,5 +36,9 @@ return work(arr, 0, 99, asc);
 }
 __t()"#;
     let r = run(src).unwrap_or_else(|e| e);
-    assert_eq!(r, "50", "nested while(true) break should return 50, got: {}", r);
+    assert_eq!(
+        r, "50",
+        "nested while(true) break should return 50, got: {}",
+        r
+    );
 }

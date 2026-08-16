@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Profil: {{ user.name }}</h1>
+
+{% if user.admin %}
+<p style="color: green; font-weight: bold;">✓ Admin kullanıcı</p>
+{% else %}
+<p>Standart kullanıcı</p>
+{% endif %}
+
+<h2>Öğeler ({{ user.items | length }})</h2>
+
+{% if user.items | length > 0 %}
+<ul>
+    {% for item in user.items %}
+    <li>{{ loop.index }}. {{ item.title }} ({{ item.count }} adet)</li>
+    {% endfor %}
+</ul>
+{% else %}
+<p>Henüz öğe yok.</p>
+{% endif %}
+{% endblock %}

@@ -240,7 +240,11 @@ pub(crate) fn collect_stmt(stmt: &Stmt, name: &str, uri: &Url, out: &mut Vec<Loc
             }
         }
 
-        Stmt::Despawn { name: despawn_name, span, .. } => {
+        Stmt::Despawn {
+            name: despawn_name,
+            span,
+            ..
+        } => {
             push_if_match(despawn_name, name, *span, uri, out);
         }
 

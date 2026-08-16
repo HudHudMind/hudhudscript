@@ -13,7 +13,11 @@ fn vm_run(code: &str, var: &str) -> (hudhudscript_vm::VM, hudhudscript_bytecode:
     let bytecode = compiler.compile(&ast).expect("compile failed");
     let mut vm = VM::new();
     vm.execute(&bytecode).expect("VM execution failed");
-    let val = vm.get_variable(var).cloned().map(|v| v).unwrap_or_else(|| panic!("variable \'{}\' not found", var));
+    let val = vm
+        .get_variable(var)
+        .cloned()
+        .map(|v| v)
+        .unwrap_or_else(|| panic!("variable \'{}\' not found", var));
     (vm, val)
 }
 

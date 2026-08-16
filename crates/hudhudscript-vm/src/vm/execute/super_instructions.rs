@@ -87,9 +87,9 @@ impl VM {
                     }
                     None => {
                         let val = self.registers[slot_idx];
-                        self.registers[arg_reg] = crate::vm::bigint_arith::int_sub(
-                            val, Value16::int(sp.imm as i64),
-                        ).unwrap_or(Value16::int(0));
+                        self.registers[arg_reg] =
+                            crate::vm::bigint_arith::int_sub(val, Value16::int(sp.imm as i64))
+                                .unwrap_or(Value16::int(0));
                     }
                 }
                 let payload = bytecode.get_call_payload(sp.call_idx);
@@ -128,9 +128,9 @@ impl VM {
                     }
                     None => {
                         let val = self.registers[slot_idx];
-                        self.registers[arg_reg] = crate::vm::bigint_arith::int_add(
-                            val, Value16::int(sp.imm as i64),
-                        ).unwrap_or(Value16::int(0));
+                        self.registers[arg_reg] =
+                            crate::vm::bigint_arith::int_add(val, Value16::int(sp.imm as i64))
+                                .unwrap_or(Value16::int(0));
                     }
                 }
                 let payload = bytecode.get_call_payload(sp.call_idx);

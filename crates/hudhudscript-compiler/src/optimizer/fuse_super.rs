@@ -1,4 +1,6 @@
-use super::fuse_helpers::{instr_reads_reg, reg_dead_after, remove_fused_pair, try_fuse_arith_return};
+use super::fuse_helpers::{
+    instr_reads_reg, reg_dead_after, remove_fused_pair, try_fuse_arith_return,
+};
 use super::fuse_super_extra::try_fuse_extra_pattern;
 use crate::optimizer::utils::adjust_jumps_after_remove_full;
 use hudhudscript_bytecode::{CallPayload, Instruction, LoopPayload, SuperInstrPayload};
@@ -18,7 +20,11 @@ pub fn fuse_super_instructions_with_positions(
         match (&instructions[i], &instructions[i + 1]) {
             (
                 Instruction::IntMul { dst: t, src1, src2 },
-                Instruction::IntMod { dst, src1: mod_src1, src2: mod_src2 },
+                Instruction::IntMod {
+                    dst,
+                    src1: mod_src1,
+                    src2: mod_src2,
+                },
             ) if *t == *mod_src1 => {
                 instructions[i] = Instruction::IntMulMod {
                     dst: *dst,
@@ -31,7 +37,11 @@ pub fn fuse_super_instructions_with_positions(
             }
             (
                 Instruction::IntMul { dst: t, src1, src2 },
-                Instruction::IntModI { dst, src: mod_src, imm },
+                Instruction::IntModI {
+                    dst,
+                    src: mod_src,
+                    imm,
+                },
             ) if *t == *mod_src => {
                 instructions[i] = Instruction::IntMulModI {
                     dst: *dst,
@@ -194,12 +204,30 @@ pub fn fuse_super_instructions_with_positions(
                             dst: dst_reg,
                             src: dst_reg,
                         };
-                        adjust_jumps_after_remove_full(instructions, loop_payloads, &mut [], &mut [], i + 2);
+                        adjust_jumps_after_remove_full(
+                            instructions,
+                            loop_payloads,
+                            &mut [],
+                            &mut [],
+                            i + 2,
+                        );
                         instructions.remove(i + 2);
                     } else {
-                        adjust_jumps_after_remove_full(instructions, loop_payloads, &mut [], &mut [], i + 2);
+                        adjust_jumps_after_remove_full(
+                            instructions,
+                            loop_payloads,
+                            &mut [],
+                            &mut [],
+                            i + 2,
+                        );
                         instructions.remove(i + 2);
-                        adjust_jumps_after_remove_full(instructions, loop_payloads, &mut [], &mut [], i + 1);
+                        adjust_jumps_after_remove_full(
+                            instructions,
+                            loop_payloads,
+                            &mut [],
+                            &mut [],
+                            i + 1,
+                        );
                         instructions.remove(i + 1);
                     }
                     if i + 2 < source_positions.len() {
@@ -223,7 +251,8 @@ pub fn fuse_super_instructions_with_positions(
                     offset,
                 },
             ) if *cmp_dst == *jmp_src
-                && reg_dead_after(instructions, loop_payloads, i + 2, *cmp_dst) => {
+                && reg_dead_after(instructions, loop_payloads, i + 2, *cmp_dst) =>
+            {
                 instructions[i] = Instruction::IntCmpIJumpIfFalse {
                     src: *src,
                     imm: *imm,
@@ -245,7 +274,8 @@ pub fn fuse_super_instructions_with_positions(
                     offset,
                 },
             ) if *cmp_dst == *jmp_src
-                && reg_dead_after(instructions, loop_payloads, i + 2, *cmp_dst) => {
+                && reg_dead_after(instructions, loop_payloads, i + 2, *cmp_dst) =>
+            {
                 instructions[i] = Instruction::IntCmpRRJumpIfFalse {
                     src1: *src1,
                     src2: *src2,
@@ -266,8 +296,7 @@ pub fn fuse_super_instructions_with_positions(
                     src: jmp_src,
                     offset,
                 },
-            ) if *dst == *jmp_src
-                && reg_dead_after(instructions, loop_payloads, i + 2, *dst) => {
+            ) if *dst == *jmp_src && reg_dead_after(instructions, loop_payloads, i + 2, *dst) => {
                 instructions[i] = Instruction::JumpIfTrue {
                     src: *src,
                     offset: offset.wrapping_add(1),
@@ -301,9 +330,21 @@ pub fn fuse_super_instructions_with_positions(
                             imm: *imm,
                             offset: new_offset as i16,
                         };
-                        adjust_jumps_after_remove_full(instructions, loop_payloads, &mut [], &mut [], i + 2);
+                        adjust_jumps_after_remove_full(
+                            instructions,
+                            loop_payloads,
+                            &mut [],
+                            &mut [],
+                            i + 2,
+                        );
                         instructions.remove(i + 2);
-                        adjust_jumps_after_remove_full(instructions, loop_payloads, &mut [], &mut [], i + 1);
+                        adjust_jumps_after_remove_full(
+                            instructions,
+                            loop_payloads,
+                            &mut [],
+                            &mut [],
+                            i + 1,
+                        );
                         instructions.remove(i + 1);
                         if i + 1 < source_positions.len() {
                             source_positions.remove(i + 1);
@@ -318,11 +359,16 @@ pub fn fuse_super_instructions_with_positions(
             (Instruction::IntAddI { dst, src, imm }, Instruction::Jump(offset)) if *dst == *src => {
                 // FAZ E: only fuse backward jumps (loop back-edges), not forward
                 // jumps (if-else skip-else) — forward fusions break loop counters.
-                if *offset >= 0 { i += 1; continue; }
+                if *offset >= 0 {
+                    i += 1;
+                    continue;
+                }
                 // Also skip if any OTHER instruction jumps to this Jump (shared target).
                 let jump_pos = (i + 1) as i64;
                 let has_other_jumper = instructions.iter().enumerate().any(|(ip, instr)| {
-                    if ip == i { return false; }
+                    if ip == i {
+                        return false;
+                    }
                     match instr {
                         Instruction::Jump(o) => (ip as i64 + *o as i64) == jump_pos,
                         Instruction::IntAddIJump { offset: o, .. }
@@ -337,7 +383,10 @@ pub fn fuse_super_instructions_with_positions(
                         _ => false,
                     }
                 });
-                if has_other_jumper { i += 1; continue; }
+                if has_other_jumper {
+                    i += 1;
+                    continue;
+                }
                 let new_offset = offset.wrapping_add(1);
                 instructions[i] = Instruction::IntAddIJump {
                     reg: *dst,
@@ -350,13 +399,18 @@ pub fn fuse_super_instructions_with_positions(
             (Instruction::IntSubI { dst, src, imm }, Instruction::Jump(offset)) if *dst == *src => {
                 // FAZ E: only fuse backward jumps (loop back-edges), not forward
                 // jumps (if-else skip-else) — forward fusions break loop counters.
-                if *offset >= 0 { i += 1; continue; }
+                if *offset >= 0 {
+                    i += 1;
+                    continue;
+                }
                 // Also skip if any OTHER instruction jumps to this Jump. The Jump
                 // is a shared loop back-edge; fusing would cause the OTHER path
                 // (e.g., if-branch after its own c=c-1) to double-decrement.
                 let jump_pos = (i + 1) as i64;
                 let has_other_jumper = instructions.iter().enumerate().any(|(ip, instr)| {
-                    if ip == i { return false; }
+                    if ip == i {
+                        return false;
+                    }
                     match instr {
                         Instruction::Jump(o) => (ip as i64 + *o as i64) == jump_pos,
                         Instruction::IntAddIJump { offset: o, .. }
@@ -371,7 +425,10 @@ pub fn fuse_super_instructions_with_positions(
                         _ => false,
                     }
                 });
-                if has_other_jumper { i += 1; continue; }
+                if has_other_jumper {
+                    i += 1;
+                    continue;
+                }
                 let new_offset = offset.wrapping_add(1);
                 instructions[i] = Instruction::IntSubIJump {
                     reg: *dst,
@@ -393,7 +450,8 @@ pub fn fuse_super_instructions_with_positions(
                     offset,
                 },
             ) if *cmp_dst == *jmp_src
-                && reg_dead_after(instructions, loop_payloads, i + 2, *cmp_dst) => {
+                && reg_dead_after(instructions, loop_payloads, i + 2, *cmp_dst) =>
+            {
                 instructions[i] = Instruction::IntCmpIJumpIfTrue {
                     src: *src,
                     imm: *imm,

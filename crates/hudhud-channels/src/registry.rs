@@ -14,8 +14,6 @@ use tokio::sync::RwLock;
 /// Type alias for the inner channel map.
 type ChannelMap = HashMap<String, Arc<dyn Channel>>;
 
-
-
 /// Registry of active communication channels.
 ///
 /// # Config gate
@@ -49,8 +47,7 @@ impl ChannelRegistry {
         channel_name: &str,
         msg: &OutboundMessage,
     ) -> Result<(), ChannelError> {
-        let channels =
-            self.channels.read().await;
+        let channels = self.channels.read().await;
         if let Some(ch) = channels.get(channel_name) {
             ch.send(msg).await
         } else {

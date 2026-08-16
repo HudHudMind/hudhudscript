@@ -56,7 +56,8 @@ pub fn parse(args: &[Value16]) -> HudHudResult<Value16> {
         .map_err(|e| runtime_error(format!("CSV.parse error: {}", e)))?
         .iter()
         .map(|h| h.to_string())
-        .map(|k| k.to_string()).collect();
+        .map(|k| k.to_string())
+        .collect();
 
     let mut rows = Vec::new();
     for result in rdr.records() {

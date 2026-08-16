@@ -8,7 +8,8 @@ fn run_global(src: &str, name: &str) -> hudhudscript_bytecode::Value16 {
     let mut compiler = hudhudscript_compiler::Compiler::new();
     let bc = compiler.compile(&ast).unwrap();
     vm.execute(&bc).unwrap();
-    vm.get_global(name).unwrap_or(hudhudscript_bytecode::Value16::null())
+    vm.get_global(name)
+        .unwrap_or(hudhudscript_bytecode::Value16::null())
 }
 
 #[test]
@@ -24,7 +25,11 @@ while (i < 5) {
 "#;
     let v = run_global(src, "count");
     assert!(v.is_int(), "result should be Int, got {:?}", v);
-    assert_eq!(v.as_int(), Some(4), "switch case continue must target the loop");
+    assert_eq!(
+        v.as_int(),
+        Some(4),
+        "switch case continue must target the loop"
+    );
 }
 
 #[test]
@@ -40,5 +45,9 @@ while (i < 5) {
 "#;
     let v = run_global(src, "count");
     assert!(v.is_int(), "result should be Int, got {:?}", v);
-    assert_eq!(v.as_int(), Some(4), "switch case break must exit switch only");
+    assert_eq!(
+        v.as_int(),
+        Some(4),
+        "switch case break must exit switch only"
+    );
 }

@@ -1,0 +1,72 @@
+// ═══════════════════════════════════════════════════════════
+// Swarm + Council + Agent + Provider — Tam Çalışan Örnek
+// v0.5.44 — DEEPSEEK_API_KEY env var gerektirir
+// ═══════════════════════════════════════════════════════════
+
+provider DeepSeek {
+    type: "deepseek"
+    api_key: env("DEEPSEEK_API_KEY")
+    model: "deepseek-chat"
+}
+
+// Agent'lar
+agent Researcher {
+    role: "researcher"
+    intent: "Research topics thoroughly"
+    provider: DeepSeek
+}
+
+agent Writer {
+    role: "writer"
+    intent: "Write clear summaries"
+    provider: DeepSeek
+}
+
+agent Reviewer {
+    role: "reviewer"
+    intent: "Review content for accuracy"
+    provider: DeepSeek
+}
+
+// Swarm — paralel agent grubu
+swarm ResearchTeam {
+    agents: ["Researcher", "Writer"]
+    strategy: "parallel"
+}
+
+// Council — oylamalı karar
+council EditorialBoard {
+    members: [
+        { agent_id: "Researcher", role: "investigator" }
+        { agent_id: "Reviewer", role: "judge" }
+    ]
+    rules: ["majority"]
+}
+
+// Council — oylamalı karar
+council EditorialBoard {
+    members: [
+        { agent_id: "Researcher", role: "investigator" }
+        { agent_id: "Reviewer", role: "judge" }
+    ]
+    rules: ["majority"]
+}
+
+// Community — birden fazla council
+community Organization {
+    councils: ["EditorialBoard"]
+    members: ["Researcher", "Writer", "Reviewer"]
+}
+
+// Kullanım
+print("=== Swarm ===")
+let results = ResearchTeam.run("Explain AI in one sentence")
+print(results)
+
+print("=== Council ===")
+let verdict = EditorialBoard.decide("Should we publish the AI article?")
+print(verdict)
+
+print("=== Community ===")
+let all = Organization.run("Quarterly review")
+print(all)

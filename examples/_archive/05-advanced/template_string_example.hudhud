@@ -1,0 +1,17 @@
+// Template String Example
+// Demonstrates string interpolation
+
+var name = "Ali";
+var age = 25;
+var city = "Istanbul";
+
+// Basic interpolation
+var greeting = `Hello, ${name}!`;
+
+// Multiple interpolations
+var info = `Name: ${name}, Age: ${age}, City: ${city}`;
+
+// Expression interpolation
+var x = 10;
+var y = 20;
+var result = `${x} + ${y} = ${x + y}`;

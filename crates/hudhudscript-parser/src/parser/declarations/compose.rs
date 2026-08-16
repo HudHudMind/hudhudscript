@@ -35,8 +35,14 @@ pub fn parse_compose_decl(pair: Pair<Rule>) -> ParseResult<Stmt> {
             }
             Rule::compose_state_rule => {
                 let mut state_inner = rule_pair.into_inner();
-                let field_name = state_inner.next().map(|p| p.as_str().to_string()).unwrap_or_default();
-                let mode_text = state_inner.next().map(|p| p.as_str().trim().to_string()).unwrap_or_default();
+                let field_name = state_inner
+                    .next()
+                    .map(|p| p.as_str().to_string())
+                    .unwrap_or_default();
+                let mode_text = state_inner
+                    .next()
+                    .map(|p| p.as_str().trim().to_string())
+                    .unwrap_or_default();
                 let corr = if mode_text == "correspond" {
                     FieldCorrespondence::Correspond
                 } else {
@@ -68,17 +74,29 @@ fn parse_compose_mode(pair: Pair<Rule>) -> ParseResult<ComposeMode> {
             .map(|p| p.as_str().to_string())
             .collect();
         if subjects.is_empty() {
-            return Err(parse_codes::invalid_syntax("combine requires at least one subject", span));
+            return Err(parse_codes::invalid_syntax(
+                "combine requires at least one subject",
+                span,
+            ));
         }
         Ok(ComposeMode::Combine(subjects))
     } else if raw.starts_with("override") {
-        let subject = inner.first().map(|p| p.as_str().to_string()).unwrap_or_default();
+        let subject = inner
+            .first()
+            .map(|p| p.as_str().to_string())
+            .unwrap_or_default();
         Ok(ComposeMode::Override(subject))
     } else if raw.starts_with("before") {
-        let subject = inner.first().map(|p| p.as_str().to_string()).unwrap_or_default();
+        let subject = inner
+            .first()
+            .map(|p| p.as_str().to_string())
+            .unwrap_or_default();
         Ok(ComposeMode::Before(subject))
     } else if raw.starts_with("after") {
-        let subject = inner.first().map(|p| p.as_str().to_string()).unwrap_or_default();
+        let subject = inner
+            .first()
+            .map(|p| p.as_str().to_string())
+            .unwrap_or_default();
         Ok(ComposeMode::After(subject))
     } else {
         Err(parse_codes::invalid_syntax(

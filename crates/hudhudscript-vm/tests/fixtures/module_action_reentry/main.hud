@@ -1,0 +1,19 @@
+use "iteration_agent_process.hud" as agent_process
+
+let parent_state = { parent_loop_calls: 0 }
+
+function pf0() { return 0 }
+function pf1() { return 0 }
+function pf2() { return 0 }
+function pf3() { return 0 }
+function pf4() { return 0 }
+function pf5() { return 0 }
+function pf6() { return 0 }
+function pf7() { return 0 }
+
+function parent_loop(state, process) {
+    state.parent_loop_calls = state.parent_loop_calls + 1
+    return "parent-loop-called"
+}
+
+let production_result = agent_process.IterationAgentProcess.execute(parent_state)

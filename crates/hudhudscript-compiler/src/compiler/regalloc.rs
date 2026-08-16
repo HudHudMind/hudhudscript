@@ -4,8 +4,8 @@
 //! to each allocator instance. This prevents register aliasing when
 //! nested expressions create their own allocators.
 
-use std::cell::Cell;
 use crate::error::{compile_codes, CompileResult};
+use std::cell::Cell;
 
 /// Registers per allocator instance.
 const REGS_PER_ALLOC: u8 = 32;
@@ -32,9 +32,10 @@ impl RegAlloc {
         let base = NEXT_BASE.with(|c| {
             let current = c.get();
             if current >= MAX_BASE {
-                return Err(compile_codes::generic(
-                    format!("RegAlloc: out of register zones (base={})", current)
-                ));
+                return Err(compile_codes::generic(format!(
+                    "RegAlloc: out of register zones (base={})",
+                    current
+                )));
             }
             c.set(current + REGS_PER_ALLOC);
             Ok(current)
@@ -54,9 +55,10 @@ impl RegAlloc {
             let current = c.get();
             let effective = current.max(floor);
             if effective >= MAX_BASE {
-                return Err(compile_codes::generic(
-                    format!("RegAlloc: out of register zones (base={}, floor={})", current, floor)
-                ));
+                return Err(compile_codes::generic(format!(
+                    "RegAlloc: out of register zones (base={}, floor={})",
+                    current, floor
+                )));
             }
             c.set(effective + REGS_PER_ALLOC);
             Ok(effective)
@@ -91,9 +93,10 @@ impl RegAlloc {
             let reg = self.next;
             self.next += 1;
             if reg >= REGS_PER_ALLOC {
-                return Err(compile_codes::generic(
-                    format!("RegAlloc: out of registers (base={}, next={})", self.base, reg)
-                ));
+                return Err(compile_codes::generic(format!(
+                    "RegAlloc: out of registers (base={}, next={})",
+                    self.base, reg
+                )));
             }
             reg
         };
@@ -108,12 +111,19 @@ impl RegAlloc {
 
     pub fn free_now(&mut self, reg: u8) {
         // B5: local registers live below base — they're permanent, don't free
-        if reg < self.base { return; }
+        if reg < self.base {
+            return;
+        }
         let local = reg - self.base;
         self.free.push(local);
     }
 
-    pub fn get_local_reg(&mut self, _slot: u32, current_ip: usize, last_use_ip: usize) -> CompileResult<u8> {
+    pub fn get_local_reg(
+        &mut self,
+        _slot: u32,
+        current_ip: usize,
+        last_use_ip: usize,
+    ) -> CompileResult<u8> {
         self.alloc(current_ip, last_use_ip)
     }
 
@@ -124,7 +134,12 @@ impl RegAlloc {
     /// Allocate a contiguous block of `count` registers.
     /// Returns the GLOBAL register index of the first register.
     /// All registers in the block are marked as live until `last_use_ip`.
-    pub fn alloc_contiguous(&mut self, count: u8, current_ip: usize, last_use_ip: usize) -> CompileResult<u8> {
+    pub fn alloc_contiguous(
+        &mut self,
+        count: u8,
+        current_ip: usize,
+        last_use_ip: usize,
+    ) -> CompileResult<u8> {
         self.expire(current_ip);
         if count == 0 {
             return Ok(self.base);
@@ -133,9 +148,10 @@ impl RegAlloc {
         // fragmentation with the normal alloc/free cycle.
         let start = self.next;
         if start.saturating_add(count) > REGS_PER_ALLOC {
-            return Err(compile_codes::generic(
-                format!("RegAlloc: out of contiguous registers (base={}, next={}, count={})", self.base, self.next, count)
-            ));
+            return Err(compile_codes::generic(format!(
+                "RegAlloc: out of contiguous registers (base={}, next={}, count={})",
+                self.base, self.next, count
+            )));
         }
         for i in 0..count {
             let local = start + i;

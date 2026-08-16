@@ -1,5 +1,5 @@
 use crate::provider::ProviderError;
-use crate::providers::http_client::{shared_http_client, send_with_retry};
+use crate::providers::http_client::{send_with_retry, shared_http_client};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
@@ -121,10 +121,11 @@ impl DeepSeekProvider {
         };
 
         let url = format!("{}/chat/completions", self.base_url);
-        
-        let effective_timeout = timeout_secs.unwrap_or(crate::provider::types::DEFAULT_PROVIDER_TIMEOUT_SECS);
+
+        let effective_timeout =
+            timeout_secs.unwrap_or(crate::provider::types::DEFAULT_PROVIDER_TIMEOUT_SECS);
         let timeout_duration = std::time::Duration::from_secs(effective_timeout);
-        
+
         let build_req = || {
             self.client
                 .post(&url)

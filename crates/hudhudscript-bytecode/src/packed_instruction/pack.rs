@@ -57,7 +57,7 @@ pub fn pack(instr: &Instruction) -> Option<u32> {
         Instruction::SuperCall { dst: 255, payload_idx, first_arg: 0, arg_count: 0 } => Some(encode(OP_SUPER_CALL, 0, u16::try_from(*payload_idx).ok()?)),
         Instruction::MakeGenerator { payload_idx: idx, .. } => Some(encode(OP_MAKE_GENERATOR, 0, u16::try_from(*idx).ok()?)),
         Instruction::CallSpread(sym) => Some(encode(OP_CALL_SPREAD, 0, sym.0 as u16)),
-        Instruction::MethodCallSpread(sym) => Some(encode(OP_METHOD_CALL_SPREAD, 0, sym.0 as u16)),
+        Instruction::MethodCallSpread { .. } => None, // Unpacked — register operands
         Instruction::LoopBegin(idx) => Some(encode(OP_PUSH_LOOP, 0, u16::try_from(*idx).ok()?)),
         Instruction::MatchVariant(idx) => Some(encode(OP_MATCH_VARIANT, 0, u16::try_from(*idx).ok()?)),
         Instruction::GetStatic(idx) => Some(encode(OP_GET_STATIC, 0, u16::try_from(*idx).ok()?)),

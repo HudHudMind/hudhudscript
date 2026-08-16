@@ -20,8 +20,9 @@ pub fn write_telemetry_json(vm: &VM, path: &Path, ok: bool) -> Result<(), CliErr
     // Create parent dirs if needed
     if let Some(parent) = path.parent() {
         if !parent.as_os_str().is_empty() {
-            fs::create_dir_all(parent)
-                .map_err(|e| CliError::Io(format!("telemetry mkdir {}: {}", parent.display(), e)))?;
+            fs::create_dir_all(parent).map_err(|e| {
+                CliError::Io(format!("telemetry mkdir {}: {}", parent.display(), e))
+            })?;
         }
     }
 
@@ -55,22 +56,44 @@ fn build_telemetry_json(snap: &TelemetrySnapshot, ok: bool) -> serde_json::Value
         .collect();
 
     // P0: fallthrough list — all non-zero
-    let ft_list: Vec<serde_json::Value> = snap.fallthrough_by_opcode.iter().enumerate()
+    let ft_list: Vec<serde_json::Value> = snap
+        .fallthrough_by_opcode
+        .iter()
+        .enumerate()
         .filter(|(_, &c)| c > 0)
         .map(|(i, &c)| serde_json::json!({"op": format!("{}", dense_name(i as u8)), "count": c}))
         .collect();
 
     // P0: unpacked opcode names — top
-    let mut unpacked_list: Vec<(&str, u64)> = snap.unpacked_opcode_counts.iter()
-        .map(|(k, v)| (k.as_str(), *v)).collect();
+    let mut unpacked_list: Vec<(&str, u64)> = snap
+        .unpacked_opcode_counts
+        .iter()
+        .map(|(k, v)| (k.as_str(), *v))
+        .collect();
     unpacked_list.sort_by(|a, b| b.1.cmp(&a.1));
-    let unpacked_json: serde_json::Value = unpacked_list.into_iter()
+    let unpacked_json: serde_json::Value = unpacked_list
+        .into_iter()
         .map(|(k, v)| (k.to_string(), serde_json::Value::from(v)))
         .collect();
 
     let kind_names = [
-        "String", "StringAscii", "Array", "Object", "Function", "Promise", "Class", "Instance",
-        "Data", "Set", "Map", "Generator", "Tool", "Resource", "Option", "Result", "BigInt",
+        "String",
+        "StringAscii",
+        "Array",
+        "Object",
+        "Function",
+        "Promise",
+        "Class",
+        "Instance",
+        "Data",
+        "Set",
+        "Map",
+        "Generator",
+        "Tool",
+        "Resource",
+        "Option",
+        "Result",
+        "BigInt",
     ];
     let mut logical_by_kind = serde_json::Map::new();
     for (i, &count) in snap.alloc_count_by_kind.iter().enumerate() {

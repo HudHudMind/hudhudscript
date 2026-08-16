@@ -307,7 +307,11 @@ impl HostAccessConfig {
                 max_processes: self.exec.max_processes,
             },
             modules: ModulePolicy {
-                default: self.modules.default.map(convert).unwrap_or_else(|| convert(self.default)),
+                default: self
+                    .modules
+                    .default
+                    .map(convert)
+                    .unwrap_or_else(|| convert(self.default)),
                 http: self.modules.http.map(convert),
                 tcp: self.modules.tcp.map(convert),
                 udp: self.modules.udp.map(convert),
@@ -321,7 +325,10 @@ impl HostAccessConfig {
 
         // When the top-level default is deny and no module default is set,
         // inherit deny into modules so the policy is consistent.
-        if policy.modules.default == PDecision::Allow && self.default == AccessDecision::Deny && self.modules.default.is_none() {
+        if policy.modules.default == PDecision::Allow
+            && self.default == AccessDecision::Deny
+            && self.modules.default.is_none()
+        {
             policy.modules.default = PDecision::Deny;
         }
 

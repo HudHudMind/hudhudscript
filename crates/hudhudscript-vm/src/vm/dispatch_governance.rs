@@ -36,6 +36,7 @@ impl crate::vm::VM {
         arg_count: u8,
         first_arg: u8,
         bytecode: &hudhudscript_bytecode::Bytecode,
+        call_site: crate::vm::call_state::DeferredCallSite,
     ) -> hudhudscript_bytecode::error::CompileResult<bool> {
         match name {
             "dispatch_intent" => {
@@ -65,23 +66,30 @@ impl crate::vm::VM {
                 // SOP: try to dispatch via subject instances and action registry
                 let chunk_name = format!("intent::{}.{}", subject_name, intent_name);
                 if let Some(chunk) = bytecode.get_function(&chunk_name) {
-                    let params = chunk.params.clone();
-                    let call_args = intent_args;
-                    let dispatch_result = self.call_chunk_with_captures(
-                        &chunk,
-                        &params,
-                        &call_args,
-                        bytecode,
-                        hudhudscript_bytecode::SymId(hudhudscript_bytecode::interner::intern(&chunk_name).0),
-                        &HashMap::new(),
+                    use crate::vm::call_state::{
+                        GovernanceDispatchState, ReturnSink, VmCallRequest, VmContinuation,
+                    };
+                    let request = Box::new(VmCallRequest {
+                        chunk,
+                        func_sym: hudhudscript_bytecode::SymId(
+                            hudhudscript_bytecode::interner::intern(&chunk_name).0,
+                        ),
+                        args: intent_args,
+                        captures: rustc_hash::FxHashMap::default(),
+                        dst: call_site.dst,
+                        origin_ip: call_site.origin_ip,
+                        receiver_context: None,
+                        return_sink: ReturnSink::Discard,
+                        swallow_error: false,
+                    });
+                    self.schedule_vm_call_with_continuation(
+                        VmContinuation::GovernanceDispatch(GovernanceDispatchState {
+                            dst: call_site.dst,
+                            response: result,
+                        }),
+                        request,
                     )?;
-                    // Merge result into response
-                    if let Some(res_obj) = dispatch_result.as_object() {
-                        for (k, v) in &*res_obj {
-                            result.insert(k.clone(), *v);
-                        }
-                    }
-                    result.insert("dispatched".to_string(), Value16::bool_(true));
+                    return Ok(true);
                 } else {
                     result.insert("dispatched".to_string(), Value16::bool_(false));
                     result.insert(

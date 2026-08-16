@@ -54,6 +54,6 @@ pub mod declarations;
 use declarations::compile_stmt_part2;
 pub mod special;
 use special::compile_stmt_part3;
-pub mod loops;
 pub mod assignment;
 pub mod assignment_fusions;
+pub mod loops;

@@ -45,9 +45,15 @@ pub(crate) enum NumericSlot {
 #[inline(always)]
 pub(crate) fn numeric_slot(v: Option<&Value16>) -> Option<NumericSlot> {
     let val = v?;
-    if let Some(b) = val.as_bigint() { return None; }
-    if let Some(i) = val.as_int() { return Some(NumericSlot::Int(i)); }
-    if let Some(n) = val.as_number() { return Some(NumericSlot::Num(n)); }
+    if let Some(b) = val.as_bigint() {
+        return None;
+    }
+    if let Some(i) = val.as_int() {
+        return Some(NumericSlot::Int(i));
+    }
+    if let Some(n) = val.as_number() {
+        return Some(NumericSlot::Num(n));
+    }
     None
 }
 
@@ -137,6 +143,9 @@ pub(crate) enum StepAction {
         dst: u8,
         ip: usize,
     },
+    /// A VM-to-VM call request already lives in `VM::pending_vm_call`.
+    /// The outer trampoline consumes it; this marker intentionally has no payload.
+    DeferredCall,
     /// Fallback `Break` (no loop header available) — exit the loop with
     /// `hit_return` unchanged (false).
     Break,
@@ -154,6 +163,16 @@ pub(crate) enum StepAction {
     /// (not the enum) to keep `Result<StepAction, CompileError>`
     /// small on the hot dispatch path.
     TailCall,
+}
+
+#[cfg(test)]
+mod step_action_tests {
+    use super::StepAction;
+
+    #[test]
+    fn step_action_stays_compact() {
+        assert!(std::mem::size_of::<StepAction>() <= 32);
+    }
 }
 
 /// Result of one `step_generator_iter` call — signals whether the caller

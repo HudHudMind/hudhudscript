@@ -26,7 +26,10 @@ impl TypeChecker {
         let diag = type_codes::duplicate_variable(name.to_string(), span);
         match self.redeclare_policy {
             RedeclarePolicy::Allow => Ok(()),
-            RedeclarePolicy::Warn => { self.warnings.push(diag); Ok(()) }
+            RedeclarePolicy::Warn => {
+                self.warnings.push(diag);
+                Ok(())
+            }
             RedeclarePolicy::Error => Err(diag),
         }
     }

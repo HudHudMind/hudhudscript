@@ -4,7 +4,10 @@ impl Compiler {
     #[inline]
     pub(crate) fn emit_decl_store(&mut self, kind: &str, name: &str, src: u8) {
         let idx = self.bytecode.add_two_sym_payload(sym(kind).0, sym(name).0);
-        self.bytecode.push_instr(Instruction::DeclStore { payload_idx: idx as u16, src });
+        self.bytecode.push_instr(Instruction::DeclStore {
+            payload_idx: idx as u16,
+            src,
+        });
     }
 
     pub(crate) fn compile_decl_fields(
@@ -17,14 +20,15 @@ impl Compiler {
         // Matches VM's register-based MakeObject (count=0, SetProperty per key).
         {
             let tr = crate::compiler::regalloc::temp_reg();
-            self.bytecode.push_instr(Instruction::MakeObject { dst: tr, count: 0 });
-            self.bytecode.push_move(255, tr );
+            self.bytecode
+                .push_instr(Instruction::MakeObject { dst: tr, count: 0 });
+            self.bytecode.push_move(255, tr);
         }
         for (key, value) in fields {
             // Save current object (in reg 255) to a temp reg before
             // compile_expr overwrites reg 255.
             let obj_reg = crate::compiler::regalloc::temp_reg();
-            self.bytecode.push_move(obj_reg, 255 );
+            self.bytecode.push_move(obj_reg, 255);
 
             self.compile_expr(value)?;
             // compile_expr stores result in register 255.
@@ -38,7 +42,7 @@ impl Compiler {
                 prop_sym: key_sym.0 as u16,
             });
             // Move updated object back to reg 255 for next iteration / DeclStore.
-            self.bytecode.push_move(255, dst_reg );
+            self.bytecode.push_move(255, dst_reg);
         }
         self.emit_decl_store(kind, name, 255);
         Ok(())
@@ -59,7 +63,9 @@ impl Compiler {
                 Literal::Number(n, _) => Value16::number(*n),
                 Literal::Int(i) => Value16::int(*i),
                 Literal::BigInt(s) => {
-                    let big = s.parse::<num_bigint::BigInt>().expect("BigInt literal must be valid decimal");
+                    let big = s
+                        .parse::<num_bigint::BigInt>()
+                        .expect("BigInt literal must be valid decimal");
                     Value16::bigint(big)
                 }
                 Literal::String(s) => Value16::string(s.clone()),
@@ -74,7 +80,8 @@ impl Compiler {
             ),
             Expr::Object { properties, .. } => {
                 use std::collections::HashMap;
-                let mut obj: hudhudscript_bytecode::ObjMap = hudhudscript_bytecode::ObjMap::default();
+                let mut obj: hudhudscript_bytecode::ObjMap =
+                    hudhudscript_bytecode::ObjMap::default();
                 for (k, v) in properties {
                     obj.insert(k.clone(), self.expr_to_const_value(v));
                 }

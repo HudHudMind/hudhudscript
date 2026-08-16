@@ -153,7 +153,7 @@ pub fn create_mcp_client_from_config(
             .map_err(|e| e.to_string())
     };
     crate::vm::provider::block_on_provider(connect_fut)
-    .map_err(|e| format!("Failed to connect MCP client '{}': {}", name, e))
+        .map_err(|e| format!("Failed to connect MCP client '{}': {}", name, e))
 }
 
 /// Runtime-provided hooks needed to execute an MCP tool call.

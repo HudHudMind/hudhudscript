@@ -39,7 +39,9 @@ fn m1_stdio_client_survives_sync_bridge_two_calls() {
         let c = client.clone();
         let name = "echo".to_string();
         let result = hudhudscript_vm::provider_bridge_block_on(async move {
-            c.call_tool(name, Some(args)).await.map_err(|e| e.to_string())
+            c.call_tool(name, Some(args))
+                .await
+                .map_err(|e| e.to_string())
         });
         let response = result.unwrap_or_else(|e| panic!("{}. tools/call başarısız: {}", i + 1, e));
         let text_out = response

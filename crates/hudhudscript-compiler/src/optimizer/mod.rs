@@ -22,9 +22,9 @@ pub enum OptimizationLevel {
 mod constant_fold;
 mod dead_code;
 mod entry;
+pub(crate) mod fuse_helpers;
 mod fuse_slot;
 mod fuse_super;
-pub(crate) mod fuse_helpers;
 mod fuse_super_extra;
 mod inline;
 pub mod inline_compile;

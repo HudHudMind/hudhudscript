@@ -48,8 +48,11 @@ test_push();
     let vm = run(source).expect("Execution should not error");
 
     let v0 = vm.get_variable("r0").expect("r0 not found");
-    assert!((v0.as_number().expect("number") - 0.0).abs() < 1e-10,
-        "push(0) should be 0, got {:?}", v0);
+    assert!(
+        (v0.as_number().expect("number") - 0.0).abs() < 1e-10,
+        "push(0) should be 0, got {:?}",
+        v0
+    );
 
     let v1 = vm.get_variable("r1").expect("r1 not found");
     assert!((v1.as_number().expect("number") - 1.0).abs() < 1e-10);

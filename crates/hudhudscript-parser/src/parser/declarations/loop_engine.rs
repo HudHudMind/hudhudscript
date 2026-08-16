@@ -1,11 +1,14 @@
 //! Loop engineering declaration parsing
 
-use hudhudscript_ast::{Decl, Expr, GateBranchAst, GateTargetAst, LoopItemAst, RunModeAst, StepGateAst, Stmt, ChainLinkAst, ChainTargetAst, AttachStepTarget, GoalSpecAst};
+use hudhudscript_ast::{
+    AttachStepTarget, ChainLinkAst, ChainTargetAst, Decl, Expr, GateBranchAst, GateTargetAst,
+    GoalSpecAst, LoopItemAst, RunModeAst, StepGateAst, Stmt,
+};
 use pest::iterators::Pair;
 
 use crate::error::{parse_codes, ParseResult};
-use crate::parser::{pair_to_span, parse_expression};
 use crate::parser::statement::declarations::parse_block;
+use crate::parser::{pair_to_span, parse_expression};
 use crate::pest_parser::Rule;
 
 pub fn parse_gate_decl(pair: Pair<Rule>) -> ParseResult<Stmt> {
@@ -13,7 +16,8 @@ pub fn parse_gate_decl(pair: Pair<Rule>) -> ParseResult<Stmt> {
     let mut inner = pair.into_inner();
 
     let name = inner
-.next().ok_or_else(|| parse_codes::invalid_syntax("Expected gate name", span))?
+        .next()
+        .ok_or_else(|| parse_codes::invalid_syntax("Expected gate name", span))?
         .as_str()
         .to_string();
 
@@ -84,7 +88,8 @@ pub fn parse_step_decl(pair: Pair<Rule>) -> ParseResult<Stmt> {
     let mut inner = pair.into_inner();
 
     let name = inner
-.next().ok_or_else(|| parse_codes::invalid_syntax("Expected step name", span))?
+        .next()
+        .ok_or_else(|| parse_codes::invalid_syntax("Expected step name", span))?
         .as_str()
         .to_string();
 
@@ -100,14 +105,29 @@ pub fn parse_step_decl(pair: Pair<Rule>) -> ParseResult<Stmt> {
             Rule::block => {
                 let block_stmt = parse_block(item.clone())?;
                 let block_span = pair_to_span(&item);
-                if let Stmt::Block { statements: stmts, .. } = block_stmt {
+                if let Stmt::Block {
+                    statements: stmts, ..
+                } = block_stmt
+                {
                     for s in stmts {
                         match s {
-                            Stmt::Decl(Decl::Gate { name: gname, branches: gbranches, else_target: gelse, .. }) => {
+                            Stmt::Decl(Decl::Gate {
+                                name: gname,
+                                branches: gbranches,
+                                else_target: gelse,
+                                ..
+                            }) => {
                                 if gate.is_some() {
-                                    return Err(parse_codes::invalid_syntax(&format!("step '{}' cannot have more than one gate", name), block_span));
+                                    return Err(parse_codes::invalid_syntax(
+                                        &format!("step '{}' cannot have more than one gate", name),
+                                        block_span,
+                                    ));
                                 }
-                                gate = Some(StepGateAst { name: gname, branches: gbranches, else_target: gelse });
+                                gate = Some(StepGateAst {
+                                    name: gname,
+                                    branches: gbranches,
+                                    else_target: gelse,
+                                });
                             }
                             other => body.push(other),
                         }
@@ -126,7 +146,10 @@ pub fn parse_step_decl(pair: Pair<Rule>) -> ParseResult<Stmt> {
                 }) = stmt
                 {
                     if gate.is_some() {
-                        return Err(parse_codes::invalid_syntax(&format!("step '{}' cannot have more than one gate", name), item_span));
+                        return Err(parse_codes::invalid_syntax(
+                            &format!("step '{}' cannot have more than one gate", name),
+                            item_span,
+                        ));
                     }
                     gate = Some(StepGateAst {
                         name: gname,
@@ -139,11 +162,24 @@ pub fn parse_step_decl(pair: Pair<Rule>) -> ParseResult<Stmt> {
                 // Statement inside step body — parse and add to body (gates extracted separately)
                 let stmt_span = pair_to_span(&item);
                 if let Ok(Some(stmt)) = super::super::statement::parse_statement(item) {
-                    if let Stmt::Decl(Decl::Gate { name: gname, branches: gbranches, else_target: gelse, .. }) = &stmt {
+                    if let Stmt::Decl(Decl::Gate {
+                        name: gname,
+                        branches: gbranches,
+                        else_target: gelse,
+                        ..
+                    }) = &stmt
+                    {
                         if gate.is_some() {
-                            return Err(parse_codes::invalid_syntax(&format!("step '{}' cannot have more than one gate", name), stmt_span));
+                            return Err(parse_codes::invalid_syntax(
+                                &format!("step '{}' cannot have more than one gate", name),
+                                stmt_span,
+                            ));
                         }
-                        gate = Some(StepGateAst { name: gname.clone(), branches: gbranches.clone(), else_target: gelse.clone() });
+                        gate = Some(StepGateAst {
+                            name: gname.clone(),
+                            branches: gbranches.clone(),
+                            else_target: gelse.clone(),
+                        });
                     } else {
                         body.push(stmt);
                     }
@@ -167,7 +203,8 @@ pub fn parse_loop_decl(pair: Pair<Rule>) -> ParseResult<Stmt> {
     let mut inner = pair.into_inner();
 
     let name = inner
-.next().ok_or_else(|| parse_codes::invalid_syntax("Expected loop name", span))?
+        .next()
+        .ok_or_else(|| parse_codes::invalid_syntax("Expected loop name", span))?
         .as_str()
         .to_string();
 
@@ -186,17 +223,25 @@ pub fn parse_loop_decl(pair: Pair<Rule>) -> ParseResult<Stmt> {
                 for gp in item.into_inner() {
                     if gp.as_rule() == Rule::goal_pair {
                         let mut parts = gp.into_inner();
-                        let key = parts.next().map(|p| p.as_str().to_string()).unwrap_or_default();
+                        let key = parts
+                            .next()
+                            .map(|p| p.as_str().to_string())
+                            .unwrap_or_default();
                         let val_pair = parts.next();
                         if key == "metric" {
-                            metric_name = val_pair.map(|p| p.as_str().to_string()).unwrap_or_default();
+                            metric_name =
+                                val_pair.map(|p| p.as_str().to_string()).unwrap_or_default();
                         } else if key == "target" {
                             target = val_pair.and_then(|p| parse_expression(p).ok());
                         }
                     }
                 }
                 if !metric_name.is_empty() {
-                    goal = Some(GoalSpecAst { metric: metric_name, target: target.unwrap_or(Expr::Literal(hudhudscript_ast::Literal::Int(0), span)) });
+                    goal = Some(GoalSpecAst {
+                        metric: metric_name,
+                        target: target
+                            .unwrap_or(Expr::Literal(hudhudscript_ast::Literal::Int(0), span)),
+                    });
                 }
             }
             _ => {
@@ -280,25 +325,40 @@ fn parse_run_mode(pair: Pair<Rule>, span: hudhudscript_ast::Span) -> ParseResult
         _ => {}
     }
     // Compound modes: times_mode / until_mode have non-silent inner rules
-    let inner = pair.into_inner().next()
+    let inner = pair
+        .into_inner()
+        .next()
         .ok_or_else(|| parse_codes::invalid_syntax(format!("Unknown run mode: {}", s), span))?;
     match inner.as_rule() {
         Rule::times_mode => {
             // times_kw is silent; only non-silent child is times_int
-            let num_pair = inner.into_inner().next()
+            let num_pair = inner
+                .into_inner()
+                .next()
                 .ok_or_else(|| parse_codes::invalid_syntax("Expected integer in times(N)", span))?;
-            let n: u64 = num_pair.as_str().parse().map_err(|_|
-                parse_codes::invalid_syntax(format!("Invalid integer in times({}): expected non-negative integer", num_pair.as_str()), span))?;
+            let n: u64 = num_pair.as_str().parse().map_err(|_| {
+                parse_codes::invalid_syntax(
+                    format!(
+                        "Invalid integer in times({}): expected non-negative integer",
+                        num_pair.as_str()
+                    ),
+                    span,
+                )
+            })?;
             Ok(RunModeAst::Times(n))
         }
         Rule::until_mode => {
             // until_kw is silent; only non-silent child is expression
-            let expr_pair = inner.into_inner().next()
-                .ok_or_else(|| parse_codes::invalid_syntax("Expected expression in until(expr)", span))?;
+            let expr_pair = inner.into_inner().next().ok_or_else(|| {
+                parse_codes::invalid_syntax("Expected expression in until(expr)", span)
+            })?;
             let expr = parse_expression(expr_pair)?;
             Ok(RunModeAst::Until(expr))
         }
-        _ => Err(parse_codes::invalid_syntax(format!("Unknown run mode: {}", s), span)),
+        _ => Err(parse_codes::invalid_syntax(
+            format!("Unknown run mode: {}", s),
+            span,
+        )),
     }
 }
 
@@ -307,7 +367,8 @@ pub fn parse_chain_decl(pair: Pair<Rule>) -> ParseResult<Stmt> {
     let mut inner = pair.into_inner();
 
     let name = inner
-.next().ok_or_else(|| parse_codes::invalid_syntax("Expected chain name", span))?
+        .next()
+        .ok_or_else(|| parse_codes::invalid_syntax("Expected chain name", span))?
         .as_str()
         .to_string();
 
@@ -320,28 +381,35 @@ pub fn parse_chain_decl(pair: Pair<Rule>) -> ParseResult<Stmt> {
             }
             Rule::chain_link => {
                 let mut parts = item.into_inner();
-                let loop_pair = parts.next()
-                    .ok_or_else(|| parse_codes::invalid_syntax("Expected loop in chain link", span))?;
+                let loop_pair = parts.next().ok_or_else(|| {
+                    parse_codes::invalid_syntax("Expected loop in chain link", span)
+                })?;
                 let loop_stmt = parse_loop_decl(loop_pair)?;
                 let mut on_done = ChainTargetAst::Next;
                 let mut on_fail = ChainTargetAst::ChainFail;
                 for p in parts {
                     match p.as_rule() {
                         Rule::chain_on_done => {
-                            let target_pair = p.into_inner().next()
-                                .ok_or_else(|| parse_codes::invalid_syntax("Expected on_done target", span))?;
+                            let target_pair = p.into_inner().next().ok_or_else(|| {
+                                parse_codes::invalid_syntax("Expected on_done target", span)
+                            })?;
                             on_done = parse_chain_target(&target_pair);
                         }
                         Rule::chain_on_fail => {
-                            let target_pair = p.into_inner().next()
-                                .ok_or_else(|| parse_codes::invalid_syntax("Expected on_fail target", span))?;
+                            let target_pair = p.into_inner().next().ok_or_else(|| {
+                                parse_codes::invalid_syntax("Expected on_fail target", span)
+                            })?;
                             on_fail = parse_chain_target(&target_pair);
                         }
                         _ => {}
                     }
                 }
                 if let Stmt::Decl(loop_decl) = loop_stmt {
-                    let loop_name = if let Decl::Loop { name, .. } = &loop_decl { name.clone() } else { String::new() };
+                    let loop_name = if let Decl::Loop { name, .. } = &loop_decl {
+                        name.clone()
+                    } else {
+                        String::new()
+                    };
                     links.push(ChainLinkAst {
                         loop_name: loop_name.clone(),
                         inline_loop: Some(Box::new(loop_decl)),
@@ -373,9 +441,11 @@ pub fn parse_attach_step_decl(pair: Pair<Rule>) -> ParseResult<Stmt> {
         match item.as_rule() {
             Rule::step_with_gate => {
                 let mut parts = item.into_inner();
-                let step = parts.next()
+                let step = parts
+                    .next()
                     .ok_or_else(|| parse_codes::invalid_syntax("Expected step name", span))?
-                    .as_str().to_string();
+                    .as_str()
+                    .to_string();
                 let mut gate = None;
                 for p in parts {
                     if p.as_rule() == Rule::gate_kw {
@@ -393,7 +463,11 @@ pub fn parse_attach_step_decl(pair: Pair<Rule>) -> ParseResult<Stmt> {
         }
     }
 
-    Ok(Stmt::Decl(Decl::AttachStep { targets, loop_name, span }))
+    Ok(Stmt::Decl(Decl::AttachStep {
+        targets,
+        loop_name,
+        span,
+    }))
 }
 
 fn parse_chain_target(pair: &Pair<Rule>) -> ChainTargetAst {
@@ -413,7 +487,8 @@ pub fn parse_run_stmt(pair: Pair<Rule>) -> ParseResult<Stmt> {
     let span = pair_to_span(&pair);
     let mut inner = pair.into_inner();
     let name = inner
-.next().ok_or_else(|| parse_codes::invalid_syntax("Expected loop name", span))?
+        .next()
+        .ok_or_else(|| parse_codes::invalid_syntax("Expected loop name", span))?
         .as_str()
         .to_string();
     Ok(Stmt::Decl(Decl::RunLoop { name, span }))
@@ -422,6 +497,10 @@ pub fn parse_run_stmt(pair: Pair<Rule>) -> ParseResult<Stmt> {
 pub fn parse_run_chain_stmt(pair: Pair<Rule>) -> ParseResult<Stmt> {
     let span = pair_to_span(&pair);
     let mut inner = pair.into_inner();
-    let name = inner.next().ok_or_else(|| parse_codes::invalid_syntax("Expected chain name", span))?.as_str().to_string();
+    let name = inner
+        .next()
+        .ok_or_else(|| parse_codes::invalid_syntax("Expected chain name", span))?
+        .as_str()
+        .to_string();
     Ok(Stmt::Decl(Decl::RunChain { name, span }))
 }

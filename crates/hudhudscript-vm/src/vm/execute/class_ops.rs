@@ -26,26 +26,35 @@ impl VM {
                     .iter()
                     .map(|s| bytecode.resolve_symbol(s.0))
                     .collect();
-                let method_access: std::collections::HashMap<hudhudscript_bytecode::SymId, u8> = methods
-                    .iter()
-                    .enumerate()
-                    .map(|(i, m)| {
-                        (
-                            hudhudscript_bytecode::SymId(hudhudscript_bytecode::interner::intern(m).0),
-                            payload.method_access.get(i).copied().unwrap_or(0),
-                        )
-                    })
-                    .collect();
+                let method_access: std::collections::HashMap<hudhudscript_bytecode::SymId, u8> =
+                    methods
+                        .iter()
+                        .enumerate()
+                        .map(|(i, m)| {
+                            (
+                                hudhudscript_bytecode::SymId(
+                                    hudhudscript_bytecode::interner::intern(m).0,
+                                ),
+                                payload.method_access.get(i).copied().unwrap_or(0),
+                            )
+                        })
+                        .collect();
                 self.classes
                     .insert(name.clone(), (parent.clone(), methods.clone()));
                 let mut method_map = hudhudscript_bytecode::ObjMap::default();
                 for method in &methods {
                     let chunk_name = format!("{}::{}", name, method);
                     let chunk_sym = hudhudscript_bytecode::interner::intern(&chunk_name);
-                    let idx = bytecode.get_function_idx(&chunk_name)
-                        .ok_or_else(|| Self::runtime_error_with_pos(
-                            &format!("Compiler invariant: method chunk '{}' not registered", chunk_name),
-                            bytecode, ip))?;
+                    let idx = bytecode.get_function_idx(&chunk_name).ok_or_else(|| {
+                        Self::runtime_error_with_pos(
+                            &format!(
+                                "Compiler invariant: method chunk '{}' not registered",
+                                chunk_name
+                            ),
+                            bytecode,
+                            ip,
+                        )
+                    })?;
                     let packed = ((idx as i64) << 32) | (chunk_sym.0 as i64);
                     method_map.insert(method.clone(), Value16::int(packed));
                 }
@@ -159,16 +168,24 @@ impl VM {
                     instance.extend(error_fields);
                 }
 
-                // Run constructor if available
+                // Run constructor if available — G06A: deferred frame with a
+                // constructor continuation; no nested driver, no direct `this`
+                // global setup (the receiver context owns `this`).
                 let ctor_name = format!("{}::constructor", class_name);
                 if let Some(chunk) = bytecode.get_function(&ctor_name) {
-                    self.set_var("this", Value16::object(instance.clone()))?;
-                    self.class_context_stack.push(hudhudscript_bytecode::SymId(
-                        hudhudscript_bytecode::interner::intern(&class_name).0));
-                    let _result =
-                        self.call_chunk(&chunk, &chunk.params, &args, bytecode, hudhudscript_bytecode::SymId(hudhudscript_bytecode::interner::intern(&ctor_name).0))?;
-                    self.class_context_stack.pop();
-                    instance = self.collect_this_fields(instance);
+                    let ctor_sym = hudhudscript_bytecode::SymId(
+                        hudhudscript_bytecode::interner::intern(&ctor_name).0,
+                    );
+                    self.schedule_constructor_call(
+                        chunk,
+                        ctor_sym,
+                        args,
+                        class_name,
+                        class_val,
+                        Value16::object(instance),
+                        ip,
+                    )?;
+                    return Ok(StepAction::DeferredCall);
                 }
                 let inst_data = InstanceData {
                     class_name,
@@ -184,7 +201,10 @@ impl VM {
             // `get_property_op` to keep the main match frame small.
             // GetProperty: register-based property access with inline cache
             Instruction::GetProperty { dst, obj, prop_sym } => {
-                #[cfg(feature = "telemetry")] { self.telemetry.site_property_count += 1; }
+                #[cfg(feature = "telemetry")]
+                {
+                    self.telemetry.site_property_count += 1;
+                }
                 let obj_val = self.registers[*obj as usize];
                 let result = self.get_property_ic(
                     obj_val,
@@ -207,53 +227,80 @@ impl VM {
                 // Handle SOP subject_instance state update BEFORE mutable borrow
                 let obj_val = self.registers[*obj as usize];
                 if let Some(map) = obj_val.as_object() {
-                    if map.get(&hudhudscript_bytecode::well_known::wk().type_).and_then(|v| v.as_string()).as_deref()
+                    if map
+                        .get(&hudhudscript_bytecode::well_known::wk().type_)
+                        .and_then(|v| v.as_string())
+                        .as_deref()
                         == Some("subject_instance")
                     {
                         let field = bytecode.resolve_symbol(*prop_sym as u32);
-                        if let Some(id) = map.get(&hudhudscript_bytecode::well_known::wk().instance_id).and_then(|v| v.as_string()) {
+                        if let Some(id) = map
+                            .get(&hudhudscript_bytecode::well_known::wk().instance_id)
+                            .and_then(|v| v.as_string())
+                        {
                             if let Some(inst) = self.subject_instances.get_mut(&id) {
                                 // (... SOP field correspondence logic unchanged ...)
                                 let template = inst.template_name.clone();
                                 let compose_key = format!("{}::state::{}", template, field);
-                                let corr = self.field_correspondences.get(&compose_key).copied()
+                                let corr = self
+                                    .field_correspondences
+                                    .get(&compose_key)
+                                    .copied()
                                     .unwrap_or(crate::vm::sop_types::FieldCorrespondence::Separate);
-                                let active_view = map.get(&hudhudscript_bytecode::well_known::wk().view_name)
-                                    .and_then(|v| v.as_string()).map(|s| s.to_string());
+                                let active_view = map
+                                    .get(&hudhudscript_bytecode::well_known::wk().view_name)
+                                    .and_then(|v| v.as_string())
+                                    .map(|s| s.to_string());
                                 match corr {
                                     crate::vm::sop_types::FieldCorrespondence::Correspond => {
-                                        if inst.state.contains_key(&field) { inst.state.insert(field.clone(), value); }
+                                        if inst.state.contains_key(&field) {
+                                            inst.state.insert(field.clone(), value);
+                                        }
                                         for (_, view_state) in inst.views.iter_mut() {
-                                            if view_state.contains_key(&field) { view_state.insert(field.clone(), value); }
+                                            if view_state.contains_key(&field) {
+                                                view_state.insert(field.clone(), value);
+                                            }
                                         }
                                     }
                                     crate::vm::sop_types::FieldCorrespondence::Separate => {
                                         if let Some(ref view_name) = active_view {
-                                            if let Some(view_state) = inst.views.get_mut(view_name) {
+                                            if let Some(view_state) = inst.views.get_mut(view_name)
+                                            {
                                                 view_state.insert(field.clone(), value);
                                             } else if inst.state.contains_key(&field) {
                                                 inst.state.insert(field.clone(), value);
-                                            } else { inst.state.insert(field.clone(), value); }
+                                            } else {
+                                                inst.state.insert(field.clone(), value);
+                                            }
                                         } else if inst.state.contains_key(&field) {
                                             inst.state.insert(field.clone(), value);
                                         } else {
-                                            let mut view_names: Vec<String> = inst.views.keys().cloned().collect();
+                                            let mut view_names: Vec<String> =
+                                                inst.views.keys().cloned().collect();
                                             view_names.sort();
                                             let mut written = false;
                                             for view_name in &view_names {
-                                                if let Some(view_state) = inst.views.get_mut(view_name) {
+                                                if let Some(view_state) =
+                                                    inst.views.get_mut(view_name)
+                                                {
                                                     if view_state.contains_key(&field) {
-                                                        view_state.insert(field.clone(), value); written = true; break;
+                                                        view_state.insert(field.clone(), value);
+                                                        written = true;
+                                                        break;
                                                     }
                                                 }
                                             }
-                                            if !written { inst.state.insert(field.clone(), value); }
+                                            if !written {
+                                                inst.state.insert(field.clone(), value);
+                                            }
                                         }
                                     }
                                 }
                             } else {
                                 return Err(compile_codes::runtime_error(format!(
-                                    "Cannot set property '{}' on despawned subject '{}'", field, id)));
+                                    "Cannot set property '{}' on despawned subject '{}'",
+                                    field, id
+                                )));
                             }
                         }
                     }
@@ -265,7 +312,9 @@ impl VM {
                 } else if obj_mut.as_object_mut().is_some() {
                     obj_mut.as_object_mut().unwrap().insert(prop_sym_id, value);
                 } else {
-                    return Err(compile_codes::runtime_error("Cannot set property on non-object".to_string()));
+                    return Err(compile_codes::runtime_error(
+                        "Cannot set property on non-object".to_string(),
+                    ));
                 }
                 self.registers[*dst as usize] = *obj_mut;
             }
@@ -275,14 +324,23 @@ impl VM {
                 let obj_val = self.registers[*obj as usize];
                 // B1: SOP subject instance — read/write via subject_instances, not ObjMap
                 if let Some(map) = obj_val.as_object() {
-                    if map.get(&hudhudscript_bytecode::well_known::wk().type_).and_then(|v| v.as_string()).as_deref()
+                    if map
+                        .get(&hudhudscript_bytecode::well_known::wk().type_)
+                        .and_then(|v| v.as_string())
+                        .as_deref()
                         == Some("subject_instance")
                     {
-                        if let Some(id) = map.get(&hudhudscript_bytecode::well_known::wk().instance_id).and_then(|v| v.as_string()) {
+                        if let Some(id) = map
+                            .get(&hudhudscript_bytecode::well_known::wk().instance_id)
+                            .and_then(|v| v.as_string())
+                        {
                             if let Some(inst) = self.subject_instances.get_mut(&id) {
-                                let current = inst.state.get(&field).copied().unwrap_or(Value16::int(0));
+                                let current =
+                                    inst.state.get(&field).copied().unwrap_or(Value16::int(0));
                                 let result = crate::vm::bigint_arith::int_sub(current, sub)
-                                    .map_err(|code| compile_codes::runtime_error(code.to_string()))?;
+                                    .map_err(|code| {
+                                        compile_codes::runtime_error(code.to_string())
+                                    })?;
                                 inst.state.insert(field.clone(), result);
                                 // Also update proxy ObjMap so GetProperty sees the new value
                                 let obj_mut = &mut self.registers[*obj as usize];

@@ -1,0 +1,16 @@
+let loop_storage_marker = false
+let loop_storage_counter = 0
+
+loop shared_storage_guard mode: times(1) {
+    step mutate_shared_state {
+        loop_storage_marker = true
+        loop_storage_counter = loop_storage_counter + 1
+
+        gate storage_contract {
+            when loop_storage_counter == 1 -> done
+            else -> fail
+        }
+    }
+}
+
+run loop shared_storage_guard

@@ -1,0 +1,55 @@
+// Basic Server Test - Server configuration simulation
+
+// Test 1: Server configuration object
+var serverConfig = {
+    name: "test-server",
+    transport: "stdio",
+    command: "node",
+    status: "configured"
+};
+
+print("Server Name: " + serverConfig.name);
+print("Transport: " + serverConfig.transport);
+print("Command: " + serverConfig.command);
+print("Status: " + serverConfig.status);
+
+// Test 2: Multiple server configurations
+var server1 = {
+    name: "filesystem",
+    transport: "stdio",
+    enabled: true
+};
+
+var server2 = {
+    name: "database",
+    transport: "sse",
+    enabled: false
+};
+
+var server3 = {
+    name: "api",
+    transport: "stdio",
+    enabled: true
+};
+
+// Convert boolean to string for printing
+var enabled1 = "true";
+var enabled2 = "false";
+var enabled3 = "true";
+
+print("Server 1: " + server1.name + " - Enabled: " + enabled1);
+print("Server 2: " + server2.name + " - Enabled: " + enabled2);
+print("Server 3: " + server3.name + " - Enabled: " + enabled3);
+
+// Test 3: Server connection simulation
+var connection = {
+    connected: true,
+    server: serverConfig.name,
+    timestamp: 1234567890
+};
+
+var connStatus = "true";
+print("Connection status: " + connStatus);
+print("Connected to: " + connection.server);
+
+print("✅ Basic Server test completed");

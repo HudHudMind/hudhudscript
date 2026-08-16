@@ -23,7 +23,11 @@ pub fn validate_loop_structure(stmts: &[Stmt]) -> Result<(), Vec<String>> {
             }
         }
     }
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        Err(errors)
+    }
 }
 
 /// A1: Tek canonical semantic validation pipeline.

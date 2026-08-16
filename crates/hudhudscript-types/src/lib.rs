@@ -14,8 +14,8 @@ pub use contracts::{
 };
 pub use inference::TypeInference;
 pub use semantics::{default_ownership, OwnedType, Ownership};
-pub use types::*;
 pub use types::error_codes as type_codes;
+pub use types::*;
 
 /// Type error — type alias for the unified [`hudhudscript_errors::Error`].
 ///

@@ -248,4 +248,3 @@ pub(super) fn parse_template_string(pair: Pair<Rule>) -> ParseResult<Expr> {
 
     Ok(Expr::TemplateString { parts, span })
 }
-

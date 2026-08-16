@@ -32,12 +32,12 @@ pub(super) struct FloopPlan {
 }
 
 impl FloopPlan {
-    pub(super) fn new(
-        pre: Vec<(String, u8, u8)>,
-        slots: Vec<(String, u8)>,
-        temp_base: u8,
-    ) -> Self {
-        Self { pre, slots, temp_base }
+    pub(super) fn new(pre: Vec<(String, u8, u8)>, slots: Vec<(String, u8)>, temp_base: u8) -> Self {
+        Self {
+            pre,
+            slots,
+            temp_base,
+        }
     }
 }
 
@@ -78,11 +78,17 @@ pub(super) fn enter(
     }
     let temp_base = (n_vars + consts.len()) as u8;
     for (_name, fslot, reg) in &plan.pre {
-        target.ct_emit(Instruction::FLoadNum { fslot: *fslot, src: *reg });
+        target.ct_emit(Instruction::FLoadNum {
+            fslot: *fslot,
+            src: *reg,
+        });
     }
     for (bits, slot) in &consts {
         let idx = target.ct_emit_num_const(f64::from_bits(*bits));
-        target.ct_emit(Instruction::FConst { d: *slot, const_idx: idx as u16 });
+        target.ct_emit(Instruction::FConst {
+            d: *slot,
+            const_idx: idx as u16,
+        });
     }
     target.ct_floop_push(plan.slots.clone(), consts, temp_base);
     Some(plan)
@@ -105,7 +111,11 @@ fn collect_f_consts(stmt: &Stmt, slots: &HashSet<String>, out: &mut Vec<u64>) {
                 }
             }
         }
-        Stmt::If { then_branch, else_branch, .. } => {
+        Stmt::If {
+            then_branch,
+            else_branch,
+            ..
+        } => {
             collect_f_consts(then_branch, slots, out);
             if let Some(e) = else_branch {
                 collect_f_consts(e, slots, out);
@@ -133,12 +143,20 @@ fn collect_expr_consts(expr: &Expr, out: &mut Vec<u64>) {
             collect_expr_consts(left, out);
             collect_expr_consts(right, out);
         }
-        Expr::Unary { op: UnaryOp::Neg, expr: inner, .. } => {
+        Expr::Unary {
+            op: UnaryOp::Neg,
+            expr: inner,
+            ..
+        } => {
             // Neg, hoist edilmiş -1.0 ile FMul olarak emit edilir.
             push((-1.0f64).to_bits(), out);
             collect_expr_consts(inner, out);
         }
-        Expr::Unary { op: UnaryOp::Plus, expr: inner, .. } => {
+        Expr::Unary {
+            op: UnaryOp::Plus,
+            expr: inner,
+            ..
+        } => {
             collect_expr_consts(inner, out);
         }
         Expr::Call { args, .. } if math_intrinsic(expr).is_some() => {
@@ -153,7 +171,10 @@ pub(super) fn exit(target: &mut impl CompileTarget, plan: Option<FloopPlan>) {
     if let Some(plan) = plan {
         target.ct_floop_pop();
         for (_name, fslot, reg) in &plan.pre {
-            target.ct_emit(Instruction::FStoreNum { dst: *reg, fslot: *fslot });
+            target.ct_emit(Instruction::FStoreNum {
+                dst: *reg,
+                fslot: *fslot,
+            });
         }
     }
 }
@@ -238,18 +259,28 @@ fn emit_operand(target: &mut impl CompileTarget, expr: &Expr) -> CompileResult<F
             .ct_floop_const_slot((*i as f64).to_bits())
             .map(FRef::Fixed)
             .ok_or_else(|| f_bug("hoist edilmemiş sabit")),
-        Expr::Binary { left, op, right, .. }
-            if matches!(op, BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div) =>
+        Expr::Binary {
+            left, op, right, ..
+        } if matches!(
+            op,
+            BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div
+        ) =>
         {
             let a = emit_operand(target, left)?;
             let b = emit_operand(target, right)?;
             f_free(target, b);
             f_free(target, a);
-            let d = target.ct_floop_temp().ok_or_else(|| f_bug("geçici slot tükendi"))?;
+            let d = target
+                .ct_floop_temp()
+                .ok_or_else(|| f_bug("geçici slot tükendi"))?;
             target.ct_emit(f_binop(op, d, a.slot(), b.slot()));
             Ok(FRef::Temp(d))
         }
-        Expr::Unary { op: UnaryOp::Neg, expr: inner, .. } => {
+        Expr::Unary {
+            op: UnaryOp::Neg,
+            expr: inner,
+            ..
+        } => {
             // -v yerine v * -1.0: işaretli-sıfır ve sonsuz semantiği birebir
             // (0.0 - v, +0.0 için -0.0 ÜRETMEZ — Neg eder). -1.0 hoist'li.
             let neg1 = target
@@ -257,16 +288,28 @@ fn emit_operand(target: &mut impl CompileTarget, expr: &Expr) -> CompileResult<F
                 .ok_or_else(|| f_bug("hoist edilmemiş -1.0"))?;
             let a = emit_operand(target, inner)?;
             f_free(target, a);
-            let d = target.ct_floop_temp().ok_or_else(|| f_bug("geçici slot tükendi"))?;
-            target.ct_emit(Instruction::FMul { d, a: a.slot(), b: neg1 });
+            let d = target
+                .ct_floop_temp()
+                .ok_or_else(|| f_bug("geçici slot tükendi"))?;
+            target.ct_emit(Instruction::FMul {
+                d,
+                a: a.slot(),
+                b: neg1,
+            });
             Ok(FRef::Temp(d))
         }
-        Expr::Unary { op: UnaryOp::Plus, expr: inner, .. } => emit_operand(target, inner),
+        Expr::Unary {
+            op: UnaryOp::Plus,
+            expr: inner,
+            ..
+        } => emit_operand(target, inner),
         Expr::Call { args, .. } if math_intrinsic(expr).is_some() => {
             let property = math_intrinsic(expr).expect("az önce kontrol edildi");
             let a = emit_operand(target, &args[0])?;
             f_free(target, a);
-            let d = target.ct_floop_temp().ok_or_else(|| f_bug("geçici slot tükendi"))?;
+            let d = target
+                .ct_floop_temp()
+                .ok_or_else(|| f_bug("geçici slot tükendi"))?;
             target.ct_emit(f_intrinsic(property, d, a.slot()));
             Ok(FRef::Temp(d))
         }
@@ -302,11 +345,18 @@ fn emit_f(target: &mut impl CompileTarget, expr: &Expr, dst: u8) -> CompileResul
         Expr::Identifier(..) | Expr::Literal(..) => {
             let r = emit_operand(target, expr)?;
             if r.slot() != dst {
-                target.ct_emit(Instruction::FMove { d: dst, s: r.slot() });
+                target.ct_emit(Instruction::FMove {
+                    d: dst,
+                    s: r.slot(),
+                });
             }
         }
-        Expr::Binary { left, op, right, .. }
-            if matches!(op, BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div) =>
+        Expr::Binary {
+            left, op, right, ..
+        } if matches!(
+            op,
+            BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div
+        ) =>
         {
             let a = emit_operand(target, left)?;
             let b = emit_operand(target, right)?;
@@ -314,15 +364,27 @@ fn emit_f(target: &mut impl CompileTarget, expr: &Expr, dst: u8) -> CompileResul
             f_free(target, a);
             target.ct_emit(f_binop(op, dst, a.slot(), b.slot()));
         }
-        Expr::Unary { op: UnaryOp::Neg, expr: inner, .. } => {
+        Expr::Unary {
+            op: UnaryOp::Neg,
+            expr: inner,
+            ..
+        } => {
             let neg1 = target
                 .ct_floop_const_slot((-1.0f64).to_bits())
                 .ok_or_else(|| f_bug("hoist edilmemiş -1.0"))?;
             let a = emit_operand(target, inner)?;
             f_free(target, a);
-            target.ct_emit(Instruction::FMul { d: dst, a: a.slot(), b: neg1 });
+            target.ct_emit(Instruction::FMul {
+                d: dst,
+                a: a.slot(),
+                b: neg1,
+            });
         }
-        Expr::Unary { op: UnaryOp::Plus, expr: inner, .. } => emit_f(target, inner, dst)?,
+        Expr::Unary {
+            op: UnaryOp::Plus,
+            expr: inner,
+            ..
+        } => emit_f(target, inner, dst)?,
         Expr::Call { args, .. } if math_intrinsic(expr).is_some() => {
             let property = math_intrinsic(expr).expect("az önce kontrol edildi");
             let a = emit_operand(target, &args[0])?;
@@ -339,7 +401,10 @@ fn emit_f(target: &mut impl CompileTarget, expr: &Expr, dst: u8) -> CompileResul
 pub(super) fn math_intrinsic(expr: &Expr) -> Option<&str> {
     if let Expr::Call { callee, args, .. } = expr {
         if args.len() == 1 && !matches!(args[0], Expr::Spread { .. }) {
-            if let Expr::Member { object, property, .. } = callee.as_ref() {
+            if let Expr::Member {
+                object, property, ..
+            } = callee.as_ref()
+            {
                 if matches!(property.as_str(), "sin" | "cos" | "sqrt")
                     && matches!(object.as_ref(), Expr::Identifier(n, _) if n == "Math")
                 {

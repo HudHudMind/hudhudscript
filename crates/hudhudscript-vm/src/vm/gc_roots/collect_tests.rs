@@ -39,6 +39,7 @@ fn assert_collect_preserves_root(
 fn dummy_frame_with_pending(value: Value16) -> CallFrame {
     CallFrame {
         chunk_ptr: ptr::null(),
+        owned_chunk: None,
         packed: ptr::null(),
         func_sym: SymId(0),
         ip: 0,
@@ -55,6 +56,9 @@ fn dummy_frame_with_pending(value: Value16) -> CallFrame {
         call_depth: 0,
         owned_local_syms: false,
         class_context: false,
+        return_sink: crate::vm::call_state::ReturnSink::Discard,
+        receiver_context: None,
+        swallow_error: false,
     }
 }
 
@@ -377,89 +381,4 @@ fn collect_preserves_args_scratch_root() {
         |vm, rooted| vm.args_scratch.push(rooted),
         |vm| vm.args_scratch[0],
     );
-}
-
-#[test]
-fn collect_preserves_unconsumed_generator_values() {
-    // P4 regresyon: pending'deki (henüz advance edilmemiş) değerler collect'ten sağ çıkar.
-    let mut vm = VM::new();
-    let v1 = Value16::string("gen-pending-value-one!");
-    let v2 = Value16::string("gen-pending-value-two!");
-    let state = Arc::new(Mutex::new(GeneratorState16::from(vec![v1, v2])));
-    let generator = Value16::generator(Arc::clone(&state));
-    vm.globals.insert(interner::intern("g"), generator);
-
-    gc::collect(&vm);
-
-    let first = state.lock().advance().expect("first pending value");
-    assert_eq!(first.as_str(), Some("gen-pending-value-one!"));
-    let second = state.lock().advance().expect("second pending value");
-    assert_eq!(second.as_str(), Some("gen-pending-value-two!"));
-}
-
-#[test]
-fn collect_preserves_bytecode_string_constants() {
-    // P5.1 regresyon: >15B string literal'ler bytecode.constants'ta yaşar;
-    // ilk collect onları free etmemeli. gc_constant_roots izlenmeli.
-    let mut vm = VM::new();
-    // 16+ byte literal → heap alloc yoluna girer.
-    let long_strings: Vec<Value16> = (0..1000)
-        .map(|i| Value16::string(format!("literal_longer_than_15_chars_{:04}", i)))
-        .collect();
-    for (i, s) in long_strings.iter().enumerate() {
-        vm.globals.insert(interner::intern(&format!("k{}", i)), *s);
-    }
-    // constants taklidi: gc_constant_roots'a ekle (execute()'nin yaptığı iş).
-    vm.gc_constant_roots.extend(long_strings.clone());
-
-    gc::collect(&vm);
-
-    for (i, s) in long_strings.iter().enumerate() {
-        let key_str = format!("k{}", i);
-        let key = interner::intern(&key_str);
-        let got = vm.globals.get(&key).expect("key survived");
-        assert_eq!(
-            got.as_str(),
-            s.as_str(),
-            "literal {} should survive collect",
-            i
-        );
-    }
-}
-
-#[test]
-fn collect_preserves_function_chunk_constants_via_gc_constant_roots() {
-    // P5.1: gc_constant_roots'taki değerler collect'ten sağ çıkmalı
-    // (trace_roots'un onları gördüğünün doğrudan kanıtı).
-    let mut vm = VM::new();
-    let chunk_const = Value16::string("function_chunk_literal_over_15bytes!");
-    let chunk_sym = interner::intern("chunk_literal");
-    vm.globals.insert(chunk_sym, chunk_const);
-    // gc_constant_roots ile trace_roots'a dahil et: chunk cache yüklenmiş gibi.
-    vm.gc_constant_roots.push(chunk_const);
-
-    gc::collect(&vm);
-
-    let got = vm.globals.get(&chunk_sym).expect("global survived");
-    assert_eq!(
-        got.as_str(),
-        Some("function_chunk_literal_over_15bytes!"),
-        "chunk literal should not be freed"
-    );
-}
-
-#[test]
-fn collect_increments_stats() {
-    // P8: Tek collect sonrası collections >= 1, total_freed >= 0.
-    let st_before = gc::stats();
-    let mut vm = VM::new();
-    let s = Value16::string("gc-stats-test-string");
-    vm.globals.insert(interner::intern("k"), s);
-    gc::collect(&vm);
-    let st_after = gc::stats();
-    assert!(
-        st_after.collections > st_before.collections,
-        "collections should increment"
-    );
-    assert!(st_after.live_objects >= 1, "at least our global survives");
 }

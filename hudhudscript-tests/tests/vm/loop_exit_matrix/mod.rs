@@ -9,7 +9,8 @@ fn run_global(src: &str, name: &str) -> hudhudscript_bytecode::Value16 {
     let mut compiler = hudhudscript_compiler::Compiler::new();
     let bc = compiler.compile(&ast).unwrap();
     vm.execute(&bc).unwrap();
-    vm.get_global(name).unwrap_or(hudhudscript_bytecode::Value16::null())
+    vm.get_global(name)
+        .unwrap_or(hudhudscript_bytecode::Value16::null())
 }
 
 fn assert_int(src: &str, var: &str, expected: i64) {
@@ -22,7 +23,8 @@ fn assert_int(src: &str, var: &str, expected: i64) {
 #[test]
 fn while_plain_break() {
     // i=0,1,2 → break at i=3 → c=3
-    let src = "let c = 0; let i = 0; while (i < 10) { if (i == 3) { break; } c = c + 1; i = i + 1; }";
+    let src =
+        "let c = 0; let i = 0; while (i < 10) { if (i == 3) { break; } c = c + 1; i = i + 1; }";
     assert_int(src, "c", 3);
 }
 
@@ -32,7 +34,8 @@ fn while_plain_continue() {
     // i=0→body: i=1, 1!=3→c++→c=1. i=1→body: i=2, c++→c=2. i=2→body: i=3, continue→c=3→wrong
     // Let me redo: body does i=i+1; if i==3 continue; c=c+1
     // i=0→body: i=1, c++→c=1. i=1→body: i=2, c++→c=2. i=2→body: i=3, continue→skips c++. i=3→body: i=4, c++→c=3... i=9→body: i=10→condition false→exit. c=8
-    let src = "let c = 0; let i = 0; while (i < 10) { i = i + 1; if (i == 3) { continue; } c = c + 1; }";
+    let src =
+        "let c = 0; let i = 0; while (i < 10) { i = i + 1; if (i == 3) { continue; } c = c + 1; }";
     assert_int(src, "c", 9);
 }
 
@@ -73,14 +76,16 @@ fn for_cstyle_break() {
 
 #[test]
 fn for_cstyle_continue() {
-    let src = "let c = 0; for (let i = 0; i < 10; i = i + 1) { if (i == 3) { continue; } c = c + 1; }";
+    let src =
+        "let c = 0; for (let i = 0; i < 10; i = i + 1) { if (i == 3) { continue; } c = c + 1; }";
     assert_int(src, "c", 9);
 }
 
 #[test]
 fn for_cstyle_break_in_switch() {
     // break inside switch exits switch only. for loop does NOT skip c++. All 5 iterations get c++.
-    let src = "let c = 0; for (let i = 0; i < 5; i = i + 1) { switch (i) { case 2: break; } c = c + 1; }";
+    let src =
+        "let c = 0; for (let i = 0; i < 5; i = i + 1) { switch (i) { case 2: break; } c = c + 1; }";
     assert_int(src, "c", 5);
 }
 

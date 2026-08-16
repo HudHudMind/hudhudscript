@@ -57,13 +57,21 @@ impl ProviderContext for VM {
 
                 // Check if this is an Agent object (has a 'provider' field)
                 if let Some(prov_val) = receiver_obj.get("provider") {
-                    agent_model = receiver_obj.get("model").and_then(|v| v.as_string()).map(|s| s.to_string());
+                    agent_model = receiver_obj
+                        .get("model")
+                        .and_then(|v| v.as_string())
+                        .map(|s| s.to_string());
 
                     if let Some(p_obj) = prov_val.as_object() {
                         prov_obj = p_obj.clone();
                     } else if let Some(prov_name) = prov_val.as_string() {
                         let key = format!("provider:{}", prov_name);
-                        if let Some(decl) = self.declarations.get(&key).cloned().or_else(|| self.get_var_cloned(&prov_name)) {
+                        if let Some(decl) = self
+                            .declarations
+                            .get(&key)
+                            .cloned()
+                            .or_else(|| self.get_var_cloned(&prov_name))
+                        {
                             if let Some(p_obj) = decl.as_object() {
                                 prov_obj = p_obj.clone();
                             }
@@ -80,10 +88,12 @@ impl ProviderContext for VM {
                     .and_then(|v| v.as_string())
                     .map(|s| s.to_string())
                     .unwrap_or_default();
-                let model = agent_model.or_else(|| prov_obj
-                    .get("model")
-                    .and_then(|v| v.as_string())
-                    .map(|s| s.to_string()));
+                let model = agent_model.or_else(|| {
+                    prov_obj
+                        .get("model")
+                        .and_then(|v| v.as_string())
+                        .map(|s| s.to_string())
+                });
 
                 // A host-registered provider is preferred, but only when it can
                 // actually serve this call.
@@ -99,7 +109,8 @@ impl ProviderContext for VM {
                 // provider was silently ignored for every agent that declares a
                 // model — i.e. almost all of them — and the call went to the
                 // network instead.
-                let has_url_override = prov_obj.get("url")
+                let has_url_override = prov_obj
+                    .get("url")
                     .or_else(|| prov_obj.get("base_url"))
                     .and_then(|v| v.as_string())
                     .is_some();
@@ -123,7 +134,8 @@ impl ProviderContext for VM {
 
                 let timeout_secs = extract_timeout_secs_from_objmap(&receiver_obj)?;
 
-                let url_override = prov_obj.get("url")
+                let url_override = prov_obj
+                    .get("url")
                     .or_else(|| prov_obj.get("base_url"))
                     .and_then(|v| v.as_string())
                     .map(|s| s.to_string());
@@ -217,9 +229,15 @@ impl ProviderContext for VM {
                                 effective_timeout = extract_timeout_secs_from_objmap(&prov_obj)?;
                             } else if let Some(prov_name) = prov_val.as_string() {
                                 let key = format!("provider:{}", prov_name);
-                                if let Some(decl) = self.declarations.get(&key).cloned().or_else(|| self.get_var_cloned(&prov_name)) {
+                                if let Some(decl) = self
+                                    .declarations
+                                    .get(&key)
+                                    .cloned()
+                                    .or_else(|| self.get_var_cloned(&prov_name))
+                                {
                                     if let Some(prov_obj) = decl.as_object() {
-                                        effective_timeout = extract_timeout_secs_from_objmap(&prov_obj)?;
+                                        effective_timeout =
+                                            extract_timeout_secs_from_objmap(&prov_obj)?;
                                     }
                                 }
                             }
@@ -259,7 +277,8 @@ impl ProviderContext for VM {
         call_config: &ProviderCallConfig,
     ) -> HudHudResult<Option<String>> {
         use crate::vm::provider_system_context::{
-            compose_system_prompt, format_active_constitution_system_context, format_agent_system_context, format_provider_system_context,
+            compose_system_prompt, format_active_constitution_system_context,
+            format_agent_system_context, format_provider_system_context,
         };
 
         let mut parts = Vec::new();
@@ -278,7 +297,12 @@ impl ProviderContext for VM {
                         prov_obj = p_obj.clone();
                     } else if let Some(prov_name) = prov_val.as_string() {
                         let key = format!("provider:{}", prov_name);
-                        if let Some(decl) = self.declarations.get(&key).cloned().or_else(|| self.get_var_cloned(&prov_name)) {
+                        if let Some(decl) = self
+                            .declarations
+                            .get(&key)
+                            .cloned()
+                            .or_else(|| self.get_var_cloned(&prov_name))
+                        {
                             if let Some(p_obj) = decl.as_object() {
                                 prov_obj = p_obj.clone();
                             }
@@ -311,7 +335,9 @@ impl ProviderContext for VM {
     }
 }
 
-pub(crate) fn extract_timeout_secs_from_objmap(obj: &hudhudscript_bytecode::ObjMap) -> HudHudResult<Option<u64>> {
+pub(crate) fn extract_timeout_secs_from_objmap(
+    obj: &hudhudscript_bytecode::ObjMap,
+) -> HudHudResult<Option<u64>> {
     use hudhudscript_bytecode::shared_value::runtime_error;
     let timeout_val = obj
         .get("timeout")
@@ -329,11 +355,15 @@ pub(crate) fn extract_timeout_secs_from_objmap(obj: &hudhudscript_bytecode::ObjM
 
         if let Some(n) = n_opt {
             if n <= 0.0 || n.is_nan() {
-                return Err(runtime_error("Invalid provider config timeout: expected positive seconds"));
+                return Err(runtime_error(
+                    "Invalid provider config timeout: expected positive seconds",
+                ));
             }
             return Ok(Some(n as u64));
         }
-        return Err(runtime_error("Invalid provider config timeout: expected positive seconds"));
+        return Err(runtime_error(
+            "Invalid provider config timeout: expected positive seconds",
+        ));
     }
     Ok(None)
 }
@@ -359,7 +389,9 @@ pub(crate) fn extract_timeout_secs_from_objmap(obj: &hudhudscript_bytecode::ObjM
 /// bunu izole eder (eski davranışla aynı).
 static PROVIDER_RUNTIME: std::sync::OnceLock<tokio::runtime::Runtime> = std::sync::OnceLock::new();
 
-pub(crate) fn block_on_provider<T: Send + 'static>(fut: impl std::future::Future<Output = T> + Send + 'static) -> T {
+pub(crate) fn block_on_provider<T: Send + 'static>(
+    fut: impl std::future::Future<Output = T> + Send + 'static,
+) -> T {
     std::thread::scope(|s| {
         s.spawn(|| {
             let rt = PROVIDER_RUNTIME.get_or_init(|| {

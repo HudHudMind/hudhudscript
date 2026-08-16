@@ -1,9 +1,9 @@
 // P1: Generic Index Read Kapatma tests.
 // Verify compiler emits IndexArray/IndexStringAscii for typed locals.
 
+use hudhudscript_bytecode::Instruction;
 use hudhudscript_compiler::Compiler;
 use hudhudscript_parser::parse;
-use hudhudscript_bytecode::Instruction;
 
 fn compile_instructions(src: &str) -> Vec<Instruction> {
     let ast = parse(src).expect("parse failed");
@@ -40,7 +40,10 @@ fn local_array_read_emits_indexarray() {
 fn local_string_read_emits_indexstringascii() {
     let insns = compile_instructions("let s = \"hello\"; let c = s[1];");
     assert!(
-        has_instruction(&insns, |i| matches!(i, Instruction::IndexStringAscii { .. })),
+        has_instruction(&insns, |i| matches!(
+            i,
+            Instruction::IndexStringAscii { .. }
+        )),
         "local string read must emit IndexStringAscii"
     );
 }
@@ -97,5 +100,8 @@ fn generic_index_still_works_for_objects() {
     let insns = compile_instructions("let o = {}; o[\"key\"] = 42; let v = o[\"key\"];");
     // Object index reads use generic Index
     let has_generic_index = has_instruction(&insns, |i| matches!(i, Instruction::Index { .. }));
-    assert!(has_generic_index, "object index must still use generic Index");
+    assert!(
+        has_generic_index,
+        "object index must still use generic Index"
+    );
 }

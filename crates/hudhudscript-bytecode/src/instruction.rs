@@ -107,7 +107,12 @@ pub enum Instruction {
         arg_count: u8,
     },
     CallSpread(SymId),
-    MethodCallSpread(SymId),
+    MethodCallSpread {
+        dst: u8,
+        obj: u8,
+        args: u8,
+        method_sym: SymId,
+    },
     GetProperty {
         dst: u8,
         obj: u8,
@@ -177,9 +182,21 @@ pub enum Instruction {
         src: u8,
         imm: i16,
     },
-    IntMulI { dst: u8, src: u8, imm: i16 },
-    IntDivI { dst: u8, src: u8, imm: i16 },
-    IntModI { dst: u8, src: u8, imm: i16 },
+    IntMulI {
+        dst: u8,
+        src: u8,
+        imm: i16,
+    },
+    IntDivI {
+        dst: u8,
+        src: u8,
+        imm: i16,
+    },
+    IntModI {
+        dst: u8,
+        src: u8,
+        imm: i16,
+    },
     /// Fused IntModI + IntCmpI: `(src % mod_imm) op cmp_imm` → dst (bool).
     /// Unpacked only — never enters dense/packed encoding.
     IntModCmpI {
@@ -469,25 +486,62 @@ pub enum Instruction {
         src2: u8,
     },
     /// In-place string append (dst == src1 implied), self-assignment only.
-    NumMulAddAssign { dst: u8, mul: u8, add: u8 },
+    NumMulAddAssign {
+        dst: u8,
+        mul: u8,
+        add: u8,
+    },
     /// Horner polynomial fusion: acc = acc * mul + arr[idx] (2 ops → 1)
-    NumMulAddIndexed { acc: u8, mul: u8, arr: u8, idx: u8 },
+    NumMulAddIndexed {
+        acc: u8,
+        mul: u8,
+        arr: u8,
+        idx: u8,
+    },
     /// Float-only fused multiply-add: dst = mul1 * mul2 + add (single FMA instruction).
-    FloatMulAdd { dst: u8, mul1: u8, mul2: u8, add: u8 },
+    FloatMulAdd {
+        dst: u8,
+        mul1: u8,
+        mul2: u8,
+        add: u8,
+    },
     /// Float-only add: dst = src1 + src2 (no type check).
-    FloatAdd { dst: u8, src1: u8, src2: u8 },
+    FloatAdd {
+        dst: u8,
+        src1: u8,
+        src2: u8,
+    },
     /// Float-only mul: dst = src1 * src2 (no type check).
-    FloatMul { dst: u8, src1: u8, src2: u8 },
+    FloatMul {
+        dst: u8,
+        src1: u8,
+        src2: u8,
+    },
     /// P4: fused integer multiply-modulo — dst = (src1 * src2) % src3.
     /// Used by `modular_exp` and other modular arithmetic loops to keep
     /// the hot path in Int tag without intermediate Number widening.
-    IntMulMod { dst: u8, src1: u8, src2: u8, src3: u8 },
+    IntMulMod {
+        dst: u8,
+        src1: u8,
+        src2: u8,
+        src3: u8,
+    },
     /// P4: fused integer multiply-modulo with constant modulus —
     /// dst = (src1 * src2) % imm.  Common when the modulus is a loop
     /// invariant literal (e.g. `result = (result * base) % 1000000007`).
-    IntMulModI { dst: u8, src1: u8, src2: u8, imm: i16 },
+    IntMulModI {
+        dst: u8,
+        src1: u8,
+        src2: u8,
+        imm: i16,
+    },
     /// Palindrome fusion: s[i] == s[j] (2 Index + Cmp → 1 op)
-    StrCharEqRR { dst: u8, src_s: u8, src_i: u8, src_j: u8 },
+    StrCharEqRR {
+        dst: u8,
+        src_s: u8,
+        src_i: u8,
+        src_j: u8,
+    },
     StrCatMut {
         dst: u8,
         src2: u8,
@@ -593,20 +647,57 @@ pub enum Instruction {
     // kutu-aç/kutula. BYTECODE_VERSION 22 (aynı yayın döngüsü, kuyruk).
     /// Value16 reg → f64 slot (Int/Number kabul; değilse runtime hata —
     /// derleyici tip-kanıtı olmadan emit ETMEZ, hata=derleyici bug'ı).
-    FLoadNum { fslot: u8, src: u8 },
+    FLoadNum {
+        fslot: u8,
+        src: u8,
+    },
     /// f64 slot → Value16 reg (Number olarak kutula).
-    FStoreNum { dst: u8, fslot: u8 },
+    FStoreNum {
+        dst: u8,
+        fslot: u8,
+    },
     /// f_slots[d] = f_slots[a] ⊕ f_slots[b] — tag'siz.
-    FAdd { d: u8, a: u8, b: u8 },
-    FSub { d: u8, a: u8, b: u8 },
-    FMul { d: u8, a: u8, b: u8 },
-    FDiv { d: u8, a: u8, b: u8 },
+    FAdd {
+        d: u8,
+        a: u8,
+        b: u8,
+    },
+    FSub {
+        d: u8,
+        a: u8,
+        b: u8,
+    },
+    FMul {
+        d: u8,
+        a: u8,
+        b: u8,
+    },
+    FDiv {
+        d: u8,
+        a: u8,
+        b: u8,
+    },
     /// f_slots[d] = f_slots[s].sin() vb.
-    FSin { d: u8, s: u8 },
-    FCos { d: u8, s: u8 },
-    FSqrt { d: u8, s: u8 },
+    FSin {
+        d: u8,
+        s: u8,
+    },
+    FCos {
+        d: u8,
+        s: u8,
+    },
+    FSqrt {
+        d: u8,
+        s: u8,
+    },
     /// f_slots[d] = f_slots[s] — slot-içi kopya (let x = y deseni).
-    FMove { d: u8, s: u8 },
+    FMove {
+        d: u8,
+        s: u8,
+    },
     /// f_slots[d] = sabit (numeric_constants havuzundan).
-    FConst { d: u8, const_idx: u16 },
+    FConst {
+        d: u8,
+        const_idx: u16,
+    },
 }

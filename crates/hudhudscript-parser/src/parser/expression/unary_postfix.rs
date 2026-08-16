@@ -237,7 +237,10 @@ pub(super) fn parse_new_expr(pair: Pair<Rule>) -> ParseResult<Expr> {
     // Skip the 'new' keyword token (new_kw_en is atomic so it appears as a child).
     // The next child is the class name identifier.
     let first = inner.next();
-    let class_name = if first.as_ref().map_or(false, |f| f.as_rule() == Rule::new_kw_en) {
+    let class_name = if first
+        .as_ref()
+        .map_or(false, |f| f.as_rule() == Rule::new_kw_en)
+    {
         inner.next()
     } else {
         first
@@ -290,8 +293,15 @@ pub(super) fn parse_view_expr(pair: Pair<Rule>) -> ParseResult<Expr> {
     let span = pair_to_span(&pair);
     let mut inner = pair.into_inner();
     let instance = parse_expression(inner.next().unwrap())?;
-    let view_name = inner.next().map(|p| p.as_str().to_string()).unwrap_or_default();
-    Ok(Expr::ViewAs { instance: Box::new(instance), view_name, span })
+    let view_name = inner
+        .next()
+        .map(|p| p.as_str().to_string())
+        .unwrap_or_default();
+    Ok(Expr::ViewAs {
+        instance: Box::new(instance),
+        view_name,
+        span,
+    })
 }
 
 pub(super) fn parse_array(pair: Pair<Rule>) -> ParseResult<Expr> {

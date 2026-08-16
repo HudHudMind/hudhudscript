@@ -1,0 +1,18 @@
+// Mobile Deploy — Flutter
+
+deploy MyMobileApp {
+    target {
+        mobile {
+            framework: "flutter";
+            min_ios: "14.0";
+            min_android: 21;
+            bundle_id: "com.hudhud.myapp";
+        }
+    }
+
+    github {
+        repo: "HudHudMind/my-mobile-app";
+        on: "push";
+        branch: "main";
+    }
+}

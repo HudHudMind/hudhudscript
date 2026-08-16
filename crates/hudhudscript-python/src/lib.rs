@@ -200,8 +200,7 @@ fn run(code: &str, timeout_ms: Option<u64>) -> PyResult<ExecutionResult> {
 
         hudhud_print::print_ops::start_capture();
         let exec_result = vm.execute(&bytecode);
-        let captured_output = hudhud_print::print_ops::stop_capture()
-            .unwrap_or_default();
+        let captured_output = hudhud_print::print_ops::stop_capture().unwrap_or_default();
 
         let payload = match exec_result {
             Ok(()) => {

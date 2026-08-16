@@ -5,7 +5,7 @@
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use hudhudscript_bytecode::packed_instruction::{pack, unpack};
-use hudhudscript_bytecode::{Bytecode, Instruction, SymId, Value};
+use hudhudscript_bytecode::{Bytecode, Instruction, SymId, Value16};
 
 // ── Helpers ────────────────────────────────────────────────────────
 
@@ -14,16 +14,39 @@ fn make_instructions() -> Vec<Instruction> {
     let mut instrs = Vec::with_capacity(1000);
     for i in 0..1000u16 {
         let instr = match i % 10 {
-            0 => Instruction::LoadConst { dst: 0, const_idx: i as u16 },
-            1 => Instruction::IntAdd { dst: 0, src1: 1, src2: 2 },
-            2 => Instruction::LoadGlobal { dst: 0, sym: i as u32 },
-            3 => Instruction::StoreGlobal { src: 0, sym: i as u32 },
-            4 => Instruction::JumpIfFalse { src: 255, offset: i as i16 },
+            0 => Instruction::LoadConst {
+                dst: 0,
+                const_idx: i as u16,
+            },
+            1 => Instruction::IntAdd {
+                dst: 0,
+                src1: 1,
+                src2: 2,
+            },
+            2 => Instruction::LoadGlobal { dst: 0, sym: i },
+            3 => Instruction::StoreGlobal { src: 0, sym: i },
+            4 => Instruction::JumpIfFalse {
+                src: 255,
+                offset: i as i16,
+            },
             // CROSS-2c: Call now carries a u32 call_payloads index.
-            5 => Instruction::Call { dst: 0, payload_idx: i as u32, first_arg: 0, arg_count: 0 },
-            6 => Instruction::GetProperty { obj: 255, field: SymId(i as u32) },
-            7 => Instruction::NumAdd { dst: 0, src1: 1, src2: 2 },
-            8 => Instruction::MakeArray { dst: 0, count: *i as u16 },
+            5 => Instruction::Call {
+                dst: 0,
+                payload_idx: i,
+                first_arg: 0,
+                arg_count: 0,
+            },
+            6 => Instruction::GetProperty {
+                dst: 0,
+                obj: 255,
+                prop_sym: i,
+            },
+            7 => Instruction::NumAdd {
+                dst: 0,
+                src1: 1,
+                src2: 2,
+            },
+            8 => Instruction::MakeArray { dst: 0, count: i },
             9 => Instruction::Return { src: 255 },
             _ => unreachable!(),
         };
@@ -46,15 +69,22 @@ fn make_bytecode_with_symbol_lists() -> Bytecode {
 fn make_bytecode_for_serialization() -> Bytecode {
     let mut bc = Bytecode::new();
     for i in 0..200 {
-        bc.add_constant(Value::Number(i as f64));
-        bc.add_constant(Value::string(format!("str_{}", i)));
+        bc.add_constant(Value16::number(i as f64));
+        bc.add_constant(Value16::string(format!("str_{}", i)));
     }
     for i in 0..500u16 {
         bc.instructions.push(match i % 4 {
-            0 => Instruction::LoadConst((i as usize) % 200),
-            1 => Instruction::Add,
-            2 => Instruction::LoadVar(i as u32),
-            3 => Instruction::Return,
+            0 => Instruction::LoadConst {
+                dst: 0,
+                const_idx: i % 200,
+            },
+            1 => Instruction::NumAdd {
+                dst: 0,
+                src1: 1,
+                src2: 2,
+            },
+            2 => Instruction::LoadGlobal { dst: 0, sym: i },
+            3 => Instruction::Return { src: 255 },
             _ => unreachable!(),
         });
     }
@@ -146,7 +176,9 @@ fn bench_symid_intern_resolve(c: &mut Criterion) {
     c.bench_function("symid_resolve_200", |b| {
         b.iter(|| {
             for id in &ids {
-                black_box(id.resolve());
+                black_box(hudhudscript_bytecode::interner::resolve(
+                    hudhudscript_bytecode::interner::SymbolId(id.0),
+                ));
             }
         })
     });
@@ -177,11 +209,11 @@ fn bench_constant_pool_dedup(c: &mut Criterion) {
             let mut bc = Bytecode::new();
             // First pass: add 200 unique constants
             for i in 0..200 {
-                bc.add_constant(Value::Number(i as f64));
+                bc.add_constant(Value16::number(i as f64));
             }
             // Second pass: re-add same 200 (all dedup hits)
             for i in 0..200 {
-                black_box(bc.add_constant(Value::Number(i as f64)));
+                black_box(bc.add_constant(Value16::number(i as f64)));
             }
         })
     });
@@ -190,11 +222,11 @@ fn bench_constant_pool_dedup(c: &mut Criterion) {
         b.iter(|| {
             let mut bc = Bytecode::new();
             for i in 0..100 {
-                bc.add_constant(Value::string(format!("const_{}", i)));
+                bc.add_constant(Value16::string(format!("const_{}", i)));
             }
             // Re-add same strings (dedup path)
             for i in 0..100 {
-                black_box(bc.add_constant(Value::string(format!("const_{}", i))));
+                black_box(bc.add_constant(Value16::string(format!("const_{}", i))));
             }
         })
     });

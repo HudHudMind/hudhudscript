@@ -469,15 +469,20 @@ mod tests {
         assert!(result.is_ok());
 
         let actual = vm.registers[d_reg as usize];
-        assert!(actual.is_bigint(),
-            "overflow mul must be BigInt, got {:?}", actual);
+        assert!(
+            actual.is_bigint(),
+            "overflow mul must be BigInt, got {:?}",
+            actual
+        );
 
         #[cfg(feature = "telemetry")]
         {
             let snap = vm.telemetry_snapshot();
-            assert!(snap.bigint_promotion > 0,
+            assert!(
+                snap.bigint_promotion > 0,
                 "packed D_INT_MUL_RR overflow must count promotion, got {}",
-                snap.bigint_promotion);
+                snap.bigint_promotion
+            );
         }
     }
 }

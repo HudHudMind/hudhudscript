@@ -111,10 +111,10 @@ impl Value16 {
             let obj = unsafe { &*(ptr as *const DynamicObject) };
             if let DynamicData::String(s) = &obj.data {
                 if obj.kind == DynamicKind::StringAscii {
-                    return Some(s.len());  // O(1): byte len == char len
+                    return Some(s.len()); // O(1): byte len == char len
                 }
                 if obj.kind == DynamicKind::String {
-                    return Some(s.len());  // O(1): byte len (existing semantics)
+                    return Some(s.len()); // O(1): byte len (existing semantics)
                 }
             }
         }
@@ -257,7 +257,9 @@ impl Value16 {
             let ptr = self.0.as_ptr()? as *mut DynamicObject;
             let obj = unsafe { &mut *ptr };
             if matches!(obj.kind, DynamicKind::Set) {
-                if let DynamicData::Set(ref mut v) = obj.data { return Some(v); }
+                if let DynamicData::Set(ref mut v) = obj.data {
+                    return Some(v);
+                }
             }
         }
         None
@@ -268,7 +270,9 @@ impl Value16 {
             let ptr = self.0.as_ptr()? as *mut DynamicObject;
             let obj = unsafe { &mut *ptr };
             if matches!(obj.kind, DynamicKind::Map) {
-                if let DynamicData::Map(ref mut v) = obj.data { return Some(v); }
+                if let DynamicData::Map(ref mut v) = obj.data {
+                    return Some(v);
+                }
             }
         }
         None
@@ -279,7 +283,9 @@ impl Value16 {
             let ptr = self.0.as_ptr()? as *mut DynamicObject;
             let obj = unsafe { &mut *ptr };
             if matches!(obj.kind, DynamicKind::Data) {
-                if let DynamicData::Data(ref mut d) = obj.data { return Some(d); }
+                if let DynamicData::Data(ref mut d) = obj.data {
+                    return Some(d);
+                }
             }
         }
         None
@@ -290,7 +296,9 @@ impl Value16 {
             let ptr = self.0.as_ptr()? as *mut DynamicObject;
             let obj = unsafe { &mut *ptr };
             if matches!(obj.kind, DynamicKind::Instance) {
-                if let DynamicData::Instance(ref mut i) = obj.data { return Some(i); }
+                if let DynamicData::Instance(ref mut i) = obj.data {
+                    return Some(i);
+                }
             }
         }
         None
@@ -301,7 +309,9 @@ impl Value16 {
             let ptr = self.0.as_ptr()? as *mut DynamicObject;
             let obj = unsafe { &mut *ptr };
             if matches!(obj.kind, DynamicKind::Result) {
-                if let DynamicData::Result(ref mut r) = obj.data { return Some(r); }
+                if let DynamicData::Result(ref mut r) = obj.data {
+                    return Some(r);
+                }
             }
         }
         None
@@ -312,7 +322,9 @@ impl Value16 {
             let ptr = self.0.as_ptr()? as *mut DynamicObject;
             let obj = unsafe { &mut *ptr };
             if matches!(obj.kind, DynamicKind::Option) {
-                if let DynamicData::Option(ref mut o) = obj.data { return Some(o); }
+                if let DynamicData::Option(ref mut o) = obj.data {
+                    return Some(o);
+                }
             }
         }
         None
@@ -438,7 +450,11 @@ impl Value16 {
     pub fn as_bigint_unchecked(&self) -> &num_bigint::BigInt {
         let ptr = self.0.as_ptr().unwrap();
         let obj = unsafe { &*(ptr as *const DynamicObject) };
-        if let DynamicData::BigInt(ref b) = obj.data { b } else { unreachable!() }
+        if let DynamicData::BigInt(ref b) = obj.data {
+            b
+        } else {
+            unreachable!()
+        }
     }
 
     #[inline]

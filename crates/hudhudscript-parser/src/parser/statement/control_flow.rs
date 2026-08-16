@@ -5,20 +5,30 @@ pub fn parse_assignment_stmt(pair: Pair<Rule>) -> ParseResult<Stmt> {
     let mut inner = pair.into_inner();
 
     let target = parse_expression(
-        inner.next().ok_or_else(|| parse_codes::invalid_syntax("Expected assignment target", span))?,
+        inner
+            .next()
+            .ok_or_else(|| parse_codes::invalid_syntax("Expected assignment target", span))?,
     )?;
 
-    let op_str = inner.next()
+    let op_str = inner
+        .next()
         .ok_or_else(|| parse_codes::invalid_syntax("Expected assignment operator", span))?
-        .as_str().to_string();
+        .as_str()
+        .to_string();
 
     let right = parse_expression(
-        inner.next().ok_or_else(|| parse_codes::invalid_syntax("Expected expression", span))?,
+        inner
+            .next()
+            .ok_or_else(|| parse_codes::invalid_syntax("Expected expression", span))?,
     )?;
 
     // Desugar compound assignment: i += j → i = i + j
     if op_str == "=" {
-        return Ok(Stmt::Assignment { target, value: right, span });
+        return Ok(Stmt::Assignment {
+            target,
+            value: right,
+            span,
+        });
     }
     let binop = match op_str.as_str() {
         "+=" => hudhudscript_ast::BinaryOp::Add,
@@ -26,7 +36,12 @@ pub fn parse_assignment_stmt(pair: Pair<Rule>) -> ParseResult<Stmt> {
         "*=" => hudhudscript_ast::BinaryOp::Mul,
         "/=" => hudhudscript_ast::BinaryOp::Div,
         "%=" => hudhudscript_ast::BinaryOp::Mod,
-        _ => return Err(parse_codes::invalid_syntax(&format!("Unknown assignment operator: {}", op_str), span)),
+        _ => {
+            return Err(parse_codes::invalid_syntax(
+                &format!("Unknown assignment operator: {}", op_str),
+                span,
+            ))
+        }
     };
     let value = hudhudscript_ast::Expr::Binary {
         left: Box::new(target.clone()),
@@ -34,7 +49,11 @@ pub fn parse_assignment_stmt(pair: Pair<Rule>) -> ParseResult<Stmt> {
         right: Box::new(right),
         span,
     };
-    Ok(Stmt::Assignment { target, value, span })
+    Ok(Stmt::Assignment {
+        target,
+        value,
+        span,
+    })
 }
 
 pub fn parse_return_stmt(pair: Pair<Rule>) -> ParseResult<Stmt> {

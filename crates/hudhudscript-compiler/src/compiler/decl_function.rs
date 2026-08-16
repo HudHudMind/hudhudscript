@@ -34,9 +34,9 @@ impl Compiler {
                 self.current_function_name = None;
                 let chunk_arc = Arc::new(chunk);
                 // P3a: register for compiler-side inlining
-                self.inline_function_chunks.insert(chunk_name.clone(), Arc::clone(&chunk_arc));
-                self.bytecode
-                    .add_function(chunk_name.clone(), chunk_arc);
+                self.inline_function_chunks
+                    .insert(chunk_name.clone(), Arc::clone(&chunk_arc));
+                self.bytecode.add_function(chunk_name.clone(), chunk_arc);
                 Ok(Value16::function(FunctionData {
                     name: chunk_name.clone(),
                     params: param_names,
@@ -82,11 +82,16 @@ impl Compiler {
         is_async: bool,
     ) -> CompileResult<FunctionChunk> {
         let body = body.to_vec();
-        self.compile_function_chunk_with(params, fn_name, is_async, |compiler: &mut Compiler| -> CompileResult<()> {
-            for stmt in &body {
-                compiler.compile_stmt(stmt)?;
-            }
-            Ok(())
-        })
+        self.compile_function_chunk_with(
+            params,
+            fn_name,
+            is_async,
+            |compiler: &mut Compiler| -> CompileResult<()> {
+                for stmt in &body {
+                    compiler.compile_stmt(stmt)?;
+                }
+                Ok(())
+            },
+        )
     }
 }

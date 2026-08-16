@@ -51,9 +51,15 @@ impl VM {
     }
 
     /// G5-slotvec: install cell at slot index (hot path, no hash).
-    pub(crate) fn install_cell_by_slot(&mut self, slot: u8, cell: Arc<parking_lot::RwLock<Value16>>) {
+    pub(crate) fn install_cell_by_slot(
+        &mut self,
+        slot: u8,
+        cell: Arc<parking_lot::RwLock<Value16>>,
+    ) {
         #[cfg(feature = "telemetry")]
-        { self.telemetry.scope_cell_lookup_count += 1; }
+        {
+            self.telemetry.scope_cell_lookup_count += 1;
+        }
         if let Some((cells, _)) = self.scope_cells.last_mut() {
             cells[slot as usize] = Some(cell);
         }
@@ -145,7 +151,8 @@ impl VM {
                         let cell = Arc::new(parking_lot::RwLock::new(value));
                         if let Some((_, sym_ids)) = self.scope_cells.last() {
                             if let Some(slot_idx) = sym_ids.iter().position(|&s| s == sym_id) {
-                                self.scope_cells.last_mut().unwrap().0[slot_idx] = Some(Arc::clone(&cell));
+                                self.scope_cells.last_mut().unwrap().0[slot_idx] =
+                                    Some(Arc::clone(&cell));
                             }
                         }
                         return Some(cell);
@@ -393,9 +400,9 @@ impl VM {
                     {
                         let slot = local_syms[idx].1 as i32;
                         if slot >= 0 {
-                        if let Some(cell) = self.find_cell_by_sym(sym_id) {
-                            return Some(cell.read().clone());
-                        }
+                            if let Some(cell) = self.find_cell_by_sym(sym_id) {
+                                return Some(cell.read().clone());
+                            }
                             return Some(self.registers[slot as usize]);
                         }
                     }

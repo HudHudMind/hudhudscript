@@ -158,13 +158,19 @@ pub fn property_not_found(
 /// Returns a `HashMap` of fields to set on the error instance.
 pub fn construct_error_fields(class_name: &str, args: &[Value16]) -> ObjMap {
     let mut fields = ObjMap::default();
-    fields.insert(crate::sym::SymId::from("name"), Value16::string(class_name.to_string()));
+    fields.insert(
+        crate::sym::SymId::from("name"),
+        Value16::string(class_name.to_string()),
+    );
 
     // First argument: message
     if let Some(msg) = args.first() {
         fields.insert(crate::sym::SymId::from("message"), msg.clone());
     } else {
-        fields.insert(crate::sym::SymId::from("message"), Value16::string(String::new()));
+        fields.insert(
+            crate::sym::SymId::from("message"),
+            Value16::string(String::new()),
+        );
     }
 
     // Second argument: options object { cause: ... }
@@ -274,7 +280,7 @@ pub fn shared_add(left: &Value16, right: &Value16) -> CompileResult<Value16> {
         result.extend_from_slice(b);
         return Ok(Value16::array(result));
     }
-// #745: String + Boolean is a TypeError — no auto-coercion.
+    // #745: String + Boolean is a TypeError — no auto-coercion.
     if left.as_str().is_some() || right.as_str().is_some() {
         return Err(type_error("String or Number", right.type_name_str(), "+"));
     }
@@ -286,16 +292,4 @@ pub fn shared_add(left: &Value16, right: &Value16) -> CompileResult<Value16> {
         &format!("{} and {}", left.type_name_str(), right.type_name_str()),
         "addition",
     ))
-}
-
-/// Trait for invoking callback functions — abstracts over VM call mechanisms.
-/// Shared builtin code (e.g. array map/filter) calls back into the runtime.
-pub trait CallbackInvoker {
-    /// Invoke `callback` with the given arguments and return the result.
-    fn invoke(&mut self, callback: &Value16, args: Vec<Value16>) -> SharedResult<Value16>;
-
-    /// Check if a value is truthy (convenience).
-    fn is_truthy_value(&self, val: &Value16) -> bool {
-        val.is_truthy()
-    }
 }

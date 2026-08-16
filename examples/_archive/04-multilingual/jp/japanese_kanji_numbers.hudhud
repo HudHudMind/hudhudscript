@@ -1,0 +1,19 @@
+// 日本語の漢字数字テスト
+// Japanese Kanji Number Test
+// Kural 8: All keywords in native Japanese script
+// Note: Kanji numerals (一, 二, 三...) are numeric literals, not identifiers
+
+変数 甲 = 1
+変数 乙 = 2
+変数 丙 = 3
+
+表示(甲)
+表示(乙)
+表示(丙)
+
+// 計算
+変数 合計 = 甲 + 乙
+表示(合計)
+
+変数 積 = 乙 * 丙
+表示(積)

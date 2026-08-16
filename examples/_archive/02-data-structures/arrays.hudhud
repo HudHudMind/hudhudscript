@@ -1,0 +1,18 @@
+// Array operations example
+var numbers = [1, 2, 3, 4, 5];
+print("Array:");
+print(numbers);
+
+print("First element:");
+print(numbers[0]);
+
+print("Last element:");
+print(numbers[4]);
+
+print("Array length:");
+print(len(numbers));
+
+// Array of strings
+var names = ["Alice", "Bob", "Charlie"];
+print("Names:");
+print(names);

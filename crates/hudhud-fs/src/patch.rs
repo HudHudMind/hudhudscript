@@ -25,11 +25,7 @@ pub struct PatchResult {
 /// 4. If multiple matches, return error (ambiguous).
 /// 5. Replace matched block with REPLACE block.
 /// 6. Atomic write: temp file → rename.
-pub fn patch_apply(
-    file_path: &str,
-    search: &str,
-    replace: &str,
-) -> Result<PatchResult, String> {
+pub fn patch_apply(file_path: &str, search: &str, replace: &str) -> Result<PatchResult, String> {
     let path = Path::new(file_path);
     let content = fs::read_to_string(path)
         .map_err(|e| format!("patch.apply: cannot read '{}': {}", file_path, e))?;
@@ -61,8 +57,7 @@ pub fn patch_apply(
     let tmp_path = format!("{}.hudhud_patch_tmp", file_path);
     fs::write(&tmp_path, &new_content)
         .map_err(|e| format!("patch.apply: cannot write temp file: {}", e))?;
-    fs::rename(&tmp_path, path)
-        .map_err(|e| format!("patch.apply: cannot commit patch: {}", e))?;
+    fs::rename(&tmp_path, path).map_err(|e| format!("patch.apply: cannot commit patch: {}", e))?;
 
     Ok(PatchResult {
         replacements: 1,

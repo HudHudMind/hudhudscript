@@ -265,4 +265,3 @@ pub fn from_millis(args: &[Value16]) -> HudHudResult<Value16> {
     obj.insert("iso".to_string(), Value16::string(dt.to_rfc3339()));
     Ok(Value16::object(obj))
 }
-

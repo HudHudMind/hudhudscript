@@ -1,0 +1,21 @@
+print("=== Binary Search ===");
+let arr = [];
+arr.push(1); arr.push(3); arr.push(5); arr.push(7); arr.push(9);
+arr.push(11); arr.push(13); arr.push(15); arr.push(17); arr.push(19);
+
+fn binary_search(arr, target, n) {
+    let left = 0;
+    let right = n - 1;
+    while (left <= right) {
+        let mid = (left + right) / 2;
+        if (arr[mid] == target) { return mid; }
+        if (arr[mid] < target) { left = mid + 1; }
+        else { right = mid - 1; }
+    }
+    return -1;
+}
+
+let idx = binary_search(arr, 11, 10);
+print("11 indeksi: " + idx + " (5 beklenir)");
+idx = binary_search(arr, 4, 10);
+print("4 indeksi: " + idx + " (-1 beklenir)");

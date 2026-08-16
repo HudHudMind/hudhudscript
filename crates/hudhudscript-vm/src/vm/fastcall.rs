@@ -1,3 +1,4 @@
+use crate::vm::call_state::ReturnSink;
 use crate::vm::machine::CallFrame;
 use crate::vm::VM;
 use hudhudscript_bytecode::error::compile_codes;
@@ -121,6 +122,7 @@ impl VM {
 
         self.frame_stack.push(CallFrame {
             chunk_ptr: chunk as *const FunctionChunk,
+            owned_chunk: None,
             packed: packed_ptr,
             func_sym,
             ip: 0,
@@ -133,6 +135,9 @@ impl VM {
             call_depth: self.call_depth,
             owned_local_syms: false,
             class_context: false,
+            return_sink: ReturnSink::Register(dst),
+            receiver_context: None,
+            swallow_error: false,
         });
 
         Ok(())

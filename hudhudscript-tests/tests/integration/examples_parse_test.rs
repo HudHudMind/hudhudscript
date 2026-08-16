@@ -36,7 +36,7 @@ fn all_examples_parse_successfully() {
     // CWD is hudhud-script-tests/ (separate repo, workspace member)
     // examples/ is in the parent hudhud-script repo
     let possible_paths = [
-        Path::new("../hudhud-script/examples"),
+        Path::new("../examples"),
         Path::new("../examples"),
         Path::new("examples"),
     ];

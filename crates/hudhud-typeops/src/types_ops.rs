@@ -93,9 +93,9 @@ pub fn shared_to_number(args: &[Value16]) -> HudHudResult<Value16> {
         Ok(Value16::number(0.0))
     } else if let Some(b) = val.as_bigint() {
         use num_traits::ToPrimitive;
-        let n = b.to_f64().ok_or_else(|| {
-            runtime_error("BigInt too large to convert to Number")
-        })?;
+        let n = b
+            .to_f64()
+            .ok_or_else(|| runtime_error("BigInt too large to convert to Number"))?;
         Ok(Value16::number(n))
     } else {
         Err(runtime_error(format!(
@@ -148,7 +148,10 @@ pub fn shared_values(args: &[Value16]) -> HudHudResult<Value16> {
         .first()
         .ok_or_else(|| runtime_error("values() requires 1 argument"))?;
     if let Some(obj) = val.as_object() {
-        let mut pairs: Vec<(String, Value16)> = obj.iter().map(|(k, v)| (k.to_string(), v.clone())).collect();
+        let mut pairs: Vec<(String, Value16)> = obj
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.clone()))
+            .collect();
         pairs.sort_by_key(|(k, _)| k.clone());
         let items: Vec<Value16> = pairs.into_iter().map(|(_, v)| v).collect();
         Ok(Value16::array(items))

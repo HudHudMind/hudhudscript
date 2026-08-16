@@ -64,13 +64,19 @@ pub fn parse_for_c_style_stmt(pair: Pair<Rule>) -> ParseResult<Stmt> {
                     })?;
                     let is_inc = op_pair.as_rule() == Rule::increment_op;
                     let imm_literal = hudhudscript_ast::Expr::Literal(
-                        hudhudscript_ast::Literal::Int(1), update_span);
+                        hudhudscript_ast::Literal::Int(1),
+                        update_span,
+                    );
                     let target_expr = hudhudscript_ast::Expr::Identifier(name.clone(), update_span);
                     update = Some(Box::new(Stmt::Assignment {
                         target: target_expr,
                         value: hudhudscript_ast::Expr::Binary {
                             left: Box::new(hudhudscript_ast::Expr::Identifier(name, update_span)),
-                            op: if is_inc { hudhudscript_ast::BinaryOp::Add } else { hudhudscript_ast::BinaryOp::Sub },
+                            op: if is_inc {
+                                hudhudscript_ast::BinaryOp::Add
+                            } else {
+                                hudhudscript_ast::BinaryOp::Sub
+                            },
                             right: Box::new(imm_literal),
                             span: update_span,
                         },
@@ -78,8 +84,9 @@ pub fn parse_for_c_style_stmt(pair: Pair<Rule>) -> ParseResult<Stmt> {
                     }));
                 } else {
                     // assignment: target = value (or +=, -= etc via desugar)
-                    let op_pair = update_inner.next()
-                        .ok_or_else(|| parse_codes::invalid_syntax("Expected assignment operator", update_span))?;
+                    let op_pair = update_inner.next().ok_or_else(|| {
+                        parse_codes::invalid_syntax("Expected assignment operator", update_span)
+                    })?;
                     let op_str = op_pair.as_str();
                     let target = parse_expression(first)?;
                     let right = parse_expression(update_inner.next().ok_or_else(|| {
@@ -94,7 +101,12 @@ pub fn parse_for_c_style_stmt(pair: Pair<Rule>) -> ParseResult<Stmt> {
                             "*=" => hudhudscript_ast::BinaryOp::Mul,
                             "/=" => hudhudscript_ast::BinaryOp::Div,
                             "%=" => hudhudscript_ast::BinaryOp::Mod,
-                            _ => return Err(parse_codes::invalid_syntax(&format!("Unknown assignment operator: {}", op_str), update_span)),
+                            _ => {
+                                return Err(parse_codes::invalid_syntax(
+                                    &format!("Unknown assignment operator: {}", op_str),
+                                    update_span,
+                                ))
+                            }
                         };
                         hudhudscript_ast::Expr::Binary {
                             left: Box::new(target.clone()),
@@ -103,7 +115,11 @@ pub fn parse_for_c_style_stmt(pair: Pair<Rule>) -> ParseResult<Stmt> {
                             span: update_span,
                         }
                     };
-                    update = Some(Box::new(Stmt::Assignment { target, value, span: update_span }));
+                    update = Some(Box::new(Stmt::Assignment {
+                        target,
+                        value,
+                        span: update_span,
+                    }));
                 }
             }
             Rule::block => {

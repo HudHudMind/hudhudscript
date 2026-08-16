@@ -8,13 +8,11 @@ pub fn parse_json_body(body: &str) -> HudHudResult<Value16> {
     if body.trim().is_empty() {
         return Ok(Value16::null());
     }
-    let parsed: serde_json::Value =
-        serde_json::from_str(body).map_err(|e| {
-            hudhudscript_errors::Error::new(
-                hudhudscript_errors::ErrorCode::CompileRuntimeError,
-                format!("JSON body parse error: {}", e),
-            )
-        })?;
+    let parsed: serde_json::Value = serde_json::from_str(body).map_err(|e| {
+        hudhudscript_errors::Error::new(
+            hudhudscript_errors::ErrorCode::CompileRuntimeError,
+            format!("JSON body parse error: {}", e),
+        )
+    })?;
     Ok(hudhud_http::json::serde_to_value(&parsed))
 }
-

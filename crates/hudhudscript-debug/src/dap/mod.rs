@@ -259,9 +259,9 @@ impl Default for DapServer {
 // ---------------------------------------------------------------------------
 
 mod constructor;
-mod launch;
 mod evaluate;
+mod launch;
 
 pub use constructor::*;
-pub use launch::*;
 pub use evaluate::*;
+pub use launch::*;

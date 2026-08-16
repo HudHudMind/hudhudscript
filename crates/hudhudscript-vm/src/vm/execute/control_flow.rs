@@ -98,7 +98,9 @@ impl VM {
 
             Instruction::LoopBegin(idx) => {
                 #[cfg(feature = "telemetry")]
-                { self.telemetry.loop_begin_end_count += 1; }
+                {
+                    self.telemetry.loop_begin_end_count += 1;
+                }
                 // CROSS-2b: resolve payload from the side table.  The
                 // compiler is required to emit a valid index; out-of-bounds
                 // indicates a compiler bug (Kural 7c — no fallback).
@@ -108,7 +110,9 @@ impl VM {
             }
             Instruction::LoopEnd => {
                 #[cfg(feature = "telemetry")]
-                { self.telemetry.loop_begin_end_count += 1; }
+                {
+                    self.telemetry.loop_begin_end_count += 1;
+                }
                 self.loop_headers.pop();
             }
 
@@ -129,12 +133,20 @@ impl VM {
                     let has_next = obj.get("next").map_or(false, |v| {
                         v.as_string().is_some() || v.as_function_data().is_some()
                     });
-                    let elems = if has_next {
-                        self.collect_custom_iterator(iterable, bytecode)?
-                    } else {
-                        obj.keys().map(|k| Value16::string(k.to_string())).collect()
-                    };
-                    (elems, None)
+                    if has_next {
+                        self.start_custom_iterator_sequence(
+                            iterable,
+                            var_name.clone(),
+                            bytecode,
+                            255,
+                            ip,
+                        )?;
+                        return Ok(StepAction::DeferredCall);
+                    }
+                    (
+                        obj.keys().map(|k| Value16::string(k.to_string())).collect(),
+                        None,
+                    )
                 } else if let Some(s) = iterable.as_string() {
                     (
                         s.chars().map(|c| Value16::string(c.to_string())).collect(),
@@ -150,9 +162,15 @@ impl VM {
                     (mapped, None)
                 } else if let Some(state) = iterable.as_generator_state() {
                     (Vec::new(), Some(state.clone()))
-                } else if let Some(_inst) = iterable.as_instance_data() {
-                    let collected = self.collect_custom_iterator(iterable, bytecode)?;
-                    (collected, None)
+                } else if iterable.as_instance_data().is_some() {
+                    self.start_custom_iterator_sequence(
+                        iterable,
+                        var_name.clone(),
+                        bytecode,
+                        255,
+                        ip,
+                    )?;
+                    return Ok(StepAction::DeferredCall);
                 } else {
                     return Err(compile_codes::runtime_error("Cannot iterate".to_string()));
                 };

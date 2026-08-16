@@ -1,0 +1,52 @@
+// Async/Await Example
+// Demonstrates asynchronous operations
+
+// Import MCP servers
+use weather as weatherApi;
+use news as newsApi;
+
+// Define async function
+async var fetchWeather = (city) => {
+    var result = await weatherApi.get({
+        location: city,
+        units: "metric"
+    });
+    return result;
+};
+
+// Define another async function
+async var fetchNews = (topic) => {
+    var result = await newsApi.search({
+        query: topic,
+        limit: 5
+    });
+    return result;
+};
+
+// Main async execution
+async var main = () => {
+    print("Fetching data...");
+    
+    // Parallel execution with Promise.all
+    var results = await Promise.all([
+        fetchWeather("Istanbul"),
+        fetchWeather("Tokyo"),
+        fetchNews("AI technology")
+    ]);
+    
+    var istanbulWeather = results[0];
+    var tokyoWeather = results[1];
+    var aiNews = results[2];
+    
+    print("Istanbul weather:");
+    print(istanbulWeather);
+    
+    print("Tokyo weather:");
+    print(tokyoWeather);
+    
+    print("AI News:");
+    print(aiNews);
+};
+
+// Run main function
+main();

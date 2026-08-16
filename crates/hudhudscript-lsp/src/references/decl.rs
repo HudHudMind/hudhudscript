@@ -254,7 +254,9 @@ pub(crate) fn collect_decl(decl: &Decl, name: &str, uri: &Url, out: &mut Vec<Loc
             }
         }
 
-        Decl::Compose { base_subject, span, .. } => {
+        Decl::Compose {
+            base_subject, span, ..
+        } => {
             push_if_match(base_subject, name, *span, uri, out);
         }
 
@@ -333,18 +335,10 @@ pub(crate) fn collect_decl(decl: &Decl, name: &str, uri: &Url, out: &mut Vec<Loc
         Decl::UiApp { name: n, span, .. } => {
             push_if_match(n, name, *span, uri, out);
         }
-        Decl::AgentAction {
-            name: n,
-            span,
-            ..
-        } => {
+        Decl::AgentAction { name: n, span, .. } => {
             push_if_match(n, name, *span, uri, out);
         }
-        Decl::Ability {
-            name: n,
-            span,
-            ..
-        } => {
+        Decl::Ability { name: n, span, .. } => {
             push_if_match(n, name, *span, uri, out);
         }
         Decl::Deploy {

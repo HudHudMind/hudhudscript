@@ -106,6 +106,12 @@ impl VM {
             gc::trace_value(*value, gray);
         }
         trace_pending_flow(self.pending_flow.as_ref(), gray);
+        if let Some(request) = &self.pending_vm_call {
+            request.trace_roots(gray);
+        }
+        for continuation in &self.vm_continuations {
+            continuation.trace_roots(gray);
+        }
         for frame in &self.frame_stack {
             trace_pending_flow(
                 frame
@@ -114,6 +120,12 @@ impl VM {
                     .and_then(|saved| saved.pending_flow.as_ref()),
                 gray,
             );
+            if let Some(context) = &frame.receiver_context {
+                context.trace_roots(gray);
+            }
+            if let Some(chunk) = &frame.owned_chunk {
+                trace_values(chunk.constants.iter(), gray);
+            }
         }
         for value in self.tvars.snapshot_values() {
             gc::trace_value(value, gray);
@@ -156,3 +168,9 @@ mod runtime_bucket_tests;
 
 #[cfg(test)]
 mod collect_tests;
+
+#[cfg(test)]
+mod collect_constant_tests;
+
+#[cfg(test)]
+mod call_state_tests;

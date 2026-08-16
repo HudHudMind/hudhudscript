@@ -1,0 +1,21 @@
+// Ollama Cloud Provider Test
+// API key: https://ollama.com/settings/api-keys
+// Çalıştır: OLLAMA_API_KEY=your_key hudhud examples/ollamacloud_test.hudhud
+
+provider OllamaCloud {
+    type: "ollamacloud",
+    apiKey: env("OLLAMA_API_KEY"),
+    model: "llama3.3:70b"
+}
+
+agent Asistan {
+    provider: OllamaCloud,
+    role: "assistant"
+}
+
+let cevap = Asistan.call({
+    prompt: "Merhaba! Kendini tanıt."
+})
+
+yaz(cevap.content)
+yaz("Model: " + cevap.model)

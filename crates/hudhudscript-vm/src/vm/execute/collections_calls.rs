@@ -106,8 +106,16 @@ impl VM {
                     ip,
                 });
             }
-            Instruction::MethodCallSpread(_) => {
-                self.exec_spread_call(instr, bytecode, ip)?;
+            Instruction::MethodCallSpread {
+                dst,
+                obj,
+                args,
+                method_sym,
+            } => {
+                self.exec_method_call_spread(*dst, *obj, *args, *method_sym, bytecode, ip)?;
+                if self.pending_vm_call.is_some() {
+                    return Ok(StepAction::DeferredCall);
+                }
             }
 
             _ => unreachable!("instruction routed to wrong execute helper"),

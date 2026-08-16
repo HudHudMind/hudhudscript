@@ -1,0 +1,81 @@
+// HudHudScript — Çok Ajanlı Pipeline Örneği (Türkçe)
+// Issue #18: TR/EN pipeline örneği
+//
+// Anayasa, strateji, ajan ve orkestrasyon tanımları.
+// Not: Ajan gövdesi içindeki görev bloğu ve iç içe nesneler
+// şu an desteklenmiyor — gelecek sürümlerde eklenecek.
+
+// Anayasa: darbe koşulları ve izinler
+constitution AnayasaV1 {
+    coup_authority: "sistem_ajanı",
+    permissions: "dosya:oku, llm:çalıştır, ağ:istek",
+    realm: "üretim"
+}
+
+// Strateji: paralel çalışma, çoğunluk oylaması
+protocol PipelineStratejisi: {
+    execution: "parallel",
+    voting: "majority",
+    permissions: "dosya:oku, llm:çalıştır",
+    realm: "üretim"
+}
+
+// Veri toplama ajanı
+ajan VeriToplayıcı {
+    model: "gpt-4",
+    strategy: "PipelineStratejisi"
+}
+
+// Not: görev bildirimleri henüz desteklenmeyen aspirasyonel sözdizimidir.
+// görev veri_topla {
+//     description: "Kullanıcı verilerini topla ve özetle",
+//     tools: "http_get, dosya_oku",
+//     output: "ham_veri"
+// }
+
+// Analiz ajanı
+ajan AnalizAjanı {
+    model: "claude-3-opus",
+    strategy: "PipelineStratejisi"
+}
+
+// görev analiz_et {
+//     description: "Ham veriyi analiz et ve içgörüler çıkar",
+//     input: "VeriToplayıcı.ham_veri",
+//     output: "analiz_sonucu"
+// }
+
+// Rapor ajanı
+ajan RaporAjanı {
+    model: "gpt-4",
+    strategy: "PipelineStratejisi"
+}
+
+// görev rapor_oluştur {
+//     description: "Analiz sonuçlarından kapsamlı rapor oluştur",
+//     input: "AnalizAjanı.analiz_sonucu",
+//     output: "final_rapor"
+// }
+
+// Council: üç ajan birlikte karar verir
+konsey AnalizKonseyi {
+    members: ["VeriToplayıcı", "AnalizAjanı", "RaporAjanı"],
+    execution: "roundRobin",
+    voting: "weighted"
+}
+
+// Swarm: paralel veri işleme
+sürü VeriSürüsü {
+    agents: ["VeriToplayıcı", "AnalizAjanı"],
+    consensus: "majority",
+    fault_tolerant: true,
+    min_success: 1
+}
+
+// Ana iş akışı
+print("=== Çok Ajanlı Pipeline ===");
+print("Adım 1: VeriSürüsü veri topluyor (paralel)");
+print("Adım 2: AnalizKonseyi analiz ediyor (sıralı)");
+print("Adım 3: RaporAjanı final rapor oluşturuyor");
+print("Pipeline 3 ajan ile tanımlandı.");
+print("Pipeline örneği tamamlandı.");

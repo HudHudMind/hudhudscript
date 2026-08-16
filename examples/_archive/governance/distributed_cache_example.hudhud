@@ -1,0 +1,63 @@
+// Distributed Cache Transmission Example
+// Demonstrates cache synchronization between agents
+
+// Agent 1: Creates governance structures
+constitution DataGovernance {
+    description: "Data governance framework for distributed systems",
+    laws: [
+        {
+            name: "DataPrivacy",
+            description: "Protect user data privacy",
+            enforcement: mandatory,
+            rules: ["rule.1"]
+        },
+        {
+            name: "DataQuality",
+            description: "Ensure data quality standards",
+            enforcement: advisory,
+            rules: ["rule.2"]
+        }
+    ]
+}
+
+rule DataAccessRule: {
+    id: "rule.1",
+    description: "Control data access",
+    priority: 100,
+    conditions: [
+        {
+            type: "equals",
+            field: "role",
+            value: "admin"
+        }
+    ],
+    actions: [
+        {
+            type: "allow",
+            target: "data_access"
+        }
+    ]
+}
+
+council DataCouncil {
+    constitution: "DataGovernance",
+    members: [
+        { agent: "admin1", role: "Judge" },
+        { agent: "admin2", role: "Prosecutor" }
+    ],
+    rules: ["rule.1"]
+}
+
+// Agent 2: Receives cache transmission
+// The cache is transmitted with metadata:
+// - version: "1.0"
+// - timestamp: current time
+// - item_count: 3 (constitution + rule + council)
+// - transmission_id: unique ID
+// - checksum: for validation
+
+// Agent 2 can now use the governance structures
+// without re-transmitting full definitions
+
+print("Cache transmitted successfully")
+print("Agent 2 can now enforce DataGovernance")

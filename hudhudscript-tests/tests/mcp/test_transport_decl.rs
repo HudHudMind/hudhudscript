@@ -23,7 +23,9 @@ use hudhudscript_vm::VM;
 fn run_with(src: &str, allow_network: bool, allow_process: bool) -> Result<(), String> {
     let stmts = hudhudscript_parser::parse(src).map_err(|e| format!("parse: {}", e))?;
     let mut compiler = hudhudscript_compiler::Compiler::new();
-    let bc = compiler.compile(&stmts).map_err(|e| format!("compile: {}", e))?;
+    let bc = compiler
+        .compile(&stmts)
+        .map_err(|e| format!("compile: {}", e))?;
     let mut vm = VM::new();
     if allow_network {
         vm.allow_network();

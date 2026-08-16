@@ -53,7 +53,7 @@ async fn test_register_provider_to_runtime() {
             alert_threshold: 0.8,
         }),
         timeout_secs: None,
-            extra: std::collections::HashMap::new(),
+        extra: std::collections::HashMap::new(),
     };
 
     let provider = Arc::new(OpenAIProvider::new(config).unwrap());
@@ -90,7 +90,7 @@ async fn test_agent_with_provider() {
         max_tokens: Some(4000),
         budget: Some(TokenBudget::default()),
         timeout_secs: None,
-            extra: std::collections::HashMap::new(),
+        extra: std::collections::HashMap::new(),
     };
 
     let provider = Arc::new(OpenAIProvider::new(config).unwrap());
@@ -132,7 +132,7 @@ async fn test_multiple_agents_with_different_providers() {
         max_tokens: Some(4000),
         budget: Some(TokenBudget::default()),
         timeout_secs: None,
-            extra: std::collections::HashMap::new(),
+        extra: std::collections::HashMap::new(),
     };
 
     let openai_provider = Arc::new(OpenAIProvider::new(openai_config).unwrap());
@@ -150,7 +150,7 @@ async fn test_multiple_agents_with_different_providers() {
         max_tokens: Some(2000),
         budget: Some(TokenBudget::default()),
         timeout_secs: None,
-            extra: std::collections::HashMap::new(),
+        extra: std::collections::HashMap::new(),
     };
 
     let gpt35_provider = Arc::new(OpenAIProvider::new(gpt35_config).unwrap());
@@ -253,7 +253,7 @@ async fn test_provider_budget_configuration() {
             alert_threshold: 0.9,
         }),
         timeout_secs: None,
-            extra: std::collections::HashMap::new(),
+        extra: std::collections::HashMap::new(),
     };
 
     let provider = Arc::new(OpenAIProvider::new(config).unwrap());

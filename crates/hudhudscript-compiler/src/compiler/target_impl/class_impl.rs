@@ -3,8 +3,10 @@
 use super::*;
 
 impl Compiler {
-
-    pub fn compile_class_impl(&mut self, class_decl: &hudhudscript_ast::ClassDecl) -> CompileResult<()> {
+    pub fn compile_class_impl(
+        &mut self,
+        class_decl: &hudhudscript_ast::ClassDecl,
+    ) -> CompileResult<()> {
         use hudhudscript_ast::ClassMember;
         let mut method_names: Vec<String> = Vec::new();
         let mut static_method_names: Vec<String> = Vec::new();
@@ -88,11 +90,14 @@ impl Compiler {
                     } else {
                         let idx = self.bytecode.add_constant(Value16::null());
                         let tr = crate::compiler::regalloc::temp_reg();
-                        self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 });
-                        self.bytecode.push_move(255, tr );
+                        self.bytecode.push_instr(Instruction::LoadConst {
+                            dst: tr,
+                            const_idx: idx as u16,
+                        });
+                        self.bytecode.push_move(255, tr);
                     }
                     let tr = crate::compiler::regalloc::temp_reg();
-                    self.bytecode.push_move(tr, 255 );
+                    self.bytecode.push_move(tr, 255);
                     if *is_static {
                         static_field_names.push(name.clone());
                     }

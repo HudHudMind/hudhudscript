@@ -14,13 +14,17 @@ fn run_vm(src: &str) -> VM {
 
 #[test]
 fn g3_i64_max_plus_1() {
-    let vm = run_vm("let x = 9223372036854775807 + 1; if (x == 9223372036854775808) { return 1; } return 0;");
+    let vm = run_vm(
+        "let x = 9223372036854775807 + 1; if (x == 9223372036854775808) { return 1; } return 0;",
+    );
     assert_eq!(vm.last_return_value().display_string(), "1");
 }
 
 #[test]
 fn g3_i64_min_minus_1() {
-    let vm = run_vm("let x = -9223372036854775808 - 1; if (x == -9223372036854775809) { return 1; } return 0;");
+    let vm = run_vm(
+        "let x = -9223372036854775808 - 1; if (x == -9223372036854775809) { return 1; } return 0;",
+    );
     assert_eq!(vm.last_return_value().display_string(), "1");
 }
 
@@ -33,7 +37,9 @@ fn g3_neg_i64_min() {
 
 #[test]
 fn g3_i64_max_times_2() {
-    let vm = run_vm("let x = 9223372036854775807 * 2; if (x == 18446744073709551614) { return 1; } return 0;");
+    let vm = run_vm(
+        "let x = 9223372036854775807 * 2; if (x == 18446744073709551614) { return 1; } return 0;",
+    );
     assert_eq!(vm.last_return_value().display_string(), "1");
 }
 
@@ -75,7 +81,9 @@ fn g3_bigint_div_bigint() {
 
 #[test]
 fn g3_bigint_mod_bigint() {
-    let vm = run_vm("let a = 9223372036854775807 + 10; let x = a % 3; if (x == 2) { return 1; } return 0;");
+    let vm = run_vm(
+        "let a = 9223372036854775807 + 10; let x = a % 3; if (x == 2) { return 1; } return 0;",
+    );
     assert_eq!(vm.last_return_value().display_string(), "1");
 }
 

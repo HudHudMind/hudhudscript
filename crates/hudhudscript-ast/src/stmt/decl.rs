@@ -381,13 +381,26 @@ pub struct GoalSpecAst {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum RunModeAst { Once, Times(u64), Cyclic, UntilConverged, Until(Expr) }
+pub enum RunModeAst {
+    Once,
+    Times(u64),
+    Cyclic,
+    UntilConverged,
+    Until(Expr),
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum LoopItemAst {
     InlineStep(Box<Decl>),
-    UseStep { name: String, alias: Option<String>, args: Vec<Expr> },
-    AttachGate { gate: String, step: String },
+    UseStep {
+        name: String,
+        alias: Option<String>,
+        args: Vec<Expr>,
+    },
+    AttachGate {
+        gate: String,
+        step: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

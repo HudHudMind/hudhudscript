@@ -214,10 +214,16 @@ pub struct TypeChecker {
 
 /// BOLEM-A: Redeclaration severity
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RedeclarePolicy { Allow, Warn, Error }
+pub enum RedeclarePolicy {
+    Allow,
+    Warn,
+    Error,
+}
 
 impl Default for RedeclarePolicy {
-    fn default() -> Self { RedeclarePolicy::Error }
+    fn default() -> Self {
+        RedeclarePolicy::Error
+    }
 }
 
 impl Default for TypeChecker {
@@ -227,15 +233,15 @@ impl Default for TypeChecker {
 }
 
 mod constructor;
-mod statements;
 mod declarations;
 mod expressions;
 mod operators;
 mod patterns;
+mod statements;
 
 pub use constructor::*;
-pub use statements::*;
 pub use declarations::*;
 pub use expressions::*;
 pub use operators::*;
 pub use patterns::*;
+pub use statements::*;

@@ -8,7 +8,9 @@ fn run(src: &str) -> Result<String, String> {
     let ast = hudhudscript_parser::parse(src).unwrap();
     let mut compiler = hudhudscript_compiler::Compiler::new();
     let bc = compiler.compile(&ast).unwrap();
-    vm.execute(&bc).map(|_| vm.last_return_value().display_string()).map_err(|e| format!("{}", e))
+    vm.execute(&bc)
+        .map(|_| vm.last_return_value().display_string())
+        .map_err(|e| format!("{}", e))
 }
 
 #[test]

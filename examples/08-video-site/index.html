@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VidAI — AI-Powered Video Platform</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <span class="logo-icon">▶</span>
+            <span class="logo-text">Vid<span class="logo-accent">AI</span></span>
+        </div>
+        <div class="nav-search">
+            <input type="text" id="search" placeholder="🔍  Videolarda ara...">
+        </div>
+        <div class="nav-actions">
+            <span class="ai-badge">🤖 AI-powered</span>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="hero-content">
+            <h1>Yapay Zeka ile<br><span class="gradient-text">Video Keşfi</span></h1>
+            <p>Her video için otomatik açıklama ve etiket. DeepSeek AI tarafından desteklenmektedir.</p>
+            <div class="hero-stats">
+                <div class="stat"><span class="stat-num" id="vid-count">6</span><span class="stat-label">Video</span></div>
+                <div class="stat"><span class="stat-num">AI</span><span class="stat-label">Açıklama</span></div>
+                <div class="stat"><span class="stat-num">⚡</span><span class="stat-label">Anlık</span></div>
+            </div>
+        </div>
+    </section>
+
+    <main>
+        <div class="section-header">
+            <h2>📺 Tüm Videolar</h2>
+            <div class="filter-tabs">
+                <button class="filter-btn active" data-cat="">Tümü</button>
+                <button class="filter-btn" data-cat="Müzik">🎵 Müzik</button>
+                <button class="filter-btn" data-cat="Tarih">📜 Tarih</button>
+                <button class="filter-btn" data-cat="Film">🎬 Film</button>
+            </div>
+        </div>
+
+        <div id="loading" class="loading-skeleton">
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+        </div>
+
+        <div id="video-grid" class="video-grid"></div>
+    </main>
+
+    <footer>
+        <p>HudHudScript + DeepSeek AI + jQuery &mdash; Tüm açıklamalar yapay zeka tarafından oluşturulmuştur.</p>
+    </footer>
+
+<script>
+var allVideos = [];
+
+function loadVideos() {
+    $.getJSON('/api/videos', function(data) {
+        allVideos = data;
+        $('#loading').hide();
+        renderVideos('Tümü');
+    }).fail(function() {
+        $('#loading').html('<p class="error">Sunucuya bağlanılamadı</p>');
+    });
+}
+
+function renderVideos(cat) {
+    var html = '';
+    $.each(allVideos, function(i, v) {
+        if (cat !== 'Tümü' && v.category !== cat) return;
+        var thumb = 'https://img.youtube.com/vi/' + v.id + '/hqdefault.jpg';
+        html += '<div class="video-card" data-id="' + v.id + '">' +
+            '<div class="card-thumb" style="background-image:url(' + thumb + ')">' +
+                '<div class="play-overlay"><span>▶</span></div>' +
+                '<span class="duration">HD</span>' +
+            '</div>' +
+            '<div class="card-body">' +
+                '<h3>' + v.title + '</h3>' +
+                '<div class="card-meta">' +
+                    '<span class="cat-tag">' + v.category + '</span>' +
+                    '<span class="ai-label">🤖 AI</span>' +
+                '</div>' +
+                '<p class="card-desc">' + (v.desc || '...') + '</p>' +
+                '<div class="card-tags">' + (v.tags ? v.tags.split(',').map(function(t) {
+                    return '<span class="tag">' + t.trim() + '</span>';
+                }).join('') : '') + '</div>' +
+            '</div>' +
+        '</div>';
+    });
+    $('#video-grid').html(html || '<p class="empty">Bu kategoride video yok.</p>');
+
+    $('.video-card').click(function() {
+        var id = $(this).data('id');
+        openPlayer(id);
+    });
+}
+
+function openPlayer(id) {
+    var v = allVideos.find(function(x) { return x.id === id; });
+    if (!v) return;
+    var modal = '<div class="modal-overlay" id="player-modal">' +
+        '<div class="modal-content">' +
+            '<button class="modal-close">&times;</button>' +
+            '<div class="player-wrapper">' +
+                '<iframe src="https://www.youtube.com/embed/' + id + '?autoplay=1" allowfullscreen allow="autoplay"></iframe>' +
+            '</div>' +
+            '<div class="player-info">' +
+                '<h2>' + v.title + '</h2>' +
+                '<p>' + (v.desc || '') + '</p>' +
+            '</div>' +
+        '</div>' +
+    '</div>';
+    $('body').append(modal);
+    $('#player-modal').click(function(e) {
+        if (e.target === this) $(this).remove();
+    });
+    $('.modal-close').click(function() { $('#player-modal').remove(); });
+}
+
+$(function() {
+    loadVideos();
+
+    $('#search').on('input', function() {
+        var q = $(this).val().toLowerCase();
+        $('.video-card').each(function() {
+            var text = $(this).text().toLowerCase();
+            $(this).toggle(text.includes(q) || q === '');
+        });
+    });
+
+    $('.filter-btn').click(function() {
+        $('.filter-btn').removeClass('active');
+        $(this).addClass('active');
+        renderVideos($(this).data('cat'));
+    });
+});
+</script>
+</body>
+</html>

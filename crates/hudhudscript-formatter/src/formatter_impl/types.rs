@@ -183,17 +183,26 @@ impl Formatter {
                 self.current_indent -= 1;
                 format!("{}{}{}}}", header, stmts, indent)
             }
-            Decl::Compose { base_subject, rules, .. } => {
+            Decl::Compose {
+                base_subject,
+                rules,
+                ..
+            } => {
                 let header = format!("{}compose {} {{\n", indent, base_subject);
                 let mut body = String::new();
                 for rule in rules {
                     let mode_str = match &rule.mode {
-                        hudhudscript_ast::ComposeMode::Combine(subjects) => format!("combine [{}]", subjects.join(", ")),
+                        hudhudscript_ast::ComposeMode::Combine(subjects) => {
+                            format!("combine [{}]", subjects.join(", "))
+                        }
                         hudhudscript_ast::ComposeMode::Override(s) => format!("override {}", s),
                         hudhudscript_ast::ComposeMode::Before(s) => format!("before {}", s),
                         hudhudscript_ast::ComposeMode::After(s) => format!("after {}", s),
                     };
-                    body.push_str(&format!("{}  on {}: {}\n", indent, rule.ability_name, mode_str));
+                    body.push_str(&format!(
+                        "{}  on {}: {}\n",
+                        indent, rule.ability_name, mode_str
+                    ));
                 }
                 format!("{}{}{}}}", header, body, indent)
             }

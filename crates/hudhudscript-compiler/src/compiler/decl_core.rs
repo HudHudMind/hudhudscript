@@ -153,8 +153,13 @@ impl Compiler {
         let mut sip = std::mem::take(&mut bytecode.super_instr_payloads);
         let funcs_ref = bytecode.functions.borrow();
         // Build a temporary HashMap for the optimizer (compile-time only)
-        let funcs_map: std::collections::HashMap<String, std::sync::Arc<hudhudscript_bytecode::FunctionChunk>> = bytecode
-            .function_names.borrow().iter()
+        let funcs_map: std::collections::HashMap<
+            String,
+            std::sync::Arc<hudhudscript_bytecode::FunctionChunk>,
+        > = bytecode
+            .function_names
+            .borrow()
+            .iter()
             .map(|(name, &idx)| (name.clone(), funcs_ref[idx].clone()))
             .collect();
 
@@ -198,10 +203,11 @@ impl Compiler {
         // WI-1.2: Detect whether this bytecode needs an async runtime.
         // Check for async instructions: Await, Spawn, MakePromise, MakeGenerator.
         let needs_async = bytecode.instructions.iter().any(|instr| {
-            matches!(instr,
+            matches!(
+                instr,
                 Instruction::Await { .. }
-                | Instruction::Spawn { .. }
-                | Instruction::MakeGenerator { .. }
+                    | Instruction::Spawn { .. }
+                    | Instruction::MakeGenerator { .. }
             )
         });
         bytecode.needs_async = needs_async;

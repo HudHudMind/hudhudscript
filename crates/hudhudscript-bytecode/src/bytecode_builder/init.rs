@@ -1,3 +1,4 @@
+use crate::error::{compile_codes, CompileResult};
 use crate::{Bytecode, FunctionChunk, BYTECODE_VERSION};
 use std::sync::Arc;
 
@@ -91,6 +92,67 @@ impl Bytecode {
         self.function_names.borrow().keys().cloned().collect()
     }
 
+    /// Return function names and chunks in the canonical function-vector order.
+    /// A malformed name table is rejected instead of silently changing indices.
+    pub fn function_entries_by_index(&self) -> CompileResult<Vec<(String, Arc<FunctionChunk>)>> {
+        let functions = self.functions.borrow();
+        let names = self.function_names.borrow();
+        if names.len() != functions.len() {
+            return Err(function_table_error(format!(
+                "function table length mismatch: {} names for {} chunks",
+                names.len(),
+                functions.len()
+            )));
+        }
+
+        let mut names_by_index = vec![None; functions.len()];
+        for (name, &index) in names.iter() {
+            if index >= functions.len() {
+                return Err(function_table_error(format!(
+                    "function '{}' points to out-of-range index {} (chunk count {})",
+                    name,
+                    index,
+                    functions.len()
+                )));
+            }
+            if let Some(previous) = names_by_index[index].replace(name.clone()) {
+                return Err(function_table_error(format!(
+                    "function index {} is assigned to both '{}' and '{}'",
+                    index, previous, name
+                )));
+            }
+        }
+
+        names_by_index
+            .into_iter()
+            .enumerate()
+            .map(|(index, name)| {
+                let name = name.ok_or_else(|| {
+                    function_table_error(format!("function index {} has no name", index))
+                })?;
+                Ok((name, Arc::clone(&functions[index])))
+            })
+            .collect()
+    }
+
+    /// Resolve a function index to its canonical name.
+    pub fn function_name_at(&self, index: u32) -> CompileResult<String> {
+        let index = usize::try_from(index).map_err(|_| {
+            function_table_error(format!("function index {} cannot fit usize", index))
+        })?;
+        let entries = self.function_entries_by_index()?;
+        entries
+            .get(index)
+            .map(|(name, _)| name.clone())
+            .ok_or_else(|| {
+                function_table_error(format!(
+                    "function index {} is out of range (chunk count {})",
+                    index,
+                    entries.len()
+                ))
+            })
+    }
+
     /// Number of registered functions.
     #[inline]
     pub fn function_count(&self) -> usize {
@@ -117,13 +179,38 @@ impl Bytecode {
     }
 
     /// Rebuild `function_names` from `serialized_function_names` (post-deserialization).
-    pub fn rebuild_function_names(&self) {
+    pub fn rebuild_function_names(&self) -> CompileResult<()> {
+        let function_count = self.functions.borrow().len();
+        if self.serialized_function_names.len() != function_count {
+            return Err(function_table_error(format!(
+                "serialized function table has {} names for {} chunks",
+                self.serialized_function_names.len(),
+                function_count
+            )));
+        }
+
         let mut names = self.function_names.borrow_mut();
         names.clear();
         for (idx, name) in self.serialized_function_names.iter().enumerate() {
-            if !name.is_empty() {
-                names.insert(name.clone(), idx);
+            if name.is_empty() {
+                return Err(function_table_error(format!(
+                    "serialized function index {} has an empty name",
+                    idx
+                )));
+            }
+            if let Some(previous) = names.insert(name.clone(), idx) {
+                return Err(function_table_error(format!(
+                    "serialized function '{}' appears at indices {} and {}",
+                    name, previous, idx
+                )));
             }
         }
+        Ok(())
     }
+}
+
+#[cold]
+#[inline(never)]
+fn function_table_error(message: String) -> hudhudscript_errors::Error {
+    compile_codes::invalid_bytecode(message)
 }

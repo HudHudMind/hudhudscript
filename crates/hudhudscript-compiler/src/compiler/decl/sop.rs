@@ -159,7 +159,14 @@ impl Compiler {
         }
 
         let idx = self.bytecode.add_constant(Value16::object(subject_obj));
-        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_move(255, tr ); }
+        {
+            let tr = crate::compiler::regalloc::temp_reg();
+            self.bytecode.push_instr(Instruction::LoadConst {
+                dst: tr,
+                const_idx: idx as u16,
+            });
+            self.bytecode.push_move(255, tr);
+        }
         self.emit_decl_store("subject", name, 255);
 
         // Compile ability definitions inside subject body as subject-scoped chunks
@@ -167,8 +174,7 @@ impl Compiler {
             let chunk_name = format!("ability::{}::{}", name, cap_def.name);
             let chunk = self.compile_function_body(cap_def.params.clone(), &cap_def.body)?;
             let chunk_arc = Arc::new(chunk);
-            self.bytecode
-                .add_function(chunk_name, chunk_arc);
+            self.bytecode.add_function(chunk_name, chunk_arc);
         }
 
         Ok(())
@@ -180,7 +186,8 @@ impl Compiler {
         capabilities: &[String],
         fields: &[(String, Expr)],
     ) -> CompileResult<()> {
-        self.known_roles.insert(name.to_string(), capabilities.to_vec());
+        self.known_roles
+            .insert(name.to_string(), capabilities.to_vec());
         use std::collections::HashMap;
         let mut role_obj = hudhudscript_bytecode::ObjMap::default();
         role_obj.insert("__type".to_string(), Value16::string("role".to_string()));
@@ -201,7 +208,14 @@ impl Compiler {
             role_obj.insert(key.clone(), val);
         }
         let idx = self.bytecode.add_constant(Value16::object(role_obj));
-        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_move(255, tr ); }
+        {
+            let tr = crate::compiler::regalloc::temp_reg();
+            self.bytecode.push_instr(Instruction::LoadConst {
+                dst: tr,
+                const_idx: idx as u16,
+            });
+            self.bytecode.push_move(255, tr);
+        }
         self.emit_decl_store("role", name, 255);
         Ok(())
     }
@@ -232,7 +246,14 @@ impl Compiler {
             rel_obj.insert(key.clone(), val);
         }
         let idx = self.bytecode.add_constant(Value16::object(rel_obj));
-        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_move(255, tr ); }
+        {
+            let tr = crate::compiler::regalloc::temp_reg();
+            self.bytecode.push_instr(Instruction::LoadConst {
+                dst: tr,
+                const_idx: idx as u16,
+            });
+            self.bytecode.push_move(255, tr);
+        }
         self.emit_decl_store("relation", &rel_name, 255);
         Ok(())
     }
@@ -265,7 +286,7 @@ impl Compiler {
             name: chunk_name.clone(),
             params: params.to_vec(),
             chunk_name: chunk_name.clone(),
-                chunk_sym: hudhudscript_bytecode::interner::intern(&chunk_name.clone()).0,
+            chunk_sym: hudhudscript_bytecode::interner::intern(&chunk_name.clone()).0,
             captures: Default::default(),
         });
 
@@ -274,7 +295,14 @@ impl Compiler {
         effect_obj.insert("event".to_string(), Value16::string(event_name.to_string()));
         effect_obj.insert("handler".to_string(), func_val.clone());
         let idx = self.bytecode.add_constant(Value16::object(effect_obj));
-        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_move(255, tr ); }
+        {
+            let tr = crate::compiler::regalloc::temp_reg();
+            self.bytecode.push_instr(Instruction::LoadConst {
+                dst: tr,
+                const_idx: idx as u16,
+            });
+            self.bytecode.push_move(255, tr);
+        }
         let effect_store_name = format!("effect_on_{}", event_name);
         self.emit_decl_store("effect", &effect_store_name, 255);
         Ok(())
@@ -287,21 +315,33 @@ impl Compiler {
         rules: &[hudhudscript_ast::ComposeRule],
         field_rules: &[(String, hudhudscript_ast::FieldCorrespondence)],
     ) -> CompileResult<()> {
-        use std::collections::HashMap;
         use hudhudscript_ast::ComposeMode;
+        use std::collections::HashMap;
         let mut compose_obj = hudhudscript_bytecode::ObjMap::default();
         compose_obj.insert("__type".to_string(), Value16::string("compose".to_string()));
-        compose_obj.insert("base".to_string(), Value16::string(base_subject.to_string()));
+        compose_obj.insert(
+            "base".to_string(),
+            Value16::string(base_subject.to_string()),
+        );
         let mut rules_arr = Vec::new();
         for rule in rules {
             let mut rule_obj = hudhudscript_bytecode::ObjMap::default();
-            rule_obj.insert("ability".to_string(), Value16::string(rule.ability_name.clone()));
+            rule_obj.insert(
+                "ability".to_string(),
+                Value16::string(rule.ability_name.clone()),
+            );
             match &rule.mode {
                 ComposeMode::Combine(subjects) => {
                     rule_obj.insert("mode".to_string(), Value16::string("combine".to_string()));
-                    rule_obj.insert("subjects".to_string(), Value16::array(
-                        subjects.iter().map(|s| Value16::string(s.clone())).collect()
-                    ));
+                    rule_obj.insert(
+                        "subjects".to_string(),
+                        Value16::array(
+                            subjects
+                                .iter()
+                                .map(|s| Value16::string(s.clone()))
+                                .collect(),
+                        ),
+                    );
                 }
                 ComposeMode::Override(subject) => {
                     rule_obj.insert("mode".to_string(), Value16::string("override".to_string()));
@@ -333,7 +373,14 @@ impl Compiler {
         }
         compose_obj.insert("field_rules".to_string(), Value16::array(field_rules_arr));
         let idx = self.bytecode.add_constant(Value16::object(compose_obj));
-        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_move(255, tr ); }
+        {
+            let tr = crate::compiler::regalloc::temp_reg();
+            self.bytecode.push_instr(Instruction::LoadConst {
+                dst: tr,
+                const_idx: idx as u16,
+            });
+            self.bytecode.push_move(255, tr);
+        }
         self.emit_decl_store("compose", base_subject, 255);
         Ok(())
     }

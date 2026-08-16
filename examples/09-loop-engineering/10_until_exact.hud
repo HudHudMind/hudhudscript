@@ -1,0 +1,11 @@
+// Sample 10: until(counter >= 3) exact stop
+let counter = 0
+
+loop U mode: until(counter >= 3) {
+  step s {
+    counter = counter + 1
+    gate G { when true -> continue else -> fail }
+  }
+}
+
+run loop U

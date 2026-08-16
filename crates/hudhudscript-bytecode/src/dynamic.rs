@@ -1,6 +1,6 @@
 use crate::{
-    ClassData, DataData, FunctionData, GeneratorState16, InstanceData, ObjMap,
-    PromiseState16, Repr, ResourceRef, ToolRef, Value16,
+    ClassData, DataData, FunctionData, GeneratorState16, InstanceData, ObjMap, PromiseState16,
+    Repr, ResourceRef, ToolRef, Value16,
 };
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};

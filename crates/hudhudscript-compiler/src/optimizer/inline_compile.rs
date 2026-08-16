@@ -41,7 +41,15 @@ pub(crate) fn try_inline_call(
     }
 
     // ---- Phase 2: plan (all checks, no emission) ------------------------
-    if let Some(plan) = try_inline_plan(callee, first_arg, arg_count, dst, &const_remap, &int_remap, &num_remap) {
+    if let Some(plan) = try_inline_plan(
+        callee,
+        first_arg,
+        arg_count,
+        dst,
+        &const_remap,
+        &int_remap,
+        &num_remap,
+    ) {
         // ---- Phase 3: emit atomically -----------------------------------
         for instr in plan {
             target.ct_emit(instr);
@@ -74,35 +82,59 @@ pub fn try_inline_plan(
     }
 
     // Purity: reject loops
-    if body.iter().any(|ci| matches!(ci, Instruction::LoopBegin(_))) {
+    if body
+        .iter()
+        .any(|ci| matches!(ci, Instruction::LoopBegin(_)))
+    {
         return None;
     }
     // Reject fused returns (inliner only handles plain Return)
-    if body.iter().any(|ci| matches!(ci,
-        Instruction::IntAddReturn { .. } | Instruction::IntSubReturn { .. }
-        | Instruction::IntMulReturn { .. } | Instruction::IntDivReturn { .. }
-        | Instruction::IntCmpIReturn { .. } | Instruction::ReturnConst { .. }
-    )) {
+    if body.iter().any(|ci| {
+        matches!(
+            ci,
+            Instruction::IntAddReturn { .. }
+                | Instruction::IntSubReturn { .. }
+                | Instruction::IntMulReturn { .. }
+                | Instruction::IntDivReturn { .. }
+                | Instruction::IntCmpIReturn { .. }
+                | Instruction::ReturnConst { .. }
+        )
+    }) {
         return None;
     }
     // Reject side effects
-    if body.iter().any(|ci| matches!(ci,
-        Instruction::StoreGlobal { .. } | Instruction::DeclGlobal { .. }
-        | Instruction::MethodCall { .. } | Instruction::SuperCall { .. }
-        | Instruction::Call { .. } | Instruction::IndexAssign { .. }
-        | Instruction::IndexAssignArray { .. } | Instruction::SetProperty { .. }
-        | Instruction::Yield { .. } | Instruction::Await { .. }
-        | Instruction::Spawn { .. } | Instruction::Throw { .. }
-        | Instruction::LoopBegin(_) | Instruction::TryBegin(_)
-    )) {
+    if body.iter().any(|ci| {
+        matches!(
+            ci,
+            Instruction::StoreGlobal { .. }
+                | Instruction::DeclGlobal { .. }
+                | Instruction::MethodCall { .. }
+                | Instruction::SuperCall { .. }
+                | Instruction::Call { .. }
+                | Instruction::IndexAssign { .. }
+                | Instruction::IndexAssignArray { .. }
+                | Instruction::SetProperty { .. }
+                | Instruction::Yield { .. }
+                | Instruction::Await { .. }
+                | Instruction::Spawn { .. }
+                | Instruction::Throw { .. }
+                | Instruction::LoopBegin(_)
+                | Instruction::TryBegin(_)
+        )
+    }) {
         return None;
     }
 
     // Reject jumps/conditionals inside the body
-    if body.iter().any(|ci| matches!(ci,
-        Instruction::Jump(..) | Instruction::JumpIfFalse { .. }
-        | Instruction::JumpIfTrue { .. } | Instruction::Break
-    )) {
+    if body.iter().any(|ci| {
+        matches!(
+            ci,
+            Instruction::Jump(..)
+                | Instruction::JumpIfFalse { .. }
+                | Instruction::JumpIfTrue { .. }
+                | Instruction::Break
+        )
+    }) {
         return None;
     }
 
@@ -142,10 +174,19 @@ pub fn try_inline_plan(
         if i == body.len() - 1 {
             let mapped_src = map_reg(ret_src)?;
             if dst != mapped_src {
-                out.push(Instruction::Move { dst, src: mapped_src });
+                out.push(Instruction::Move {
+                    dst,
+                    src: mapped_src,
+                });
             }
         } else {
-            out.push(remap_single_instr(ci, &map_reg, const_remap, int_remap, num_remap)?);
+            out.push(remap_single_instr(
+                ci,
+                &map_reg,
+                const_remap,
+                int_remap,
+                num_remap,
+            )?);
         }
     }
 
@@ -169,9 +210,9 @@ fn can_remap_regs<F: Fn(u8) -> Option<u8>>(instr: &Instruction, m: &F) -> bool {
         | Instruction::NumDiv { dst, src1, src2 } => {
             m(dst).is_some() && m(src1).is_some() && m(src2).is_some()
         }
-        Instruction::IntCmp { dst, src1, src2, .. } => {
-            m(dst).is_some() && m(src1).is_some() && m(src2).is_some()
-        }
+        Instruction::IntCmp {
+            dst, src1, src2, ..
+        } => m(dst).is_some() && m(src1).is_some() && m(src2).is_some(),
         Instruction::IntCmpI { dst, src, .. }
         | Instruction::NumAddI { dst, src, .. }
         | Instruction::IntAddI { dst, src, .. }
@@ -180,8 +221,9 @@ fn can_remap_regs<F: Fn(u8) -> Option<u8>>(instr: &Instruction, m: &F) -> bool {
         | Instruction::NumDivI { dst, src, .. }
         | Instruction::Neg { dst, src }
         | Instruction::Not { dst, src } => m(dst).is_some() && m(src).is_some(),
-        Instruction::JumpIfFalse { src, .. }
-        | Instruction::JumpIfTrue { src, .. } => m(src).is_some(),
+        Instruction::JumpIfFalse { src, .. } | Instruction::JumpIfTrue { src, .. } => {
+            m(src).is_some()
+        }
         Instruction::Return { src } => m(src).is_some(),
         _ => false,
     }
@@ -197,81 +239,142 @@ fn remap_single_instr<F: Fn(u8) -> Option<u8>>(
 ) -> Option<Instruction> {
     let rm = |r: u8| m(r);
     Some(match *instr {
-        Instruction::Move { dst, src } => {
-            Instruction::Move { dst: rm(dst)?, src: rm(src)? }
-        }
+        Instruction::Move { dst, src } => Instruction::Move {
+            dst: rm(dst)?,
+            src: rm(src)?,
+        },
         Instruction::LoadConst { dst, const_idx } => {
-            let new_idx = const_remap.get(const_idx as usize).copied().unwrap_or(const_idx);
-            Instruction::LoadConst { dst: rm(dst)?, const_idx: new_idx }
+            let new_idx = const_remap
+                .get(const_idx as usize)
+                .copied()
+                .unwrap_or(const_idx);
+            Instruction::LoadConst {
+                dst: rm(dst)?,
+                const_idx: new_idx,
+            }
         }
         Instruction::LoadIntConst { dst, const_idx } => {
-            let new_idx = int_remap.get(const_idx as usize).copied().unwrap_or(const_idx);
-            Instruction::LoadIntConst { dst: rm(dst)?, const_idx: new_idx }
+            let new_idx = int_remap
+                .get(const_idx as usize)
+                .copied()
+                .unwrap_or(const_idx);
+            Instruction::LoadIntConst {
+                dst: rm(dst)?,
+                const_idx: new_idx,
+            }
         }
         Instruction::LoadNumConst { dst, const_idx } => {
-            let new_idx = num_remap.get(const_idx as usize).copied().unwrap_or(const_idx);
-            Instruction::LoadNumConst { dst: rm(dst)?, const_idx: new_idx }
+            let new_idx = num_remap
+                .get(const_idx as usize)
+                .copied()
+                .unwrap_or(const_idx);
+            Instruction::LoadNumConst {
+                dst: rm(dst)?,
+                const_idx: new_idx,
+            }
         }
-        Instruction::IntAdd { dst, src1, src2 } => {
-            Instruction::IntAdd { dst: rm(dst)?, src1: rm(src1)?, src2: rm(src2)? }
-        }
-        Instruction::IntMul { dst, src1, src2 } => {
-            Instruction::IntMul { dst: rm(dst)?, src1: rm(src1)?, src2: rm(src2)? }
-        }
-        Instruction::IntSub { dst, src1, src2 } => {
-            Instruction::IntSub { dst: rm(dst)?, src1: rm(src1)?, src2: rm(src2)? }
-        }
-        Instruction::IntDiv { dst, src1, src2 } => {
-            Instruction::IntDiv { dst: rm(dst)?, src1: rm(src1)?, src2: rm(src2)? }
-        }
-        Instruction::IntCmp { dst, src1, src2, op } => {
-            Instruction::IntCmp { dst: rm(dst)?, src1: rm(src1)?, src2: rm(src2)?, op }
-        }
-        Instruction::IntCmpI { dst, src, op, imm } => {
-            Instruction::IntCmpI { dst: rm(dst)?, src: rm(src)?, op, imm }
-        }
-        Instruction::NumAdd { dst, src1, src2 } => {
-            Instruction::NumAdd { dst: rm(dst)?, src1: rm(src1)?, src2: rm(src2)? }
-        }
-        Instruction::NumSub { dst, src1, src2 } => {
-            Instruction::NumSub { dst: rm(dst)?, src1: rm(src1)?, src2: rm(src2)? }
-        }
-        Instruction::NumMul { dst, src1, src2 } => {
-            Instruction::NumMul { dst: rm(dst)?, src1: rm(src1)?, src2: rm(src2)? }
-        }
-        Instruction::NumDiv { dst, src1, src2 } => {
-            Instruction::NumDiv { dst: rm(dst)?, src1: rm(src1)?, src2: rm(src2)? }
-        }
-        Instruction::NumAddI { dst, src, imm } => {
-            Instruction::NumAddI { dst: rm(dst)?, src: rm(src)?, imm }
-        }
-        Instruction::IntAddI { dst, src, imm } => {
-            Instruction::IntAddI { dst: rm(dst)?, src: rm(src)?, imm }
-        }
-        Instruction::IntMulI { dst, src, imm } => {
-            Instruction::IntMulI { dst: rm(dst)?, src: rm(src)?, imm }
-        }
-        Instruction::IntDivI { dst, src, imm } => {
-            Instruction::IntDivI { dst: rm(dst)?, src: rm(src)?, imm }
-        }
-        Instruction::NumDivI { dst, src, imm } => {
-            Instruction::NumDivI { dst: rm(dst)?, src: rm(src)?, imm }
-        }
-        Instruction::Neg { dst, src } => {
-            Instruction::Neg { dst: rm(dst)?, src: rm(src)? }
-        }
-        Instruction::Not { dst, src } => {
-            Instruction::Not { dst: rm(dst)?, src: rm(src)? }
-        }
-        Instruction::JumpIfFalse { src, offset } => {
-            Instruction::JumpIfFalse { src: rm(src)?, offset }
-        }
-        Instruction::JumpIfTrue { src, offset } => {
-            Instruction::JumpIfTrue { src: rm(src)?, offset }
-        }
-        Instruction::Return { src } => {
-            Instruction::Move { dst: 255, src: rm(src)? }
-        }
+        Instruction::IntAdd { dst, src1, src2 } => Instruction::IntAdd {
+            dst: rm(dst)?,
+            src1: rm(src1)?,
+            src2: rm(src2)?,
+        },
+        Instruction::IntMul { dst, src1, src2 } => Instruction::IntMul {
+            dst: rm(dst)?,
+            src1: rm(src1)?,
+            src2: rm(src2)?,
+        },
+        Instruction::IntSub { dst, src1, src2 } => Instruction::IntSub {
+            dst: rm(dst)?,
+            src1: rm(src1)?,
+            src2: rm(src2)?,
+        },
+        Instruction::IntDiv { dst, src1, src2 } => Instruction::IntDiv {
+            dst: rm(dst)?,
+            src1: rm(src1)?,
+            src2: rm(src2)?,
+        },
+        Instruction::IntCmp {
+            dst,
+            src1,
+            src2,
+            op,
+        } => Instruction::IntCmp {
+            dst: rm(dst)?,
+            src1: rm(src1)?,
+            src2: rm(src2)?,
+            op,
+        },
+        Instruction::IntCmpI { dst, src, op, imm } => Instruction::IntCmpI {
+            dst: rm(dst)?,
+            src: rm(src)?,
+            op,
+            imm,
+        },
+        Instruction::NumAdd { dst, src1, src2 } => Instruction::NumAdd {
+            dst: rm(dst)?,
+            src1: rm(src1)?,
+            src2: rm(src2)?,
+        },
+        Instruction::NumSub { dst, src1, src2 } => Instruction::NumSub {
+            dst: rm(dst)?,
+            src1: rm(src1)?,
+            src2: rm(src2)?,
+        },
+        Instruction::NumMul { dst, src1, src2 } => Instruction::NumMul {
+            dst: rm(dst)?,
+            src1: rm(src1)?,
+            src2: rm(src2)?,
+        },
+        Instruction::NumDiv { dst, src1, src2 } => Instruction::NumDiv {
+            dst: rm(dst)?,
+            src1: rm(src1)?,
+            src2: rm(src2)?,
+        },
+        Instruction::NumAddI { dst, src, imm } => Instruction::NumAddI {
+            dst: rm(dst)?,
+            src: rm(src)?,
+            imm,
+        },
+        Instruction::IntAddI { dst, src, imm } => Instruction::IntAddI {
+            dst: rm(dst)?,
+            src: rm(src)?,
+            imm,
+        },
+        Instruction::IntMulI { dst, src, imm } => Instruction::IntMulI {
+            dst: rm(dst)?,
+            src: rm(src)?,
+            imm,
+        },
+        Instruction::IntDivI { dst, src, imm } => Instruction::IntDivI {
+            dst: rm(dst)?,
+            src: rm(src)?,
+            imm,
+        },
+        Instruction::NumDivI { dst, src, imm } => Instruction::NumDivI {
+            dst: rm(dst)?,
+            src: rm(src)?,
+            imm,
+        },
+        Instruction::Neg { dst, src } => Instruction::Neg {
+            dst: rm(dst)?,
+            src: rm(src)?,
+        },
+        Instruction::Not { dst, src } => Instruction::Not {
+            dst: rm(dst)?,
+            src: rm(src)?,
+        },
+        Instruction::JumpIfFalse { src, offset } => Instruction::JumpIfFalse {
+            src: rm(src)?,
+            offset,
+        },
+        Instruction::JumpIfTrue { src, offset } => Instruction::JumpIfTrue {
+            src: rm(src)?,
+            offset,
+        },
+        Instruction::Return { src } => Instruction::Move {
+            dst: 255,
+            src: rm(src)?,
+        },
         _ => return None,
     })
 }
@@ -281,11 +384,7 @@ mod tests {
     use super::*;
     use hudhudscript_bytecode::{FunctionChunk, Instruction};
 
-    fn make_chunk(
-        _name: &str,
-        params: Vec<&str>,
-        instructions: Vec<Instruction>,
-    ) -> FunctionChunk {
+    fn make_chunk(_name: &str, params: Vec<&str>, instructions: Vec<Instruction>) -> FunctionChunk {
         FunctionChunk {
             params: params.iter().map(|s| s.to_string()).collect(),
             instructions,
@@ -301,37 +400,60 @@ mod tests {
             max_register: 2,
             sym_to_slot: std::sync::OnceLock::new(),
             source_positions: vec![],
-            param_slots: (0..params.len() as u16).collect::<Vec<_>>().into_boxed_slice(),
+            param_slots: (0..params.len() as u16)
+                .collect::<Vec<_>>()
+                .into_boxed_slice(),
             is_plain_function: true,
         }
     }
 
     #[test]
     fn add1_is_inlinable() {
-        let chunk = make_chunk("add1", vec!["x"], vec![
-            Instruction::IntAddI { dst: 1, src: 0, imm: 1 },
-            Instruction::Return { src: 1 },
-        ]);
+        let chunk = make_chunk(
+            "add1",
+            vec!["x"],
+            vec![
+                Instruction::IntAddI {
+                    dst: 1,
+                    src: 0,
+                    imm: 1,
+                },
+                Instruction::Return { src: 1 },
+            ],
+        );
         let result = try_inline_plan(&chunk, 10, 1, 255, &[], &[], &[]);
         assert!(result.is_some(), "add1(x)=x+1 should be inlinable");
     }
 
     #[test]
     fn recursive_not_inlinable() {
-        let chunk = make_chunk("recurse", vec!["x"], vec![
-            Instruction::Call { dst: 1, payload_idx: 0, first_arg: 0, arg_count: 1 },
-            Instruction::Return { src: 1 },
-        ]);
+        let chunk = make_chunk(
+            "recurse",
+            vec!["x"],
+            vec![
+                Instruction::Call {
+                    dst: 1,
+                    payload_idx: 0,
+                    first_arg: 0,
+                    arg_count: 1,
+                },
+                Instruction::Return { src: 1 },
+            ],
+        );
         let result = try_inline_plan(&chunk, 10, 1, 255, &[], &[], &[]);
         assert!(result.is_none(), "recursive function must NOT be inlinable");
     }
 
     #[test]
     fn side_effect_not_inlinable() {
-        let chunk = make_chunk("s", vec!["x"], vec![
-            Instruction::StoreGlobal { src: 0, sym: 0 },
-            Instruction::Return { src: 0 },
-        ]);
+        let chunk = make_chunk(
+            "s",
+            vec!["x"],
+            vec![
+                Instruction::StoreGlobal { src: 0, sym: 0 },
+                Instruction::Return { src: 0 },
+            ],
+        );
         let result = try_inline_plan(&chunk, 10, 1, 255, &[], &[], &[]);
         assert!(result.is_none(), "side-effect must NOT be inlinable");
     }

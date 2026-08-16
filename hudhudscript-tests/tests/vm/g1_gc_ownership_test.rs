@@ -13,7 +13,8 @@ fn run_vm(src: &str) -> VM {
 
 #[test]
 fn g1_two_vms_same_thread_isolation() {
-    let mut vm_a = run_vm(r#"let s = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"; return s.length;"#);
+    let mut vm_a =
+        run_vm(r#"let s = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"; return s.length;"#);
     assert_eq!(vm_a.last_return_value().display_string(), "42");
     let mut vm_b = run_vm(r#"let arr = [1, 2, 3, 4, 5]; return arr.length;"#);
     assert_eq!(vm_b.last_return_value().display_string(), "5");
@@ -25,31 +26,41 @@ fn g1_two_vms_same_thread_isolation() {
 
 #[test]
 fn g1_cur_this_survives_collection() {
-    let mut vm = run_vm(r#"class Counter { fn constructor(start) { this.value = start; } fn bump() { this.value = this.value + 1; return this.value; } } let c = new Counter(41); c.bump(); return c.bump();"#);
+    let mut vm = run_vm(
+        r#"class Counter { fn constructor(start) { this.value = start; } fn bump() { this.value = this.value + 1; return this.value; } } let c = new Counter(41); c.bump(); return c.bump();"#,
+    );
     assert_eq!(vm.last_return_value().display_string(), "43");
 }
 
 #[test]
 fn g1_retired_frame_values_freed_active_survive() {
-    let mut vm = run_vm(r#"fn make_temp() { let temp = "collectible"; return 42; } let result = make_temp(); let persistent = "this_must_survive"; return persistent.length;"#);
+    let mut vm = run_vm(
+        r#"fn make_temp() { let temp = "collectible"; return 42; } let result = make_temp(); let persistent = "this_must_survive"; return persistent.length;"#,
+    );
     assert_eq!(vm.last_return_value().display_string(), "17");
 }
 
 #[test]
 fn g1_closure_captured_value_survives() {
-    let mut vm = run_vm(r#"fn make_closure() { let captured = "closure_data_here"; return fn() { return captured; }; } let f = make_closure(); return f();"#);
+    let mut vm = run_vm(
+        r#"fn make_closure() { let captured = "closure_data_here"; return fn() { return captured; }; } let f = make_closure(); return f();"#,
+    );
     assert_eq!(vm.last_return_value().display_string(), "closure_data_here");
 }
 
 #[test]
 fn g1_nested_return_value_survives() {
-    let mut vm = run_vm(r#"fn outer() { fn inner() { return "inner_data"; } return inner(); } return outer();"#);
+    let mut vm = run_vm(
+        r#"fn outer() { fn inner() { return "inner_data"; } return inner(); } return outer();"#,
+    );
     assert_eq!(vm.last_return_value().display_string(), "inner_data");
 }
 
 #[test]
 fn g1_multiple_returns_preserve_values() {
-    let mut vm = run_vm(r#"fn make_obj() { return {name: "test", value: 123}; } let obj = make_obj(); return obj.name;"#);
+    let mut vm = run_vm(
+        r#"fn make_obj() { return {name: "test", value: 123}; } let obj = make_obj(); return obj.name;"#,
+    );
     assert_eq!(vm.last_return_value().display_string(), "test");
 }
 
@@ -68,7 +79,7 @@ fn make_counter(start) {
 let r = fib(10);
 let c = make_counter(r);
 return c();
-"#
+"#,
     );
     assert_eq!(vm.last_return_value().display_string(), "55");
 }
@@ -88,9 +99,12 @@ try {
     tracker = tracker + "_finally";
 }
 return tracker;
-"#
+"#,
     );
-    assert_eq!(vm.last_return_value().display_string(), "alive_caught_finally");
+    assert_eq!(
+        vm.last_return_value().display_string(),
+        "alive_caught_finally"
+    );
 }
 
 // ── G1.7: Nested VM/module export ────────────────────────────────────
@@ -101,7 +115,7 @@ fn g1_nested_module_export_survives() {
 let secret = "exported_data";
 fn get_secret() { return secret; }
 return get_secret();
-"#
+"#,
     );
     assert_eq!(vm.last_return_value().display_string(), "exported_data");
 }
@@ -118,7 +132,7 @@ while (i < 1000) {
     i = i + 1;
 }
 return arr[999];
-"#
+"#,
     );
     // "item_" + 999 = "item_999"
     assert_eq!(vm.last_return_value().display_string(), "item_999");

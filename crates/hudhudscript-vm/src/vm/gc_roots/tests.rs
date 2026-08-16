@@ -23,6 +23,7 @@ fn fx_map(pairs: &[(&str, Value16)]) -> FxHashMap<String, Value16> {
 fn dummy_frame_with_pending(value: Value16) -> CallFrame {
     CallFrame {
         chunk_ptr: ptr::null(),
+        owned_chunk: None,
         packed: ptr::null(),
         func_sym: SymId(0),
         ip: 0,
@@ -39,6 +40,9 @@ fn dummy_frame_with_pending(value: Value16) -> CallFrame {
         call_depth: 0,
         owned_local_syms: false,
         class_context: false,
+        return_sink: crate::vm::call_state::ReturnSink::Discard,
+        receiver_context: None,
+        swallow_error: false,
     }
 }
 

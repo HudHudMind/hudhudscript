@@ -102,8 +102,7 @@ pub(crate) fn compile_binary(
             if target.ct_local_type(name) != ExprType::Number {
                 if let Ok(imm_i16) = i16::try_from(imm) {
                     if let Some(reg) = target.ct_local_reg(name) {
-                        let src = if target.ct_is_top_level()
-                            && target.ct_is_shared_top_level(name)
+                        let src = if target.ct_is_top_level() && target.ct_is_shared_top_level(name)
                         {
                             let dst = regs
                                 .alloc(target.ct_current_ip(), last_use)
@@ -164,8 +163,7 @@ pub(crate) fn compile_binary(
                 offset: 0,
             });
             let r_reg = compile_expr_to_reg(target, right, regs);
-            target.emit_move(dst, r_reg,
-            );
+            target.emit_move(dst, r_reg);
             let over = target.ct_current_ip();
             target.ct_emit(Instruction::Jump(0));
             let false_path = target.ct_current_ip();
@@ -176,7 +174,7 @@ pub(crate) fn compile_binary(
                     offset: jump_off(skip, false_path) as i16,
                 },
             );
-            target.emit_move(dst, l_reg );
+            target.emit_move(dst, l_reg);
             let after = target.ct_current_ip();
             target.ct_patch(over, Instruction::Jump(jump_off(over, after)));
             regs.free_now(l_reg);
@@ -190,8 +188,7 @@ pub(crate) fn compile_binary(
                 offset: 0,
             });
             let r_reg = compile_expr_to_reg(target, right, regs);
-            target.emit_move(dst, r_reg,
-            );
+            target.emit_move(dst, r_reg);
             let over = target.ct_current_ip();
             target.ct_emit(Instruction::Jump(0));
             let true_path = target.ct_current_ip();
@@ -202,7 +199,7 @@ pub(crate) fn compile_binary(
                     offset: jump_off(skip, true_path) as i16,
                 },
             );
-            target.emit_move(dst, l_reg );
+            target.emit_move(dst, l_reg);
             let after = target.ct_current_ip();
             target.ct_patch(over, Instruction::Jump(jump_off(over, after)));
             regs.free_now(l_reg);

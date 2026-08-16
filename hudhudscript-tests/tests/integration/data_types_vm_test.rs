@@ -11,7 +11,11 @@ fn vm_run_and_get(code: &str, var: &str) -> (hudhudscript_vm::VM, hudhudscript_b
     let bytecode = compiler.compile(&ast).expect("compile failed");
     let mut vm = VM::new();
     vm.execute(&bytecode).expect("VM execution failed");
-    let val = vm.get_variable(var).cloned().map(|v| v).unwrap_or_else(|| panic!("variable \'{}\' not found", var));
+    let val = vm
+        .get_variable(var)
+        .cloned()
+        .map(|v| v)
+        .unwrap_or_else(|| panic!("variable \'{}\' not found", var));
     (vm, val)
 }
 
@@ -36,7 +40,10 @@ fn assert_bool((_vm, val): (hudhudscript_vm::VM, hudhudscript_bytecode::Value16)
     }
 }
 
-fn assert_string((_vm, val): (hudhudscript_vm::VM, hudhudscript_bytecode::Value16), expected: &str) {
+fn assert_string(
+    (_vm, val): (hudhudscript_vm::VM, hudhudscript_bytecode::Value16),
+    expected: &str,
+) {
     if let Some(s) = val.as_str() {
         assert_eq!(s, expected, "Expected '{}', got '{}'", expected, s);
     } else {
@@ -170,7 +177,8 @@ fn test_vm_map_keys_values_entries() {
         var size = m.size();
     "#;
     assert_number(vm_run_and_get(code, "size"), 2.0);
-    let tuple = vm_run_and_get(code, "ks"); if let Some(keys) = tuple.1.as_array() {
+    let tuple = vm_run_and_get(code, "ks");
+    if let Some(keys) = tuple.1.as_array() {
         assert_eq!(keys.len(), 2);
     } else {
         panic!("Expected Array");

@@ -1,0 +1,39 @@
+// Function Execution Example
+// This demonstrates that functions can now be declared and executed
+
+// Basic function
+function add(x, y) {
+    return x + y;
+}
+
+// Call the function
+let result = add(5, 3);
+print("5 + 3 = ");
+print(result);
+
+// Function with no parameters
+function getFortyTwo() {
+    return 42;
+}
+
+let answer = getFortyTwo();
+print("The answer is: ");
+print(answer);
+
+// Function with closure
+let multiplier = 10;
+
+function multiply(x) {
+    return x * multiplier;
+}
+
+let product = multiply(5);
+print("5 * 10 = ");
+print(product);
+
+// Async function declaration (syntax works, execution pending)
+async function fetchData() {
+    return "data";
+}
+
+print("Functions work! ✓");

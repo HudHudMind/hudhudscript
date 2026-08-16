@@ -1,0 +1,270 @@
+// Comprehensive Governance Example
+// Demonstrates all governance features in a real-world scenario
+
+// ============================================
+// 1. CONSTITUTION: Define organizational rules
+// ============================================
+
+constitution AIEthicsFramework {
+    description: "Ethical framework for AI agent behavior",
+    laws: [
+        {
+            name: "Transparency",
+            description: "All AI decisions must be explainable",
+            enforcement: mandatory,
+            rules: ["rule.transparency"]
+        },
+        {
+            name: "Fairness",
+            description: "AI must treat all users fairly",
+            enforcement: mandatory,
+            rules: ["rule.fairness"]
+        },
+        {
+            name: "Privacy",
+            description: "User data must be protected",
+            enforcement: mandatory,
+            rules: ["rule.privacy"]
+        },
+        {
+            name: "Safety",
+            description: "AI must not cause harm",
+            enforcement: mandatory,
+            rules: ["rule.safety"]
+        },
+        {
+            name: "BestPractices",
+            description: "Follow industry best practices",
+            enforcement: advisory,
+            rules: ["rule.bestpractices"]
+        }
+    ]
+}
+
+// ============================================
+// 2. RULES: Define specific conditions and actions
+// ============================================
+
+rule TransparencyRule: {
+    id: "rule.transparency",
+    description: "Ensure all decisions are logged and explainable",
+    priority: 100,
+    conditions: [
+        {
+            type: "equals",
+            field: "action_type",
+            value: "decision"
+        }
+    ],
+    actions: [
+        {
+            type: "require",
+            target: "explanation"
+        },
+        {
+            type: "execute",
+            target: "log_decision"
+        }
+    ]
+}
+
+rule FairnessRule: {
+    id: "rule.fairness",
+    description: "Prevent bias in decision making",
+    priority: 95,
+    conditions: [
+        {
+            type: "equals",
+            field: "has_user_data",
+            value: true
+        }
+    ],
+    actions: [
+        {
+            type: "require",
+            target: "bias_check"
+        },
+        {
+            type: "notify",
+            target: "fairness_monitor"
+        }
+    ]
+}
+
+rule PrivacyRule: {
+    id: "rule.privacy",
+    description: "Protect user privacy",
+    priority: 100,
+    conditions: [
+        {
+            type: "equals",
+            field: "data_type",
+            value: "personal"
+        }
+    ],
+    actions: [
+        {
+            type: "require",
+            target: "encryption"
+        },
+        {
+            type: "require",
+            target: "consent"
+        }
+    ]
+}
+
+rule SafetyRule: {
+    id: "rule.safety",
+    description: "Prevent harmful actions",
+    priority: 100,
+    conditions: [
+        {
+            type: "equals",
+            field: "risk_level",
+            value: "high"
+        }
+    ],
+    actions: [
+        {
+            type: "deny",
+            target: "action"
+        },
+        {
+            type: "notify",
+            target: "safety_team"
+        }
+    ]
+}
+
+rule BestPracticesRule: {
+    id: "rule.bestpractices",
+    description: "Follow best practices",
+    priority: 50,
+    conditions: [
+        {
+            type: "equals",
+            field: "environment",
+            value: "production"
+        }
+    ],
+    actions: [
+        {
+            type: "notify",
+            target: "quality_team"
+        }
+    ]
+}
+
+// ============================================
+// 3. COUNCIL: Governance oversight
+// ============================================
+
+council EthicsCouncil {
+    constitution: "AIEthicsFramework",
+    members: [
+        { agent: "ethics_judge", role: "Judge" },
+        { agent: "ethics_prosecutor", role: "Prosecutor" },
+        { agent: "compliance_officer", role: "Executor" },
+        { agent: "ethics_advisor", role: "Member" }
+    ],
+    rules: [
+        "rule.transparency",
+        "rule.fairness",
+        "rule.privacy",
+        "rule.safety",
+        "rule.bestpractices"
+    ]
+}
+
+// ============================================
+// 4. SWARM: Coordinated agent execution
+// ============================================
+
+swarm DataProcessingSwarm {
+    agents: [
+        "data_collector",
+        "data_validator",
+        "data_analyzer",
+        "data_reporter"
+    ],
+    strategy: sequential
+}
+
+swarm MonitoringSwarm {
+    agents: [
+        "performance_monitor",
+        "security_monitor",
+        "compliance_monitor"
+    ],
+    strategy: parallel
+}
+
+swarm DecisionSwarm {
+    agents: [
+        "decision_maker_1",
+        "decision_maker_2",
+        "decision_maker_3"
+    ],
+    strategy: competitive
+}
+
+// ============================================
+// 5. COMMUNITY: Organizational structure
+// ============================================
+
+community AIGovernanceCommunity: {
+    councils: ["EthicsCouncil"],
+    culture: {
+        values: [
+            "transparency",
+            "accountability",
+            "fairness",
+            "safety",
+            "innovation"
+        ],
+        norms: [
+            "all_decisions_logged",
+            "bias_checks_required",
+            "privacy_first",
+            "safety_paramount"
+        ],
+        communication_style: formal
+    }
+}
+
+// ============================================
+// 6. USAGE DEMONSTRATION
+// ============================================
+
+print("=== AI Ethics Governance Framework ===")
+print("")
+print("Constitution: AIEthicsFramework")
+print("  - 4 Mandatory Laws")
+print("  - 1 Advisory Law")
+print("  - 5 Rules")
+print("")
+print("Council: EthicsCouncil")
+print("  - 4 Members with different roles")
+print("  - Enforces all ethics rules")
+print("")
+print("Swarms:")
+print("  - DataProcessingSwarm (Sequential)")
+print("  - MonitoringSwarm (Parallel)")
+print("  - DecisionSwarm (Competitive)")
+print("")
+print("Community: AIGovernanceCommunity")
+print("  - 5 Core Values")
+print("  - 4 Operating Norms")
+print("  - Formal Communication Style")
+print("")
+print("=== Governance Active ===")
+
+// This comprehensive example demonstrates:
+// 1. Multi-level governance (Constitution -> Laws -> Rules)
+// 2. Different enforcement levels (Mandatory vs Advisory)
+// 3. Rule priorities and conditions
+// 4. Council oversight with roles
+// 5. Swarm coordination strategies
+// 6. Community culture and values
+// 7. Real-world AI ethics scenario

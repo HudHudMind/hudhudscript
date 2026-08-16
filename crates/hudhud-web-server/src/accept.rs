@@ -11,7 +11,10 @@ fn runtime_error(msg: impl Into<String>) -> Error {
     Error::new(ErrorCode::CompileRuntimeError, msg.into())
 }
 fn type_error(expected: &str, got: &str, context: &str) -> Error {
-    Error::new(ErrorCode::RuntimeTypeError, format!("{}: expected {}, got {}", context, expected, got))
+    Error::new(
+        ErrorCode::RuntimeTypeError,
+        format!("{}: expected {}, got {}", context, expected, got),
+    )
 }
 
 /// `Web.accept(server_obj)` → request object.
@@ -19,18 +22,25 @@ fn type_error(expected: &str, got: &str, context: &str) -> Error {
 /// Blocks until a client connects, parses the HTTP request,
 /// and returns a rich request object with `conn_id` for later response.
 pub fn accept(args: &[Value16]) -> HudHudResult<Value16> {
-    let server = args.first().and_then(|v| v.as_object()).ok_or_else(||
-        type_error("object", "", "Web.accept"))?;
-    let server_id = server.get("id").and_then(|v| v.as_number()).ok_or_else(||
-        runtime_error("Web.accept: server object missing 'id'".to_string()))? as u64;
+    let server = args
+        .first()
+        .and_then(|v| v.as_object())
+        .ok_or_else(|| type_error("object", "", "Web.accept"))?;
+    let server_id = server
+        .get("id")
+        .and_then(|v| v.as_number())
+        .ok_or_else(|| runtime_error("Web.accept: server object missing 'id'".to_string()))?
+        as u64;
 
     // Clone the listener from registry (Rust won't let us hold lock during accept)
     let listener = {
         let reg = listener_registry().lock().unwrap();
-        let listener = reg.get(&server_id).ok_or_else(||
-            runtime_error(format!("Web.accept: server {} not found", server_id)))?;
-        listener.try_clone().map_err(|e|
-            runtime_error(format!("Web.accept: try_clone: {}", e)))?
+        let listener = reg
+            .get(&server_id)
+            .ok_or_else(|| runtime_error(format!("Web.accept: server {} not found", server_id)))?;
+        listener
+            .try_clone()
+            .map_err(|e| runtime_error(format!("Web.accept: try_clone: {}", e)))?
     };
 
     let (mut stream, peer_addr) = loop {
@@ -45,22 +55,20 @@ pub fn accept(args: &[Value16]) -> HudHudResult<Value16> {
     };
 
     // Parse the HTTP request using shared parser (Kural 7)
-    let parsed = parse_http_request(&mut stream).map_err(|e|
-        runtime_error(format!("Web.accept: parse error: {}", e)))?;
+    let parsed = parse_http_request(&mut stream)
+        .map_err(|e| runtime_error(format!("Web.accept: parse error: {}", e)))?;
 
     // Enrich with web-request parser
-    let enriched = hudhud_web_request::parse(&parsed).map_err(|e|
-        runtime_error(format!("Web.accept: request parse error: {}", e)))?;
+    let enriched = hudhud_web_request::parse(&parsed)
+        .map_err(|e| runtime_error(format!("Web.accept: request parse error: {}", e)))?;
 
     // Store stream in connection registry
     let conn_id = next_conn_id();
     conn_registry().lock().unwrap().insert(conn_id, stream);
 
     // Add conn_id and peer to the request object
-    let mut req_obj: hudhudscript_bytecode::ObjMap = enriched
-        .as_object()
-        .cloned()
-        .unwrap_or_default();
+    let mut req_obj: hudhudscript_bytecode::ObjMap =
+        enriched.as_object().cloned().unwrap_or_default();
     req_obj.insert("conn_id".to_string(), Value16::number(conn_id as f64));
     req_obj.insert("peer".to_string(), Value16::string(peer_addr.to_string()));
 

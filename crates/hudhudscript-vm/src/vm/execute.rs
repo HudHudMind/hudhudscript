@@ -43,6 +43,7 @@ mod actors_decl;
 pub(crate) mod branch;
 mod call_load;
 mod class_ops;
+// mod classes_modules - taşınacak
 mod classes_modules;
 mod collections_calls;
 mod collections_fast;
@@ -54,7 +55,12 @@ mod int_slot_super;
 mod literals_locals;
 mod methods_async_generator;
 mod methods_generator;
+mod module_loader;
+mod module_merge;
 mod module_ops;
+
+#[cfg(test)]
+mod module_loader_tests;
 mod num_arith;
 mod rag;
 mod step;

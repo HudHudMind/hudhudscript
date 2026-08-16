@@ -1,3 +1,4 @@
+use crate::vm::call_state::{ArrayCallbackOperation, DeferredCallSite, MethodDispatchOutcome};
 use crate::vm::config_types::{OutputLocale, SandboxConfig};
 use crate::vm::mcp_dispatch::{dispatch_mcp_tool_call, McpContext};
 use crate::vm::prepack::PACK_SENTINEL;
@@ -41,7 +42,17 @@ impl VM {
         arg_count: u8,
         first_arg: u8,
         bytecode: &Bytecode,
+        call_site: DeferredCallSite,
     ) -> CompileResult<()> {
+        if ArrayCallbackOperation::from_name(name).is_some() {
+            match self
+                .start_array_callback_builtin(name, arg_count, first_arg, bytecode, call_site)?
+            {
+                MethodDispatchOutcome::Immediate(value) => self.registers[255] = value,
+                MethodDispatchOutcome::Deferred => {}
+            }
+            return Ok(());
+        }
         if self.dispatch_builtin_group1(name, arg_count, first_arg, bytecode)? {
             return Ok(());
         }
@@ -51,13 +62,13 @@ impl VM {
         if self.dispatch_builtin_group3(name, arg_count, first_arg, bytecode)? {
             return Ok(());
         }
-        if self.dispatch_builtin_group4(name, arg_count, first_arg, bytecode)? {
+        if self.dispatch_builtin_group4(name, arg_count, first_arg, bytecode, call_site)? {
             return Ok(());
         }
         if self.dispatch_builtin_group5(name, arg_count, first_arg, bytecode)? {
             return Ok(());
         }
-        if self.dispatch_builtin_group6(name, arg_count, first_arg, bytecode)? {
+        if self.dispatch_builtin_group6(name, arg_count, first_arg, bytecode, call_site)? {
             return Ok(());
         }
         if self.dispatch_builtin_group7(name, arg_count, first_arg, bytecode)? {

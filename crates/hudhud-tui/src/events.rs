@@ -1,11 +1,11 @@
 //! TUI event handling builtin — keyboard + mouse + resize polling.
 
-use std::time::Duration;
 use std::collections::HashMap;
+use std::time::Duration;
 
 use crossterm::event::{poll, read, Event, KeyCode, KeyEvent, KeyModifiers, MouseEvent};
-use hudhudscript_bytecode::Value16;
 use hudhudscript_bytecode::error::compile_codes;
+use hudhudscript_bytecode::Value16;
 
 type CompileResult<T> = Result<T, hudhudscript_errors::Error>;
 
@@ -46,16 +46,35 @@ pub fn tui_poll_event(args: &[Value16]) -> CompileResult<Value16> {
     let mut obj = hudhudscript_bytecode::ObjMap::default();
 
     match event {
-        Event::Key(KeyEvent { code, modifiers, .. }) => {
+        Event::Key(KeyEvent {
+            code, modifiers, ..
+        }) => {
             obj.insert("type".to_string(), Value16::string("key".to_string()));
-            obj.insert("code".to_string(), Value16::string(key_code_to_string(code)));
-            obj.insert("ctrl".to_string(), Value16::bool_(modifiers.contains(KeyModifiers::CONTROL)));
-            obj.insert("alt".to_string(), Value16::bool_(modifiers.contains(KeyModifiers::ALT)));
-            obj.insert("shift".to_string(), Value16::bool_(modifiers.contains(KeyModifiers::SHIFT)));
+            obj.insert(
+                "code".to_string(),
+                Value16::string(key_code_to_string(code)),
+            );
+            obj.insert(
+                "ctrl".to_string(),
+                Value16::bool_(modifiers.contains(KeyModifiers::CONTROL)),
+            );
+            obj.insert(
+                "alt".to_string(),
+                Value16::bool_(modifiers.contains(KeyModifiers::ALT)),
+            );
+            obj.insert(
+                "shift".to_string(),
+                Value16::bool_(modifiers.contains(KeyModifiers::SHIFT)),
+            );
         }
-        Event::Mouse(MouseEvent { kind, column, row, .. }) => {
+        Event::Mouse(MouseEvent {
+            kind, column, row, ..
+        }) => {
             obj.insert("type".to_string(), Value16::string("mouse".to_string()));
-            obj.insert("kind".to_string(), Value16::string(format!("{:?}", kind).to_lowercase()));
+            obj.insert(
+                "kind".to_string(),
+                Value16::string(format!("{:?}", kind).to_lowercase()),
+            );
             obj.insert("x".to_string(), Value16::int(column as i64));
             obj.insert("y".to_string(), Value16::int(row as i64));
         }

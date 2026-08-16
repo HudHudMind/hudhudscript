@@ -16,9 +16,12 @@ pub fn exec_stream(args: &[Value16]) -> HudHudResult<Value16> {
         .stderr(Stdio::piped());
     apply_opts(&mut cmd, args)?;
 
-    let mut child = cmd
-        .spawn()
-        .map_err(|e| runtime_error(format!("exec.stream error: program '{}' not found or failed to start: {}", program, e)))?;
+    let mut child = cmd.spawn().map_err(|e| {
+        runtime_error(format!(
+            "exec.stream error: program '{}' not found or failed to start: {}",
+            program, e
+        ))
+    })?;
 
     let mut lines = Vec::new();
     if let Some(stdout) = child.stdout.take() {
@@ -62,9 +65,12 @@ pub fn exec_spawn(args: &[Value16]) -> HudHudResult<Value16> {
         .stderr(Stdio::null());
     apply_opts(&mut cmd, args)?;
 
-    let child = cmd
-        .spawn()
-        .map_err(|e| runtime_error(format!("exec.spawn error: program '{}' not found or failed to start: {}", program, e)))?;
+    let child = cmd.spawn().map_err(|e| {
+        runtime_error(format!(
+            "exec.spawn error: program '{}' not found or failed to start: {}",
+            program, e
+        ))
+    })?;
 
     let mut result = hudhudscript_bytecode::ObjMap::default();
     result.insert("pid".to_string(), Value16::number(child.id() as f64));

@@ -366,7 +366,9 @@ impl Compiler {
         let func_local_count = func_local_names.len() as u32;
 
         // ADIM B: which locals are genuinely captured by nested closures?
-        let nested_captured: HashSet<&str> = self.fn_ctx.as_ref()
+        let nested_captured: HashSet<&str> = self
+            .fn_ctx
+            .as_ref()
             .map(|c| c.nested_captured.iter().map(|s| s.as_str()).collect())
             .unwrap_or_default();
 
@@ -374,7 +376,8 @@ impl Compiler {
         let mut seen = HashSet::new();
         // ADIM B: a local is only a capture if it IS captured by a nested closure.
         // Pure locals (not in nested_captured) are excluded from captures.
-        let pure_locals: HashSet<&str> = func_local_names.iter()
+        let pure_locals: HashSet<&str> = func_local_names
+            .iter()
             .map(|s| s.as_str())
             .filter(|n| !nested_captured.contains(n))
             .collect();
@@ -399,7 +402,9 @@ impl Compiler {
         }
 
         // ── Capture fn_declared_names BEFORE restore (used by local_set guard) ─
-        let fn_declared_names: Vec<String> = self.declared_fns.last()
+        let fn_declared_names: Vec<String> = self
+            .declared_fns
+            .last()
             .map(|m| m.keys().cloned().collect())
             .unwrap_or_default();
 
@@ -440,13 +445,15 @@ impl Compiler {
 
         // G5-slotvec: replace LoadGlobal/StoreGlobal with LoadClosureSlot/StoreClosureSlot
         if !captures.is_empty() {
-            let name_to_slot: std::collections::HashMap<String, u8> = captures.iter()
+            let name_to_slot: std::collections::HashMap<String, u8> = captures
+                .iter()
                 .enumerate()
                 .map(|(i, name)| (name.clone(), i as u8))
                 .collect();
             // ADIM B: skip locally-defined names (params, locals, declared fns)
             // — shared_top_level_names only covers TOP-LEVEL fn names
-            let local_set: std::collections::HashSet<&str> = named_params.iter()
+            let local_set: std::collections::HashSet<&str> = named_params
+                .iter()
                 .map(|s| s.as_str())
                 .chain(func_local_names.iter().map(|s| s.as_str()))
                 .chain(fn_declared_names.iter().map(|s| s.as_str()))
@@ -455,8 +462,9 @@ impl Compiler {
                 match instr {
                     Instruction::LoadGlobal { dst, sym } => {
                         let name = hudhudscript_bytecode::interner::resolve(
-                            hudhudscript_bytecode::interner::SymbolId(*sym as u32))
-                            .to_string();
+                            hudhudscript_bytecode::interner::SymbolId(*sym as u32),
+                        )
+                        .to_string();
                         if !local_set.contains(name.as_str()) {
                             if let Some(&slot) = name_to_slot.get(&name) {
                                 *instr = Instruction::LoadClosureSlot { dst: *dst, slot };
@@ -465,8 +473,9 @@ impl Compiler {
                     }
                     Instruction::StoreGlobal { src, sym } => {
                         let name = hudhudscript_bytecode::interner::resolve(
-                            hudhudscript_bytecode::interner::SymbolId(*sym as u32))
-                            .to_string();
+                            hudhudscript_bytecode::interner::SymbolId(*sym as u32),
+                        )
+                        .to_string();
                         if !local_set.contains(name.as_str()) {
                             if let Some(&slot) = name_to_slot.get(&name) {
                                 *instr = Instruction::StoreClosureSlot { src: *src, slot };
@@ -478,7 +487,8 @@ impl Compiler {
                 }
             }
             // LANG-2: register-based reads of captured locals → cell reads
-            let mut new_instrs: Vec<Instruction> = Vec::with_capacity(func_instructions.len() + captures.len());
+            let mut new_instrs: Vec<Instruction> =
+                Vec::with_capacity(func_instructions.len() + captures.len());
             for instr in func_instructions.drain(..) {
                 match instr {
                     Instruction::Return { src } if (src as usize) < func_local_names.len() => {

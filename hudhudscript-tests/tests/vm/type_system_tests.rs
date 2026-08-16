@@ -166,7 +166,11 @@ current;
 "#)
     .expect("execution failed");
     let current = vm.get_variable("current").expect("current not found");
-    assert!(current.is_int(), "10 / 2 must produce Int, got {:?}", current);
+    assert!(
+        current.is_int(),
+        "10 / 2 must produce Int, got {:?}",
+        current
+    );
     assert_eq!(current.as_int(), Some(5));
 }
 

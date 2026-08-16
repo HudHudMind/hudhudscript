@@ -76,10 +76,7 @@ pub fn completion_item_to_lsp(item: InternalCompletionItem) -> CompletionItem {
         kind: Some(completion_kind_to_lsp(item.kind)),
         detail: item.detail,
         insert_text: item.insert_text.clone(),
-        insert_text_format: item
-            .insert_text
-            .as_ref()
-            .map(|_| InsertTextFormat::SNIPPET),
+        insert_text_format: item.insert_text.as_ref().map(|_| InsertTextFormat::SNIPPET),
         ..Default::default()
     }
 }

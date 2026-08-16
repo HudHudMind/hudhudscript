@@ -36,7 +36,7 @@ impl RegisterArena {
             arena,
             base: 0,
             base_ptr,
-            frame_size: 256,  // G1.4.2: initial frame (main script)
+            frame_size: 256, // G1.4.2: initial frame (main script)
         }
     }
 
@@ -53,7 +53,7 @@ impl RegisterArena {
             self.arena.resize(needed, Value16::null());
         }
         self.base_ptr = unsafe { self.arena.as_mut_ptr().add(self.base) };
-        self.frame_size = frame_size;  // G1.4.2
+        self.frame_size = frame_size; // G1.4.2
     }
 
     /// Move the base backward by `frame_size` on return.
@@ -61,7 +61,7 @@ impl RegisterArena {
     pub fn retreat(&mut self, frame_size: usize) {
         self.base -= frame_size;
         self.base_ptr = unsafe { self.arena.as_mut_ptr().add(self.base) };
-        self.frame_size = frame_size;  // G1.4.2: restore parent frame size
+        self.frame_size = frame_size; // G1.4.2: restore parent frame size
     }
 
     /// Zero the current frame's registers.

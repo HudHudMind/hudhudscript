@@ -1,0 +1,59 @@
+// HudHudScript — Prime Numbers
+// Prime checking, generation, and related functions
+
+// Check if a number is prime
+fn is_prime(n) {
+    if (n <= 1) {
+        return false;
+    }
+    if (n <= 3) {
+        return true;
+    }
+    if (n % 2 == 0) {
+        return false;
+    }
+    let i = 3;
+    while (i * i <= n) {
+        if (n % i == 0) {
+            return false;
+        }
+        i = i + 2;
+    }
+    return true;
+}
+
+print(is_prime(2));
+print(is_prime(17));
+print(is_prime(18));
+print(is_prime(97));
+
+// Nth prime
+fn nth_prime(n) {
+    let count = 0;
+    let candidate = 2;
+    while (count < n) {
+        if (is_prime(candidate)) {
+            count = count + 1;
+        }
+        candidate = candidate + 1;
+    }
+    return candidate - 1;
+}
+
+print(nth_prime(10));
+print(nth_prime(25));
+
+// Sum of primes up to n
+fn sum_primes(n) {
+    let sum = 0;
+    let i = 2;
+    while (i <= n) {
+        if (is_prime(i)) {
+            sum = sum + i;
+        }
+        i = i + 1;
+    }
+    return sum;
+}
+
+print(sum_primes(50));

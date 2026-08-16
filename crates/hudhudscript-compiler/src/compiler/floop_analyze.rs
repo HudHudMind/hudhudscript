@@ -14,13 +14,23 @@ use hudhudscript_ast::UnaryOp;
 fn f_class(expr: &Expr, cands: &HashSet<String>, math_shadowed: bool) -> FE {
     match expr {
         Expr::Identifier(name, _) => {
-            if cands.contains(name.as_str()) { FE::Float } else { FE::No }
+            if cands.contains(name.as_str()) {
+                FE::Float
+            } else {
+                FE::No
+            }
         }
         Expr::Literal(Literal::Number(_, is_float), _) => {
-            if *is_float { FE::Float } else { FE::Int }
+            if *is_float {
+                FE::Float
+            } else {
+                FE::Int
+            }
         }
         Expr::Literal(Literal::Int(_), _) => FE::Int,
-        Expr::Binary { left, op, right, .. } => {
+        Expr::Binary {
+            left, op, right, ..
+        } => {
             let l = f_class(left, cands, math_shadowed);
             let r = f_class(right, cands, math_shadowed);
             match op {
@@ -35,9 +45,11 @@ fn f_class(expr: &Expr, cands: &HashSet<String>, math_shadowed: bool) -> FE {
                 _ => FE::No,
             }
         }
-        Expr::Unary { op: UnaryOp::Neg | UnaryOp::Plus, expr: inner, .. } => {
-            f_class(inner, cands, math_shadowed)
-        }
+        Expr::Unary {
+            op: UnaryOp::Neg | UnaryOp::Plus,
+            expr: inner,
+            ..
+        } => f_class(inner, cands, math_shadowed),
         Expr::Call { args, .. } => {
             if !math_shadowed && super::floop::math_intrinsic(expr).is_some() {
                 return match f_class(&args[0], cands, math_shadowed) {
@@ -68,9 +80,12 @@ fn expr_safe(expr: &Expr) -> bool {
         Expr::Literal(..) | Expr::Identifier(..) => true,
         Expr::Binary { left, right, .. } => expr_safe(left) && expr_safe(right),
         Expr::Unary { expr: inner, .. } => expr_safe(inner),
-        Expr::Ternary { condition, true_expr, false_expr, .. } => {
-            expr_safe(condition) && expr_safe(true_expr) && expr_safe(false_expr)
-        }
+        Expr::Ternary {
+            condition,
+            true_expr,
+            false_expr,
+            ..
+        } => expr_safe(condition) && expr_safe(true_expr) && expr_safe(false_expr),
         _ => false,
     }
 }
@@ -102,7 +117,12 @@ fn collect_idents(expr: &Expr, out: &mut Vec<String>, poison: &mut bool) {
             collect_idents(object, out, poison);
             collect_idents(index, out, poison);
         }
-        Expr::Ternary { condition, true_expr, false_expr, .. } => {
+        Expr::Ternary {
+            condition,
+            true_expr,
+            false_expr,
+            ..
+        } => {
             collect_idents(condition, out, poison);
             collect_idents(true_expr, out, poison);
             collect_idents(false_expr, out, poison);
@@ -160,14 +180,21 @@ fn collect_stmts_idents(stmt: &Stmt, out: &mut Vec<String>) {
             w(target, out);
             w(value, out);
         }
-        Stmt::If { condition, then_branch, else_branch, .. } => {
+        Stmt::If {
+            condition,
+            then_branch,
+            else_branch,
+            ..
+        } => {
             w(condition, out);
             collect_stmts_idents(then_branch, out);
             if let Some(e) = else_branch {
                 collect_stmts_idents(e, out);
             }
         }
-        Stmt::While { condition, body, .. } => {
+        Stmt::While {
+            condition, body, ..
+        } => {
             w(condition, out);
             collect_stmts_idents(body, out);
         }
@@ -175,7 +202,13 @@ fn collect_stmts_idents(stmt: &Stmt, out: &mut Vec<String>) {
             w(iterable, out);
             collect_stmts_idents(body, out);
         }
-        Stmt::ForCStyle { init, condition, update, body, .. } => {
+        Stmt::ForCStyle {
+            init,
+            condition,
+            update,
+            body,
+            ..
+        } => {
             if let Some(i) = init {
                 collect_stmts_idents(i, out);
             }
@@ -187,7 +220,13 @@ fn collect_stmts_idents(stmt: &Stmt, out: &mut Vec<String>) {
             }
             collect_stmts_idents(body, out);
         }
-        Stmt::ForRange { start, stop, step, body, .. } => {
+        Stmt::ForRange {
+            start,
+            stop,
+            step,
+            body,
+            ..
+        } => {
             w(start, out);
             w(stop, out);
             if let Some(s) = step {
@@ -206,7 +245,12 @@ fn collect_stmts_idents(stmt: &Stmt, out: &mut Vec<String>) {
             }
         }
         Stmt::Expr(e) | Stmt::Throw { value: e, .. } => w(e, out),
-        Stmt::Switch { value, cases, default, .. } => {
+        Stmt::Switch {
+            value,
+            cases,
+            default,
+            ..
+        } => {
             w(value, out);
             for c in cases {
                 w(&c.value, out);
@@ -220,7 +264,12 @@ fn collect_stmts_idents(stmt: &Stmt, out: &mut Vec<String>) {
                 }
             }
         }
-        Stmt::Try { try_block, catch_clause, finally_block, .. } => {
+        Stmt::Try {
+            try_block,
+            catch_clause,
+            finally_block,
+            ..
+        } => {
             collect_stmts_idents(try_block, out);
             if let Some(c) = catch_clause {
                 collect_stmts_idents(&c.body, out);
@@ -239,7 +288,11 @@ fn collect_stmts_idents(stmt: &Stmt, out: &mut Vec<String>) {
 fn collect_let_names(stmt: &Stmt, out: &mut Vec<String>) {
     match stmt {
         Stmt::Let { name, .. } => out.push(name.clone()),
-        Stmt::If { then_branch, else_branch, .. } => {
+        Stmt::If {
+            then_branch,
+            else_branch,
+            ..
+        } => {
             collect_let_names(then_branch, out);
             if let Some(e) = else_branch {
                 collect_let_names(e, out);
@@ -266,14 +319,16 @@ fn seed_internals(
     match stmt {
         Stmt::Let { name, value, .. } => {
             let cls = f_class(value, cands, math_shadowed);
-            if !cands.contains(name.as_str())
-                && !banned.contains(name.as_str())
-                && cls == FE::Float
+            if !cands.contains(name.as_str()) && !banned.contains(name.as_str()) && cls == FE::Float
             {
                 out.push(name.clone());
             }
         }
-        Stmt::If { then_branch, else_branch, .. } => {
+        Stmt::If {
+            then_branch,
+            else_branch,
+            ..
+        } => {
             seed_internals(then_branch, cands, math_shadowed, banned, out);
             if let Some(e) = else_branch {
                 seed_internals(e, cands, math_shadowed, banned, out);
@@ -350,7 +405,12 @@ fn validate_stmt(
                 *bail = true;
             }
         }
-        Stmt::If { condition, then_branch, else_branch, .. } => {
+        Stmt::If {
+            condition,
+            then_branch,
+            else_branch,
+            ..
+        } => {
             if !expr_safe(condition) {
                 *bail = true;
                 return;
@@ -407,8 +467,7 @@ pub(super) fn analyze(
     }
     let cond_set: HashSet<String> = cond_ids.into_iter().collect();
 
-    let math_shadowed =
-        target.ct_local_reg("Math").is_some() || target.ct_math_global_written();
+    let math_shadowed = target.ct_local_reg("Math").is_some() || target.ct_math_global_written();
 
     // Shadow yasağı: gövdede `let x` ile yeniden bildirilen isim mevcut bir
     // yerelle çakışıyorsa aday olamaz (hangi `x`'in f-slot'ta yaşadığı

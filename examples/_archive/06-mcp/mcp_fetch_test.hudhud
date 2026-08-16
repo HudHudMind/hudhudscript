@@ -1,0 +1,20 @@
+// MCP Fetch Server Test
+// Tests actual MCP server connection and tool execution
+
+// Test 1: Simple fetch
+print("Test 1: Fetching from example.com...");
+let result1 = mcp.call("fetch", "fetch", {
+    url: "https://example.com"
+});
+print("✓ Fetch successful!");
+print("Content length: " + len(result1));
+
+// Test 2: Fetch JSON API
+print("\nTest 2: Fetching JSON from API...");
+let result2 = mcp.call("fetch", "fetch", {
+    url: "https://api.github.com/zen"
+});
+print("✓ API call successful!");
+print("Response: " + result2);
+
+print("\n✅ All MCP tests passed!");

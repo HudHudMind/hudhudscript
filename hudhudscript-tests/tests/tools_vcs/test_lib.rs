@@ -323,7 +323,7 @@ fn git_repo_open() {
 #[test]
 fn git_repo_discover_on_real_repo() {
     // This test runs in a known git repo
-    let repo = GitRepo::discover("/home/onur/HudHudMind/hudhud-script");
+    let repo = GitRepo::discover("..");
     assert!(repo.is_ok());
     let repo = repo.unwrap();
     assert!(repo.path().exists());
@@ -390,14 +390,14 @@ fn git_repo_rebase_empty_onto() {
 
 #[test]
 fn git_repo_status_on_real_repo() {
-    let repo = GitRepo::discover("/home/onur/HudHudMind/hudhud-script").unwrap();
+    let repo = GitRepo::discover("..").unwrap();
     let status = repo.status();
     assert!(status.is_ok());
 }
 
 #[test]
 fn git_repo_log_on_real_repo() {
-    let repo = GitRepo::discover("/home/onur/HudHudMind/hudhud-script").unwrap();
+    let repo = GitRepo::discover("..").unwrap();
     let log = repo.log(5).unwrap();
     assert!(log.len() <= 5);
     assert!(!log.is_empty());
@@ -406,14 +406,14 @@ fn git_repo_log_on_real_repo() {
 
 #[test]
 fn git_repo_current_branch_on_real_repo() {
-    let repo = GitRepo::discover("/home/onur/HudHudMind/hudhud-script").unwrap();
+    let repo = GitRepo::discover("..").unwrap();
     let branch = repo.current_branch().unwrap();
     assert!(!branch.is_empty());
 }
 
 #[test]
 fn git_repo_branches_on_real_repo() {
-    let repo = GitRepo::discover("/home/onur/HudHudMind/hudhud-script").unwrap();
+    let repo = GitRepo::discover("..").unwrap();
     let branches = repo.branches().unwrap();
     assert!(!branches.is_empty());
     let current = branches.iter().filter(|b| b.is_current).count();
@@ -422,21 +422,21 @@ fn git_repo_branches_on_real_repo() {
 
 #[test]
 fn git_repo_diff_on_real_repo() {
-    let repo = GitRepo::discover("/home/onur/HudHudMind/hudhud-script").unwrap();
+    let repo = GitRepo::discover("..").unwrap();
     let diff = repo.diff(None);
     assert!(diff.is_ok());
 }
 
 #[test]
 fn git_repo_diff_staged_on_real_repo() {
-    let repo = GitRepo::discover("/home/onur/HudHudMind/hudhud-script").unwrap();
+    let repo = GitRepo::discover("..").unwrap();
     let diff = repo.diff_staged();
     assert!(diff.is_ok());
 }
 
 #[test]
 fn git_repo_remotes_on_real_repo() {
-    let repo = GitRepo::discover("/home/onur/HudHudMind/hudhud-script").unwrap();
+    let repo = GitRepo::discover("..").unwrap();
     let remotes = repo.remotes().unwrap();
     // Most repos have at least "origin"
     assert!(!remotes.is_empty());
@@ -444,7 +444,7 @@ fn git_repo_remotes_on_real_repo() {
 
 #[test]
 fn git_repo_remote_url_on_real_repo() {
-    let repo = GitRepo::discover("/home/onur/HudHudMind/hudhud-script").unwrap();
+    let repo = GitRepo::discover("..").unwrap();
     let remotes = repo.remotes().unwrap();
     if !remotes.is_empty() {
         let url = repo.remote_url(&remotes[0]);
@@ -459,11 +459,11 @@ fn git_repo_remote_url_on_real_repo() {
 
 #[test]
 fn git_config_for_repo() {
-    let config = GitConfig::for_repo("/home/onur/HudHudMind/hudhud-script");
+    let config = GitConfig::for_repo("..");
     assert!(config.repo_path().is_some());
     assert_eq!(
         config.repo_path().unwrap(),
-        std::path::Path::new("/home/onur/HudHudMind/hudhud-script")
+        std::path::Path::new("..")
     );
 }
 
@@ -475,21 +475,21 @@ fn git_config_global() {
 
 #[test]
 fn git_config_get_user_name() {
-    let config = GitConfig::for_repo("/home/onur/HudHudMind/hudhud-script");
+    let config = GitConfig::for_repo("..");
     let name = config.user_name();
     assert!(name.is_ok());
 }
 
 #[test]
 fn git_config_get_user_email() {
-    let config = GitConfig::for_repo("/home/onur/HudHudMind/hudhud-script");
+    let config = GitConfig::for_repo("..");
     let email = config.user_email();
     assert!(email.is_ok());
 }
 
 #[test]
 fn git_config_get_nonexistent_key() {
-    let config = GitConfig::for_repo("/home/onur/HudHudMind/hudhud-script");
+    let config = GitConfig::for_repo("..");
     let result = config.get("hudhud.nonexistent.key.xyz");
     assert!(result.is_ok());
     assert!(result.unwrap().is_none());
@@ -501,14 +501,14 @@ fn git_config_get_nonexistent_key() {
 
 #[test]
 fn git_tool_status_on_real_repo() {
-    let tool = GitTool::new("/home/onur/HudHudMind/hudhud-script");
+    let tool = GitTool::new("..");
     let output = tool.status().unwrap();
     assert!(output.success);
 }
 
 #[test]
 fn git_tool_status_porcelain_on_real_repo() {
-    let tool = GitTool::new("/home/onur/HudHudMind/hudhud-script");
+    let tool = GitTool::new("..");
     let output = tool.status_porcelain().unwrap();
     // porcelain output always succeeds even on clean repos
     assert!(output.success);
@@ -516,7 +516,7 @@ fn git_tool_status_porcelain_on_real_repo() {
 
 #[test]
 fn git_tool_log_default_on_real_repo() {
-    let tool = GitTool::new("/home/onur/HudHudMind/hudhud-script");
+    let tool = GitTool::new("..");
     let output = tool.log(Some(3)).unwrap();
     assert!(output.success);
     assert!(!output.stdout.is_empty());
@@ -524,28 +524,28 @@ fn git_tool_log_default_on_real_repo() {
 
 #[test]
 fn git_tool_log_format_on_real_repo() {
-    let tool = GitTool::new("/home/onur/HudHudMind/hudhud-script");
+    let tool = GitTool::new("..");
     let output = tool.log_format(Some(2), Some("%H")).unwrap();
     assert!(output.success);
 }
 
 #[test]
 fn git_tool_branch_list_on_real_repo() {
-    let tool = GitTool::new("/home/onur/HudHudMind/hudhud-script");
+    let tool = GitTool::new("..");
     let output = tool.branch_list().unwrap();
     assert!(output.success);
 }
 
 #[test]
 fn git_tool_diff_unstaged_on_real_repo() {
-    let tool = GitTool::new("/home/onur/HudHudMind/hudhud-script");
+    let tool = GitTool::new("..");
     let output = tool.diff(false).unwrap();
     assert!(output.success);
 }
 
 #[test]
 fn git_tool_diff_staged_on_real_repo() {
-    let tool = GitTool::new("/home/onur/HudHudMind/hudhud-script");
+    let tool = GitTool::new("..");
     let output = tool.diff(true).unwrap();
     assert!(output.success);
 }

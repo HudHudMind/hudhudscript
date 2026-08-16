@@ -1,0 +1,33 @@
+// Break and Continue Example
+// Demonstrates loop control
+
+// Break example - exit loop early
+var i = 0;
+while (i < 10) {
+  if (i == 5) {
+    break;
+  }
+  i = i + 1;
+}
+
+// Continue example - skip iteration
+var j = 0;
+while (j < 10) {
+  j = j + 1;
+  if (j % 2 == 0) {
+    continue;
+  }
+}
+
+// Break in nested switch
+var day = 3;
+switch (day) {
+  case 1:
+    break;
+  case 2:
+    break;
+  case 3:
+    break;
+  default:
+    break;
+}

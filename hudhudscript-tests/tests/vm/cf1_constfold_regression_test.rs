@@ -10,7 +10,9 @@ use hudhudscript_vm::VM;
 fn run(src: &str) -> Result<VM, String> {
     let stmts = hudhudscript_parser::parse(src).map_err(|e| format!("parse: {}", e))?;
     let mut compiler = hudhudscript_compiler::Compiler::new();
-    let bc = compiler.compile(&stmts).map_err(|e| format!("compile: {}", e))?;
+    let bc = compiler
+        .compile(&stmts)
+        .map_err(|e| format!("compile: {}", e))?;
     let mut vm = VM::new();
     vm.execute(&bc).map_err(|e| format!("{}", e))?;
     Ok(vm)
@@ -32,8 +34,11 @@ let x = bump();
 return (seed * 16807) % 499000;
 "#;
     let vm = run(src).unwrap();
-    assert_eq!(vm.last_return_value().display_string(), "223701",
-        "Expected 223701=(43*16807)%499000, not 206894=(42*16807)%499000");
+    assert_eq!(
+        vm.last_return_value().display_string(),
+        "223701",
+        "Expected 223701=(43*16807)%499000, not 206894=(42*16807)%499000"
+    );
 }
 
 // ======================================================================
@@ -51,8 +56,11 @@ let x = bump_twice();
 return seed + 1;
 "#;
     let vm = run(src).unwrap();
-    assert_eq!(vm.last_return_value().display_string(), "45",
-        "seed=44 after bump_twice, +1 = 45");
+    assert_eq!(
+        vm.last_return_value().display_string(),
+        "45",
+        "seed=44 after bump_twice, +1 = 45"
+    );
 }
 
 // ======================================================================
@@ -87,11 +95,14 @@ let r3 = lcg_step();
 return r3;
 "#;
     let vm = run(src).unwrap();
-    let r1: i64 = 206894;                        // (42*16807)%499000
-    let r2: i64 = (r1 * 16807) % 499000;         // step 2
-    let r3: i64 = (r2 * 16807) % 499000;         // step 3
-    assert_eq!(vm.last_return_value().display_string(), r3.to_string(),
-        "LCG step 3 must be computed from live seed values, not initial 42");
+    let r1: i64 = 206894; // (42*16807)%499000
+    let r2: i64 = (r1 * 16807) % 499000; // step 2
+    let r3: i64 = (r2 * 16807) % 499000; // step 3
+    assert_eq!(
+        vm.last_return_value().display_string(),
+        r3.to_string(),
+        "LCG step 3 must be computed from live seed values, not initial 42"
+    );
 }
 
 // ======================================================================
@@ -137,6 +148,9 @@ let x = advance();
 return seed * 3;
 "#;
     let vm = run(src).unwrap();
-    assert_eq!(vm.last_return_value().display_string(), "129",
-        "seed=43 after advance(), 43*3=129");
+    assert_eq!(
+        vm.last_return_value().display_string(),
+        "129",
+        "seed=43 after advance(), 43*3=129"
+    );
 }

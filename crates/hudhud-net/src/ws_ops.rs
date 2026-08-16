@@ -76,7 +76,8 @@ fn shared_to_serde(val: &Value16) -> serde_json::Value {
         let map: serde_json::Map<String, serde_json::Value> = obj
             .iter()
             .map(|(k, v)| (k.clone(), shared_to_serde(v)))
-            .map(|(k, v)| (k.to_string(), v)).collect();
+            .map(|(k, v)| (k.to_string(), v))
+            .collect();
         serde_json::Value::Object(map)
     } else {
         serde_json::Value::Null
@@ -109,7 +110,10 @@ fn ws_connect(args: &[Value16]) -> HudHudResult<Value16> {
         }
         let id = NEXT_ID.fetch_add(1, Ordering::SeqCst);
         let mut obj = hudhudscript_bytecode::ObjMap::default();
-        obj.insert("__type".to_string(), Value16::string("WebSocket".to_string()));
+        obj.insert(
+            "__type".to_string(),
+            Value16::string("WebSocket".to_string()),
+        );
         obj.insert("id".to_string(), Value16::number(id as f64));
         obj.insert("url".to_string(), Value16::string(url));
         obj.insert("ready".to_string(), Value16::bool_(true));
@@ -147,7 +151,8 @@ fn ws_send(args: &[Value16]) -> HudHudResult<Value16> {
 
     let conn_arc = {
         let store = conn_store().lock().unwrap();
-        store.get(&id)
+        store
+            .get(&id)
             .ok_or_else(|| runtime_error("ws.send: connection not found"))?
             .clone()
     };
@@ -165,7 +170,8 @@ fn ws_recv(args: &[Value16]) -> HudHudResult<Value16> {
     let id = extract_id(args)?;
     let conn_arc = {
         let store = conn_store().lock().unwrap();
-        store.get(&id)
+        store
+            .get(&id)
             .ok_or_else(|| runtime_error("ws.recv: connection not found"))?
             .clone()
     };
@@ -242,9 +248,15 @@ fn ws_serve(args: &[Value16]) -> HudHudResult<Value16> {
     if host == "test-local-net" {
         let id = NEXT_ID.fetch_add(1, Ordering::SeqCst);
         let mut obj = hudhudscript_bytecode::ObjMap::default();
-        obj.insert("__type".to_string(), Value16::string("WebSocketServer".to_string()));
+        obj.insert(
+            "__type".to_string(),
+            Value16::string("WebSocketServer".to_string()),
+        );
         obj.insert("id".to_string(), Value16::number(id as f64));
-        obj.insert("address".to_string(), Value16::string(format!("{}:{}", host, port)));
+        obj.insert(
+            "address".to_string(),
+            Value16::string(format!("{}:{}", host, port)),
+        );
         return Ok(Value16::object(obj));
     }
 
@@ -271,7 +283,8 @@ fn ws_accept(args: &[Value16]) -> HudHudResult<Value16> {
     let id = extract_id(args)?;
     let listener = {
         let store = srv_store().lock().unwrap();
-        store.get(&id)
+        store
+            .get(&id)
             .ok_or_else(|| runtime_error("ws.accept: server not found"))?
             .try_clone()
             .map_err(|e| runtime_error(format!("ws.accept clone error: {}", e)))?
@@ -282,7 +295,10 @@ fn ws_accept(args: &[Value16]) -> HudHudResult<Value16> {
     let ws = tungstenite::accept(stream)
         .map_err(|e| runtime_error(format!("ws.accept handshake error: {}", e)))?;
     let cid = NEXT_ID.fetch_add(1, Ordering::SeqCst);
-    conn_store().lock().unwrap().insert(cid, Arc::new(Mutex::new(WsConn::Server(ws))));
+    conn_store()
+        .lock()
+        .unwrap()
+        .insert(cid, Arc::new(Mutex::new(WsConn::Server(ws))));
 
     let mut obj = hudhudscript_bytecode::ObjMap::default();
     obj.insert(

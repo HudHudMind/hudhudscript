@@ -1,0 +1,71 @@
+// NPC RPG — Effect + Ability (v0.5.19+) — SIFIR EMIT
+// Effect'ler direkt çağrılır: Damage(target, amount), Fatigue(target, amount)
+
+role Fighter { can attack, can defend }
+role Healer { can heal, can revive }
+
+subject Knight has Fighter {
+    state health: 100, state power: 30, state stamina: 100
+}
+subject Archer has Fighter {
+    state health: 70, state power: 45, state stamina: 80
+}
+subject Cleric has Healer {
+    state health: 80, state power: 20, state stamina: 60
+}
+subject Dragon has Fighter {
+    state health: 200, state power: 40, state stamina: 150
+}
+
+relation Knight <-> Dragon { hostility: 80 }
+relation Archer <-> Dragon { hostility: 60 }
+relation Knight <-> Cleric { trust: 100 }
+
+effect on Damage(target, amount) {
+    target.health = target.health - amount
+}
+effect on Fatigue(target, amount) {
+    target.stamina = target.stamina - amount
+}
+effect on Heal(target, amount) {
+    target.health = target.health + amount
+}
+
+on attack(self, target) {
+    Damage(target, self.power)
+    Fatigue(self, 10)
+}
+on heal(self, target) {
+    Heal(target, self.power)
+}
+
+let hero = spawn Knight
+let sniper = spawn Archer
+let medic = spawn Cleric
+let boss = spawn Dragon
+
+print("=== Party vs Dragon ===")
+print("Hero:   " + hero.health + " HP, " + hero.stamina + " SP")
+print("Sniper: " + sniper.health + " HP, " + sniper.stamina + " SP")
+print("Cleric: " + medic.health + " HP, " + medic.stamina + " SP")
+print("Boss:   " + boss.health + " HP, " + boss.stamina + " SP")
+
+print("R1: Hero + Sniper attack")
+hero.attack(boss)
+sniper.attack(boss)
+print("Boss: " + boss.health + " HP | Hero SP: " + hero.stamina + " Sniper SP: " + sniper.stamina)
+
+print("R2: Boss counter")
+boss.attack(hero)
+print("Hero: " + hero.health + " HP | Boss SP: " + boss.stamina)
+
+print("R3: Cleric heals")
+medic.heal(hero)
+print("Hero: " + hero.health + " HP")
+
+print("R4: Final assault")
+hero.attack(boss)
+sniper.attack(boss)
+print("Boss: " + boss.health + " HP")
+
+print("Result: Hero " + hero.health + "/" + hero.stamina + " Boss " + boss.health + "/" + boss.stamina)

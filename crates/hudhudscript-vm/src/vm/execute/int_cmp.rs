@@ -85,39 +85,72 @@ impl VM {
                         let a = payload as i64;
                         let b = *imm as i64;
                         match *op {
-                            0 => a < b, 1 => a <= b, 2 => a > b,
-                            3 => a >= b, 4 => a == b, 5 => a != b,
-                            _ => return Err(Self::runtime_error_with_pos(
-                                &format!("IntCmpI: unknown op {}", op), bytecode, ip))
+                            0 => a < b,
+                            1 => a <= b,
+                            2 => a > b,
+                            3 => a >= b,
+                            4 => a == b,
+                            5 => a != b,
+                            _ => {
+                                return Err(Self::runtime_error_with_pos(
+                                    &format!("IntCmpI: unknown op {}", op),
+                                    bytecode,
+                                    ip,
+                                ))
+                            }
                         }
                     }
                     ReprTag::Number => {
                         let a = f64::from_bits(payload);
                         let b = *imm as f64;
                         match *op {
-                            0 => a < b, 1 => a <= b, 2 => a > b,
-                            3 => a >= b, 4 => a == b, 5 => a != b,
-                            _ => return Err(Self::runtime_error_with_pos(
-                                &format!("IntCmpI: unknown op {}", op), bytecode, ip))
+                            0 => a < b,
+                            1 => a <= b,
+                            2 => a > b,
+                            3 => a >= b,
+                            4 => a == b,
+                            5 => a != b,
+                            _ => {
+                                return Err(Self::runtime_error_with_pos(
+                                    &format!("IntCmpI: unknown op {}", op),
+                                    bytecode,
+                                    ip,
+                                ))
+                            }
                         }
                     }
                     ReprTag::Dynamic => {
                         if let Some(a) = v.to_bigint_value() {
                             let b = num_bigint::BigInt::from(*imm as i64);
                             match *op {
-                                0 => a < b, 1 => a <= b, 2 => a > b,
-                                3 => a >= b, 4 => a == b, 5 => a != b,
-                                _ => return Err(Self::runtime_error_with_pos(
-                                    &format!("IntCmpI: unknown op {}", op), bytecode, ip))
+                                0 => a < b,
+                                1 => a <= b,
+                                2 => a > b,
+                                3 => a >= b,
+                                4 => a == b,
+                                5 => a != b,
+                                _ => {
+                                    return Err(Self::runtime_error_with_pos(
+                                        &format!("IntCmpI: unknown op {}", op),
+                                        bytecode,
+                                        ip,
+                                    ))
+                                }
                             }
                         } else {
                             return Err(Self::runtime_error_with_pos(
-                                "IntCmpI: src not numeric", bytecode, ip))
+                                "IntCmpI: src not numeric",
+                                bytecode,
+                                ip,
+                            ));
                         }
                     }
                     _ => {
                         return Err(Self::runtime_error_with_pos(
-                            "IntCmpI: src not numeric", bytecode, ip))
+                            "IntCmpI: src not numeric",
+                            bytecode,
+                            ip,
+                        ))
                     }
                 };
                 self.registers[*dst as usize] = Value16::bool_(result);
@@ -193,8 +226,13 @@ impl VM {
                                 3 => a >= b,
                                 4 => a == b,
                                 5 => a != b,
-                                _ => return Err(Self::runtime_error_with_pos(
-                                    &format!("IntCmp: unknown op {}", op), bytecode, ip))
+                                _ => {
+                                    return Err(Self::runtime_error_with_pos(
+                                        &format!("IntCmp: unknown op {}", op),
+                                        bytecode,
+                                        ip,
+                                    ))
+                                }
                             }
                         } else if let (Some(a), Some(b)) = (v1.as_str(), v2.as_str()) {
                             match *op {
@@ -241,14 +279,24 @@ impl VM {
                                 crate::vm::config_types::ObjectEquality::Identity => {
                                     let ptr1 = v1.split_tag().1;
                                     let ptr2 = v2.split_tag().1;
-                                    match *op { 4 => ptr1 == ptr2, 5 => ptr1 != ptr2, _ => false }
+                                    match *op {
+                                        4 => ptr1 == ptr2,
+                                        5 => ptr1 != ptr2,
+                                        _ => false,
+                                    }
                                 }
-                                crate::vm::config_types::ObjectEquality::Never => {
-                                    match *op { 4 => false, 5 => true, _ => false }
-                                }
+                                crate::vm::config_types::ObjectEquality::Never => match *op {
+                                    4 => false,
+                                    5 => true,
+                                    _ => false,
+                                },
                                 crate::vm::config_types::ObjectEquality::Deep => {
                                     let eq = v1.values_equal(v2);
-                                    match *op { 4 => eq, 5 => !eq, _ => false }
+                                    match *op {
+                                        4 => eq,
+                                        5 => !eq,
+                                        _ => false,
+                                    }
                                 }
                             }
                         }

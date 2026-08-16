@@ -136,9 +136,7 @@ pub fn dead_code_eliminate_with_positions(
     if !dead_ips.is_empty() {
         dead_ips.sort_unstable();
         dead_ips.dedup();
-        let remap = |old_ip: usize| -> usize {
-            old_ip - dead_ips.partition_point(|&d| d < old_ip)
-        };
+        let remap = |old_ip: usize| -> usize { old_ip - dead_ips.partition_point(|&d| d < old_ip) };
         for lp in _loop_payloads.iter_mut() {
             lp.start = remap(lp.start as usize) as u32;
             lp.end = remap(lp.end as usize) as u32;

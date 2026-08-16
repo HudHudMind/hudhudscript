@@ -1,5 +1,5 @@
-use hudhudscript_bytecode::Value16;
 use crate::download_ops::{runtime_error, type_error};
+use hudhudscript_bytecode::Value16;
 use hudhudscript_errors::{Error, ErrorCode, HudHudResult};
 
 pub(crate) fn build_client() -> HudHudResult<reqwest::blocking::Client> {
@@ -9,7 +9,11 @@ pub(crate) fn build_client() -> HudHudResult<reqwest::blocking::Client> {
         .map_err(|e| runtime_error(format!("HTTP client error: {}", e)))
 }
 
-pub(crate) fn require_str<'a>(args: &'a [Value16], idx: usize, method: &str) -> HudHudResult<&'a str> {
+pub(crate) fn require_str<'a>(
+    args: &'a [Value16],
+    idx: usize,
+    method: &str,
+) -> HudHudResult<&'a str> {
     match args.get(idx) {
         Some(v) => v
             .as_str()

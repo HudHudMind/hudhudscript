@@ -5,7 +5,9 @@ use hudhudscript_vm::VM;
 fn run(src: &str) -> Result<VM, String> {
     let stmts = hudhudscript_parser::parse(src).map_err(|e| format!("parse: {}", e))?;
     let mut compiler = hudhudscript_compiler::Compiler::new();
-    let bc = compiler.compile(&stmts).map_err(|e| format!("compile: {}", e))?;
+    let bc = compiler
+        .compile(&stmts)
+        .map_err(|e| format!("compile: {}", e))?;
     let mut vm = VM::new();
     vm.execute(&bc).map_err(|e| format!("{}", e))?;
     Ok(vm)
@@ -14,7 +16,9 @@ fn run(src: &str) -> Result<VM, String> {
 fn fazh_display_str(src: &str) -> String {
     let vm = run(src).unwrap();
     let val = vm.last_return_value();
-    val.as_bigint().map(|b| b.to_string()).unwrap_or_else(|| val.display_string())
+    val.as_bigint()
+        .map(|b| b.to_string())
+        .unwrap_or_else(|| val.display_string())
 }
 
 #[test]

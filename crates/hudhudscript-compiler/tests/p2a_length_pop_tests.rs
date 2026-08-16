@@ -1,8 +1,8 @@
 // P2a: Compiler tests — ArrayLen/StringLen/ArrayPop emission guards.
 
+use hudhudscript_bytecode::Instruction;
 use hudhudscript_compiler::Compiler;
 use hudhudscript_parser::parse;
-use hudhudscript_bytecode::Instruction;
 
 fn compile_instructions(src: &str) -> Vec<Instruction> {
     let ast = parse(src).expect("parse failed");
@@ -98,14 +98,14 @@ fn push_skip_wbr_for_typed_array() {
     let insns = compile_instructions("let a = [1,2]; a.push(3);");
     // push on typed local array → ArrayPush/ArrayPushIntConst
     let has_push = has_instruction(&insns, |i| {
-        matches!(i, Instruction::ArrayPush { .. }
-            | Instruction::ArrayPushIntConst { .. }
-            | Instruction::ArrayPushConst { .. })
+        matches!(
+            i,
+            Instruction::ArrayPush { .. }
+                | Instruction::ArrayPushIntConst { .. }
+                | Instruction::ArrayPushConst { .. }
+        )
     });
-    assert!(
-        has_push,
-        "typed array push must emit ArrayPush variant"
-    );
+    assert!(has_push, "typed array push must emit ArrayPush variant");
     // The companion "must NOT emit WriteBackReceiver" assertion was dropped:
     // REFSEM A1+A2 (6985f3879) removed the WriteBackReceiver variant from
     // Instruction entirely, so nothing can emit it and the type system now

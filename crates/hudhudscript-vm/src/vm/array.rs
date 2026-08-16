@@ -1,10 +1,9 @@
-//! Shared array method implementations — used by both VM and interpreter.
+//! Immediate array method implementations.
 //!
-//! Non-callback methods are handled directly. Callback-dependent methods
-//! (map, filter, reduce, forEach, find, some, every) use the `CallbackInvoker`
-//! trait to abstract over VM vs interpreter call mechanisms.
+//! Callback-dependent methods are owned by the VM continuation state machine
+//! in `call_state::array_callback`; this module never executes user code.
 
-use hudhudscript_bytecode::shared_value::{runtime_error, CallbackInvoker, SharedResult};
+use hudhudscript_bytecode::shared_value::{runtime_error, SharedResult};
 use hudhudscript_bytecode::Value16;
 
 /// Execute a non-callback array method. Returns `None` if the method
@@ -150,8 +149,8 @@ pub fn call_array_method(
             )))
         }
 
-        // Callback-dependent methods — return None so the caller can use
-        // `call_array_method_with_callback` instead.
+        // Callback-dependent methods are scheduled by the VM continuation
+        // lane. `sort` and `fill` remain unsupported here as before.
         "map" | "filter" | "reduce" | "forEach" | "find" | "some" | "every" | "sort" | "fill" => {
             None
         }
@@ -160,155 +159,5 @@ pub fn call_array_method(
             "Unknown array method: {}",
             method
         )))),
-    }
-}
-
-/// Execute a callback-dependent array method. The `invoker` provides the
-/// runtime-specific mechanism for calling HudHudScript functions.
-///
-/// Returns `None` if the method is not a callback method (caller should
-/// try `call_array_method` first).
-#[inline(always)]
-pub fn call_array_method_with_callback(
-    arr: &[Value16],
-    method: &str,
-    args: &[Value16],
-    invoker: &mut impl CallbackInvoker,
-) -> Option<SharedResult<Value16>> {
-    match method {
-        "map" => {
-            let callback = match args.first() {
-                Some(cb) => cb,
-                None => return Some(Err(runtime_error("map requires a callback argument"))),
-            };
-            let mut result = Vec::with_capacity(arr.len());
-            for (i, item) in arr.iter().enumerate() {
-                match invoker.invoke(callback, vec![item.clone(), Value16::number(i as f64)]) {
-                    Ok(val) => result.push(val),
-                    Err(e) => return Some(Err(e)),
-                }
-            }
-            Some(Ok(Value16::array(result)))
-        }
-
-        "filter" => {
-            let callback = match args.first() {
-                Some(cb) => cb,
-                None => return Some(Err(runtime_error("filter requires a callback argument"))),
-            };
-            let mut result = Vec::new();
-            for (i, item) in arr.iter().enumerate() {
-                match invoker.invoke(callback, vec![item.clone(), Value16::number(i as f64)]) {
-                    Ok(val) => {
-                        if invoker.is_truthy_value(&val) {
-                            result.push(item.clone());
-                        }
-                    }
-                    Err(e) => return Some(Err(e)),
-                }
-            }
-            Some(Ok(Value16::array(result)))
-        }
-
-        "reduce" => {
-            let callback = match args.first() {
-                Some(cb) => cb,
-                None => return Some(Err(runtime_error("reduce requires a callback argument"))),
-            };
-            let mut iter = arr.iter().enumerate();
-            let mut accumulator = if args.len() > 1 {
-                args[1].clone()
-            } else {
-                match iter.next() {
-                    Some((_, first)) => first.clone(),
-                    None => {
-                        return Some(Err(runtime_error(
-                            "reduce of empty array with no initial value",
-                        )))
-                    }
-                }
-            };
-            for (i, item) in iter {
-                match invoker.invoke(
-                    callback,
-                    vec![accumulator, item.clone(), Value16::number(i as f64)],
-                ) {
-                    Ok(val) => accumulator = val,
-                    Err(e) => return Some(Err(e)),
-                }
-            }
-            Some(Ok(accumulator))
-        }
-
-        "forEach" => {
-            let callback = match args.first() {
-                Some(cb) => cb,
-                None => return Some(Err(runtime_error("forEach requires a callback argument"))),
-            };
-            for (i, item) in arr.iter().enumerate() {
-                if let Err(e) =
-                    invoker.invoke(callback, vec![item.clone(), Value16::number(i as f64)])
-                {
-                    return Some(Err(e));
-                }
-            }
-            Some(Ok(Value16::null()))
-        }
-
-        "find" => {
-            let callback = match args.first() {
-                Some(cb) => cb,
-                None => return Some(Err(runtime_error("find requires a callback argument"))),
-            };
-            for (i, item) in arr.iter().enumerate() {
-                match invoker.invoke(callback, vec![item.clone(), Value16::number(i as f64)]) {
-                    Ok(val) => {
-                        if invoker.is_truthy_value(&val) {
-                            return Some(Ok(item.clone()));
-                        }
-                    }
-                    Err(e) => return Some(Err(e)),
-                }
-            }
-            Some(Ok(Value16::null()))
-        }
-
-        "some" => {
-            let callback = match args.first() {
-                Some(cb) => cb,
-                None => return Some(Err(runtime_error("some requires a callback argument"))),
-            };
-            for (i, item) in arr.iter().enumerate() {
-                match invoker.invoke(callback, vec![item.clone(), Value16::number(i as f64)]) {
-                    Ok(val) => {
-                        if invoker.is_truthy_value(&val) {
-                            return Some(Ok(Value16::boolean(true)));
-                        }
-                    }
-                    Err(e) => return Some(Err(e)),
-                }
-            }
-            Some(Ok(Value16::boolean(false)))
-        }
-
-        "every" => {
-            let callback = match args.first() {
-                Some(cb) => cb,
-                None => return Some(Err(runtime_error("every requires a callback argument"))),
-            };
-            for (i, item) in arr.iter().enumerate() {
-                match invoker.invoke(callback, vec![item.clone(), Value16::number(i as f64)]) {
-                    Ok(val) => {
-                        if !invoker.is_truthy_value(&val) {
-                            return Some(Ok(Value16::boolean(false)));
-                        }
-                    }
-                    Err(e) => return Some(Err(e)),
-                }
-            }
-            Some(Ok(Value16::boolean(true)))
-        }
-
-        _ => None,
     }
 }

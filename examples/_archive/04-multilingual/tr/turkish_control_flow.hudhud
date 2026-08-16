@@ -1,0 +1,19 @@
+// Türkçe kontrol akışı testi
+tanım x = 10;
+tanım y = 20;
+
+print(x);
+print(y);
+
+// If-else testi
+eğer (x < y) {
+    print(100);
+} değilse {
+    print(200);
+}
+
+// Başka bir test
+tanım a = 5;
+eğer (a > 3) {
+    print(999);
+}

@@ -130,6 +130,9 @@ mod provider_timeout_tests {
         assert_eq!(get_effective_timeout(Some(300), Some(120)), 300);
         assert_eq!(get_effective_timeout(None, Some(300)), 300);
         assert_eq!(get_effective_timeout(Some(180), None), 180);
-        assert_eq!(get_effective_timeout(None, None), DEFAULT_PROVIDER_TIMEOUT_SECS);
+        assert_eq!(
+            get_effective_timeout(None, None),
+            DEFAULT_PROVIDER_TIMEOUT_SECS
+        );
     }
 }

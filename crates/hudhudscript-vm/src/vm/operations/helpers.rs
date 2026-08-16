@@ -16,7 +16,9 @@ pub fn eval_literal(lit: &Literal) -> SharedResult<Value16> {
         Literal::Int(i) => Value16::int(*i),
         Literal::BigInt(s) => {
             let big = s.parse::<num_bigint::BigInt>().map_err(|_| {
-                hudhudscript_bytecode::shared_value::runtime_error("Invalid BigInt literal".to_string())
+                hudhudscript_bytecode::shared_value::runtime_error(
+                    "Invalid BigInt literal".to_string(),
+                )
             })?;
             Value16::bigint(big)
         }

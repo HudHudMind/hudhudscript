@@ -26,13 +26,23 @@ pub(super) fn jump_off(jump_site: usize, target: usize) -> i32 {
 pub(super) fn ends_with_return(stmt: &hudhudscript_ast::Stmt) -> bool {
     use hudhudscript_ast::Stmt;
     match stmt {
-        Stmt::Return { .. } | Stmt::Break { .. } | Stmt::Continue { .. } | Stmt::Throw { .. } => true,
-        Stmt::Block { statements, .. } => {
-            statements.last().map(|s| ends_with_return(s)).unwrap_or(false)
+        Stmt::Return { .. } | Stmt::Break { .. } | Stmt::Continue { .. } | Stmt::Throw { .. } => {
+            true
         }
-        Stmt::If { then_branch, else_branch, .. } => {
+        Stmt::Block { statements, .. } => statements
+            .last()
+            .map(|s| ends_with_return(s))
+            .unwrap_or(false),
+        Stmt::If {
+            then_branch,
+            else_branch,
+            ..
+        } => {
             let then_ends = ends_with_return(then_branch);
-            else_branch.as_ref().map(|e| then_ends && ends_with_return(e)).unwrap_or(false)
+            else_branch
+                .as_ref()
+                .map(|e| then_ends && ends_with_return(e))
+                .unwrap_or(false)
         }
         _ => false,
     }
@@ -136,7 +146,12 @@ pub(super) fn expr_to_rule_string(expr: &Expr) -> String {
 pub(super) fn decompose_add_chain<'a>(expr: &'a Expr, name: &str) -> Option<Vec<&'a Expr>> {
     fn walk<'a>(expr: &'a Expr, name: &str, out: &mut Vec<&'a Expr>) -> bool {
         match expr {
-            Expr::Binary { left, op: BinaryOp::Add, right, .. } => {
+            Expr::Binary {
+                left,
+                op: BinaryOp::Add,
+                right,
+                ..
+            } => {
                 if walk(left, name, out) {
                     out.push(right);
                     true
@@ -170,35 +185,47 @@ fn body_contains_loop_exit_impl(body: &hudhudscript_ast::Stmt, in_switch: bool) 
     match body {
         Stmt::Break { .. } => !in_switch,
         Stmt::Continue { .. } => true,
-        Stmt::Block { statements, .. } => {
-            statements.iter().any(|s| body_contains_loop_exit_impl(s, in_switch))
-        }
-        Stmt::If { then_branch, else_branch, .. } => {
+        Stmt::Block { statements, .. } => statements
+            .iter()
+            .any(|s| body_contains_loop_exit_impl(s, in_switch)),
+        Stmt::If {
+            then_branch,
+            else_branch,
+            ..
+        } => {
             body_contains_loop_exit_impl(then_branch, in_switch)
-                || else_branch.as_ref().map_or(false, |e| body_contains_loop_exit_impl(e, in_switch))
+                || else_branch
+                    .as_ref()
+                    .map_or(false, |e| body_contains_loop_exit_impl(e, in_switch))
         }
-        Stmt::While { .. }
-        | Stmt::For { .. }
-        | Stmt::ForCStyle { .. }
-        | Stmt::ForRange { .. } => {
+        Stmt::While { .. } | Stmt::For { .. } | Stmt::ForCStyle { .. } | Stmt::ForRange { .. } => {
             // Inner loop forms its own break/continue-target boundary.
             false
         }
         Stmt::Switch { cases, default, .. } => {
             // Inside a switch, `break` exits the switch — not the loop.
             // But `continue` inside a switch still targets the loop.
-            let case_has_continue = cases.iter().any(|c| {
-                c.body.iter().any(|s| body_contains_loop_exit_impl(s, true))
+            let case_has_continue = cases
+                .iter()
+                .any(|c| c.body.iter().any(|s| body_contains_loop_exit_impl(s, true)));
+            let default_has_continue = default.as_ref().map_or(false, |stmts| {
+                stmts.iter().any(|s| body_contains_loop_exit_impl(s, true))
             });
-            let default_has_continue = default
-                .as_ref()
-                .map_or(false, |stmts| stmts.iter().any(|s| body_contains_loop_exit_impl(s, true)));
             case_has_continue || default_has_continue
         }
-        Stmt::Try { try_block, catch_clause, finally_block, .. } => {
+        Stmt::Try {
+            try_block,
+            catch_clause,
+            finally_block,
+            ..
+        } => {
             body_contains_loop_exit_impl(try_block, in_switch)
-                || catch_clause.as_ref().map_or(false, |c| body_contains_loop_exit_impl(&c.body, in_switch))
-                || finally_block.as_ref().map_or(false, |b| body_contains_loop_exit_impl(b, in_switch))
+                || catch_clause
+                    .as_ref()
+                    .map_or(false, |c| body_contains_loop_exit_impl(&c.body, in_switch))
+                || finally_block
+                    .as_ref()
+                    .map_or(false, |b| body_contains_loop_exit_impl(b, in_switch))
         }
         _ => false,
     }

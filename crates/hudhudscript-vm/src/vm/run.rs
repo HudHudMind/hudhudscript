@@ -100,6 +100,7 @@ impl VM {
 
         self.frame_stack.push(CallFrame {
             chunk_ptr: std::ptr::null(),
+            owned_chunk: None,
             packed: &packed as *const Vec<u32>,
             func_sym: SymId(0),
             ip: 0,
@@ -112,6 +113,9 @@ impl VM {
             call_depth: 0,
             owned_local_syms: has_slots,
             class_context: false,
+            return_sink: crate::vm::call_state::ReturnSink::Register(255),
+            receiver_context: None,
+            swallow_error: false,
         });
 
         let stop_depth = 0;
@@ -152,7 +156,8 @@ impl VM {
         // G1.4.4: clear dedup state for fresh execution (mirrors execute())
         self.gc_constant_roots.clear();
         self.constant_root_chunks.clear();
-        self.gc_constant_roots.extend_from_slice(&bytecode.constants);
+        self.gc_constant_roots
+            .extend_from_slice(&bytecode.constants);
         let deadline = std::time::Instant::now() + max_duration;
         self.execution_deadline = Some(deadline);
         self.suspended_ip = None;
@@ -213,6 +218,7 @@ impl VM {
 
         self.frame_stack.push(CallFrame {
             chunk_ptr: std::ptr::null(),
+            owned_chunk: None,
             packed: &packed as *const Vec<u32>,
             func_sym: SymId(0),
             ip: 0,
@@ -225,6 +231,9 @@ impl VM {
             call_depth: 0,
             owned_local_syms: false,
             class_context: false,
+            return_sink: crate::vm::call_state::ReturnSink::Register(255),
+            receiver_context: None,
+            swallow_error: false,
         });
 
         let stop_depth = 0;

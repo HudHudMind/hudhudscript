@@ -59,7 +59,12 @@ pub(crate) fn walk_expr_children(visitor: &mut impl AstVisitor, expr: &Expr) -> 
             }
         }
 
-        Expr::Ternary { condition, true_expr, false_expr, .. } => {
+        Expr::Ternary {
+            condition,
+            true_expr,
+            false_expr,
+            ..
+        } => {
             if walk_expr(visitor, condition) == VisitControl::Stop {
                 return VisitControl::Stop;
             }

@@ -1,0 +1,17 @@
+// Built-in Methods Test
+
+// String methods
+var text = "Hello World";
+var len = text.length;
+var upper = text.toUpper();
+var lower = text.toLower();
+
+// String with spaces
+var spaced = "  trim me  ";
+var trimmed = spaced.trim();
+
+// Array methods
+var numbers = [1, 2, 3];
+var count = numbers.length;
+var pushed = numbers.push(4);
+var popped = pushed.pop();

@@ -32,42 +32,48 @@ fn run_vm(src: &str) -> VM {
 #[test]
 fn g2_carrier1_scenario_a_deletion_before_jump() {
     // return → DCE deletes dead code after → IntCmpIJumpIfFalse target shifts
-    let vm = run_vm(r#"
+    let vm = run_vm(
+        r#"
 fn f(x) {
     if (x > 0) { return 100; let d1=1;let d2=2;let d3=3;let d4=4;let d5=5; }
     let i = 0; while (i < 10) { i = i + 1; }
     return i;
 }
 return f(-1);
-"#);
+"#,
+    );
     assert_eq!(vm.last_return_value().display_string(), "10");
 }
 
 #[test]
 fn g2_carrier1_scenario_c_deletion_after_jump() {
     // Jump before deletion → jump unaffected
-    let vm = run_vm(r#"
+    let vm = run_vm(
+        r#"
 fn f() {
     let i = 0; while (i < 10) { i = i + 1; }
     return i;
     let dead = 99;
 }
 return f();
-"#);
+"#,
+    );
     assert_eq!(vm.last_return_value().display_string(), "10");
 }
 
 #[test]
 fn g2_carrier1_scenario_e_forward_edge() {
     // Jump crosses a deleted range → offset shrinks
-    let vm = run_vm(r#"
+    let vm = run_vm(
+        r#"
 let c = 0; let i = 0;
 while (i < 10) {
     switch (i) { case 4: { break; } default: { c = c + 1; } }
     i = i + 1;
 }
 return c;
-"#);
+"#,
+    );
     assert_eq!(vm.last_return_value().display_string(), "9");
 }
 
@@ -78,7 +84,8 @@ return c;
 #[test]
 fn g2_carrier2_scenario_a_deletion_before_loop() {
     // Dead code before loop with break → loop_payload.start shifts
-    let vm = run_vm(r#"
+    let vm = run_vm(
+        r#"
 fn f(x) {
     if (x > 0) { return 100; let d1=1;let d2=2;let d3=3;let d4=4;let d5=5; }
     let i = 0; let s = 0;
@@ -86,14 +93,16 @@ fn f(x) {
     return s;
 }
 return f(-1);
-"#);
+"#,
+    );
     assert_eq!(vm.last_return_value().display_string(), "3");
 }
 
 #[test]
 fn g2_carrier2_scenario_c_deletion_after_loop() {
     // Dead code after loop → loop_payload.end unaffected
-    let vm = run_vm(r#"
+    let vm = run_vm(
+        r#"
 fn f() {
     let i = 0; let s = 0;
     while (i < 5) { if (i == 2) { break; } s = s + i; i = i + 1; }
@@ -101,7 +110,8 @@ fn f() {
     let dead = 99;
 }
 return f();
-"#);
+"#,
+    );
     assert_eq!(vm.last_return_value().display_string(), "1");
 }
 
@@ -116,7 +126,10 @@ fn g2_carrier3_cmp_jump_always_empty() {
     // When cmp_jump becomes active, this test MUST be replaced with real scenarios.
     // Evidence: rg "ct_add_cmp_jump_payload" → 0 call sites outside target.rs definition.
     // The _full helper remaps empty vecs harmlessly.
-    assert!(true, "cmp_jump_payloads is always empty — future-proofed in _full");
+    assert!(
+        true,
+        "cmp_jump_payloads is always empty — future-proofed in _full"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -129,13 +142,15 @@ fn g2_carrier4_super_instr_created_after_dce() {
     // DCE cannot affect them because they don't exist yet when DCE runs.
     // The _full helper handles empty vecs harmlessly.
     // This test verifies the system works end-to-end with fusion active.
-    let vm = run_vm(r#"
+    let vm = run_vm(
+        r#"
 let c = 0; let i = 0;
 while (i < 10) {
     switch (i) { case 4: { break; } default: { c = c + 1; } }
     i = i + 1;
 }
 return c;
-"#);
+"#,
+    );
     assert_eq!(vm.last_return_value().display_string(), "9");
 }

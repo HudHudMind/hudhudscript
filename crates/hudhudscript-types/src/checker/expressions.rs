@@ -261,10 +261,18 @@ impl TypeChecker {
                 self.check_expr(action)?;
                 Ok(Type::Any)
             }
-            Expr::Ternary { true_expr, false_expr, .. } => {
+            Expr::Ternary {
+                true_expr,
+                false_expr,
+                ..
+            } => {
                 let t = self.check_expr(true_expr)?;
                 let f = self.check_expr(false_expr)?;
-                if t == f { Ok(t) } else { Ok(Type::Any) }
+                if t == f {
+                    Ok(t)
+                } else {
+                    Ok(Type::Any)
+                }
             }
         }
     }

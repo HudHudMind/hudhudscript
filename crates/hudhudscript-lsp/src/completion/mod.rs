@@ -39,7 +39,11 @@ impl CompletionItem {
         }
     }
 
-    fn snippet(label: impl Into<String>, detail: impl Into<String>, insert_text: impl Into<String>) -> Self {
+    fn snippet(
+        label: impl Into<String>,
+        detail: impl Into<String>,
+        insert_text: impl Into<String>,
+    ) -> Self {
         Self {
             label: label.into(),
             kind: CompletionKind::Snippet,

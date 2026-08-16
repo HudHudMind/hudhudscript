@@ -23,8 +23,14 @@ print(second(41));
         eprintln!("Function count: {}", names.len());
 
         // first and second should both be in the registry
-        assert!(names.contains_key("first"), "first should be in function names");
-        assert!(names.contains_key("second"), "second should be in function names");
+        assert!(
+            names.contains_key("first"),
+            "first should be in function names"
+        );
+        assert!(
+            names.contains_key("second"),
+            "second should be in function names"
+        );
     }
 
     #[test]
@@ -44,9 +50,10 @@ fn caller(y) { return add1(y); }
         // Check that caller's body does NOT have a Call to add1
         if let Some(&caller_idx) = names.get("caller") {
             if let Some(chunk) = funcs.get(caller_idx) {
-                let has_call_to_add1 = chunk.instructions.iter().any(|i| {
-                    matches!(i, hudhudscript_bytecode::Instruction::Call { .. })
-                });
+                let has_call_to_add1 = chunk
+                    .instructions
+                    .iter()
+                    .any(|i| matches!(i, hudhudscript_bytecode::Instruction::Call { .. }));
                 assert!(
                     !has_call_to_add1,
                     "caller body should not have Call after inlining add1. Instructions: {:?}",

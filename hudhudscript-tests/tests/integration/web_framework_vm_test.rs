@@ -15,7 +15,10 @@ fn vm_run(code: &str, var: &str) -> (hudhudscript_vm::VM, hudhudscript_bytecode:
     let mut vm = hudhudscript_vm::VM::new();
     hudhudscript_vm::register_vm_stdlib_modules(&mut vm);
     vm.execute(&bytecode).expect("VM execution failed");
-    let val = vm.get_variable(var).cloned().unwrap_or_else(|| panic!("variable \'{}\' not found", var));
+    let val = vm
+        .get_variable(var)
+        .cloned()
+        .unwrap_or_else(|| panic!("variable \'{}\' not found", var));
     (vm, val)
 }
 

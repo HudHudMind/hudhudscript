@@ -107,11 +107,25 @@ fn value_to_widget_html(val: &Value16) -> String {
             "Button" => format!("<button id=\"{}\">{}</button>", id, label),
             "Input" => format!("<input id=\"{}\" />", id),
             "Column" | "Row" => {
-                let dir = if widget_type == "Column" { "column" } else { "row" };
-                let children = obj.get("children").and_then(|v| v.as_array())
-                    .map(|arr| arr.iter().map(|c| value_to_widget_html(c)).collect::<Vec<_>>().join(""))
+                let dir = if widget_type == "Column" {
+                    "column"
+                } else {
+                    "row"
+                };
+                let children = obj
+                    .get("children")
+                    .and_then(|v| v.as_array())
+                    .map(|arr| {
+                        arr.iter()
+                            .map(|c| value_to_widget_html(c))
+                            .collect::<Vec<_>>()
+                            .join("")
+                    })
                     .unwrap_or_default();
-                format!("<div id=\"{}\" style=\"display:flex;flex-direction:{}\">{}</div>", id, dir, children)
+                format!(
+                    "<div id=\"{}\" style=\"display:flex;flex-direction:{}\">{}</div>",
+                    id, dir, children
+                )
             }
             _ => format!("<div id=\"{}\">unknown widget</div>", id),
         }

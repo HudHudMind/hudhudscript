@@ -30,7 +30,9 @@ pub trait Transport: TransportSend + TransportRecv + Send + Sync {
     /// Split into independent send and receive halves.
     fn split(self: Box<Self>) -> (TransportSendHalf, TransportRecvHalf);
     /// Close the transport and cleanup resources.
-    async fn close(&mut self) -> Result<()> { Ok(()) }
+    async fn close(&mut self) -> Result<()> {
+        Ok(())
+    }
 }
 
 /// Send half of a transport — used exclusively by request-sending code.

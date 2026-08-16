@@ -27,9 +27,12 @@ pub fn exec_timeout(args: &[Value16]) -> HudHudResult<Value16> {
         .stderr(Stdio::piped());
     apply_opts(&mut cmd, args)?;
 
-    let mut child = cmd
-        .spawn()
-        .map_err(|e| runtime_error(format!("exec.timeout error: program '{}' not found or failed to start: {}", program, e)))?;
+    let mut child = cmd.spawn().map_err(|e| {
+        runtime_error(format!(
+            "exec.timeout error: program '{}' not found or failed to start: {}",
+            program, e
+        ))
+    })?;
 
     let start = std::time::Instant::now();
     let timeout = std::time::Duration::from_millis(timeout_ms);

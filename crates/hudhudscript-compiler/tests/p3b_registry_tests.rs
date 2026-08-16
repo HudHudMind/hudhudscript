@@ -7,8 +7,7 @@ mod tests {
 
     #[test]
     fn function_registry_has_compiled_function() {
-        let ast = parse("fn add1(x) { return x + 1; } print(add1(41));")
-            .expect("parse");
+        let ast = parse("fn add1(x) { return x + 1; } print(add1(41));").expect("parse");
         let mut compiler = Compiler::new();
         // After compilation, the registry should contain "add1"
         let bc = compiler.compile(&ast).expect("compile");

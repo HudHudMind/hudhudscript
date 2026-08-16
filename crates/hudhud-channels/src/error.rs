@@ -11,10 +11,7 @@ pub enum ChannelError {
 
     /// Network or transport error.
     #[error("Channel '{channel}' transport error: {message}")]
-    Transport {
-        channel: String,
-        message: String,
-    },
+    Transport { channel: String, message: String },
 
     /// Rate limited by the provider.
     #[error("Channel '{channel}' rate limited: retry after {retry_after_secs}s")]
@@ -25,15 +22,9 @@ pub enum ChannelError {
 
     /// Sender is not allowed (pairing/allowlist).
     #[error("Channel '{channel}': sender '{sender}' is not allowed")]
-    SenderNotAllowed {
-        channel: String,
-        sender: String,
-    },
+    SenderNotAllowed { channel: String, sender: String },
 
     /// Invalid message format.
     #[error("Channel '{channel}': invalid message format — {reason}")]
-    InvalidMessage {
-        channel: String,
-        reason: String,
-    },
+    InvalidMessage { channel: String, reason: String },
 }

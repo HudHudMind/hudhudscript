@@ -18,14 +18,30 @@ pub fn default_max_recursion() -> usize {
 pub fn default_stack_limit() -> usize {
     hudhudscript_errors::constants::MAX_STACK_SIZE
 }
-pub fn default_thread_stack_mb() -> u32 { 64 }
-pub fn default_register_arena_kb() -> u32 { 64 }
-pub fn default_mailbox_capacity() -> usize { 128 }
-pub fn default_max_mcp_servers() -> usize { 128 }
-pub fn default_execution_timeout_ms() -> u64 { 0 }
-pub fn default_builtin_max_iter() -> usize { 10_000 }
-pub fn default_call_depth_ceiling() -> usize { 4000 }
-pub fn default_stack_bytes() -> usize { 8 * 1024 * 1024 }
+pub fn default_thread_stack_mb() -> u32 {
+    64
+}
+pub fn default_register_arena_kb() -> u32 {
+    64
+}
+pub fn default_mailbox_capacity() -> usize {
+    128
+}
+pub fn default_max_mcp_servers() -> usize {
+    128
+}
+pub fn default_execution_timeout_ms() -> u64 {
+    0
+}
+pub fn default_builtin_max_iter() -> usize {
+    10_000
+}
+pub fn default_call_depth_ceiling() -> usize {
+    4000
+}
+pub fn default_stack_bytes() -> usize {
+    8 * 1024 * 1024
+}
 
 impl Default for RuntimeConfig {
     fn default() -> Self {
@@ -257,7 +273,9 @@ fn merge_config(base: HudHudConfig, overlay: HudHudConfig) -> HudHudConfig {
             builtin_max_iter: overlay.runtime.builtin_max_iter,
             max_call_depth_hard_ceiling: overlay.runtime.max_call_depth_hard_ceiling,
             default_stack_bytes: overlay.runtime.default_stack_bytes,
-            provider_timeout_secs: if overlay.runtime.provider_timeout_secs != hudhudscript_runtime::provider::DEFAULT_PROVIDER_TIMEOUT_SECS {
+            provider_timeout_secs: if overlay.runtime.provider_timeout_secs
+                != hudhudscript_runtime::provider::DEFAULT_PROVIDER_TIMEOUT_SECS
+            {
                 overlay.runtime.provider_timeout_secs
             } else {
                 base.runtime.provider_timeout_secs

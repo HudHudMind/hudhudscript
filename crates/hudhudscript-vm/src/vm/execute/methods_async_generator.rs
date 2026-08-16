@@ -15,8 +15,8 @@ impl VM {
 
         match instr {
             Instruction::MethodCall {
-                dst: 255,
-                obj: 255,
+                dst,
+                obj,
                 payload_idx,
                 first_arg,
                 arg_count,
@@ -41,7 +41,7 @@ impl VM {
                 } else {
                     bytecode.resolve_symbol(method_sym.0)
                 };
-                let receiver = self.registers[255];
+                let receiver = self.registers[*obj as usize];
                 let first = *first_arg as usize;
                 let n = *arg_count as usize;
                 let use_regs = *first_arg != 0 || n > 0;
@@ -61,7 +61,7 @@ impl VM {
                 if method == "next" {
                     if let Some(state) = receiver.as_generator_state() {
                         let next_val = crate::vm::exec::helpers::generator_advance(self, state);
-                        self.registers[255] = next_val.unwrap_or(Value16::null());
+                        self.registers[*dst as usize] = next_val.unwrap_or(Value16::null());
 
                         *ip_ref = ip + 1;
                         return Ok(StepAction::Jumped);
@@ -72,8 +72,20 @@ impl VM {
                 // WriteBackReceiver only fires for THIS method call
                 // (not a leftover from a prior instance method call).
                 self.last_instance_mutation = None;
-                let result = self.call_method_on_value(&receiver, &method, method_sym, args, bytecode)?;
-                self.registers[255] = result;
+                let call_site = crate::vm::call_state::DeferredCallSite {
+                    dst: *dst,
+                    origin_ip: ip,
+                };
+                match self.call_method_on_value(
+                    &receiver, &method, method_sym, args, bytecode, call_site,
+                )? {
+                    crate::vm::call_state::MethodDispatchOutcome::Immediate(result) => {
+                        self.registers[*dst as usize] = result;
+                    }
+                    crate::vm::call_state::MethodDispatchOutcome::Deferred => {
+                        return Ok(StepAction::DeferredCall);
+                    }
+                }
             }
 
             // ── Async/Await (Issue #342) ─────────────────────────────
@@ -173,8 +185,11 @@ impl VM {
                 let current_class = self
                     .class_context_stack
                     .last()
-                    .map(|s| hudhudscript_bytecode::interner::resolve(
-                        hudhudscript_bytecode::interner::SymbolId(s.0)))
+                    .map(|s| {
+                        hudhudscript_bytecode::interner::resolve(
+                            hudhudscript_bytecode::interner::SymbolId(s.0),
+                        )
+                    })
                     .ok_or_else(|| {
                         compile_codes::runtime_error("super used outside class context".to_string())
                     })?;
@@ -193,7 +208,8 @@ impl VM {
                     compile_codes::runtime_error(format!("Parent method not found: {}", chunk_name))
                 })?;
                 self.class_context_stack.push(hudhudscript_bytecode::SymId(
-                    hudhudscript_bytecode::interner::intern(&parent_name).0));
+                    hudhudscript_bytecode::interner::intern(&parent_name).0,
+                ));
                 let func_sym = hudhudscript_bytecode::SymId(
                     hudhudscript_bytecode::interner::intern(&chunk_name).0,
                 );
@@ -203,7 +219,11 @@ impl VM {
                     self.call_cache.resize(sym_id + 1, None);
                 }
                 let params_box = Box::new(chunk.params.clone());
-                self.call_cache[sym_id] = Some((std::ptr::null(), Arc::as_ptr(&chunk), Box::into_raw(params_box) as *const Vec<String>));
+                self.call_cache[sym_id] = Some((
+                    std::ptr::null(),
+                    Arc::as_ptr(&chunk),
+                    Box::into_raw(params_box) as *const Vec<String>,
+                ));
                 // P5.1: call_cache'ye yeni eklenen chunk sabitleri GC root.
                 self.add_chunk_constants(&chunk);
                 self.pending_super_call = true;

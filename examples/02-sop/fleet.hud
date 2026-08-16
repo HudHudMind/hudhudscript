@@ -1,0 +1,39 @@
+// HudHudScript — SOP: Filo Yönetimi
+
+role Drivable { can drive, can park }
+role Flyable { can takeoff, can land }
+role Trackable { can report }
+
+subject Taxi has Drivable, Trackable {
+    state fuel: 85,
+    state position: "Taksim"
+}
+subject CargoPlane has Flyable, Trackable {
+    state fuel: 12000,
+    state position: "İstanbul Havalimanı"
+}
+subject Command has Trackable {
+    state missions: 0
+}
+
+relation Taxi <-> Command { trust: 90 }
+relation CargoPlane <-> Command { trust: 95 }
+
+event Dispatch { vehicle: Subject, destination: Text }
+effect on Dispatch { print("  🚀 Görev!"); }
+
+spawn Taxi; spawn CargoPlane; spawn Command;
+
+print("=== Filo Operasyonu ===");
+let missions = 0; let taxi_fuel = 85; let plane_fuel = 12000;
+
+print("Taksi: Taksim → Beşiktaş (5km)");
+taxi_fuel = taxi_fuel - 5;
+missions = missions + 1;
+
+print("Uçak: İstanbul → Ankara (350km)");
+plane_fuel = plane_fuel - 1800;
+missions = missions + 1;
+
+print("");
+print("Görev: " + missions + " | Taksi yakıt: " + taxi_fuel + "L | Uçak yakıt: " + plane_fuel + "L");

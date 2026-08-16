@@ -16,9 +16,7 @@ impl Compiler {
     ) -> CompileResult<Vec<usize>> {
         use hudhudscript_ast::MatchPattern;
         match pattern {
-            MatchPattern::Wildcard => {
-                Ok(vec![])
-            }
+            MatchPattern::Wildcard => Ok(vec![]),
             MatchPattern::Identifier(name) => {
                 self.bytecode.push_instr(Instruction::BindVar(sym(name)));
                 Ok(vec![])
@@ -28,7 +26,9 @@ impl Compiler {
                     Literal::Number(n, _) => Value16::number(*n),
                     Literal::Int(i) => Value16::int(*i),
                     Literal::BigInt(s) => {
-                        let big = s.parse::<num_bigint::BigInt>().expect("BigInt literal must be valid decimal");
+                        let big = s
+                            .parse::<num_bigint::BigInt>()
+                            .expect("BigInt literal must be valid decimal");
                         Value16::bigint(big)
                     }
                     Literal::String(s) => Value16::string(s.clone()),
@@ -37,12 +37,23 @@ impl Compiler {
                 };
                 let idx = self.bytecode.add_constant(const_val);
                 let lit_reg = crate::compiler::regalloc::temp_reg();
-                self.bytecode.push_instr(Instruction::LoadConst { dst: lit_reg, const_idx: idx as u16 });
+                self.bytecode.push_instr(Instruction::LoadConst {
+                    dst: lit_reg,
+                    const_idx: idx as u16,
+                });
                 // Compare in temp so match_reg survives for next arm
                 let cmp_reg = crate::compiler::regalloc::temp_reg();
-                self.bytecode.push_instr(Instruction::IntCmp { dst: cmp_reg, src1: match_reg, src2: lit_reg, op: 4 });
+                self.bytecode.push_instr(Instruction::IntCmp {
+                    dst: cmp_reg,
+                    src1: match_reg,
+                    src2: lit_reg,
+                    op: 4,
+                });
                 let skip = self.bytecode.instructions.len();
-                self.bytecode.push_instr(Instruction::JumpIfFalse { src: cmp_reg, offset: 0 });
+                self.bytecode.push_instr(Instruction::JumpIfFalse {
+                    src: cmp_reg,
+                    offset: 0,
+                });
                 Ok(vec![skip])
             }
             MatchPattern::EnumVariant {
@@ -55,9 +66,12 @@ impl Compiler {
                     .add_two_sym_payload(sym(enum_name).0, sym(variant).0);
                 self.bytecode
                     .push_instr(Instruction::MatchVariant(payload_idx));
-                self.bytecode.push_move(match_reg, 255 );
+                self.bytecode.push_move(match_reg, 255);
                 let skip = self.bytecode.instructions.len();
-                self.bytecode.push_instr(Instruction::JumpIfFalse { src: match_reg, offset: 0 });
+                self.bytecode.push_instr(Instruction::JumpIfFalse {
+                    src: match_reg,
+                    offset: 0,
+                });
                 if let Some(bind) = binding {
                     self.bytecode.push_instr(Instruction::BindVar(sym(bind)));
                 }
@@ -78,8 +92,10 @@ impl Compiler {
                         match_jumps.push(jmp_to_body);
                         let next = self.bytecode.instructions.len();
                         for s in sub_skips {
-                            self.bytecode.instructions[s] =
-                                Instruction::JumpIfFalse { src: match_reg, offset: jump_off(s, next) as i16 };
+                            self.bytecode.instructions[s] = Instruction::JumpIfFalse {
+                                src: match_reg,
+                                offset: jump_off(s, next) as i16,
+                            };
                         }
                     } else {
                         fail_skip = Some(sub_skips);
@@ -95,8 +111,12 @@ impl Compiler {
     }
 
     pub(super) fn compile_expr(&mut self, expr: &Expr) -> CompileResult<()> {
-        let r = crate::compiler::expr::compile_reg::compile_expr_to_reg(self, expr, &mut RegAlloc::new_with_base(self.ct_next_local_reg())?);
-        self.bytecode.push_move(255, r );
+        let r = crate::compiler::expr::compile_reg::compile_expr_to_reg(
+            self,
+            expr,
+            &mut RegAlloc::new_with_base(self.ct_next_local_reg())?,
+        );
+        self.bytecode.push_move(255, r);
         Ok(())
     }
 
@@ -135,12 +155,18 @@ impl Compiler {
             Pattern::Identifier(name) => {
                 self.declare_local(name, is_const)?;
                 let tr = crate::compiler::regalloc::temp_reg();
-                self.bytecode.push_move(tr, 255 );
+                self.bytecode.push_move(tr, 255);
                 let sym = self.intern(name);
                 if is_const {
-                    self.bytecode.push_instr(Instruction::StoreConst { src: tr, sym: sym as u16 });
+                    self.bytecode.push_instr(Instruction::StoreConst {
+                        src: tr,
+                        sym: sym as u16,
+                    });
                 } else {
-                    self.bytecode.push_instr(Instruction::StoreGlobal { src: tr, sym: sym as u16 });
+                    self.bytecode.push_instr(Instruction::StoreGlobal {
+                        src: tr,
+                        sym: sym as u16,
+                    });
                 }
             }
             Pattern::IdentifierDefault(name, default_expr) => {
@@ -149,7 +175,7 @@ impl Compiler {
                 let temp = format!("__destruct_temp_{}", name);
                 let temp_sym = self.intern(&temp) as u16;
                 let tr = crate::compiler::regalloc::temp_reg();
-                self.bytecode.push_move(tr, 255 );
+                self.bytecode.push_move(tr, 255);
                 self.bytecode.push_instr(Instruction::StoreGlobal {
                     src: tr,
                     sym: temp_sym,
@@ -159,27 +185,36 @@ impl Compiler {
                     dst: tr,
                     sym: temp_sym,
                 });
-                self.bytecode.push_move(255, tr );
+                self.bytecode.push_move(255, tr);
                 let null_idx = self.bytecode.add_constant(Value16::null());
                 let tr = crate::compiler::regalloc::temp_reg();
-                self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: null_idx as u16 });
-                self.bytecode.push_move(255, tr );
-                self.bytecode.push_move(tr, 255 );
+                self.bytecode.push_instr(Instruction::LoadConst {
+                    dst: tr,
+                    const_idx: null_idx as u16,
+                });
+                self.bytecode.push_move(255, tr);
+                self.bytecode.push_move(tr, 255);
                 let jump_to_default = self.bytecode.instructions.len();
-                self.bytecode.push_instr(Instruction::JumpIfFalse { src: tr, offset: 0 });
+                self.bytecode
+                    .push_instr(Instruction::JumpIfFalse { src: tr, offset: 0 });
                 // Use default
                 self.compile_expr(default_expr)?;
                 let jump_to_end = self.bytecode.instructions.len();
                 self.bytecode.push_instr(Instruction::Jump(0));
                 // Use value
                 let else_start = self.bytecode.instructions.len();
-                self.bytecode.instructions[jump_to_default] =
-                    Instruction::JumpIfFalse { src: tr, offset: jump_off(jump_to_default, else_start) as i16 };
+                self.bytecode.instructions[jump_to_default] = Instruction::JumpIfFalse {
+                    src: tr,
+                    offset: jump_off(jump_to_default, else_start) as i16,
+                };
                 {
                     let sym = self.ct_intern(&temp);
                     let tr = crate::compiler::regalloc::temp_reg();
-                    self.bytecode.push_instr(Instruction::LoadGlobal { dst: tr, sym: sym as u16 });
-                    self.bytecode.push_move(255, tr );
+                    self.bytecode.push_instr(Instruction::LoadGlobal {
+                        dst: tr,
+                        sym: sym as u16,
+                    });
+                    self.bytecode.push_move(255, tr);
                 }
                 let end = self.bytecode.instructions.len();
                 self.bytecode.instructions[jump_to_end] =
@@ -187,12 +222,18 @@ impl Compiler {
                 // Store result
                 self.declare_local(name, is_const)?;
                 let tr = crate::compiler::regalloc::temp_reg();
-                self.bytecode.push_move(tr, 255 );
+                self.bytecode.push_move(tr, 255);
                 let sym = self.intern(name);
                 if is_const {
-                    self.bytecode.push_instr(Instruction::StoreConst { src: tr, sym: sym as u16 });
+                    self.bytecode.push_instr(Instruction::StoreConst {
+                        src: tr,
+                        sym: sym as u16,
+                    });
                 } else {
-                    self.bytecode.push_instr(Instruction::StoreGlobal { src: tr, sym: sym as u16 });
+                    self.bytecode.push_instr(Instruction::StoreGlobal {
+                        src: tr,
+                        sym: sym as u16,
+                    });
                 }
             }
             Pattern::Array { elements, rest } => {
@@ -200,7 +241,7 @@ impl Compiler {
                 let temp = "__destruct_arr".to_string();
                 let temp_sym = self.intern(&temp) as u16;
                 let tr = crate::compiler::regalloc::temp_reg();
-                self.bytecode.push_move(tr, 255 );
+                self.bytecode.push_move(tr, 255);
                 self.bytecode.push_instr(Instruction::StoreGlobal {
                     src: tr,
                     sym: temp_sym,
@@ -212,9 +253,22 @@ impl Compiler {
                         dst: tr,
                         sym: temp_sym,
                     });
-                    self.bytecode.push_move(255, tr );
+                    self.bytecode.push_move(255, tr);
                     let idx = self.bytecode.add_int_constant(i as i64);
-                    { let tr_i = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadIntConst { dst: tr_i, const_idx: idx as u16 }); let tr_dst = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::Index { dst: tr_dst, obj: tr, idx: tr_i }); self.bytecode.push_move(255, tr_dst ); }
+                    {
+                        let tr_i = crate::compiler::regalloc::temp_reg();
+                        self.bytecode.push_instr(Instruction::LoadIntConst {
+                            dst: tr_i,
+                            const_idx: idx as u16,
+                        });
+                        let tr_dst = crate::compiler::regalloc::temp_reg();
+                        self.bytecode.push_instr(Instruction::Index {
+                            dst: tr_dst,
+                            obj: tr,
+                            idx: tr_i,
+                        });
+                        self.bytecode.push_move(255, tr_dst);
+                    }
                     self.compile_destructure_pattern(elem_pattern, is_const)?;
                 }
                 // Handle rest element
@@ -224,8 +278,11 @@ impl Compiler {
                     {
                         let sym = self.ct_intern(&temp);
                         let tr = crate::compiler::regalloc::temp_reg();
-                        self.bytecode.push_instr(Instruction::LoadGlobal { dst: tr, sym: sym as u16 });
-                        self.bytecode.push_move(255, tr );
+                        self.bytecode.push_instr(Instruction::LoadGlobal {
+                            dst: tr,
+                            sym: sym as u16,
+                        });
+                        self.bytecode.push_move(255, tr);
                     }
                     self.bytecode
                         .push_instr(Instruction::DestructArray(elements.len() as u16, true));
@@ -236,7 +293,7 @@ impl Compiler {
                 let temp = "__destruct_obj".to_string();
                 let temp_sym = self.intern(&temp) as u16;
                 let tr = crate::compiler::regalloc::temp_reg();
-                self.bytecode.push_move(tr, 255 );
+                self.bytecode.push_move(tr, 255);
                 self.bytecode.push_instr(Instruction::StoreGlobal {
                     src: tr,
                     sym: temp_sym,
@@ -248,8 +305,12 @@ impl Compiler {
                         dst: tr,
                         sym: temp_sym,
                     });
-                    self.bytecode.push_instr(Instruction::GetProperty { dst: tr2, obj: tr, prop_sym: sym(key).0 as u16 });
-                    self.bytecode.push_move(255, tr2 );
+                    self.bytecode.push_instr(Instruction::GetProperty {
+                        dst: tr2,
+                        obj: tr,
+                        prop_sym: sym(key).0 as u16,
+                    });
+                    self.bytecode.push_move(255, tr2);
                     self.compile_destructure_pattern(sub_pattern, is_const)?;
                 }
                 if let Some(rest_pattern) = rest {
@@ -257,8 +318,11 @@ impl Compiler {
                     {
                         let s = self.ct_intern(&temp);
                         let tr = crate::compiler::regalloc::temp_reg();
-                        self.bytecode.push_instr(Instruction::LoadGlobal { dst: tr, sym: s as u16 });
-                        self.bytecode.push_move(255, tr );
+                        self.bytecode.push_instr(Instruction::LoadGlobal {
+                            dst: tr,
+                            sym: s as u16,
+                        });
+                        self.bytecode.push_move(255, tr);
                     }
                     let payload_idx = self.bytecode.add_destruct_object_payload(
                         hudhudscript_bytecode::DestructObjectPayload {

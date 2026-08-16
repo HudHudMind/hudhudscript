@@ -1,0 +1,26 @@
+function mf0() { return 0 }
+function mf1() { return 0 }
+function mf2() { return 0 }
+function mf3() { return 0 }
+function mf4() { return 0 }
+function mf5() { return 0 }
+function mf6() { return 0 }
+function mf7() { return 0 }
+
+function invoke_agent(state, process) {
+    process.invoke_agent_calls = process.invoke_agent_calls + 1
+    return "invoke-agent-ok"
+}
+
+agent IterationAgentProcess {
+    invoke_agent_calls: 0
+
+    action execute(state) {
+        let result = invoke_agent(state, this)
+        return {
+            parent_loop_calls: state.parent_loop_calls,
+            invoke_agent_calls: this.invoke_agent_calls,
+            result: result
+        }
+    }
+}

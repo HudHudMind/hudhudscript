@@ -6,7 +6,9 @@ use hudhudscript_vm::VM;
 fn run_with_timeout(src: &str, timeout_ms: u64) -> Result<VM, String> {
     let stmts = hudhudscript_parser::parse(src).map_err(|e| format!("parse: {}", e))?;
     let mut compiler = hudhudscript_compiler::Compiler::new();
-    let bc = compiler.compile(&stmts).map_err(|e| format!("compile: {}", e))?;
+    let bc = compiler
+        .compile(&stmts)
+        .map_err(|e| format!("compile: {}", e))?;
     let mut vm = VM::new();
     // If this hangs, the test will be killed by the test runner's timeout,
     // which is better than a deadlock.
@@ -33,7 +35,11 @@ let r = TestAg.call({prompt: "OK", max_tokens: 2});
         Err(e) => {
             // Must be a connection error, NOT a hang
             assert!(
-                e.contains("Ollama") || e.contains("API error") || e.contains("connection") || e.contains("404") || e.contains("Sandbox"),
+                e.contains("Ollama")
+                    || e.contains("API error")
+                    || e.contains("connection")
+                    || e.contains("404")
+                    || e.contains("Sandbox"),
                 "unexpected error: {}",
                 e
             );

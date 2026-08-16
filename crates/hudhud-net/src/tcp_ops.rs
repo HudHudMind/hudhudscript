@@ -119,7 +119,10 @@ fn tcp_connect(args: &[Value16]) -> HudHudResult<Value16> {
     let addr = format!("{}:{}", host, port);
     if host == "test-local-net" {
         let mut obj = hudhudscript_bytecode::ObjMap::default();
-        obj.insert("__type".to_string(), Value16::string("TcpStream".to_string()));
+        obj.insert(
+            "__type".to_string(),
+            Value16::string("TcpStream".to_string()),
+        );
         obj.insert("fd".to_string(), Value16::number(9999.0));
         obj.insert("address".to_string(), Value16::string(addr));
         return Ok(Value16::object(obj));
@@ -164,7 +167,10 @@ fn tcp_listen(args: &[Value16]) -> HudHudResult<Value16> {
     let addr = format!("{}:{}", host, port);
     if host == "test-local-net" {
         let mut obj = hudhudscript_bytecode::ObjMap::default();
-        obj.insert("__type".to_string(), Value16::string("TcpListener".to_string()));
+        obj.insert(
+            "__type".to_string(),
+            Value16::string("TcpListener".to_string()),
+        );
         obj.insert("fd".to_string(), Value16::number(9999.0));
         obj.insert("address".to_string(), Value16::string(addr));
         return Ok(Value16::object(obj));

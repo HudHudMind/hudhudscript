@@ -9,8 +9,8 @@
 use async_trait::async_trait;
 use hudhudscript_compiler::Compiler;
 use hudhudscript_runtime::provider::{
-    LLMRequest, LLMResponse, Provider, ProviderError, ProviderInfo, ProviderRegistry,
-    ProviderType, TokenUsage,
+    LLMRequest, LLMResponse, Provider, ProviderError, ProviderInfo, ProviderRegistry, ProviderType,
+    TokenUsage,
 };
 use hudhudscript_vm::{SandboxConfig, VM};
 use std::sync::{Arc, Mutex};
@@ -23,7 +23,9 @@ struct RecordingProvider {
 
 impl RecordingProvider {
     fn new() -> Self {
-        Self { requests: Arc::new(Mutex::new(Vec::new())) }
+        Self {
+            requests: Arc::new(Mutex::new(Vec::new())),
+        }
     }
 }
 
@@ -33,7 +35,11 @@ impl Provider for RecordingProvider {
         self.requests.lock().unwrap().push(request);
         Ok(LLMResponse {
             content: "ok".to_string(),
-            tokens_used: TokenUsage { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
+            tokens_used: TokenUsage {
+                prompt_tokens: 0,
+                completion_tokens: 0,
+                total_tokens: 0,
+            },
             model: "mock-model".to_string(),
             finish_reason: "stop".to_string(),
             tool_calls: None,
@@ -71,9 +77,14 @@ fn execute_script(script: &str, provider: Arc<RecordingProvider>) {
     let bytecode = Compiler::new().compile(&stmts).unwrap();
 
     let mut registry = ProviderRegistry::new();
-    let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
     rt.block_on(async {
-        registry.register("mock_provider".to_string(), provider.clone()).await;
+        registry
+            .register("mock_provider".to_string(), provider.clone())
+            .await;
     });
 
     let mut vm = VM::new();

@@ -1,0 +1,60 @@
+// ═══════════════════════════════════════════════════════════
+// Agent + Provider — Tam Çalışan Örnek
+// v0.5.41 — DEEPSEEK_API_KEY env var gerektirir
+// ═══════════════════════════════════════════════════════════
+
+provider DeepSeek {
+    type: "deepseek",
+    model: "deepseek-chat",
+    api_key: env("DEEPSEEK_API_KEY"),
+    temperature: 0.7
+}
+
+// Agent tanımları (blueprint)
+agent Translator {
+    role: "translator",
+    intent: "Translate text between languages"
+}
+
+agent Coder {
+    role: "code_reviewer",
+    intent: "Review and write code"
+}
+
+// Agent fonksiyonları — provider parametre alır
+fn translate(prov, text, target_lang) {
+    let prompt = "Translate to " + target_lang + ": " + text
+    let resp = prov.call({ prompt: prompt })
+    return resp
+}
+
+fn review_code(prov, code) {
+    let prompt = "Review this code:\n" + code
+    let resp = prov.call({ prompt: prompt })
+    return resp
+}
+
+fn ask(prov, question) {
+    let resp = prov.call({ prompt: question })
+    return resp
+}
+
+// Pipeline — 3 agent farklı görevlerde
+let soru = "What is the capital of France? Answer in one word."
+
+print("=== Agent Pipeline ===")
+print("Question: " + soru)
+
+print("[Translator] → DeepSeek")
+let cevap1 = translate(DeepSeek, soru, "Turkish")
+print("DeepSeek: " + cevap1)
+
+print("[Analyst] → DeepSeek")
+let cevap2 = ask(DeepSeek, "Explain quantum computing in one sentence")
+print("DeepSeek: " + cevap2)
+
+print("[Coder] → DeepSeek")
+let cevap3 = review_code(DeepSeek, "fn add(a,b) { a+b }")
+print("DeepSeek: " + cevap3)
+
+print("=== Complete ===")

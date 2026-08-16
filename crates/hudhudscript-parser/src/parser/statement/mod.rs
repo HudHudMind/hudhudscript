@@ -201,8 +201,12 @@ pub fn parse_statement(pair: Pair<Rule>) -> ParseResult<Option<Stmt>> {
             Rule::gate_decl => super::declarations::loop_engine::parse_gate_decl(inner_pair)?,
             Rule::chain_decl => super::declarations::loop_engine::parse_chain_decl(inner_pair)?,
             Rule::run_stmt => super::declarations::loop_engine::parse_run_stmt(inner_pair)?,
-            Rule::run_chain_stmt => super::declarations::loop_engine::parse_run_chain_stmt(inner_pair)?,
-            Rule::attach_step_decl => super::declarations::loop_engine::parse_attach_step_decl(inner_pair)?,
+            Rule::run_chain_stmt => {
+                super::declarations::loop_engine::parse_run_chain_stmt(inner_pair)?
+            }
+            Rule::attach_step_decl => {
+                super::declarations::loop_engine::parse_attach_step_decl(inner_pair)?
+            }
             Rule::compose_decl => super::parse_compose_decl(inner_pair)?,
             Rule::ability_decl => super::parse_ability_decl(inner_pair)?,
             Rule::trait_decl => parse_trait_decl(inner_pair)?,
@@ -396,17 +400,17 @@ pub fn parse_const_stmt(pair: Pair<Rule>) -> ParseResult<Stmt> {
 }
 
 pub mod control_flow;
-pub mod for_c_style;
-pub mod pattern;
 pub mod declarations;
-pub mod types;
-pub mod special;
+pub mod for_c_style;
 pub mod generators;
+pub mod pattern;
+pub mod special;
+pub mod types;
 
 pub use control_flow::*;
-pub use for_c_style::*;
-pub use pattern::*;
 pub use declarations::*;
-pub use types::*;
-pub use special::*;
+pub use for_c_style::*;
 pub use generators::*;
+pub use pattern::*;
+pub use special::*;
+pub use types::*;

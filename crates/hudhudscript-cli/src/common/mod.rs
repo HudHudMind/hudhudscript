@@ -120,7 +120,9 @@ pub enum RedeclarePolicy {
 }
 
 impl Default for RedeclarePolicy {
-    fn default() -> Self { RedeclarePolicy::Warn }
+    fn default() -> Self {
+        RedeclarePolicy::Warn
+    }
 }
 
 /// [lint] section
@@ -132,7 +134,9 @@ pub struct LintConfig {
 
 impl Default for LintConfig {
     fn default() -> Self {
-        Self { redeclare: RedeclarePolicy::Warn }
+        Self {
+            redeclare: RedeclarePolicy::Warn,
+        }
     }
 }
 
@@ -161,13 +165,19 @@ pub struct RuntimeConfig {
     #[serde(default = "default_max_mcp_servers", rename = "max_mcp_servers")]
     pub max_mcp_servers: usize,
     /// Execution timeout in milliseconds (0 = no timeout).
-    #[serde(default = "default_execution_timeout_ms", rename = "execution_timeout_ms")]
+    #[serde(
+        default = "default_execution_timeout_ms",
+        rename = "execution_timeout_ms"
+    )]
     pub execution_timeout_ms: u64,
     /// Builtin iteration limit (default: 10_000).
     #[serde(default = "default_builtin_max_iter", rename = "builtin_max_iter")]
     pub builtin_max_iter: usize,
     /// Hard ceiling for max_call_depth (default: 4000).
-    #[serde(default = "default_call_depth_ceiling", rename = "max_call_depth_hard_ceiling")]
+    #[serde(
+        default = "default_call_depth_ceiling",
+        rename = "max_call_depth_hard_ceiling"
+    )]
     pub max_call_depth_hard_ceiling: usize,
     /// Non-Linux default stack bytes (default: 8MB).
     #[serde(default = "default_stack_bytes", rename = "default_stack_bytes")]
@@ -196,7 +206,10 @@ pub struct RuntimeConfig {
     #[serde(default)]
     pub allow_privileged: bool,
     /// Default provider timeout in seconds (default: 120).
-    #[serde(default = "default_provider_timeout_secs", rename = "provider_timeout_secs")]
+    #[serde(
+        default = "default_provider_timeout_secs",
+        rename = "provider_timeout_secs"
+    )]
     pub provider_timeout_secs: u64,
 }
 
@@ -267,11 +280,16 @@ pub fn render_error(e: &CliError) -> String {
 
     if locale != "en" {
         if let Some(code) = extract_error_code(&msg) {
-            if let Some(entry) = hudhudscript_errors::embedded_translations::localized_by_short_code(&code, &locale) {
+            if let Some(entry) =
+                hudhudscript_errors::embedded_translations::localized_by_short_code(&code, &locale)
+            {
                 // ERR-1: Show localized title + full English body (was: title-only, lost all detail)
                 let title = entry.title;
-                return format!("{}: [{}] {}
-{}", prefix, code, title, msg);
+                return format!(
+                    "{}: [{}] {}
+{}",
+                    prefix, code, title, msg
+                );
             }
         }
     }
@@ -280,14 +298,19 @@ pub fn render_error(e: &CliError) -> String {
 
 fn locale_prefix(locale: &str) -> &str {
     match locale {
-        "tr" => "Hata", "ar" => "خطأ", "ja" => "エラー", "ru" => "Ошибка", "zh" => "错误", _ => "Error",
+        "tr" => "Hata",
+        "ar" => "خطأ",
+        "ja" => "エラー",
+        "ru" => "Ошибка",
+        "zh" => "错误",
+        _ => "Error",
     }
 }
 
 fn extract_error_code(msg: &str) -> Option<String> {
     let start = msg.find("[E")?;
     let rel_end = msg[start..].find(']')?;
-    let code = &msg[start+1..start+rel_end];
+    let code = &msg[start + 1..start + rel_end];
     if code.len() > 1 && code[1..].chars().all(|c| c.is_ascii_digit()) {
         Some(code.to_string())
     } else {

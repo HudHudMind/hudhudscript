@@ -108,12 +108,36 @@ impl ContextualBandit {
     /// Production use should build arms from `PricingRegistry` instead.
     pub fn with_defaults() -> Self {
         let arms = vec![
-            ModelArm { model: "claude-haiku-3.5".into(), provider: "anthropic".into(), cost_per_1k: 0.0024 },
-            ModelArm { model: "claude-sonnet-4".into(), provider: "anthropic".into(), cost_per_1k: 0.009 },
-            ModelArm { model: "claude-opus-4".into(), provider: "anthropic".into(), cost_per_1k: 0.045 },
-            ModelArm { model: "gpt-4o-mini".into(), provider: "openai".into(), cost_per_1k: 0.000375 },
-            ModelArm { model: "gpt-4o".into(), provider: "openai".into(), cost_per_1k: 0.00625 },
-            ModelArm { model: "deepseek-v3".into(), provider: "deepseek".into(), cost_per_1k: 0.000685 },
+            ModelArm {
+                model: "claude-haiku-3.5".into(),
+                provider: "anthropic".into(),
+                cost_per_1k: 0.0024,
+            },
+            ModelArm {
+                model: "claude-sonnet-4".into(),
+                provider: "anthropic".into(),
+                cost_per_1k: 0.009,
+            },
+            ModelArm {
+                model: "claude-opus-4".into(),
+                provider: "anthropic".into(),
+                cost_per_1k: 0.045,
+            },
+            ModelArm {
+                model: "gpt-4o-mini".into(),
+                provider: "openai".into(),
+                cost_per_1k: 0.000375,
+            },
+            ModelArm {
+                model: "gpt-4o".into(),
+                provider: "openai".into(),
+                cost_per_1k: 0.00625,
+            },
+            ModelArm {
+                model: "deepseek-v3".into(),
+                provider: "deepseek".into(),
+                cost_per_1k: 0.000685,
+            },
         ];
         Self::new(arms, 0.3, 0.6, 0.1)
     }

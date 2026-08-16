@@ -63,12 +63,16 @@ pub fn word_at_position(source: &str, pos: Position) -> Option<String> {
         return None;
     }
 
-    let start = line.get(..col).unwrap_or(line)
+    let start = line
+        .get(..col)
+        .unwrap_or(line)
         .rfind(|c: char| !c.is_alphanumeric() && c != '_')
         .map(|i| i + 1)
         .unwrap_or(0);
 
-    let end = line.get(col..).unwrap_or("")
+    let end = line
+        .get(col..)
+        .unwrap_or("")
         .find(|c: char| !c.is_alphanumeric() && c != '_')
         .map(|i| col + i)
         .unwrap_or(line.len());
@@ -177,7 +181,9 @@ impl AstVisitor for DefinitionCollector {
             Decl::Effect {
                 event_name, span, ..
             } => (event_name.clone(), *span),
-            Decl::Compose { base_subject, span, .. } => (base_subject.clone(), *span),
+            Decl::Compose {
+                base_subject, span, ..
+            } => (base_subject.clone(), *span),
             Decl::Entity { name, span, .. } => (name.clone(), *span),
             Decl::StateMachine { name, span, .. } => (name.clone(), *span),
             Decl::Event { name, span, .. } => (name.clone(), *span),

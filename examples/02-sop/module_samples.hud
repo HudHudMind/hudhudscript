@@ -1,0 +1,174 @@
+// ═══════════════════════════════════════════════════════════
+// HudHudScript — Kullanilabilir Modul Ornekleri
+// v0.5.71 itibariyle VM'e kayitli tum moduller
+// ═══════════════════════════════════════════════════════════
+
+use http
+use file
+use fs
+use exec
+use tcp
+use udp
+use ws
+use download
+use json
+use csv
+use toml
+use yaml
+use crypto
+use Base64
+use Hex
+use Regex
+use uuid
+use env
+use os
+use system
+use Date
+use translate
+use email
+use log
+
+// ═══════════════ 1. HTTP — REST API cagrilari ═══════════════
+print("=== HTTP GET ===")
+let resp = http.get("https://api.github.com/users/octocat")
+print("Status: " + resp.status)
+print("Body: " + resp.body)
+
+print("=== HTTP POST ===")
+let post_resp = http.post("https://jsonplaceholder.typicode.com/posts", json.encode({
+    title: "HudHudScript",
+    body: "SOP + HTTP",
+    userId: 1
+}))
+print("Created: " + post_resp.body)
+
+// ═══════════════ 2. FILE — Dosya islemleri ═══════════════
+print("=== DOSYA ===")
+let files = file.list(".")
+print("Dosya sayisi: " + files.length)
+
+let content = file.read("Cargo.toml")
+print("Cargo.toml: " + content[0:100] + "...")
+
+file.write("/tmp/hud_test.txt", "Merhaba HudHudScript!")
+file.append("/tmp/hud_test.txt", "\nYeni satir eklendi.")
+
+let exists = file.exists("/tmp/hud_test.txt")
+print("Dosya var mi: " + exists)
+file.delete("/tmp/hud_test.txt")
+
+// ═══════════════ 3. EXEC — Komut calistirma ═══════════════
+print("=== EXEC ===")
+let result = exec.run("echo 'HudHudScript'")
+print("Cikti: " + result.stdout)
+print("Exit: " + result.exit_code)
+
+// ═══════════════ 4. TCP/UDP/WS — Ag ═══════════════
+// TCP sunucu
+let server = tcp.listen("127.0.0.1", 9999)
+
+// UDP
+let udp_sock = udp.bind("0.0.0.0", 8888)
+udp.send("127.0.0.1", 8888, "ping")
+
+// WebSocket
+let ws_client = ws.connect("wss://echo.websocket.org")
+ws.send("Merhaba!")
+
+// ═══════════════ 5. DOWNLOAD — Dosya indirme ═══════════════
+print("=== DOWNLOAD ===")
+download.file("https://httpbin.org/image/png", "/tmp/test.png")
+
+// ═══════════════ 6. SERIALIZATION — JSON/CSV/TOML/YAML ═══════════════
+print("=== JSON ===")
+let data = { name: "Hud", version: "0.5.71", tags: ["sop", "tui"] }
+let encoded = json.encode(data)
+print("JSON: " + encoded)
+
+let decoded = json.decode(encoded)
+print("Name: " + decoded.name)
+
+print("=== CSV ===")
+let csv_data = csv.encode([
+    ["ad", "yas", "sehir"],
+    ["Ali", "25", "Istanbul"],
+    ["Ayse", "30", "Ankara"]
+])
+print(csv_data)
+
+// ═══════════════ 7. CRYPTO — Sifreleme / Hash ═══════════════
+print("=== CRYPTO ===")
+let hash = crypto.sha256("HudHudScript")
+print("SHA256: " + hash)
+
+let md5 = crypto.md5("test")
+print("MD5: " + md5)
+
+// ═══════════════ 8. ENV / OS — Sistem ═══════════════
+print("=== SISTEM ===")
+let home = os.homedir()
+print("Home: " + home)
+print("OS: " + os.name() + " " + os.arch())
+print("Username: " + os.username())
+print("Hostname: " + os.hostname())
+print("CPUs: " + os.cpus())
+
+let path_var = env.get("PATH")
+print("PATH: " + path_var)
+
+// ═══════════════ 9. REGEX — Metin isleme ═══════════════
+print("=== REGEX ===")
+let re = Regex.new("\\d{3}-\\d{4}")
+let matches = re.find_all("Tel: 555-1234, Fax: 555-5678")
+print("Bulunan: " + matches.length)
+
+// ═══════════════ 10. UUID — Benzersiz ID ═══════════════
+print("=== UUID ===")
+let id = uuid.v4()
+print("UUID: " + id)
+
+// ═══════════════ 11. TRANSLATE — Ceviri ═══════════════
+print("=== CEVIRI ===")
+let tr = translate.text("Hello world", { from: "en", to: "tr" })
+print("Ceviri: " + tr)
+
+// ═══════════════ 12. EMAIL — E-posta ═══════════════
+print("=== EMAIL ===")
+email.send({
+    to: "ornek@mail.com",
+    subject: "HudHudScript Test",
+    body: "Bu bir test mailidir."
+})
+
+// ═══════════════ 13. DATE — Tarih ═══════════════
+print("=== TARIH ===")
+let now = Date.now()
+print("Simdi: " + now)
+let formatted = Date.format(now, "%Y-%m-%d %H:%M:%S")
+print("Formatli: " + formatted)
+
+// ═══════════════ 14. LOG — Loglama ═══════════════
+print("=== LOG ===")
+log.init({ level: "info" })
+log.info("Uygulama basladi")
+log.warn("Bu bir uyari")
+log.error("Hata olustu!")
+
+// ═══════════════ 15. SYSTEM — Sistem komutlari ═══════════════
+print("=== SYSTEM ===")
+system.sleep(1000)  // 1 saniye bekle
+let mem = system.memory()
+print("RAM: " + mem.total + " / " + mem.free)
+
+// ═══════════════ 16. ARCHIVE — Arsiv ═══════════════
+print("=== ARSIV ===")
+archive.zip("/tmp/demo", "/tmp/demo.zip")
+archive.unzip("/tmp/demo.zip", "/tmp/extracted")
+
+// ═══════════════ 17. DOCKER — Konteyner ═══════════════
+print("=== DOCKER ===")
+let containers = docker.ps()
+print("Konteyner sayisi: " + containers.length)
+
+print("")
+print("=== TUM ORNEKLER TAMAM ===")

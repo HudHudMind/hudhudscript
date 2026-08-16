@@ -196,7 +196,8 @@ pub const STATEMENT_SNIPPETS_EN: &[Snippet] = &[
     Snippet {
         label: "switch",
         detail: "Switch statement",
-        insert_text: "switch (${1:value}) {\n\tcase ${2:pattern}:\n\t\t$0\n\tdefault:\n\t\tbreak\n}",
+        insert_text:
+            "switch (${1:value}) {\n\tcase ${2:pattern}:\n\t\t$0\n\tdefault:\n\t\tbreak\n}",
     },
     Snippet {
         label: "try-catch",

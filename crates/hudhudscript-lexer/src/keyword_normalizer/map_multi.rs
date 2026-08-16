@@ -1,8 +1,14 @@
 use super::core::KwMap;
 
 pub(crate) static MULTI_KEYWORDS: &[KwMap] = &[
-    KwMap { from: "eşit değildir", to: "!=" },
-    KwMap { from: "eşit değil", to: "!=" },
+    KwMap {
+        from: "eşit değildir",
+        to: "!=",
+    },
+    KwMap {
+        from: "eşit değil",
+        to: "!=",
+    },
     KwMap {
         from: "değilse ama",
         to: "else if",

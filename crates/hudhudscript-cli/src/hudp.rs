@@ -129,7 +129,9 @@ fn main() {
 }
 
 fn run(cli: Cli) -> std::result::Result<(), String> {
-    let rt = tokio::runtime::Builder::new_current_thread().enable_all().build()
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
         .map_err(|e| format!("Failed to create async runtime: {}", e))?;
 
     match cli.command {
@@ -199,7 +201,10 @@ fn run(cli: Cli) -> std::result::Result<(), String> {
                 hudhudscript_parser::parse(&source).map_err(|e| format!("Parse error: {}", e))?;
 
             let canonical_script = std::fs::canonicalize(&entry).unwrap_or(entry.clone());
-            let module_base = canonical_script.parent().unwrap_or(std::path::Path::new(".")).to_path_buf();
+            let module_base = canonical_script
+                .parent()
+                .unwrap_or(std::path::Path::new("."))
+                .to_path_buf();
             let mut compiler = hudhudscript_compiler::Compiler::new();
             compiler.set_module_base_dir(module_base.clone());
             let bytecode = compiler
@@ -213,18 +218,28 @@ fn run(cli: Cli) -> std::result::Result<(), String> {
             // TOKIO T-2: conditional runtime
             #[cfg(not(feature = "mcp"))]
             {
-                vm.execute(&bytecode).map_err(|e| format!("Runtime: {}", e))?;
+                vm.execute(&bytecode)
+                    .map_err(|e| format!("Runtime: {}", e))?;
             }
             #[cfg(feature = "mcp")]
             {
                 let rt = tokio::runtime::Builder::new_current_thread()
-                    .enable_all().build()
+                    .enable_all()
+                    .build()
                     .map_err(|e| format!("Runtime: {}", e))?;
                 rt.block_on(async {
                     let servers = std::collections::HashMap::new();
                     match setup_mcp_clients(&servers, debug || cli.verbose).await {
-                        Ok(c) => { for (n, c) in c { vm.register_mcp_client(n, c); } }
-                        Err(e) => { if debug || cli.verbose { eprintln!("⚠ MCP: {}", e); } }
+                        Ok(c) => {
+                            for (n, c) in c {
+                                vm.register_mcp_client(n, c);
+                            }
+                        }
+                        Err(e) => {
+                            if debug || cli.verbose {
+                                eprintln!("⚠ MCP: {}", e);
+                            }
+                        }
                     }
                     let r = vm.execute(&bytecode).map_err(|e| format!("Runtime: {}", e));
                     vm.shutdown_mcp_clients().await;

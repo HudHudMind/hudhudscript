@@ -1,0 +1,3 @@
+let seed=0;fn ri(m){seed=seed+1;return seed;}
+let arr=[];arr.push(ri(10));
+print(arr[0]);

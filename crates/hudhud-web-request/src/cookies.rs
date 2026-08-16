@@ -27,4 +27,3 @@ pub fn parse_cookies(cookie_header: &str) -> Value16 {
     }
     Value16::object(map)
 }
-

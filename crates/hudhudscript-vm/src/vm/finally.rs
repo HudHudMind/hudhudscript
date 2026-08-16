@@ -177,8 +177,8 @@ impl VM {
         self.exec_call(name_sym, u32::MAX, argc, first_arg, 255, bytecode, ip)
     }
 
-    /// Gap 1 — unified dispatcher for `CallSpread` / `MethodCallSpread`
-    /// so the main match only needs one arm.
+    /// Gap 1 — unified dispatcher for `CallSpread` (MethodCallSpread is a
+    /// register-operand instruction dispatched from `collections_calls`).
     #[inline(never)]
     pub(crate) fn exec_spread_call(
         &mut self,
@@ -188,9 +188,6 @@ impl VM {
     ) -> CompileResult<()> {
         match instr {
             Instruction::CallSpread(name_sym) => self.exec_call_spread(*name_sym, bytecode, ip),
-            Instruction::MethodCallSpread(method_sym) => {
-                self.exec_method_call_spread(*method_sym, bytecode)
-            }
             _ => Err(compile_codes::runtime_error(
                 "exec_spread_call: unexpected instruction".to_string(),
             )),
@@ -229,27 +226,42 @@ impl VM {
     }
 
     /// Gap 1 — extracted body of `Instruction::MethodCallSpread`.
+    /// G06F: açık register operandları; deferred sonuç `dst`e gider.
     #[inline(never)]
     pub(crate) fn exec_method_call_spread(
         &mut self,
+        dst: u8,
+        obj: u8,
+        args: u8,
         method_sym: hudhudscript_bytecode::SymId,
         bytecode: &Bytecode,
+        ip: usize,
     ) -> CompileResult<()> {
-        let receiver = self.registers[255];
-        let args_val = self.registers[255];
-        let args = match args_val.as_array() {
-            Some(a) => a.clone(),
-            None => {
-                return Err(compile_codes::runtime_error(format!(
-                    "MethodCallSpread expects Array on stack, got {}",
-                    Self::bytecode_value_type_name(&args_val)
-                )))
-            }
-        };
+        let receiver = self.registers[obj as usize];
+        let call_args = self.registers[args as usize]
+            .as_array()
+            .cloned()
+            .ok_or_else(|| {
+                compile_codes::runtime_error(format!(
+                    "MethodCallSpread expects Array, got {}",
+                    Self::bytecode_value_type_name(&self.registers[args as usize])
+                ))
+            })?;
         let method = bytecode.resolve_symbol(method_sym.0);
         self.last_instance_mutation = None;
-        let result = self.call_method_on_value(&receiver, &method, method_sym, args, bytecode)?;
-        self.registers[255] = result;
+        match self.call_method_on_value(
+            &receiver,
+            &method,
+            method_sym,
+            call_args,
+            bytecode,
+            crate::vm::call_state::DeferredCallSite { dst, origin_ip: ip },
+        )? {
+            crate::vm::call_state::MethodDispatchOutcome::Immediate(value) => {
+                self.registers[dst as usize] = value;
+            }
+            crate::vm::call_state::MethodDispatchOutcome::Deferred => {}
+        }
 
         Ok(())
     }

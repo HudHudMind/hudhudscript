@@ -1,0 +1,327 @@
+// ═══════════════════════════════════════════════════════════
+// HudFS — SOP TUI File Manager (v1.1 — Command Queue)
+// Kullanim: cargo run --bin hudhud -- run examples/02-sop/hudfs.hudhud
+// ═══════════════════════════════════════════════════════════
+
+use tui
+use file
+
+// --- ROLLER ---
+role Browsable { can list, can enter, can back }
+role Editable  { can create, can delete, can view }
+
+// --- SUBJECT ---
+subject Explorer has Browsable {
+    state current_path: "."
+    state selected_index: 0
+
+    on enter(self, name) { self.log_nav(name) }
+    on back(self) { self.log_nav("..") }
+    on list(self) {}
+}
+
+subject OpLog {
+    state ops: 0
+    state last_op: ""
+}
+
+subject NavLog of Explorer {
+    state nav_count: 0
+    on log_nav(self, dest) {
+        self.nav_count = self.nav_count + 1
+    }
+}
+
+compose Explorer {
+    on enter: combine [NavLog]
+    on back: combine [NavLog]
+}
+
+relation Explorer <-> OpLog { trust: 100 }
+
+let explorer = spawn Explorer
+let oplog    = spawn OpLog
+
+// --- STATE ---
+let path_stack = ["."]
+let stack_depth = 1
+let running = 1
+let status_text = "[↑↓]gez [Enter]ac [b]geri [v]goruntule [n]yeni [d]sil [q]cik"
+let preview_text = "(dosya secin)"
+
+// --- TUI ---
+tui.init()
+
+while (running) {
+    let files = file.list(explorer.current_path)
+    let count = files.length
+    let sel = explorer.selected_index
+
+    // --- LISTE METNI ---
+    let list_text = ""
+    let max_vis = 22
+    if (stack_depth > 1) {
+        max_vis = max_vis - 1
+    }
+    if (max_vis > count) {
+        max_vis = count
+    }
+
+    if (stack_depth > 1) {
+        if (sel == 0) {
+            list_text = " > .. (ust dizin)\n"
+        }
+        if (sel != 0) {
+            list_text = "   .. (ust dizin)\n"
+        }
+    }
+
+    let i = 0
+    while (i < max_vis) {
+        let di = i
+        if (stack_depth > 1) {
+            di = i + 1
+        }
+        let marker = "   "
+        if (sel == di) {
+            marker = " > "
+        }
+        list_text = list_text + marker + files[i] + "\n"
+        i = i + 1
+    }
+
+    // --- PREVIEW ---
+    let prev = preview_text
+    if (sel == 0 && stack_depth > 1) {
+        prev = "📁 Ust dizin"
+    }
+    if (sel > 0) {
+        let aidx = sel
+        if (stack_depth > 1) {
+            aidx = sel - 1
+        }
+        if (aidx < count) {
+            prev = "📄 " + files[aidx] + "\n\n" + preview_text
+        }
+    }
+
+    // --- QUEUE WIDGETS ---
+    let sz = tui.size()
+    let vs = tui.split({
+        direction: "vertical",
+        constraints: [
+            { type: "length", value: 3 },
+            { type: "min", value: 5 },
+            { type: "length", value: 3 }
+        ],
+        area: sz
+    })
+
+    tui.block({
+        title: " HudFS — SOP File Manager ",
+        borders: "all",
+        border_style: { fg: "cyan" },
+        area: vs[0]
+    })
+    tui.paragraph({
+        text: "📁 " + explorer.current_path + "   [" + count + " oge]",
+        style: { fg: "yellow", bold: 1 },
+        area: vs[0]
+    })
+
+    let hs = tui.split({
+        direction: "horizontal",
+        constraints: [
+            { type: "percentage", value: 50 },
+            { type: "percentage", value: 50 }
+        ],
+        area: vs[1]
+    })
+
+    tui.block({
+        title: " Dosyalar ",
+        borders: "all",
+        border_style: { fg: "green" },
+        area: hs[0]
+    })
+    tui.paragraph({
+        text: list_text,
+        area: hs[0]
+    })
+
+    tui.block({
+        title: " Onizleme ",
+        borders: "all",
+        border_style: { fg: "blue" },
+        area: hs[1]
+    })
+    tui.paragraph({
+        text: prev,
+        area: hs[1]
+    })
+
+    let bs = tui.split({
+        direction: "horizontal",
+        constraints: [
+            { type: "percentage", value: 60 },
+            { type: "percentage", value: 40 }
+        ],
+        area: vs[2]
+    })
+
+    tui.paragraph({
+        text: status_text,
+        style: { fg: "white" },
+        area: bs[0]
+    })
+    tui.paragraph({
+        text: oplog.last_op + " (" + oplog.ops + ")",
+        style: { fg: "gray" },
+        area: bs[1]
+    })
+
+    // --- RENDER ---
+    tui.draw()
+
+    // --- INPUT ---
+    let ev = tui.poll_event(150)
+    if (ev != null) {
+        let c = ev["code"]
+
+        if (c == "q") {
+            running = 0
+            oplog.ops = oplog.ops + 1
+            oplog.last_op = "Cikis"
+        }
+
+        if (c == "up" || c == "k") {
+            if (sel > 0) {
+                explorer.selected_index = sel - 1
+            }
+        }
+
+        if (c == "down" || c == "j") {
+            let mx = count
+            if (stack_depth > 1) {
+                mx = count + 1
+            }
+            if (sel < mx - 1) {
+                explorer.selected_index = sel + 1
+            }
+        }
+
+        if (c == "b" || c == "h" || c == "left") {
+            if (stack_depth > 1) {
+                stack_depth = stack_depth - 1
+                explorer.current_path = "."
+                let pi = 1
+                while (pi < stack_depth) {
+                    explorer.current_path = explorer.current_path + "/" + path_stack[pi]
+                    pi = pi + 1
+                }
+                explorer.selected_index = 0
+                oplog.ops = oplog.ops + 1
+                oplog.last_op = "← " + explorer.current_path
+                status_text = "📍 " + explorer.current_path
+            }
+        }
+
+        if (c == "enter" || c == "l") {
+            let sidx = explorer.selected_index
+
+            if (sidx == 0 && stack_depth > 1) {
+                stack_depth = stack_depth - 1
+                explorer.current_path = "."
+                let pi = 1
+                while (pi < stack_depth) {
+                    explorer.current_path = explorer.current_path + "/" + path_stack[pi]
+                    pi = pi + 1
+                }
+                explorer.selected_index = 0
+                oplog.ops = oplog.ops + 1
+                oplog.last_op = "← " + explorer.current_path
+                status_text = "📍 " + explorer.current_path
+            }
+
+            if (sidx > 0) {
+                let aidx = sidx
+                if (stack_depth > 1) {
+                    aidx = sidx - 1
+                }
+                if (aidx < count) {
+                    let sf = files[aidx]
+                    let fp = explorer.current_path + "/" + sf
+                    let content = file.read(fp)
+                    if (content.length > 0) {
+                        preview_text = content
+                        status_text = "📄 " + sf
+                        oplog.ops = oplog.ops + 1
+                        oplog.last_op = "Oku: " + sf
+                    }
+                    if (content.length == 0) {
+                        path_stack[stack_depth] = sf
+                        stack_depth = stack_depth + 1
+                        explorer.enter(sf)
+                        explorer.selected_index = 0
+                        status_text = "📍 " + explorer.current_path
+                        oplog.ops = oplog.ops + 1
+                        oplog.last_op = "→ " + sf
+                    }
+                }
+            }
+        }
+
+        if (c == "v") {
+            let sidx = explorer.selected_index
+            if (sidx > 0) {
+                let aidx = sidx
+                if (stack_depth > 1) {
+                    aidx = sidx - 1
+                }
+                if (aidx < count) {
+                    let sf = files[aidx]
+                    let fp = explorer.current_path + "/" + sf
+                    preview_text = file.read(fp)
+                    status_text = "📄 " + sf
+                    oplog.ops = oplog.ops + 1
+                    oplog.last_op = "Goruntule: " + sf
+                }
+            }
+        }
+
+        if (c == "n") {
+            let nn = "yeni_dosya.txt"
+            let fp = explorer.current_path + "/" + nn
+            file.write(fp, "Merhaba!\n")
+            status_text = "📝 " + nn
+            oplog.ops = oplog.ops + 1
+            oplog.last_op = "Yeni: " + nn
+        }
+
+        if (c == "d") {
+            let sidx = explorer.selected_index
+            if (sidx > 0) {
+                let aidx = sidx
+                if (stack_depth > 1) {
+                    aidx = sidx - 1
+                }
+                if (aidx < count) {
+                    let sf = files[aidx]
+                    let fp = explorer.current_path + "/" + sf
+                    file.delete(fp)
+                    status_text = "🗑️ " + sf
+                    oplog.ops = oplog.ops + 1
+                    oplog.last_op = "Sil: " + sf
+                }
+            }
+        }
+    }
+}
+
+tui.restore()
+
+print("")
+print("=== HudFS Oturum Sonu ===")
+print("Islem: " + oplog.ops + " | Gezinti: " + explorer.nav_count)
+print("Son: " + oplog.last_op)
+print("")

@@ -94,7 +94,7 @@ pub fn unpack(packed: u32) -> Option<Instruction> {
         }),
         OP_MAKE_GENERATOR => None, // Back compat: register-based MakeGenerator
         OP_CALL_SPREAD => Some(Instruction::CallSpread(SymId(arg2 as u32))),
-        OP_METHOD_CALL_SPREAD => Some(Instruction::MethodCallSpread(SymId(arg2 as u32))),
+        OP_METHOD_CALL_SPREAD => None, // Back compat: register-based MethodCallSpread
         OP_PUSH_LOOP => Some(Instruction::LoopBegin(arg2 as u32)),
         OP_MATCH_VARIANT => Some(Instruction::MatchVariant(arg2 as u32)),
         OP_GET_STATIC => Some(Instruction::GetStatic(arg2 as u32)),
@@ -377,12 +377,20 @@ pub fn unpack(packed: u32) -> Option<Instruction> {
         OP_INDEX_ARRAY_RRR => {
             let obj = ((arg2 >> 8) & 0xFF) as u8;
             let idx = (arg2 & 0xFF) as u8;
-            Some(Instruction::IndexArray { dst: arg1, obj, idx })
+            Some(Instruction::IndexArray {
+                dst: arg1,
+                obj,
+                idx,
+            })
         }
         OP_INDEX_STRING_ASCII_RRR => {
             let obj = ((arg2 >> 8) & 0xFF) as u8;
             let idx = (arg2 & 0xFF) as u8;
-            Some(Instruction::IndexStringAscii { dst: arg1, obj, idx })
+            Some(Instruction::IndexStringAscii {
+                dst: arg1,
+                obj,
+                idx,
+            })
         }
 
         _ => None,

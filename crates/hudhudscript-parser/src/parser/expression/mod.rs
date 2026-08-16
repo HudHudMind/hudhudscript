@@ -85,9 +85,11 @@ pub fn parse_expression(pair: Pair<Rule>) -> ParseResult<Expr> {
 fn parse_ternary_expr(pair: Pair<Rule>) -> ParseResult<Expr> {
     let span = pair_to_span(&pair);
     let mut inner = pair.into_inner();
-    let condition = parse_expression(inner.next().ok_or_else(|| {
-        parse_codes::invalid_syntax("Expected condition in ternary", span)
-    })?)?;
+    let condition = parse_expression(
+        inner
+            .next()
+            .ok_or_else(|| parse_codes::invalid_syntax("Expected condition in ternary", span))?,
+    )?;
     // ternary_q ("?") ve ternary_colon (":") SILENT — pairs'a girmez.
     // Eğer ternary ise bir sonraki pair doğrudan true_expr'dir.
     if let Some(true_pair) = inner.next() {
@@ -95,7 +97,12 @@ fn parse_ternary_expr(pair: Pair<Rule>) -> ParseResult<Expr> {
         let false_expr = parse_expression(inner.next().ok_or_else(|| {
             parse_codes::invalid_syntax("Expected false expression in ternary", span)
         })?)?;
-        Ok(Expr::Ternary { condition: Box::new(condition), true_expr: Box::new(true_expr), false_expr: Box::new(false_expr), span })
+        Ok(Expr::Ternary {
+            condition: Box::new(condition),
+            true_expr: Box::new(true_expr),
+            false_expr: Box::new(false_expr),
+            span,
+        })
     } else {
         Ok(condition)
     }
@@ -342,10 +349,10 @@ fn parse_multiplicative_expr(pair: Pair<Rule>) -> ParseResult<Expr> {
     Ok(left)
 }
 
-pub mod unary_postfix;
 pub mod functions;
+pub mod unary_postfix;
 
 pub use unary_postfix::*;
 pub mod literals;
-pub use literals::*;
 pub use functions::*;
+pub use literals::*;

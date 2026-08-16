@@ -66,7 +66,10 @@ impl Provider for OpenAICompatibleProvider {
         ) || is_local_url(&url);
         let api_key = self.resolve_api_key(no_auth)?;
 
-        let timeout_secs = request.timeout_secs.or(self.config.timeout_secs).unwrap_or(crate::provider::types::DEFAULT_PROVIDER_TIMEOUT_SECS);
+        let timeout_secs = request
+            .timeout_secs
+            .or(self.config.timeout_secs)
+            .unwrap_or(crate::provider::types::DEFAULT_PROVIDER_TIMEOUT_SECS);
         let timeout_duration = std::time::Duration::from_secs(timeout_secs);
 
         let build_req = || {
@@ -195,7 +198,10 @@ impl Provider for OpenAICompatibleProvider {
         ) || is_local_url(&url);
         let api_key = self.resolve_api_key(no_auth)?;
 
-        let timeout_secs = self.config.timeout_secs.unwrap_or(crate::provider::types::DEFAULT_PROVIDER_TIMEOUT_SECS);
+        let timeout_secs = self
+            .config
+            .timeout_secs
+            .unwrap_or(crate::provider::types::DEFAULT_PROVIDER_TIMEOUT_SECS);
         let timeout_duration = std::time::Duration::from_secs(timeout_secs);
 
         let build_req = || {
@@ -299,7 +305,10 @@ impl Provider for OpenAICompatibleProvider {
         ) || is_local_url(&url);
         let api_key = self.resolve_api_key(no_auth)?;
 
-        let timeout_secs = request.timeout_secs.or(self.config.timeout_secs).unwrap_or(crate::provider::types::DEFAULT_PROVIDER_TIMEOUT_SECS);
+        let timeout_secs = request
+            .timeout_secs
+            .or(self.config.timeout_secs)
+            .unwrap_or(crate::provider::types::DEFAULT_PROVIDER_TIMEOUT_SECS);
         let timeout_duration = std::time::Duration::from_secs(timeout_secs);
 
         let mut req = self
@@ -366,7 +375,10 @@ impl Provider for OpenAICompatibleProvider {
             }
         }
 
-        self.token_tracker.write().await.record(prompt_tokens, total_tokens);
+        self.token_tracker
+            .write()
+            .await
+            .record(prompt_tokens, total_tokens);
 
         Ok(LLMResponse {
             content: full_content.clone(),

@@ -28,19 +28,24 @@ mod telemetry_tests {
     fn total_instructions_nonzero() {
         let (vm, _) = run_script("let x = 1 + 2");
         let snap = vm.telemetry_snapshot();
-        assert!(snap.total_instructions > 0, "total_instructions should be > 0");
+        assert!(
+            snap.total_instructions > 0,
+            "total_instructions should be > 0"
+        );
     }
 
     // ── 2. bigint_promotion on mul overflow (Int * Int → BigInt) ──
 
     #[test]
     fn bigint_promotion_on_mul_overflow() {
-        let (vm, result) = run_script_ret(
-            "let a = 3037000500; let b = 3037000500; return a * b"
-        );
+        let (vm, result) = run_script_ret("let a = 3037000500; let b = 3037000500; return a * b");
         assert!(result.is_bigint(), "overflow mul must produce BigInt");
         let snap = vm.telemetry_snapshot();
-        assert!(snap.bigint_promotion > 0, "bigint_promotion must be > 0, got {}", snap.bigint_promotion);
+        assert!(
+            snap.bigint_promotion > 0,
+            "bigint_promotion must be > 0, got {}",
+            snap.bigint_promotion
+        );
     }
 
     // ── 3. No promotion without overflow ──────────────────────────
@@ -76,10 +81,16 @@ mod telemetry_tests {
         vm2.execute(&bytecode).unwrap();
         let snap_fresh = vm2.telemetry_snapshot();
 
-        assert_eq!(snap_a.total_instructions, snap_b.total_instructions,
-            "same bytecode, same VM: {} vs {} (no accumulation)", snap_a.total_instructions, snap_b.total_instructions);
-        assert_eq!(snap_a.total_instructions, snap_fresh.total_instructions,
-            "same bytecode, different VM: {} vs {} (reset is correct)", snap_a.total_instructions, snap_fresh.total_instructions);
+        assert_eq!(
+            snap_a.total_instructions, snap_b.total_instructions,
+            "same bytecode, same VM: {} vs {} (no accumulation)",
+            snap_a.total_instructions, snap_b.total_instructions
+        );
+        assert_eq!(
+            snap_a.total_instructions, snap_fresh.total_instructions,
+            "same bytecode, different VM: {} vs {} (reset is correct)",
+            snap_a.total_instructions, snap_fresh.total_instructions
+        );
     }
 
     // ── 5. execution_status: "error" ───────────────────────────────
@@ -89,7 +100,9 @@ mod telemetry_tests {
         let mut vm = VM::new();
         let src = "let x = 5 / 0";
         let ast = hudhudscript_parser::parse(src).unwrap();
-        let bc = hudhudscript_compiler::Compiler::new().compile(&ast).unwrap();
+        let bc = hudhudscript_compiler::Compiler::new()
+            .compile(&ast)
+            .unwrap();
         let result = vm.execute(&bc);
         assert!(result.is_err(), "division by zero should fail");
 
@@ -116,7 +129,12 @@ mod telemetry_tests {
         assert_eq!(json["schema_version"], 1);
         assert_eq!(json["telemetry_enabled"], true);
         assert_eq!(json["execution_status"], "ok");
-        assert!(json["counter_availability"]["total_instructions"].as_str().unwrap() == "available");
+        assert!(
+            json["counter_availability"]["total_instructions"]
+                .as_str()
+                .unwrap()
+                == "available"
+        );
         assert!(json["counters"]["total_instructions"].as_u64().unwrap() > 0);
 
         let _ = fs::remove_file(path);
@@ -128,7 +146,11 @@ mod telemetry_tests {
     fn json_write_to_invalid_path_fails() {
         let (vm, _) = run_script("1");
         use hudhudscript_cli::common::telemetry_writer::write_telemetry_json;
-        let result = write_telemetry_json(&vm, std::path::Path::new("/dev/null/nonexistent.json"), true);
+        let result = write_telemetry_json(
+            &vm,
+            std::path::Path::new("/dev/null/nonexistent.json"),
+            true,
+        );
         assert!(result.is_err());
     }
 
@@ -139,14 +161,18 @@ mod telemetry_tests {
         // Mul overflow inside a function — the values are in registers
         // so packed dispatch (D_INT_MUL_RR) handles the operation.
         // Overflow triggers Int→BigInt promotion counted in telemetry.
-        let (vm, result) = run_script_ret(
-            "let a = 3037000500; let b = 3037000500; return a * b"
+        let (vm, result) = run_script_ret("let a = 3037000500; let b = 3037000500; return a * b");
+        assert!(
+            result.is_bigint(),
+            "overflow mul must produce BigInt, got {}",
+            result.type_name_str()
         );
-        assert!(result.is_bigint(),
-            "overflow mul must produce BigInt, got {}", result.type_name_str());
         let snap = vm.telemetry_snapshot();
         assert!(snap.total_instructions > 0);
-        assert!(snap.bigint_promotion > 0,
-            "overflow promotion must be > 0, got {}", snap.bigint_promotion);
+        assert!(
+            snap.bigint_promotion > 0,
+            "overflow promotion must be > 0, got {}",
+            snap.bigint_promotion
+        );
     }
 }

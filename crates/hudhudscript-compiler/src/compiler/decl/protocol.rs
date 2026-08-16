@@ -29,7 +29,14 @@ impl Compiler {
             protocol_obj.insert("session".to_string(), Value16::object(session_obj));
         }
         let idx = self.bytecode.add_constant(Value16::object(protocol_obj));
-        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_move(255, tr ); }
+        {
+            let tr = crate::compiler::regalloc::temp_reg();
+            self.bytecode.push_instr(Instruction::LoadConst {
+                dst: tr,
+                const_idx: idx as u16,
+            });
+            self.bytecode.push_move(255, tr);
+        }
         self.emit_decl_store("protocol", name, 255);
         Ok(())
     }
@@ -77,7 +84,14 @@ impl Compiler {
             strategy_obj.insert("session".to_string(), Value16::object(session_obj));
         }
         let idx = self.bytecode.add_constant(Value16::object(strategy_obj));
-        { let tr = crate::compiler::regalloc::temp_reg(); self.bytecode.push_instr(Instruction::LoadConst { dst: tr, const_idx: idx as u16 }); self.bytecode.push_move(255, tr ); }
+        {
+            let tr = crate::compiler::regalloc::temp_reg();
+            self.bytecode.push_instr(Instruction::LoadConst {
+                dst: tr,
+                const_idx: idx as u16,
+            });
+            self.bytecode.push_move(255, tr);
+        }
         self.emit_decl_store("strategy", name, 255);
         Ok(())
     }

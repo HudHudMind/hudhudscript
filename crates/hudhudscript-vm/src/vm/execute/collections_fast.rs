@@ -30,10 +30,14 @@ impl VM {
                 self.registers[*dst as usize] = Value16::object(properties);
             }
             Instruction::ObjLitSet { obj, val, prop_sym } => {
-                #[cfg(feature = "telemetry")] { self.telemetry.site_property_count += 1; }
+                #[cfg(feature = "telemetry")]
+                {
+                    self.telemetry.site_property_count += 1;
+                }
                 let v = self.registers[*val as usize];
                 let mut obj_val = self.registers[*obj as usize];
-                obj_val.as_object_mut_unchecked()
+                obj_val
+                    .as_object_mut_unchecked()
                     .insert(hudhudscript_bytecode::SymId(*prop_sym as u32), v);
             }
             Instruction::ArrayPush { dst, arr, val } => {
@@ -103,10 +107,9 @@ impl VM {
                 #[cfg(feature = "telemetry")]
                 self.record_bigint_promotion(a, b, product);
                 let acc_val = self.registers[*acc as usize];
-                let sum = crate::vm::bigint_arith::int_add(acc_val, product)
-                    .map_err(|code| {
-                        Self::runtime_error_with_pos(&code.to_string(), ctx.bytecode, ctx.ip)
-                    })?;
+                let sum = crate::vm::bigint_arith::int_add(acc_val, product).map_err(|code| {
+                    Self::runtime_error_with_pos(&code.to_string(), ctx.bytecode, ctx.ip)
+                })?;
                 #[cfg(feature = "telemetry")]
                 self.record_bigint_promotion(acc_val, product, sum);
                 self.registers[dst as usize] = sum;
