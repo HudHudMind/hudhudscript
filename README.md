@@ -3,10 +3,10 @@
 > Multilingual, register-based scripting language for AI orchestration, agent workflows, governance models, automation, and embeddable runtime use.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.8.233-blue.svg)](Cargo.toml)
+[![Version](https://img.shields.io/badge/version-0.8.237-blue.svg)](Cargo.toml)
 [![Rust](https://img.shields.io/badge/built%20with-Rust-orange.svg)](https://www.rust-lang.org/)
 
-**Current version:** `0.8.233`
+**Current version:** `0.8.237`
 
 HudHudScript is a Rust-powered scripting language built around a register-based bytecode VM, native multilingual syntax, and first-class constructs for AI providers, agents, SOP (Subject-Oriented Programming), councils, swarms, and governance rules.
 
