@@ -76,3 +76,4 @@ coverage/
 # Backup files
 *.bak
 *.backup
+*README.md.template
