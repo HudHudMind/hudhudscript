@@ -297,6 +297,7 @@ impl Compiler {
                 }
             }
             Expr::Perform { action, .. } => Self::walk_closures_in_expr(action, top, out),
+            Expr::Recall { query, .. } => Self::walk_closures_in_expr(query, top, out),
             Expr::Member { object, .. } | Expr::OptionalMember { object, .. } => {
                 Self::walk_closures_in_expr(object, top, out)
             }
@@ -767,6 +768,7 @@ impl Compiler {
                 Self::mark_expr(e, top, out)
             }
             Expr::Perform { action, .. } => Self::mark_expr(action, top, out),
+            Expr::Recall { query, .. } => Self::mark_expr(query, top, out),
             Expr::Member { object, .. } | Expr::OptionalMember { object, .. } => {
                 Self::mark_expr(object, top, out)
             }

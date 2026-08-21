@@ -29,6 +29,10 @@ pub(crate) fn collect_expr(expr: &Expr, name: &str, uri: &Url, out: &mut Vec<Loc
             collect_expr(action, name, uri, out);
         }
 
+        Expr::Recall { query, .. } => {
+            collect_expr(query, name, uri, out);
+        }
+
         Expr::Member {
             object,
             property,

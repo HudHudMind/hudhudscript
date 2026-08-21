@@ -143,6 +143,7 @@ pub fn optimize_with_positions(
                 int_constants,
                 loop_payloads,
                 source_positions,
+                protected_below,
             );
             // P7: IntModI+IntCmpI chain fusion — must run AFTER
             // fuse_slot_immediate which creates IntModI/IntCmpI
@@ -255,6 +256,7 @@ pub fn optimize_with_positions(
                 int_constants,
                 loop_payloads,
                 source_positions,
+                protected_below,
             );
             // P7: IntModI+IntCmpI chain fusion — after I6
             fuse_intmodcmpi_chain(instructions, loop_payloads, source_positions);

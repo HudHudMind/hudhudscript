@@ -98,6 +98,13 @@ pub enum Expr {
     /// Perform an agent action: perform Worker.double(21)
     Perform { action: Box<Expr>, span: Span },
 
+    /// Recall from vector memory: recall "query" from store
+    Recall {
+        query: Box<Expr>,
+        store_name: Option<String>,
+        span: Span,
+    },
+
     /// Member access: obj.field
     Member {
         object: Box<Expr>,
@@ -212,6 +219,7 @@ impl Expr {
             Expr::Unary { span, .. } => *span,
             Expr::Call { span, .. } => *span,
             Expr::Perform { span, .. } => *span,
+            Expr::Recall { span, .. } => *span,
             Expr::Member { span, .. } => *span,
             Expr::OptionalMember { span, .. } => *span,
             Expr::Index { span, .. } => *span,

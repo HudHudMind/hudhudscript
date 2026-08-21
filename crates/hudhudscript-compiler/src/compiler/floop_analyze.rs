@@ -110,6 +110,7 @@ fn collect_idents(expr: &Expr, out: &mut Vec<String>, poison: &mut bool) {
             }
         }
         Expr::Perform { action, .. } => collect_idents(action, out, poison),
+        Expr::Recall { query, .. } => collect_idents(query, out, poison),
         Expr::Member { object, .. } | Expr::OptionalMember { object, .. } => {
             collect_idents(object, out, poison)
         }

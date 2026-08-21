@@ -130,6 +130,7 @@ pub fn run_function_optimizer_passes(
             &int_consts,
             isolation.local_mut(),
             source_positions,
+            protected_below,
         );
         crate::optimizer::fuse_intmodcmpi_chain(
             &mut bytecode.instructions,

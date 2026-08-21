@@ -73,7 +73,7 @@ impl VM {
                     }
                 }
 
-                let context = ReceiverContext::new(*receiver, Some(class_sym), true);
+                let context = ReceiverContext::new(*receiver, Some(class_sym), false);
                 return self.schedule_deferred_chunk_call(
                     chunk,
                     function_sym,
@@ -92,7 +92,7 @@ impl VM {
         {
             if let Some(chunk) = bytecode.get_function(&chunk_name) {
                 let function_sym = SymId(hudhudscript_bytecode::interner::intern(&chunk_name).0);
-                let context = ReceiverContext::new(*receiver, None, true);
+                let context = ReceiverContext::new(*receiver, None, false);
                 return self.schedule_deferred_chunk_call(
                     chunk,
                     function_sym,
@@ -151,7 +151,7 @@ impl VM {
         if let Some(chunk_name) = object.get(&method_sym).and_then(|value| value.as_string()) {
             if let Some(chunk) = bytecode.get_function(&chunk_name) {
                 let function_sym = SymId(hudhudscript_bytecode::interner::intern(&chunk_name).0);
-                let context = ReceiverContext::new(*receiver, None, true);
+                let context = ReceiverContext::new(*receiver, None, false);
                 return self.schedule_deferred_chunk_call(
                     chunk,
                     function_sym,

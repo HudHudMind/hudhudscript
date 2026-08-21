@@ -44,6 +44,12 @@ pub(crate) fn walk_expr_children(visitor: &mut impl AstVisitor, expr: &Expr) -> 
             }
         }
 
+        Expr::Recall { query, .. } => {
+            if walk_expr(visitor, query) == VisitControl::Stop {
+                return VisitControl::Stop;
+            }
+        }
+
         Expr::Member { object, .. } | Expr::OptionalMember { object, .. } => {
             if walk_expr(visitor, object) == VisitControl::Stop {
                 return VisitControl::Stop;

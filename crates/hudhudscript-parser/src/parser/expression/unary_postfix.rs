@@ -3,17 +3,26 @@ use super::*;
 pub(super) fn parse_unary_expr(pair: Pair<Rule>) -> ParseResult<Expr> {
     let span = pair_to_span(&pair);
 
-    // Check the full text first to see if it starts with await or perform
+    // Check the full text first to see if it starts with await
     let full_text = pair.as_str().trim_start();
     let is_await = full_text.starts_with("await ")
         || full_text.starts_with("bekle ")
         || full_text.starts_with("matsu ");
-    let is_perform = full_text.starts_with("perform ");
 
     // Recursively parse nested expressions
     let mut inner = pair.into_inner();
     if let Some(first) = inner.next() {
         let first_str = first.as_str();
+
+        if first.as_rule() == Rule::recall_expr {
+            return parse_recall_expr(first);
+        }
+
+        if first.as_rule() == Rule::perform_expr {
+            let mut pinner = first.into_inner();
+            let action = Box::new(parse_expression(pinner.next().unwrap())?);
+            return Ok(Expr::Perform { action, span });
+        }
 
         // If we detected await from the full text, this first element is the inner unary_expr
         // which may itself contain postfix operations (e.g. `await fetchData()` where
@@ -24,14 +33,6 @@ pub(super) fn parse_unary_expr(pair: Pair<Rule>) -> ParseResult<Expr> {
             let expr = parse_unary_expr(first)?;
             return Ok(Expr::Await {
                 expr: Box::new(expr),
-                span,
-            });
-        }
-
-        if is_perform {
-            let expr = parse_unary_expr(first)?;
-            return Ok(Expr::Perform {
-                action: Box::new(expr),
                 span,
             });
         }
@@ -57,18 +58,42 @@ pub(super) fn parse_unary_expr(pair: Pair<Rule>) -> ParseResult<Expr> {
         }
 
         // Otherwise, just parse as postfix expression
-        parse_postfix_expr(first)
+        match first.as_rule() {
+            Rule::recall_expr => parse_recall_expr(first),
+            Rule::postfix_expr => parse_postfix_expr(first),
+            _ => parse_expression(first),
+        }
     } else {
         Err(parse_codes::invalid_syntax("Empty expression", span))
     }
 }
 
-pub(super) fn parse_postfix_expr(pair: Pair<Rule>) -> ParseResult<Expr> {
+pub(super) fn parse_recall_expr(pair: Pair<Rule>) -> ParseResult<Expr> {
     let span = pair_to_span(&pair);
     let mut inner = pair.into_inner();
 
+    let query = Box::new(parse_expression(inner.next().ok_or_else(|| {
+        parse_codes::invalid_syntax("Expected query expression in recall", span)
+    })?)?);
+
+    let store_name = inner.next().map(|p| p.as_str().to_string());
+
+    Ok(Expr::Recall {
+        query,
+        store_name,
+        span,
+    })
+}
+
+pub(super) fn parse_postfix_expr(pair: Pair<Rule>) -> ParseResult<Expr> {
+    let span = pair_to_span(&pair);
+    if pair.as_rule() != Rule::postfix_expr {
+        return parse_expression(pair);
+    }
+    let mut inner = pair.into_inner();
+
     // Parse the primary expression first
-    let mut expr = parse_primary(
+    let mut expr = parse_expression(
         inner
             .next()
             .ok_or_else(|| parse_codes::invalid_syntax("Expected primary expression", span))?,
@@ -208,221 +233,14 @@ pub(super) fn parse_postfix_expr(pair: Pair<Rule>) -> ParseResult<Expr> {
 pub(super) fn parse_primary(pair: Pair<Rule>) -> ParseResult<Expr> {
     let span = pair_to_span(&pair);
 
-    // Primary can contain: number, string, boolean, null, identifier, array, object, arrow_function, template_string, or (expression)
-    // We need to check if this is a parenthesized expression or a direct value
+    if pair.as_rule() != Rule::primary {
+        return parse_expression(pair);
+    }
+
     let mut inner = pair.into_inner();
     if let Some(first) = inner.next() {
-        // If the first child is an expression, it means we have "(" ~ expression ~ ")"
-        // Otherwise, it's a direct value that should be parsed by parse_expression routing
-        match first.as_rule() {
-            Rule::expression => {
-                // Parenthesized expression: (expr)
-                parse_expression(first)
-            }
-            _ => {
-                // Direct value: number, string, identifier, etc.
-                // These are already handled by parse_expression routing
-                parse_expression(first)
-            }
-        }
+        parse_expression(first)
     } else {
         Err(parse_codes::invalid_syntax("Empty primary", span))
     }
-}
-
-pub(super) fn parse_new_expr(pair: Pair<Rule>) -> ParseResult<Expr> {
-    let span = pair_to_span(&pair);
-    let mut inner = pair.into_inner();
-
-    // Skip the 'new' keyword token (new_kw_en is atomic so it appears as a child).
-    // The next child is the class name identifier.
-    let first = inner.next();
-    let class_name = if first
-        .as_ref()
-        .map_or(false, |f| f.as_rule() == Rule::new_kw_en)
-    {
-        inner.next()
-    } else {
-        first
-    }
-    .ok_or_else(|| parse_codes::invalid_syntax("Expected class name after 'new'", span))?
-    .as_str()
-    .to_string();
-
-    // Remaining children are the arguments
-    let mut args = Vec::new();
-    for arg_pair in inner {
-        args.push(parse_expression(arg_pair)?);
-    }
-
-    Ok(Expr::New {
-        class_name,
-        args,
-        span,
-    })
-}
-
-pub(super) fn parse_spawn_expr(pair: Pair<Rule>) -> ParseResult<Expr> {
-    let span = pair_to_span(&pair);
-    let mut inner = pair.into_inner();
-
-    // First child is the subject name (identifier)
-    let subject_name = inner
-        .next()
-        .ok_or_else(|| parse_codes::invalid_syntax("Expected subject name after 'spawn'", span))?
-        .as_str()
-        .to_string();
-
-    // Remaining children are the arguments
-    let mut args = Vec::new();
-    for arg_pair in inner {
-        if arg_pair.as_rule() == Rule::expression {
-            args.push(parse_expression(arg_pair)?);
-        }
-    }
-
-    Ok(Expr::Spawn {
-        subject_name,
-        args,
-        span,
-    })
-}
-
-/// SOP0008: parse view expr as ViewType
-pub(super) fn parse_view_expr(pair: Pair<Rule>) -> ParseResult<Expr> {
-    let span = pair_to_span(&pair);
-    let mut inner = pair.into_inner();
-    let instance = parse_expression(inner.next().unwrap())?;
-    let view_name = inner
-        .next()
-        .map(|p| p.as_str().to_string())
-        .unwrap_or_default();
-    Ok(Expr::ViewAs {
-        instance: Box::new(instance),
-        view_name,
-        span,
-    })
-}
-
-pub(super) fn parse_array(pair: Pair<Rule>) -> ParseResult<Expr> {
-    let span = pair_to_span(&pair);
-    let mut elements = Vec::new();
-
-    for inner_pair in pair.into_inner() {
-        match inner_pair.as_rule() {
-            Rule::array_element => {
-                let span = pair_to_span(&inner_pair);
-                let child = inner_pair.into_inner().next().ok_or_else(|| {
-                    parse_codes::invalid_syntax("Expected expression in array element", span)
-                })?;
-                match child.as_rule() {
-                    Rule::spread_expr => {
-                        let spread_inner = child.into_inner().next().ok_or_else(|| {
-                            parse_codes::invalid_syntax("Expected expression in spread", span)
-                        })?;
-                        let expr = parse_expression(spread_inner)?;
-                        elements.push(Expr::Spread {
-                            expr: Box::new(expr),
-                            span,
-                        });
-                    }
-                    _ => {
-                        elements.push(parse_expression(child)?);
-                    }
-                }
-            }
-            _ => {
-                elements.push(parse_expression(inner_pair)?);
-            }
-        }
-    }
-
-    Ok(Expr::Array { elements, span })
-}
-
-pub(super) fn parse_object(pair: Pair<Rule>) -> ParseResult<Expr> {
-    let span = pair_to_span(&pair);
-    let mut properties = Vec::new();
-
-    for inner_pair in pair.into_inner() {
-        match inner_pair.as_rule() {
-            Rule::object_entry => {
-                let entry_span = pair_to_span(&inner_pair);
-                let child = inner_pair.into_inner().next().ok_or_else(|| {
-                    parse_codes::invalid_syntax("Expected object entry content", entry_span)
-                })?;
-                match child.as_rule() {
-                    Rule::object_spread => {
-                        let spread_inner = child.into_inner().next().ok_or_else(|| {
-                            parse_codes::invalid_syntax(
-                                "Expected expression in object spread",
-                                entry_span,
-                            )
-                        })?;
-                        let expr = parse_expression(spread_inner)?;
-                        // Use special key "__spread__N" for spread entries
-                        properties.push((
-                            format!("__spread__{}", properties.len()),
-                            Expr::Spread {
-                                expr: Box::new(expr),
-                                span,
-                            },
-                        ));
-                    }
-                    Rule::object_pair => {
-                        let mut pair_inner = child.into_inner();
-                        let key_pair = pair_inner.next().ok_or_else(|| {
-                            parse_codes::invalid_syntax("Expected object key", span)
-                        })?;
-                        let key = match key_pair.as_rule() {
-                            Rule::identifier => key_pair.as_str().to_string(),
-                            Rule::string => {
-                                let s = key_pair.as_str();
-                                // Parse escape sequences properly
-                                let raw = &s[1..s.len() - 1];
-                                parse_escape_sequences(raw)
-                            }
-                            _ => {
-                                return Err(parse_codes::invalid_syntax("Invalid object key", span))
-                            }
-                        };
-                        let value_expr = pair_inner.next().ok_or_else(|| {
-                            parse_codes::invalid_syntax(
-                                "Expected object value expression",
-                                entry_span,
-                            )
-                        })?;
-                        let value = parse_expression(value_expr)?;
-                        properties.push((key, value));
-                    }
-                    _ => {}
-                }
-            }
-            Rule::object_pair => {
-                let pair_span = pair_to_span(&inner_pair);
-                let mut pair_inner = inner_pair.into_inner();
-                let key_pair = pair_inner
-                    .next()
-                    .ok_or_else(|| parse_codes::invalid_syntax("Expected object key", pair_span))?;
-                let key = match key_pair.as_rule() {
-                    Rule::identifier => key_pair.as_str().to_string(),
-                    Rule::string => {
-                        let s = key_pair.as_str();
-                        // Parse escape sequences properly
-                        let raw = &s[1..s.len() - 1];
-                        parse_escape_sequences(raw)
-                    }
-                    _ => return Err(parse_codes::invalid_syntax("Invalid object key", span)),
-                };
-                let value =
-                    parse_expression(pair_inner.next().ok_or_else(|| {
-                        parse_codes::invalid_syntax("Expected object value", span)
-                    })?)?;
-                properties.push((key, value));
-            }
-            _ => {}
-        }
-    }
-
-    Ok(Expr::Object { properties, span })
 }

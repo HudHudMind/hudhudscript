@@ -136,8 +136,15 @@ unary_op = { "!" | "-" | "+" }
 unary_expr = {
     unary_op ~ unary_expr
     | await_kw ~ unary_expr
-    | perform_kw ~ unary_expr
+    | perform_expr
+    | recall_expr
     | postfix_expr
+}
+perform_expr = {
+    perform_kw ~ unary_expr
+}
+recall_expr = {
+    recall_kw ~ primary ~ ("from" ~ identifier)?
 }
 multiplicative_op = @{ "*" | "/" | "%" }
 additive_op = @{ !("+" ~ "+") ~ "+" | !("-" ~ "-") ~ "-" }

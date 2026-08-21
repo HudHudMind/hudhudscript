@@ -28,6 +28,7 @@ impl VM {
         receiver: Value16,
         origin_ip: usize,
     ) -> CompileResult<()> {
+        self.last_instance_mutation = None;
         let class_sym = SymId(hudhudscript_bytecode::interner::intern(&class_name).0);
         let continuation = VmContinuation::ConstructorCall(ConstructorContinuation {
             dst: 255,

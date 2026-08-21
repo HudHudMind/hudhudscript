@@ -204,3 +204,4 @@ pub mod compile_complex;
 pub mod compile_complex_extra;
 pub mod compile_reg;
 pub mod compile_reg_binary;
+pub mod compile_reg_calls;

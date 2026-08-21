@@ -93,7 +93,7 @@ impl crate::vm::VM {
                 let content = self.registers[first_arg as usize];
                 let store_key = if arg_count == 2 {
                     let store = self.registers[first_arg as usize + 1];
-                    self.value_to_string(&store)
+                    self.resolve_rag_store_key(&store)
                 } else {
                     "default".to_string()
                 };
@@ -116,7 +116,7 @@ impl crate::vm::VM {
                 let target_str = self.value_to_string(&target);
                 let store_key = if arg_count == 2 {
                     let store = self.registers[first_arg as usize + 1];
-                    self.value_to_string(&store)
+                    self.resolve_rag_store_key(&store)
                 } else {
                     "default".to_string()
                 };
@@ -138,7 +138,7 @@ impl crate::vm::VM {
                 let query_str = self.value_to_string(&query);
                 let store_key = if arg_count == 2 {
                     let store = self.registers[first_arg as usize + 1];
-                    self.value_to_string(&store)
+                    self.resolve_rag_store_key(&store)
                 } else {
                     "default".to_string()
                 };
@@ -296,6 +296,20 @@ impl crate::vm::VM {
                 Ok(true)
             }
             _ => Ok(false),
+        }
+    }
+
+    fn resolve_rag_store_key(&self, store: &Value16) -> String {
+        if let Some(s) = store.as_string() {
+            s
+        } else if let Some(obj) = store.as_object() {
+            obj.get("name")
+                .or_else(|| obj.get("__name"))
+                .or_else(|| obj.get("id"))
+                .and_then(|v| v.as_string())
+                .unwrap_or_else(|| self.value_to_string(store))
+        } else {
+            self.value_to_string(store)
         }
     }
 }

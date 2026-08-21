@@ -165,6 +165,7 @@ impl VM {
                         returned = true;
                         let value = self.last_return;
                         let frame = self.frame_stack.pop().expect("active frame must exist");
+                        let is_root_frame = frame.chunk_ptr.is_null();
                         let sink = frame.return_sink;
                         self.teardown_frame(frame);
                         self.deliver_return(sink, value)?;
@@ -173,7 +174,9 @@ impl VM {
                             continue 'outer;
                         }
                         if self.frame_stack.len() <= stop_depth {
-                            self.registers[255] = value;
+                            if matches!(sink, ReturnSink::Register(255)) || is_root_frame {
+                                self.registers[255] = value;
+                            }
                             break 'outer Ok(());
                         }
                     } else if let Some(crate::vm::PendingFlow::Throw(thrown)) =

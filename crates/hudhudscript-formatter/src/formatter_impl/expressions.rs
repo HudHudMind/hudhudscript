@@ -33,6 +33,15 @@ impl Formatter {
             Expr::Perform { action, .. } => {
                 format!("perform {}", self.format_expr(action))
             }
+            Expr::Recall {
+                query, store_name, ..
+            } => {
+                if let Some(store) = store_name {
+                    format!("recall {} from {}", self.format_expr(query), store)
+                } else {
+                    format!("recall {}", self.format_expr(query))
+                }
+            }
             Expr::Member {
                 object, property, ..
             } => {

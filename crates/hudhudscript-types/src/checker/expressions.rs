@@ -261,6 +261,10 @@ impl TypeChecker {
                 self.check_expr(action)?;
                 Ok(Type::Any)
             }
+            Expr::Recall { query, .. } => {
+                self.check_expr(query)?;
+                Ok(Type::Array(Box::new(Type::Any)))
+            }
             Expr::Ternary {
                 true_expr,
                 false_expr,

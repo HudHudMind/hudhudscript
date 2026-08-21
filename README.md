@@ -3,10 +3,10 @@
 > Multilingual, register-based scripting language for AI orchestration, agent workflows, governance models, automation, and embeddable runtime use.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.8.237-blue.svg)](Cargo.toml)
+[![Version](https://img.shields.io/badge/version-0.8.242-blue.svg)](Cargo.toml)
 [![Rust](https://img.shields.io/badge/built%20with-Rust-orange.svg)](https://www.rust-lang.org/)
 
-**Current version:** `0.8.237`
+**Current version:** `0.8.242`
 
 HudHudScript is a Rust-powered scripting language built around a register-based bytecode VM, native multilingual syntax, and first-class constructs for AI providers, agents, SOP (Subject-Oriented Programming), councils, swarms, and governance rules.
 
@@ -177,8 +177,8 @@ More examples are available in [`samples/`](samples/).
 ### Build from Source
 
 ```bash
-git clone https://github.com/HudHudMind/hudhudscript.git
-cd hudhudscript
+git clone https://github.com/HudHudMind/hudhud-script.git
+cd hudhud-script
 cargo build --release -p hudhudscript-cli
 ./target/release/hudhud --version
 ```
@@ -254,7 +254,7 @@ hudhud --help
 ## Project Structure
 
 ```text
-hudhudscript/
+hudhud-script/
 ├── Cargo.toml                 # Workspace root
 ├── crates/                    # Compiler, VM, CLI, tooling, stdlib crates
 │   ├── hudhudscript-cli/      # `hudhud`, `hudc`, `hudi`, `hudp`
@@ -265,7 +265,10 @@ hudhudscript/
 │   ├── hudhudscript-lsp/
 │   └── hudhud-*              # Standard library / extension crates
 ├── samples/                   # Compact demo programs
-└── hudhudscript-tests/       # Integration test workspace copied for public release
+├── docs/                      # Documentation and translation resources
+├── scripts/                   # Build, benchmark, publish helpers
+├── benches/                   # Rust benchmark harnesses
+└── hudhud-script-tests/       # Integration test workspace when checked out nearby
 ```
 
 ---
