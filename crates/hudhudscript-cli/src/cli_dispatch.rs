@@ -8,7 +8,7 @@ use std::process;
 pub(crate) fn run_cli(cli: Cli) {
     // Set up logging based on verbose flag
     if cli.verbose {
-        println!("Verbose mode enabled");
+        eprintln!("Verbose mode enabled");
     }
 
     let config_path = cli.config.as_deref();
@@ -172,7 +172,7 @@ pub(crate) fn run_cli(cli: Cli) {
             }
         }
         Some(Commands::Lsp { transport, port }) => {
-            println!(
+            eprintln!(
                 "Starting HudHudScript LSP server ({} transport)...",
                 transport
             );
