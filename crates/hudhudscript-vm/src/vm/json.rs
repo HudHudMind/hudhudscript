@@ -26,33 +26,5 @@ pub fn serde_to_value(v: &serde_json::Value) -> Value16 {
 
 /// Convert a SharedValue to a JSON string.
 pub fn value_to_json_string(value: &Value16) -> String {
-    if value.is_null() {
-        return "null".to_string();
-    }
-    if let Some(b) = value.as_bool() {
-        return b.to_string();
-    }
-    if let Some(n) = value.as_number() {
-        return hudhudscript_bytecode::shared_value::format_number(n);
-    }
-    if let Some(i) = value.as_int() {
-        return hudhudscript_bytecode::shared_value::format_number(i as f64);
-    }
-    if let Some(s) = value.as_str() {
-        return format!("\"{}\"", s.replace('\\', "\\\\").replace('"', "\\\""));
-    }
-    if let Some(arr) = value.as_array() {
-        let items: Vec<String> = arr.iter().map(|v| value_to_json_string(v)).collect();
-        return format!("[{}]", items.join(","));
-    }
-    if let Some(obj) = value.as_object() {
-        let mut pairs: Vec<String> = obj
-            .iter()
-            .filter(|(k, _)| !k.to_string().starts_with("__"))
-            .map(|(k, v)| format!("\"{}\":{}", k, value_to_json_string(v)))
-            .collect();
-        pairs.sort();
-        return format!("{{{}}}", pairs.join(","));
-    }
-    format!("\"{}\"", value.display_string().replace('"', "\\\""))
+    hudhud_http::json::value_to_json_string(value)
 }

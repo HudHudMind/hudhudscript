@@ -32,9 +32,12 @@ pub mod telemetry;
 // ── Re-exports from original modules ────────────────────────────────
 pub use approval::{ApprovalError, ApprovalGate, ApprovalRegistry, ApprovalRequest, ApprovalState};
 pub use context::{estimate_tokens, ContextWindow, OutputLimiterConfig, ToolOutputLimiter};
+#[cfg(feature = "db")]
+pub use database::DatabaseService;
 pub use database::{
-    register_database_tools, ColumnInfo, DatabaseBackend, DatabaseConfig, DatabaseError,
-    DatabaseTool, QueryResult,
+    register_database_tools, ColumnInfo, DatabaseBackend, DatabaseConfig, DatabaseConnection,
+    DatabaseError, DatabaseTool, ExecuteOptions, Migration, MigrationReport, PoolStatus,
+    QueryResult, TransactionOptions,
 };
 pub use git::{register_git_tools, GitError, GitOutput, GitTool};
 pub use http::{

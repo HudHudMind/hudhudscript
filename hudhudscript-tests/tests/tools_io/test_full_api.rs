@@ -55,6 +55,9 @@ fn query_result_empty() {
         columns: vec![],
         rows: vec![],
         rows_affected: 0,
+        column_types: vec![],
+        last_insert_id: None,
+        truncated: false,
     };
     assert!(result.columns.is_empty());
     assert!(result.rows.is_empty());

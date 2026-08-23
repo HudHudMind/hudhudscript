@@ -3,10 +3,12 @@ use hudhudscript_tools::database::{
     DatabaseTool, QueryResult,
 };
 use hudhudscript_tools::registry::ToolRegistry;
+use serde_json::json;
 
 #[test]
 fn test_database_backend_display() {
     assert_eq!(DatabaseBackend::Postgres.to_string(), "postgres");
+    assert_eq!(DatabaseBackend::Mysql.to_string(), "mysql");
     assert_eq!(DatabaseBackend::Sqlite.to_string(), "sqlite");
 }
 
@@ -15,58 +17,57 @@ fn test_database_config_postgres() {
     let cfg = DatabaseConfig::postgres("postgres://localhost/mydb");
     assert_eq!(cfg.backend, DatabaseBackend::Postgres);
     assert_eq!(cfg.connection_string, "postgres://localhost/mydb");
-    assert_eq!(cfg.max_connections, Some(5));
+    assert_eq!(cfg.max_connections, 10);
 }
 
 #[test]
 fn test_database_config_sqlite() {
     let cfg = DatabaseConfig::sqlite("/tmp/test.db");
     assert_eq!(cfg.backend, DatabaseBackend::Sqlite);
-    assert_eq!(cfg.connection_string, "/tmp/test.db");
-    assert_eq!(cfg.max_connections, Some(1));
+    assert_eq!(cfg.connection_string, "sqlite:///tmp/test.db");
+    assert_eq!(cfg.max_connections, 1);
 }
 
 #[test]
 fn test_query_result_affected() {
-    let result = QueryResult::affected(42);
+    let result = QueryResult::affected(42, None);
     assert_eq!(result.rows_affected, 42);
     assert!(result.rows.is_empty());
     assert!(result.columns.is_empty());
 }
 
 #[tokio::test]
-async fn test_execute_query_without_db_feature() {
+async fn test_execute_query_uses_real_sqlite() {
     let tool = DatabaseTool::new(DatabaseConfig::sqlite(":memory:"));
-    let result = tool.execute_query("SELECT 1", &[]).await;
-    // Without the `db` feature this must return FeatureNotEnabled
-    #[cfg(not(feature = "db"))]
-    assert!(matches!(result, Err(DatabaseError::FeatureNotEnabled)));
-    #[cfg(feature = "db")]
-    let _ = result; // may succeed or fail depending on environment
+    let result = tool
+        .execute_query("SELECT 1 AS value", &[])
+        .await
+        .expect("query SQLite");
+    assert_eq!(result.rows[0]["value"], json!(1));
 }
 
 #[tokio::test]
-async fn test_list_tables_without_db_feature() {
+async fn test_list_tables_uses_real_sqlite() {
     let tool = DatabaseTool::new(DatabaseConfig::sqlite(":memory:"));
-    let result = tool.list_tables().await;
-    #[cfg(not(feature = "db"))]
-    assert!(matches!(result, Err(DatabaseError::FeatureNotEnabled)));
-    #[cfg(feature = "db")]
-    let _ = result;
+    let result = tool.list_tables().await.expect("list SQLite tables");
+    assert!(result.is_empty());
 }
 
 #[test]
 fn test_register_database_tools() {
     let registry = ToolRegistry::new();
-    let count = register_database_tools(&registry).unwrap();
-    assert_eq!(count, 2);
-    assert!(registry.get_tool("db_execute_query").is_some());
+    let count = register_database_tools(&registry, DatabaseConfig::sqlite(":memory:")).unwrap();
+    assert_eq!(count, 5);
+    assert!(registry.get_tool("db_query").is_some());
+    assert!(registry.get_tool("db_execute").is_some());
     assert!(registry.get_tool("db_list_tables").is_some());
+    assert!(registry.get_tool("db_describe_table").is_some());
+    assert!(registry.get_tool("db_migrate").is_some());
 }
 
 #[test]
 fn test_database_tool_backend_accessor() {
-    let tool = DatabaseTool::new(DatabaseConfig::postgres("pg://localhost"));
+    let tool = DatabaseTool::new(DatabaseConfig::postgres("postgres://localhost/app"));
     assert_eq!(*tool.backend(), DatabaseBackend::Postgres);
 }
 
@@ -76,6 +77,8 @@ fn test_column_info_struct() {
         name: "email".to_string(),
         data_type: "varchar".to_string(),
         nullable: true,
+        primary_key: false,
+        default: None,
     };
     assert_eq!(col.name, "email");
     assert_eq!(col.data_type, "varchar");
@@ -92,24 +95,23 @@ fn test_database_error_display() {
 }
 
 #[tokio::test]
-async fn test_describe_table_without_db_feature() {
+async fn test_describe_missing_sqlite_table() {
     let tool = DatabaseTool::new(DatabaseConfig::sqlite(":memory:"));
-    let result = tool.describe_table("test").await;
-    #[cfg(not(feature = "db"))]
-    assert!(matches!(result, Err(DatabaseError::FeatureNotEnabled)));
-    #[cfg(feature = "db")]
-    let _ = result;
+    let result = tool
+        .describe_table("test")
+        .await
+        .expect("describe SQLite table");
+    assert!(result.is_empty());
 }
 
 #[test]
 fn test_register_database_tools_metadata() {
     let registry = ToolRegistry::new();
-    register_database_tools(&registry).unwrap();
+    register_database_tools(&registry, DatabaseConfig::sqlite(":memory:")).unwrap();
 
-    let meta = registry.get_metadata("db_execute_query").unwrap();
+    let meta = registry.get_metadata("db_query").unwrap();
     assert_eq!(meta.server, "built-in");
     assert!(meta.tags.contains(&"database".to_string()));
-    assert!(meta.tags.contains(&"standard".to_string()));
 }
 
 #[test]
@@ -136,6 +138,9 @@ fn test_query_result_serialization() {
         }],
         rows_affected: 0,
         columns: vec!["id".to_string(), "name".to_string()],
+        column_types: vec!["INTEGER".to_string(), "TEXT".to_string()],
+        last_insert_id: None,
+        truncated: false,
     };
     let json = serde_json::to_string(&result).unwrap();
     let deserialized: QueryResult = serde_json::from_str(&json).unwrap();
@@ -150,6 +155,8 @@ fn test_column_info_serialization() {
         name: "age".to_string(),
         data_type: "integer".to_string(),
         nullable: false,
+        primary_key: true,
+        default: None,
     };
     let json = serde_json::to_string(&col).unwrap();
     let deserialized: ColumnInfo = serde_json::from_str(&json).unwrap();
@@ -165,7 +172,7 @@ fn test_database_config_serialization() {
     let deserialized: DatabaseConfig = serde_json::from_str(&json).unwrap();
     assert_eq!(deserialized.backend, DatabaseBackend::Postgres);
     assert_eq!(deserialized.connection_string, "postgres://localhost/db");
-    assert_eq!(deserialized.max_connections, Some(5));
+    assert_eq!(deserialized.max_connections, 10);
 }
 
 #[test]
@@ -196,9 +203,9 @@ fn test_database_error_all_variants_display() {
 #[test]
 fn test_register_database_tools_schemas_have_required_fields() {
     let registry = ToolRegistry::new();
-    register_database_tools(&registry).unwrap();
+    register_database_tools(&registry, DatabaseConfig::sqlite(":memory:")).unwrap();
 
-    let exec_tool = registry.get_tool("db_execute_query").unwrap();
+    let exec_tool = registry.get_tool("db_query").unwrap();
     assert_eq!(exec_tool.server, "built-in");
     assert!(exec_tool.description.is_some());
 

@@ -1,6 +1,7 @@
 mod globals;
 mod indexing;
 mod modules_core;
+mod modules_database;
 mod modules_io;
 mod modules_system;
 mod types;
@@ -15,6 +16,7 @@ use std::sync::LazyLock;
 pub static BUILTIN_MODULES: LazyLock<Vec<&'static BuiltinModule>> = LazyLock::new(|| {
     let mut v = Vec::new();
     v.extend(modules_core::BUILTIN_MODULES_CORE.iter());
+    v.extend(modules_database::BUILTIN_MODULES_DATABASE.iter());
     v.extend(modules_io::BUILTIN_MODULES_IO.iter());
     v.extend(modules_system::BUILTIN_MODULES_SYSTEM.iter());
     v

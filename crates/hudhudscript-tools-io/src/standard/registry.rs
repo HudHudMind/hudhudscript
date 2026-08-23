@@ -1,5 +1,5 @@
 use hudhudscript_tools_schema::registry::{RegistryError, ToolRegistry};
-use hudhudscript_tools_schema::schema::{JsonSchema, JsonSchemaProperty, ToolSchema};
+use hudhudscript_tools_schema::schema::{JsonSchema, JsonSchemaProperty};
 use serde_json::Value;
 use std::collections::HashMap;
 
@@ -8,7 +8,8 @@ use super::StandardTool;
 /// Register all standard built-in tools into a `ToolRegistry`.
 ///
 /// This includes the core standard tools (`file_read`, `http_get`, `json_parse`)
-/// as well as the database tools (Issue #21) and git tools (Issue #22).
+/// and git tools. Database tools require an explicit connection configuration
+/// and are registered with `register_database_tools`.
 ///
 /// Returns the total number of tools registered.
 pub fn register_standard_tools(registry: &ToolRegistry) -> Result<usize, RegistryError> {
@@ -28,8 +29,6 @@ pub fn register_standard_tools(registry: &ToolRegistry) -> Result<usize, Registr
         registry.register_tool(schema, metadata)?;
         count += 1;
     }
-
-    count += crate::database::register_database_tools(registry)?;
 
     // Register git tools (side effect, not counted)
     let _git_count = hudhudscript_tools_vcs::git::register_git_tools(registry)?;

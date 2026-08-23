@@ -1,5 +1,6 @@
 //! Tool Registry Implementation
 
+pub use crate::registry_error::RegistryError;
 use crate::schema::{JsonSchema, ToolMetadata, ToolSchema, ValidationError};
 use hudhudscript_mcp::client::McpClient;
 use serde_json::Value;
@@ -7,6 +8,26 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, SystemTime};
 use tracing::warn;
+
+pub type NativeToolFuture = std::pin::Pin<
+    Box<dyn std::future::Future<Output = Result<Value, RegistryError>> + Send + 'static>,
+>;
+
+/// In-process executor for a registered tool. Unlike MCP handlers, this never
+/// requires a server process and can safely capture application configuration.
+pub trait NativeToolHandler: Send + Sync {
+    fn call(&self, arguments: Value) -> NativeToolFuture;
+}
+
+impl<F, Fut> NativeToolHandler for F
+where
+    F: Fn(Value) -> Fut + Send + Sync,
+    Fut: std::future::Future<Output = Result<Value, RegistryError>> + Send + 'static,
+{
+    fn call(&self, arguments: Value) -> NativeToolFuture {
+        Box::pin((self)(arguments))
+    }
+}
 
 /// Tool Registry for managing MCP tools
 pub struct ToolRegistry {
@@ -21,6 +42,9 @@ pub struct ToolRegistry {
 
     /// MCP clients by server name
     clients: Arc<RwLock<HashMap<String, Arc<McpClient>>>>,
+
+    /// In-process handlers keyed by tool name.
+    native_handlers: Arc<RwLock<HashMap<String, Arc<dyn NativeToolHandler>>>>,
 }
 
 /// Tool cache with TTL support
@@ -46,6 +70,7 @@ impl ToolRegistry {
             metadata: Arc::new(RwLock::new(HashMap::new())),
             cache: Arc::new(RwLock::new(ToolCache::new(Duration::from_secs(300)))),
             clients: Arc::new(RwLock::new(HashMap::new())),
+            native_handlers: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -134,6 +159,19 @@ impl ToolRegistry {
         Ok(())
     }
 
+    /// Register a schema and an executable in-process handler atomically.
+    pub fn register_native_tool(
+        &self,
+        schema: ToolSchema,
+        metadata: ToolMetadata,
+        handler: Arc<dyn NativeToolHandler>,
+    ) -> Result<(), RegistryError> {
+        let name = schema.name.clone();
+        self.register_tool(schema, metadata)?;
+        self.native_handlers.write().unwrap().insert(name, handler);
+        Ok(())
+    }
+
     /// Get tool schema by name
     pub fn get_tool(&self, name: &str) -> Option<ToolSchema> {
         // Try cache first
@@ -189,6 +227,13 @@ impl ToolRegistry {
             .get_tool(tool_name)
             .ok_or_else(|| RegistryError::ToolNotFound(tool_name.to_string()))?;
 
+        let native = self.native_handlers.read().unwrap().get(tool_name).cloned();
+        if let Some(handler) = native {
+            let result = handler.call(arguments).await?;
+            self.record_usage(tool_name);
+            return Ok(result);
+        }
+
         // Get MCP client for server
         let client = {
             let clients = self.clients.read().unwrap();
@@ -205,12 +250,7 @@ impl ToolRegistry {
             .map_err(|e| RegistryError::CallFailed(e.to_string()))?;
 
         // Update metadata
-        {
-            let mut metadata = self.metadata.write().unwrap();
-            if let Some(meta) = metadata.get_mut(tool_name) {
-                meta.record_usage();
-            }
-        }
+        self.record_usage(tool_name);
 
         // Convert content to JSON value
         serde_json::to_value(result.content)
@@ -229,6 +269,13 @@ impl ToolRegistry {
         CacheStats {
             size: cache.size(),
             ttl: cache.ttl,
+        }
+    }
+
+    fn record_usage(&self, tool_name: &str) {
+        let mut metadata = self.metadata.write().unwrap();
+        if let Some(meta) = metadata.get_mut(tool_name) {
+            meta.record_usage();
         }
     }
 }
@@ -296,80 +343,4 @@ impl ToolCache {
 pub struct CacheStats {
     pub size: usize,
     pub ttl: Duration,
-}
-
-/// Registry error types
-#[derive(Debug, Clone)]
-pub enum RegistryError {
-    ToolNotFound(String),
-    ServerNotFound(String),
-    DiscoveryFailed(String),
-    CallFailed(String),
-    DuplicateTool(String),
-    ValidationFailed(ValidationError),
-}
-
-impl std::fmt::Display for RegistryError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let entry = self.code().entry();
-        write!(f, "[{}] {} — ", entry.short_code, entry.title)?;
-        match self {
-            RegistryError::ToolNotFound(s) => write!(f, "Tool not found: {}", s),
-            RegistryError::ServerNotFound(s) => write!(f, "Server not found: {}", s),
-            RegistryError::DiscoveryFailed(s) => write!(f, "Tool discovery failed: {}", s),
-            RegistryError::CallFailed(s) => write!(f, "Tool call failed: {}", s),
-            RegistryError::DuplicateTool(s) => write!(f, "Duplicate tool: {}", s),
-            RegistryError::ValidationFailed(e) => write!(f, "Validation failed: {}", e),
-        }
-    }
-}
-
-impl std::error::Error for RegistryError {}
-
-// ---------------------------------------------------------------------------
-// Auto-generated bridge to the unified error catalog (v0.4.48)
-// ---------------------------------------------------------------------------
-impl RegistryError {
-    /// Stable catalog code for this error variant.
-    pub fn code(&self) -> hudhudscript_errors::ErrorCode {
-        match self {
-            RegistryError::CallFailed(..) => hudhudscript_errors::ErrorCode::RegistryCallFailed,
-            RegistryError::DiscoveryFailed(..) => {
-                hudhudscript_errors::ErrorCode::RegistryDiscoveryFailed
-            }
-            RegistryError::DuplicateTool(..) => {
-                hudhudscript_errors::ErrorCode::RegistryDuplicateTool
-            }
-            RegistryError::ServerNotFound(..) => {
-                hudhudscript_errors::ErrorCode::RegistryServerNotFound
-            }
-            RegistryError::ToolNotFound(..) => hudhudscript_errors::ErrorCode::RegistryToolNotFound,
-            RegistryError::ValidationFailed(..) => {
-                hudhudscript_errors::ErrorCode::RegistryValidationFailed
-            }
-        }
-    }
-
-    /// Catalog short code (e.g. `"E0120"`).
-    pub fn short_code(&self) -> &'static str {
-        self.code().short_code()
-    }
-
-    /// Catalog title.
-    pub fn title(&self) -> &'static str {
-        self.code().title()
-    }
-
-    /// Render with full catalog metadata: `[E0XXX] Title — message`.
-    pub fn display_full(&self) -> String {
-        let entry = self.code().entry();
-        format!("[{}] {} — {}", entry.short_code, entry.title, self)
-    }
-}
-
-impl From<RegistryError> for hudhudscript_errors::Error {
-    fn from(e: RegistryError) -> hudhudscript_errors::Error {
-        let code = e.code();
-        hudhudscript_errors::Error::new(code, e.to_string())
-    }
 }

@@ -23,8 +23,7 @@ fn test_json_parse_invalid() {
 fn test_register_standard_tools() {
     let registry = ToolRegistry::new();
     let count = register_standard_tools(&registry).unwrap();
-    // 6 core + 2 database (Issue #21) = 8 (git tools moved to tools-vcs)
-    assert_eq!(count, 8);
+    assert_eq!(count, 6);
     // Core tools
     assert!(registry.get_tool("file_read").is_some());
     assert!(registry.get_tool("http_get").is_some());
@@ -32,9 +31,10 @@ fn test_register_standard_tools() {
     assert!(registry.get_tool("http_put").is_some());
     assert!(registry.get_tool("http_delete").is_some());
     assert!(registry.get_tool("json_parse").is_some());
-    // Database tools (Issue #21)
-    assert!(registry.get_tool("db_execute_query").is_some());
-    assert!(registry.get_tool("db_list_tables").is_some());
+    // Database tools require an explicit DatabaseConfig so secrets and access
+    // cannot be introduced by the generic standard-tool registration path.
+    assert!(registry.get_tool("db_query").is_none());
+    assert!(registry.get_tool("db_list_tables").is_none());
     // Git tools (Issue #22)
     assert!(registry.get_tool("git_status").is_some());
     assert!(registry.get_tool("git_commit").is_some());

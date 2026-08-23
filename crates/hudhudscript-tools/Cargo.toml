@@ -11,7 +11,7 @@ description = "HudHudScript Tool Registry — re-exports from sub-crates for bac
 [features]
 default = []
 # Enable full sqlx-backed DatabaseTool (Issue #21).
-db = ["dep:sqlx", "hudhudscript-tools-io/db"]
+db = ["hudhudscript-tools-io/db"]
 
 [dependencies]
 hudhudscript-errors = { path = "../hudhudscript-errors" }
@@ -35,9 +35,6 @@ tokio.workspace = true
 tracing.workspace = true
 reqwest = { workspace = true, features = ["blocking", "json"] }
 uuid = { version = "1.0", features = ["v4", "serde"] }
-
-# Optional: full database support behind the `db` feature (Issue #21)
-sqlx = { version = "0.8", features = ["runtime-tokio-native-tls", "postgres", "sqlite", "macros"], optional = true }
 
 [dev-dependencies]
 proptest.workspace = true

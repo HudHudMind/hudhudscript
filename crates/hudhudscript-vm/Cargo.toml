@@ -75,7 +75,7 @@ hudhud-eventbus = { path = "../hudhud-eventbus" }
 hudhud-plugin = { path = "../hudhud-plugin" }
 hudhudscript-governance = { path = "../hudhudscript-governance" }
 hudhudscript-runtime = { path = "../hudhudscript-runtime" }
-hudhudscript-tools = { path = "../hudhudscript-tools" }
+hudhudscript-tools = { path = "../hudhudscript-tools", features = ["db"] }
 hudhudscript-async = { path = "../hudhudscript-async" }
 hudhudscript-stm = { path = "../hudhudscript-stm" }
 tokio = { workspace = true }
@@ -106,4 +106,3 @@ harness = false
 # to compile ("cannot find function take_telemetry_alloc_counts … found an item
 # that was configured out").
 telemetry = ["hudhudscript-bytecode/telemetry"]
-

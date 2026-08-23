@@ -1,6 +1,7 @@
 use crate::vm::VM;
 use hudhudscript_bytecode::Value16;
 use std::collections::HashMap;
+mod late;
 mod platform;
 
 impl VM {
@@ -392,33 +393,7 @@ impl VM {
         );
         self.set_global("codesign", Value16::object(codesign_obj));
 
-        // StringBuilder module — O(n) string concatenation.
-        // Usage: let sb = StringBuilder.new(); sb.append("text"); sb.build();
-        let mut sb_obj = hudhudscript_bytecode::ObjMap::default();
-        sb_obj.insert(
-            "__module".to_string(),
-            Value16::string("StringBuilder".to_string()),
-        );
-        self.set_global("StringBuilder", Value16::object(sb_obj));
-
-        // Tesseract OCR (v0.4.38 — #640). Shared (Kural 7).
-        let mut ocr_obj = hudhudscript_bytecode::ObjMap::default();
-        ocr_obj.insert("__module".to_string(), Value16::string("ocr".to_string()));
-        self.set_global("ocr", Value16::object(ocr_obj));
-
-        // n8n workflow (v0.4.38 — #646). Shared (Kural 7).
-        let mut workflow_obj = hudhudscript_bytecode::ObjMap::default();
-        workflow_obj.insert(
-            "__module".to_string(),
-            Value16::string("workflow".to_string()),
-        );
-        self.set_global("workflow", Value16::object(workflow_obj));
-
-        // Web framework module (meşru seam — Server/URLParser/EventBus ile aynı pattern)
-        let mut web_obj = hudhudscript_bytecode::ObjMap::default();
-        web_obj.insert("__module".to_string(), Value16::string("Web".to_string()));
-        self.set_global("Web", Value16::object(web_obj));
-
+        self.register_late_globals();
         self.register_platform_globals();
     }
 }

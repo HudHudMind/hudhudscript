@@ -86,6 +86,7 @@ pub(crate) mod chunk;
 pub(crate) mod class_ops;
 pub(crate) mod config_types;
 pub(crate) mod ctor;
+pub(crate) mod database;
 pub(crate) mod dense_ops;
 pub(crate) mod dense_spec;
 pub(crate) mod dispatch;

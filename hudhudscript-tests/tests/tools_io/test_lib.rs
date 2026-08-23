@@ -2,9 +2,7 @@ use hudhudscript_tools_io::standard::*;
 use hudhudscript_tools_io::*;
 use serde_json::json;
 
-// =========================================================================
 // DatabaseBackend
-// =========================================================================
 
 #[test]
 fn database_backend_display_postgres() {
@@ -38,24 +36,22 @@ fn database_backend_serialize_deserialize() {
     assert_eq!(back, DatabaseBackend::Postgres);
 }
 
-// =========================================================================
 // DatabaseConfig
-// =========================================================================
 
 #[test]
 fn database_config_postgres() {
     let config = DatabaseConfig::postgres("postgres://localhost/testdb");
     assert_eq!(config.backend, DatabaseBackend::Postgres);
     assert_eq!(config.connection_string, "postgres://localhost/testdb");
-    assert_eq!(config.max_connections, Some(5));
+    assert_eq!(config.max_connections, 10);
 }
 
 #[test]
 fn database_config_sqlite() {
     let config = DatabaseConfig::sqlite("/tmp/test.db");
     assert_eq!(config.backend, DatabaseBackend::Sqlite);
-    assert_eq!(config.connection_string, "/tmp/test.db");
-    assert_eq!(config.max_connections, Some(1));
+    assert_eq!(config.connection_string, "sqlite:///tmp/test.db");
+    assert_eq!(config.max_connections, 1);
 }
 
 #[test]
@@ -67,13 +63,11 @@ fn database_config_serialize_deserialize() {
     assert_eq!(back.connection_string, "postgres://host/db");
 }
 
-// =========================================================================
 // QueryResult
-// =========================================================================
 
 #[test]
 fn query_result_affected() {
-    let result = QueryResult::affected(42);
+    let result = QueryResult::affected(42, None);
     assert_eq!(result.rows_affected, 42);
     assert!(result.rows.is_empty());
     assert!(result.columns.is_empty());
@@ -81,7 +75,7 @@ fn query_result_affected() {
 
 #[test]
 fn query_result_affected_zero() {
-    let result = QueryResult::affected(0);
+    let result = QueryResult::affected(0, None);
     assert_eq!(result.rows_affected, 0);
 }
 
@@ -94,6 +88,9 @@ fn query_result_with_rows() {
         rows: vec![row],
         rows_affected: 0,
         columns: vec!["id".to_string(), "name".to_string()],
+        column_types: vec!["INTEGER".to_string(), "TEXT".to_string()],
+        last_insert_id: None,
+        truncated: false,
     };
     assert_eq!(result.rows.len(), 1);
     assert_eq!(result.columns.len(), 2);
@@ -101,15 +98,13 @@ fn query_result_with_rows() {
 
 #[test]
 fn query_result_serialize_deserialize() {
-    let result = QueryResult::affected(10);
+    let result = QueryResult::affected(10, None);
     let json = serde_json::to_string(&result).unwrap();
     let back: QueryResult = serde_json::from_str(&json).unwrap();
     assert_eq!(back.rows_affected, 10);
 }
 
-// =========================================================================
 // ColumnInfo
-// =========================================================================
 
 #[test]
 fn column_info_construction() {
@@ -117,6 +112,8 @@ fn column_info_construction() {
         name: "email".to_string(),
         data_type: "varchar".to_string(),
         nullable: true,
+        primary_key: false,
+        default: None,
     };
     assert_eq!(col.name, "email");
     assert_eq!(col.data_type, "varchar");
@@ -129,6 +126,8 @@ fn column_info_serialize_deserialize() {
         name: "age".to_string(),
         data_type: "integer".to_string(),
         nullable: false,
+        primary_key: true,
+        default: None,
     };
     let json = serde_json::to_string(&col).unwrap();
     let back: ColumnInfo = serde_json::from_str(&json).unwrap();
@@ -136,9 +135,7 @@ fn column_info_serialize_deserialize() {
     assert!(!back.nullable);
 }
 
-// =========================================================================
 // DatabaseError
-// =========================================================================
 
 #[test]
 fn database_error_connection_failed() {
@@ -171,9 +168,7 @@ fn database_error_invalid_arguments() {
     assert!(format!("{err}").contains("missing SQL"));
 }
 
-// =========================================================================
 // DatabaseTool
-// =========================================================================
 
 #[test]
 fn database_tool_new_postgres() {
@@ -190,37 +185,38 @@ fn database_tool_new_sqlite() {
 }
 
 #[tokio::test]
-async fn database_tool_execute_query_feature_not_enabled() {
-    let config = DatabaseConfig::sqlite("/tmp/test.db");
+async fn database_tool_executes_real_sqlite_query() {
+    let config = DatabaseConfig::sqlite(":memory:");
     let tool = DatabaseTool::new(config);
-    let result = tool.execute_query("SELECT 1", &[]).await;
-    // Without the db feature, this should fail with FeatureNotEnabled
-    assert!(result.is_err());
-    assert!(matches!(
-        result.unwrap_err(),
-        DatabaseError::FeatureNotEnabled
-    ));
+    let result = tool
+        .execute_query("SELECT 1 AS value", &[])
+        .await
+        .expect("query SQLite");
+    assert_eq!(result.rows[0]["value"], json!(1));
 }
 
 #[tokio::test]
-async fn database_tool_list_tables_feature_not_enabled() {
-    let config = DatabaseConfig::sqlite("/tmp/test.db");
+async fn database_tool_lists_real_sqlite_tables() {
+    let config = DatabaseConfig::sqlite(":memory:");
     let tool = DatabaseTool::new(config);
-    let result = tool.list_tables().await;
-    assert!(result.is_err());
+    let result = tool.list_tables().await.expect("list SQLite tables");
+    assert!(result.is_empty());
 }
 
 #[tokio::test]
-async fn database_tool_describe_table_feature_not_enabled() {
-    let config = DatabaseConfig::postgres("postgres://localhost/test");
+async fn database_tool_describes_real_sqlite_table() {
+    let config = DatabaseConfig::sqlite(":memory:");
     let tool = DatabaseTool::new(config);
-    let result = tool.describe_table("users").await;
-    assert!(result.is_err());
+    tool.execute(
+        "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL)",
+        &[],
+    )
+    .await
+    .expect("create users");
+    let result = tool.describe_table("users").await.expect("describe users");
+    assert_eq!(result.len(), 2);
+    assert!(result[0].primary_key);
 }
-
-// =========================================================================
-// ToolError
-// =========================================================================
 
 #[test]
 fn tool_error_invalid_arguments() {
@@ -233,10 +229,6 @@ fn tool_error_execution_failed() {
     let err = ToolError::ExecutionFailed("crash".to_string());
     assert!(format!("{err}").contains("crash"));
 }
-
-// =========================================================================
-// StandardTool
-// =========================================================================
 
 #[test]
 fn standard_tool_json_parse_success() {
@@ -295,10 +287,6 @@ fn standard_tool_http_delete_missing_url() {
     assert!(result.is_err());
 }
 
-// =========================================================================
-// build_object_schema
-// =========================================================================
-
 #[test]
 fn build_object_schema_basic() {
     let schema = build_object_schema(&[
@@ -331,10 +319,6 @@ fn build_object_schema_empty() {
     assert!(required.is_empty());
 }
 
-// =========================================================================
-// object_schema_with_required_strings
-// =========================================================================
-
 #[test]
 fn object_schema_with_required_strings_basic() {
     let schema = object_schema_with_required_strings(&["name", "email"]);
@@ -354,10 +338,6 @@ fn object_schema_with_required_strings_empty() {
     assert!(props.is_empty());
 }
 
-// =========================================================================
-// StandardTool — file_read on a real file
-// =========================================================================
-
 #[test]
 fn standard_tool_file_read_real_file() {
     // Read a known-to-exist file
@@ -372,10 +352,6 @@ fn standard_tool_file_read_real_file() {
         "../Cargo.toml"
     );
 }
-
-// =========================================================================
-// StandardTool — JSON parse edge cases
-// =========================================================================
 
 #[test]
 fn standard_tool_json_parse_array() {

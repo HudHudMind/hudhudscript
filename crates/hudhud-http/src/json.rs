@@ -2,7 +2,6 @@
 
 use hudhudscript_bytecode::Value16;
 use hudhudscript_errors::{Error, ErrorCode, HudHudResult};
-use std::collections::HashMap;
 
 fn runtime_error(msg: impl Into<String>) -> Error {
     Error::new(ErrorCode::CompileRuntimeError, msg.into())
@@ -80,6 +79,10 @@ pub fn serde_to_value(v: &serde_json::Value) -> Value16 {
     }
 }
 
+fn quote_json_string(value: &str) -> String {
+    serde_json::Value::String(value.to_string()).to_string()
+}
+
 /// Convert a Value16 to a JSON string.
 pub fn value_to_json_string(value: &Value16) -> String {
     if value.is_null() {
@@ -95,7 +98,7 @@ pub fn value_to_json_string(value: &Value16) -> String {
         return format_number(i as f64);
     }
     if let Some(s) = value.as_str() {
-        return format!("\"{}\"", s.replace('\\', "\\\\").replace('"', "\\\""));
+        return quote_json_string(s);
     }
     if let Some(arr) = value.as_array() {
         let items: Vec<String> = arr.iter().map(|v| value_to_json_string(v)).collect();
@@ -105,11 +108,31 @@ pub fn value_to_json_string(value: &Value16) -> String {
         let mut pairs: Vec<String> = obj
             .iter()
             .filter(|(k, _)| !k.to_string().starts_with("__"))
-            .map(|(k, v)| format!("\"{}\":{}", k, value_to_json_string(v)))
+            .map(|(k, v)| format!("{}:{}", quote_json_string(&k.to_string()), value_to_json_string(v)))
             .collect();
         pairs.sort();
         return format!("{{{}}}", pairs.join(","));
     }
     // Fallback for non-basic types (Function, Promise, Class, etc.)
-    format!("\"{}\"", value.display_string().replace('"', "\\\""))
+    quote_json_string(&value.display_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::value_to_json_string;
+    use hudhudscript_bytecode::{ObjMap, Value16};
+
+    #[test]
+    fn stringify_escapes_control_characters_and_object_keys() {
+        let original = "line one\nline two\t\u{0000}";
+        let text = value_to_json_string(&Value16::string(original.to_string()));
+        let parsed: serde_json::Value = serde_json::from_str(&text).expect("valid JSON string");
+        assert_eq!(parsed.as_str(), Some(original));
+
+        let mut object = ObjMap::default();
+        object.insert("key\nname".to_string(), Value16::string("value\r\n".to_string()));
+        let object_text = value_to_json_string(&Value16::object(object));
+        let parsed_object: serde_json::Value = serde_json::from_str(&object_text).expect("valid JSON object");
+        assert_eq!(parsed_object["key\nname"], "value\r\n");
+    }
 }

@@ -6,6 +6,10 @@ pub enum DatabaseError {
     UnsupportedBackend(String),
     FeatureNotEnabled,
     InvalidArguments(String),
+    Timeout(String),
+    PoolLimit(String),
+    HandleNotFound(String),
+    TransactionClosed(String),
 }
 
 impl std::fmt::Display for DatabaseError {
@@ -21,6 +25,10 @@ impl std::fmt::Display for DatabaseError {
                 "Feature not enabled: compile with the `db` feature for full sqlx support"
             ),
             DatabaseError::InvalidArguments(s) => write!(f, "Invalid arguments: {}", s),
+            DatabaseError::Timeout(s) => write!(f, "Database operation timed out: {}", s),
+            DatabaseError::PoolLimit(s) => write!(f, "Database resource limit reached: {}", s),
+            DatabaseError::HandleNotFound(s) => write!(f, "Database handle not found: {}", s),
+            DatabaseError::TransactionClosed(s) => write!(f, "Transaction is closed: {}", s),
         }
     }
 }
@@ -39,6 +47,12 @@ impl DatabaseError {
             }
             DatabaseError::InvalidArguments(..) => {
                 hudhudscript_errors::ErrorCode::DatabaseInvalidArguments
+            }
+            DatabaseError::Timeout(..) | DatabaseError::TransactionClosed(..) => {
+                hudhudscript_errors::ErrorCode::DatabaseQueryFailed
+            }
+            DatabaseError::PoolLimit(..) | DatabaseError::HandleNotFound(..) => {
+                hudhudscript_errors::ErrorCode::DatabaseConnectionFailed
             }
             DatabaseError::QueryFailed(..) => hudhudscript_errors::ErrorCode::DatabaseQueryFailed,
             DatabaseError::UnsupportedBackend(..) => {

@@ -227,6 +227,9 @@ pub fn value_to_serde_json(val: &Value16) -> serde_json::Value {
     if let Some(b) = val.as_bool() {
         return json!(b);
     }
+    if let Some(i) = val.as_int() {
+        return json!(i);
+    }
     if let Some(n) = val.as_number() {
         return json!(n);
     }

@@ -43,6 +43,7 @@ pub struct ModulePolicy {
     pub unix: Option<AccessDecision>,
     pub fs: Option<AccessDecision>,
     pub process: Option<AccessDecision>,
+    pub database: Option<AccessDecision>,
     pub dbus: Option<AccessDecision>,
     pub tts: Option<AccessDecision>,
 }
@@ -56,6 +57,7 @@ impl ModulePolicy {
             "unix" => self.unix,
             "fs" => self.fs,
             "process" | "exec" => self.process,
+            "database" => self.database,
             "dbus" => self.dbus,
             "tts" => self.tts,
             _ => None,
@@ -162,6 +164,9 @@ impl HostAccessPolicy {
                 unix: None,
                 fs: None,
                 process: None,
+                // Durable database mutation is opt-in even for the legacy
+                // permissive profile.
+                database: Some(AccessDecision::Deny),
                 dbus: None,
                 tts: None,
             },
@@ -191,6 +196,7 @@ impl HostAccessPolicy {
                 unix: None,
                 fs: None,
                 process: None,
+                database: None,
                 dbus: None,
                 tts: None,
             },
@@ -297,12 +303,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn permissive_allows_everything() {
+    fn permissive_keeps_database_opt_in() {
         let p = HostAccessPolicy::permissive();
         assert!(p.ensure_module_allowed("http").is_ok());
         assert!(p.ensure_env_read("ANY").is_ok());
         assert!(p.ensure_exec_method("run").is_ok());
         assert!(p.ensure_command_allowed("/bin/ls").is_ok());
+        assert!(p.ensure_module_allowed("database").is_err());
     }
 
     #[test]

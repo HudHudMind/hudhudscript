@@ -1,7 +1,7 @@
 //! External tests for hudhudscript-tools-io — standard tools, database config, schemas
 
 use hudhudscript_tools_io::database::{
-    DatabaseBackend, DatabaseConfig, DatabaseError, DatabaseTool, QueryResult,
+    register_database_tools, DatabaseBackend, DatabaseConfig, DatabaseTool, QueryResult,
 };
 use hudhudscript_tools_io::standard::{register_standard_tools, StandardTool, ToolError};
 use hudhudscript_tools_schema::registry::ToolRegistry;
@@ -114,8 +114,7 @@ fn http_get_missing_url_returns_invalid_arguments() {
 fn register_standard_tools_populates_registry_with_all_tools() {
     let registry = ToolRegistry::new();
     let count = register_standard_tools(&registry).unwrap();
-    // 6 core tools + 2 database tools = 8
-    assert_eq!(count, 8, "expected 8 tools (6 standard + 2 database)");
+    assert_eq!(count, 6, "expected 6 standard tools");
 
     let names = registry.list_tools();
     for expected in &[
@@ -125,8 +124,6 @@ fn register_standard_tools_populates_registry_with_all_tools() {
         "http_put",
         "http_delete",
         "json_parse",
-        "db_execute_query",
-        "db_list_tables",
     ] {
         assert!(
             names.contains(&expected.to_string()),
@@ -151,12 +148,12 @@ fn registered_standard_tool_metadata_has_standard_tag() {
 
 #[test]
 fn registered_database_tool_metadata_has_database_tag() {
-    let reg = make_registry();
+    let reg = ToolRegistry::new();
+    register_database_tools(&reg, DatabaseConfig::sqlite(":memory:")).unwrap();
     let meta = reg
-        .get_metadata("db_execute_query")
-        .expect("db_execute_query metadata missing");
+        .get_metadata("db_query")
+        .expect("db_query metadata missing");
     assert!(meta.tags.contains(&"database".to_string()));
-    assert!(meta.tags.contains(&"standard".to_string()));
 }
 
 // ---------------------------------------------------------------------------
@@ -168,15 +165,15 @@ fn database_config_postgres_defaults() {
     let cfg = DatabaseConfig::postgres("postgres://localhost/test");
     assert_eq!(cfg.backend, DatabaseBackend::Postgres);
     assert_eq!(cfg.connection_string, "postgres://localhost/test");
-    assert_eq!(cfg.max_connections, Some(5));
+    assert_eq!(cfg.max_connections, 10);
 }
 
 #[test]
 fn database_config_sqlite_defaults() {
     let cfg = DatabaseConfig::sqlite("/tmp/test.db");
     assert_eq!(cfg.backend, DatabaseBackend::Sqlite);
-    assert_eq!(cfg.connection_string, "/tmp/test.db");
-    assert_eq!(cfg.max_connections, Some(1));
+    assert_eq!(cfg.connection_string, "sqlite:///tmp/test.db");
+    assert_eq!(cfg.max_connections, 1);
 }
 
 // ---------------------------------------------------------------------------
@@ -201,38 +198,26 @@ fn database_backend_display_and_serde_roundtrip() {
 
 #[test]
 fn query_result_affected_has_empty_rows_and_columns() {
-    let qr = QueryResult::affected(42);
+    let qr = QueryResult::affected(42, None);
     assert_eq!(qr.rows_affected, 42);
     assert!(qr.rows.is_empty());
     assert!(qr.columns.is_empty());
 }
 
 // ---------------------------------------------------------------------------
-// DatabaseTool — feature-not-enabled guard (no `db` feature)
+// DatabaseTool — real SQLite execution
 // ---------------------------------------------------------------------------
 
 #[tokio::test]
-async fn database_tool_without_db_feature_returns_feature_not_enabled() {
+async fn database_tool_executes_real_sqlite() {
     let cfg = DatabaseConfig::sqlite(":memory:");
     let tool = DatabaseTool::new(cfg);
-
-    let err = tool.execute_query("SELECT 1", &[]).await.unwrap_err();
-    match err {
-        DatabaseError::FeatureNotEnabled => {} // expected
-        other => panic!("expected FeatureNotEnabled, got: {other}"),
-    }
-
-    let err2 = tool.list_tables().await.unwrap_err();
-    match err2 {
-        DatabaseError::FeatureNotEnabled => {}
-        other => panic!("expected FeatureNotEnabled, got: {other}"),
-    }
-
-    let err3 = tool.describe_table("users").await.unwrap_err();
-    match err3 {
-        DatabaseError::FeatureNotEnabled => {}
-        other => panic!("expected FeatureNotEnabled, got: {other}"),
-    }
+    let result = tool
+        .execute_query("SELECT 1 AS value", &[])
+        .await
+        .expect("query SQLite");
+    assert_eq!(result.rows[0]["value"], json!(1));
+    assert!(tool.list_tables().await.expect("list tables").is_empty());
 }
 
 // ---------------------------------------------------------------------------

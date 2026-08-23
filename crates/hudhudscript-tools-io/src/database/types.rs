@@ -1,59 +1,109 @@
 use serde::{Deserialize, Serialize};
 
-/// Database backend type
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum DatabaseBackend {
-    /// PostgreSQL via connection string
     Postgres,
-    /// MySQL via connection string
     Mysql,
-    /// SQLite via file path
     Sqlite,
 }
 
 impl std::fmt::Display for DatabaseBackend {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            DatabaseBackend::Postgres => write!(f, "postgres"),
-            DatabaseBackend::Mysql => write!(f, "mysql"),
-            DatabaseBackend::Sqlite => write!(f, "sqlite"),
-        }
+        f.write_str(match self {
+            Self::Postgres => "postgres",
+            Self::Mysql => "mysql",
+            Self::Sqlite => "sqlite",
+        })
     }
 }
 
-/// Result row: a list of key-value pairs representing one row from the query
 pub type Row = std::collections::HashMap<String, serde_json::Value>;
 
-/// Result of executing a SQL query
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QueryResult {
-    /// Rows returned (empty for non-SELECT statements)
     pub rows: Vec<Row>,
-    /// Number of rows affected (for INSERT / UPDATE / DELETE)
     pub rows_affected: u64,
-    /// Column names in result order
     pub columns: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub column_types: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_insert_id: Option<serde_json::Value>,
+    #[serde(default)]
+    pub truncated: bool,
 }
 
 impl QueryResult {
-    /// Create a result for a non-row-returning statement
-    pub fn affected(rows_affected: u64) -> Self {
+    pub fn affected(rows_affected: u64, last_insert_id: Option<serde_json::Value>) -> Self {
         Self {
             rows: Vec::new(),
             rows_affected,
             columns: Vec::new(),
+            column_types: Vec::new(),
+            last_insert_id,
+            truncated: false,
         }
     }
 }
 
-/// Information about a database column
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ColumnInfo {
-    /// Column name
     pub name: String,
-    /// SQL data type
     pub data_type: String,
-    /// Whether the column allows NULL values
     pub nullable: bool,
+    #[serde(default)]
+    pub primary_key: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PoolStatus {
+    pub backend: DatabaseBackend,
+    pub size: u32,
+    pub idle: usize,
+    pub closed: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ExecuteOptions {
+    #[serde(default)]
+    pub timeout_ms: Option<u64>,
+    #[serde(default)]
+    pub max_rows: Option<usize>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct TransactionOptions {
+    #[serde(default)]
+    pub isolation: Option<String>,
+    #[serde(default)]
+    pub read_only: bool,
+    #[serde(default)]
+    pub timeout_ms: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DatabaseConnection {
+    pub handle: String,
+    pub backend: DatabaseBackend,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DatabaseTransaction {
+    pub transaction: String,
+    pub backend: DatabaseBackend,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Migration {
+    pub version: i64,
+    pub name: String,
+    pub sql: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MigrationReport {
+    pub applied: Vec<i64>,
+    pub skipped: Vec<i64>,
 }

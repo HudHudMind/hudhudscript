@@ -104,6 +104,9 @@ impl VM {
             Some("Terminal") => self.call_terminal_method(method, args.to_vec()).map(Some),
             Some("log") => self.call_log_method(method, args.to_vec()).map(Some),
             Some("exec") => self.call_exec_method(method, args.to_vec()).map(Some),
+            Some("database") | Some("database.connection") | Some("database.transaction") => self
+                .call_database_method(receiver, method, args.to_vec())
+                .map(Some),
             Some("tcp") => self.call_tcp_method(method, args.to_vec()).map(Some),
             Some("udp") => self.call_udp_method(method, args.to_vec()).map(Some),
             Some("unix") => self.call_unix_method(method, args.to_vec()).map(Some),

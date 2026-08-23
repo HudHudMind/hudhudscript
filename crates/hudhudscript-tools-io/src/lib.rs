@@ -6,8 +6,11 @@
 pub mod database;
 pub mod standard;
 
+#[cfg(feature = "db")]
+pub use database::DatabaseService;
 pub use database::{
-    register_database_tools, ColumnInfo, DatabaseBackend, DatabaseConfig, DatabaseError,
-    DatabaseTool, QueryResult,
+    register_database_tools, ColumnInfo, DatabaseBackend, DatabaseConfig, DatabaseConnection,
+    DatabaseError, DatabaseTool, ExecuteOptions, Migration, MigrationReport, PoolStatus,
+    QueryResult, TransactionOptions,
 };
 pub use standard::{register_standard_tools, CustomTool, StandardTool, ToolError};

@@ -10,7 +10,7 @@ description = "I/O tools for HudHudScript — standard tools, database operation
 
 [features]
 default = []
-db = ["dep:sqlx"]
+db = ["dep:sqlx", "dep:base64", "dep:bigdecimal", "dep:chrono", "dep:futures", "dep:sha2"]
 
 [dependencies]
 hudhudscript-errors = { path = "../hudhudscript-errors" }
@@ -25,7 +25,13 @@ tokio.workspace = true
 tracing.workspace = true
 reqwest = { workspace = true, features = ["blocking", "json"] }
 uuid = { version = "1.0", features = ["v4", "serde"] }
-sqlx = { version = "0.8", features = ["runtime-tokio-native-tls", "postgres", "mysql", "sqlite", "macros"], optional = true }
+base64 = { workspace = true, optional = true }
+bigdecimal = { version = "0.4", optional = true }
+chrono = { workspace = true, optional = true }
+futures = { version = "0.3", optional = true }
+sha2 = { workspace = true, optional = true }
+sqlx = { version = "0.8", features = ["runtime-tokio-native-tls", "postgres", "mysql", "sqlite", "chrono", "uuid", "json", "bigdecimal"], optional = true }
 
 [dev-dependencies]
 proptest.workspace = true
+toml.workspace = true

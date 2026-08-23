@@ -17,6 +17,9 @@ fn module_index() -> &'static rustc_hash::FxHashMap<&'static str, &'static Built
         for module in super::modules_core::BUILTIN_MODULES_CORE.iter() {
             m.insert(module.name, module);
         }
+        for module in super::modules_database::BUILTIN_MODULES_DATABASE.iter() {
+            m.insert(module.name, module);
+        }
         for module in super::modules_io::BUILTIN_MODULES_IO.iter() {
             m.insert(module.name, module);
         }
