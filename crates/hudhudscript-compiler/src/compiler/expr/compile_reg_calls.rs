@@ -46,14 +46,18 @@ pub(crate) fn compile_perform(
             }
         }
     }
-    let complex_reg = crate::compiler::expr::compile_complex::compile_expr_complex(
-        target,
-        &Expr::Perform {
-            action: Box::new(action.clone()),
-            span: action.span(),
-        },
-    )
-    .expect("compile_complex failed");
+    let complex_expr = Expr::Perform {
+        action: Box::new(action.clone()),
+        span: action.span(),
+    };
+    let complex_reg =
+        match crate::compiler::expr::compile_complex::compile_expr_complex(target, &complex_expr) {
+            Ok(r) => r,
+            Err(e) => {
+                target.ct_defer_compile_error(e);
+                255
+            }
+        };
     let dst = regs.alloc(ip, last_use).expect("out of registers");
     target.emit_move(dst, complex_reg);
     dst
@@ -182,8 +186,14 @@ pub(crate) fn compile_call(
             }
         }
     }
-    let complex_reg = crate::compiler::expr::compile_complex::compile_expr_complex(target, full_expr)
-        .expect("compile_complex failed");
+    let complex_reg =
+        match crate::compiler::expr::compile_complex::compile_expr_complex(target, full_expr) {
+            Ok(r) => r,
+            Err(e) => {
+                target.ct_defer_compile_error(e);
+                255
+            }
+        };
     let dst = regs.alloc(ip, last_use).expect("out of registers");
     target.emit_move(dst, complex_reg);
     dst

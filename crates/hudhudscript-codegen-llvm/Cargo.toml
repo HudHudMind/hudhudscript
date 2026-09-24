@@ -1,0 +1,22 @@
+[package]
+name = "hudhudscript-codegen-llvm"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+readme.workspace = true
+
+[dependencies]
+hudhudscript-codegen = { path = "../hudhudscript-codegen" }
+hudhudscript-mir = { path = "../hudhudscript-mir" }
+hudhudscript-native-abi = { path = "../hudhudscript-native-abi" }
+
+[target.'cfg(unix)'.dependencies]
+inkwell = { workspace = true }
+llvm-sys = { workspace = true }
+
+[dev-dependencies]
+hudhudscript-parser = { path = "../hudhudscript-parser" }
+hudhudscript-types = { path = "../hudhudscript-types" }
+hudhudscript-target = { path = "../hudhudscript-target" }

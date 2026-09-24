@@ -5,7 +5,9 @@ edition.workspace = true
 description = "C FFI bindings for HudHudScript VM"
 
 [lib]
-crate-type = ["cdylib", "staticlib"]
+# `lib` (rlib) target enables integration tests; cdylib/staticlib outputs
+# for C/Dart embedders are unchanged.
+crate-type = ["cdylib", "staticlib", "lib"]
 
 [dependencies]
 hudhudscript-vm = { path = "../hudhudscript-vm" }

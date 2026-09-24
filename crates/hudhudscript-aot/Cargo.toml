@@ -1,0 +1,24 @@
+[package]
+name = "hudhudscript-aot"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+readme.workspace = true
+
+[features]
+gccjit = ["dep:hudhudscript-codegen-gccjit"]
+llvm = ["dep:hudhudscript-codegen-llvm"]
+
+[dependencies]
+hudhudscript-codegen = { path = "../hudhudscript-codegen" }
+hudhudscript-codegen-cranelift = { path = "../hudhudscript-codegen-cranelift" }
+hudhudscript-codegen-gccjit = { path = "../hudhudscript-codegen-gccjit", optional = true }
+hudhudscript-codegen-llvm = { path = "../hudhudscript-codegen-llvm", optional = true }
+hudhudscript-linker = { path = "../hudhudscript-linker" }
+hudhudscript-mir = { path = "../hudhudscript-mir" }
+hudhudscript-mir-opt = { path = "../hudhudscript-mir-opt" }
+hudhudscript-parser = { path = "../hudhudscript-parser" }
+hudhudscript-target = { path = "../hudhudscript-target" }
+hudhudscript-types = { path = "../hudhudscript-types" }

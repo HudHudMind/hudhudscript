@@ -1,0 +1,22 @@
+[package]
+name = "hudhudscript-codegen-gccjit"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+readme.workspace = true
+build = "build.rs"
+
+[dependencies]
+hudhudscript-codegen = { path = "../hudhudscript-codegen" }
+hudhudscript-mir = { path = "../hudhudscript-mir" }
+hudhudscript-native-abi = { path = "../hudhudscript-native-abi" }
+hudhudscript-target = { path = "../hudhudscript-target" }
+
+[target.'cfg(unix)'.dependencies]
+gccjit = { workspace = true }
+
+[dev-dependencies]
+hudhudscript-parser = { path = "../hudhudscript-parser" }
+hudhudscript-types = { path = "../hudhudscript-types" }

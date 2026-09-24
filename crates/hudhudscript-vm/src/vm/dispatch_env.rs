@@ -210,8 +210,8 @@ impl crate::vm::VM {
                 if let Some(promises) = val.as_array() {
                     let promises_v: Vec<Value16> = promises.clone();
                     // P1-4: concurrent Promise.all — awaits every
-                    // AsyncPending entry on its own OS thread via the
-                    // shared registry, so wall-clock is max(d_i) rather
+                    // AsyncPending entry on its own OS thread across every
+                    // resolver transport, so wall-clock is max(d_i) rather
                     // than sum(d_i). Matches the interpreter's
                     // `eval_promise_all_async` semantics.
                     match self.resolve_promise_all(promises_v) {
@@ -244,8 +244,8 @@ impl crate::vm::VM {
                 let val = self.registers[first_arg as usize];
                 if let Some(promises) = val.as_array() {
                     // P1-3: concurrent Promise.race — races every
-                    // AsyncPending entry on its own OS thread via the
-                    // shared registry, returning the first to settle
+                    // AsyncPending entry on its own OS thread across every
+                    // resolver transport, returning the first to settle
                     // (resolve or reject). Matches the interpreter's
                     // `eval_promise_race_async` semantics. An empty
                     // array rejects with the canonical message rather

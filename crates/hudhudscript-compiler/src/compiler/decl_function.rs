@@ -89,6 +89,9 @@ impl Compiler {
             |compiler: &mut Compiler| -> CompileResult<()> {
                 for stmt in &body {
                     compiler.compile_stmt(stmt)?;
+                    if let Some(e) = compiler.ct_take_deferred_compile_error() {
+                        return Err(e);
+                    }
                 }
                 Ok(())
             },

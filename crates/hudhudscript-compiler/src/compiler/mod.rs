@@ -34,6 +34,10 @@ pub use target::CompileTarget;
 
 pub struct Compiler {
     bytecode: Bytecode,
+    /// Issue #7: u8 döndüren ifade yardımcılarından ertelenmiş derleme hatası
+    /// (RegAlloc tükenmesi gibi) — panic YOK, ifade sonunda yapılandırılmış Err.
+    pub(super) deferred_compile_error:
+        std::cell::RefCell<Option<hudhudscript_bytecode::error::CompileError>>,
     /// B8: snapshot of the outer bytecode's int/numeric constants for inliner remap.
     /// Set before function body compilation, cleared after.
     pub(super) global_int_constants: Vec<i64>,

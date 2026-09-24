@@ -1,0 +1,27 @@
+// tests/math/test_math.hud — math grubunun testleri.
+
+import { topla, carp, mutlak } from "../../src/math.hud";
+
+// @group hizli
+fn test_topla_pozitif() {
+    assert_eq(topla(2, 3), 5);
+}
+
+// @group hizli
+fn test_topla_negatif() {
+    assert_eq(topla(-1, 1), 0);
+}
+
+fn test_carp() {
+    assert_eq(carp(3, 4), 12);
+    assert_approx(carp(0.5, 0.5), 0.25);
+}
+
+fn test_mutlak() {
+    assert_eq(mutlak(-7), 7);
+    assert_eq(mutlak(7), 7);
+}
+
+fn ignore_test_henuez_hazir_degil() {
+    assert_eq(topla(1, 1), 3);
+}

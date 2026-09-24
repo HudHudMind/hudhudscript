@@ -34,7 +34,11 @@ name = "hudp"
 path = "src/hudp.rs"
 
 [features]
-default = ["governance", "mcp", "rag", "mimalloc"]
+jit = ["dep:hudhudscript-jit"]
+aot = ["dep:hudhudscript-aot"]
+gccjit = ["aot", "jit", "hudhudscript-aot/gccjit", "hudhudscript-jit/gccjit"]
+llvm = ["aot", "jit", "hudhudscript-aot/llvm", "hudhudscript-jit/llvm"]
+default = ["governance", "mcp", "rag", "mimalloc", "jit"]
 governance = ["dep:hudhudscript-governance", "dep:hudhudscript-rules"]
 mcp = ["dep:hudhudscript-mcp"]
 rag = ["dep:hudhudscript-rag"]
@@ -46,11 +50,14 @@ minimal = []
 sysalloc-profile = []
 
 [dependencies]
+libc = "0.2"
 hudhudscript-errors = { path = "../hudhudscript-errors" }
 hudhudscript-exception = { path = "../hudhudscript-exception" }
 hudhudscript-parser = { path = "../hudhudscript-parser" }
 hudhudscript-compiler = { path = "../hudhudscript-compiler" }
 hudhudscript-vm = { path = "../hudhudscript-vm" }
+hudhudscript-jit = { path = "../hudhudscript-jit", optional = true }
+hudhudscript-aot = { path = "../hudhudscript-aot", optional = true }
 hudhudscript-bytecode = { path = "../hudhudscript-bytecode" }
 hudhudscript-formatter = { path = "../hudhudscript-formatter" }
 hudhudscript-runtime = { path = "../hudhudscript-runtime" }

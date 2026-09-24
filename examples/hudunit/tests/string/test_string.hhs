@@ -1,0 +1,25 @@
+// tests/string/test_string.hhs — string grubunun testleri.
+
+fn setup() {
+    // her testten önce çalışır
+}
+
+fn teardown() {
+    // her testten sonra çalışır
+}
+
+fn test_birlesim() {
+    let a = "hud";
+    let b = "hud";
+    assert_eq(a + b, "hudhud");
+}
+
+fn test_uzunluk() {
+    assert_length("hudhud", 6);
+    assert_contains("hudhud script", "script");
+}
+
+fn test_dogru_yanlis() {
+    assert_true(1 == 1);
+    assert_false(1 == 2);
+}

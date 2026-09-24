@@ -230,6 +230,11 @@ impl VM {
         date_obj.insert("__module".to_string(), Value16::string("Date".to_string()));
         self.set_global("Date", Value16::object(date_obj));
 
+        // Array module
+        let mut array_obj = hudhudscript_bytecode::ObjMap::default();
+        array_obj.insert("__module".to_string(), Value16::string("Array".to_string()));
+        self.set_global("Array", Value16::object(array_obj));
+
         // Duration module (v0.4.38 — #593)
         let mut duration_obj = hudhudscript_bytecode::ObjMap::default();
         duration_obj.insert(

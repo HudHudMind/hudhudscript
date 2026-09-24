@@ -1,0 +1,13 @@
+// src/string.hudhud — test edilen gerçek kod (farklı uzantı örneği).
+
+fn birlestir(a, b) {
+    return a + b;
+}
+
+fn tekrarla(s, n) {
+    let sonuc = "";
+    for (i in range(0, n)) {
+        sonuc = sonuc + s;
+    }
+    return sonuc;
+}

@@ -2,6 +2,7 @@ use super::*;
 impl Compiler {
     pub fn new() -> Self {
         Self {
+            deferred_compile_error: std::cell::RefCell::new(None),
             bytecode: Bytecode::new(),
             global_int_constants: Vec::new(),
             global_numeric_constants: Vec::new(),
@@ -112,6 +113,33 @@ impl Compiler {
     }
 
     pub fn compile(&mut self, statements: &[Stmt]) -> CompileResult<Bytecode> {
+        // Issue #7: derleyici içi hicbir yol panic ATMAZ — iç expect'ler
+        // (ör. RegAlloc tükenmesi) burada yapılandırılmış hataya dönüşür.
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            self.compile_inner(statements)
+        }));
+        match result {
+            Ok(r) => r,
+            Err(payload) => {
+                let msg = payload
+                    .downcast_ref::<String>()
+                    .cloned()
+                    .or_else(|| payload.downcast_ref::<&str>().map(|s| s.to_string()))
+                    .unwrap_or_else(|| "compiler panic (derleyici iç hatası)".to_string());
+                // RegAlloc expect'leri 'msg: Error { .. }' basar — okunur kısmı çıkar
+                let cleaned = if let Some(i) = msg.find("message:") {
+                    msg[i..].split('"').nth(1).map(|m| m.to_string()).unwrap_or(msg)
+                } else {
+                    msg
+                };
+                Err(compile_codes::generic(format!(
+                    "Derleyici hatası: {cleaned}"
+                )))
+            }
+        }
+    }
+
+    fn compile_inner(&mut self, statements: &[Stmt]) -> CompileResult<Bytecode> {
         if let Err(errs) = crate::compiler::decl::loop_engine::validate_loop_semantics(statements) {
             return Err(compile_codes::generic(errs.join("\n")));
         }
@@ -126,6 +154,11 @@ impl Compiler {
         // Normal source-order compilation (all types available from pre-pass)
         for stmt in statements {
             self.compile_stmt(stmt)?;
+            // Issue #7: ifade yardımcılarından ertelenmiş hata (ör. RegAlloc
+            // tükenmesi) — statement sınırında yapılandırılmış Err
+            if let Some(e) = self.ct_take_deferred_compile_error() {
+                return Err(e);
+            }
         }
         // PERF-B1: Emit top-level local variable slot names so the VM
         // can populate sym_to_slot in execute() and use the O(1) slot

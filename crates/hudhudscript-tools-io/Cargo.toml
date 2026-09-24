@@ -30,7 +30,7 @@ bigdecimal = { version = "0.4", optional = true }
 chrono = { workspace = true, optional = true }
 futures = { version = "0.3", optional = true }
 sha2 = { workspace = true, optional = true }
-sqlx = { version = "0.8", features = ["runtime-tokio-native-tls", "postgres", "mysql", "sqlite", "chrono", "uuid", "json", "bigdecimal"], optional = true }
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "mysql", "sqlite", "chrono", "uuid", "json", "bigdecimal"], optional = true }
 
 [dev-dependencies]
 proptest.workspace = true

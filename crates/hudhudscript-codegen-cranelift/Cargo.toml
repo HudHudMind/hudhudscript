@@ -1,0 +1,28 @@
+[package]
+name = "hudhudscript-codegen-cranelift"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+readme.workspace = true
+
+[dependencies]
+hudhudscript-codegen = { path = "../hudhudscript-codegen" }
+hudhudscript-mir = { path = "../hudhudscript-mir" }
+hudhudscript-target = { path = "../hudhudscript-target" }
+hudhudscript-native-abi = { path = "../hudhudscript-native-abi" }
+
+cranelift = { workspace = true }
+libm = "0.2"
+cranelift-codegen = { workspace = true }
+cranelift-jit = { workspace = true }
+cranelift-module = { workspace = true }
+cranelift-native = { workspace = true }
+cranelift-object = { workspace = true }
+
+[dev-dependencies]
+hudhudscript-parser = { path = "../hudhudscript-parser" }
+hudhudscript-types = { path = "../hudhudscript-types" }
+hudhudscript-compiler = { path = "../hudhudscript-compiler" }
+hudhudscript-vm = { path = "../hudhudscript-vm" }

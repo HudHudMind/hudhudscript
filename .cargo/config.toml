@@ -1,4 +1,4 @@
-[build]
+[target.x86_64-unknown-linux-gnu]
 rustflags = ["-C", "target-cpu=native"]
 
 # Give test threads the same stack the runtime gets in production.
@@ -16,3 +16,7 @@ rustflags = ["-C", "target-cpu=native"]
 # production-like conditions no matter which directory cargo is invoked from.
 [env]
 RUST_MIN_STACK = "8388608"
+# llvm-sys (inkwell llvm14-0) build script'i llvm-config'i bu önekten bulur.
+# Bu makinede llvm-prefix kırık olduğundan açık yol verilir (target-cpu=native
+# gibi makineye özel bir kayıt; LLVM'si başka yerde olan makine değiştirir).
+LLVM_SYS_140_PREFIX = "/usr/lib/llvm-14"

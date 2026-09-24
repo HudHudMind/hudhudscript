@@ -25,6 +25,19 @@ pub fn call_array_method(
             Some(Ok(Value16::array(new_arr)))
         }
 
+        "fill" => {
+            let mut new_arr = arr.to_vec();
+            if args.len() == 2 {
+                let len = args[0].as_int().unwrap_or(0) as usize;
+                let val = args[1].clone();
+                new_arr.resize(len, val);
+            } else if args.len() == 1 {
+                let val = args[0].clone();
+                new_arr.fill(val);
+            }
+            Some(Ok(Value16::array(new_arr)))
+        }
+
         "pop" => {
             // Interpreter parity: popping from empty array is an error.
             if arr.is_empty() {

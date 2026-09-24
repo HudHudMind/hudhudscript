@@ -1,0 +1,11 @@
+[package]
+name = "hudhudscript-linker"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+readme.workspace = true
+
+[dependencies]
+hudhudscript-codegen = { path = "../hudhudscript-codegen" }

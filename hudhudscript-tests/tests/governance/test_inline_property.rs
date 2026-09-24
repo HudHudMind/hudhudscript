@@ -1099,9 +1099,20 @@ proptest! {
 proptest! {
     #[test]
     fn property_community_resource_sharing(
-        resource_ids in prop::collection::vec("[a-z]{3,10}", 1..10),
+        resource_ids_raw in prop::collection::vec("[a-z]{3,10}", 1..10),
     ) {
         use hudhudscript_governance::resources::{AllocationPolicy, Resource, ResourceManager};
+
+        // Proptest rastgele ID'lerde tekrar üretebilir; register_resource
+        // yinelenen ID'de hata verir → ID'leri benzersizleştir.
+        let mut resource_ids: Vec<String> = Vec::new();
+        for id in &resource_ids_raw {
+            if !resource_ids.contains(id) {
+                resource_ids.push(id.clone());
+            }
+        }
+        // En az 1 benzersiz ID garanti (vec 1..10 → en az 1 eleman var)
+        prop_assume!(!resource_ids.is_empty());
 
         let mut manager = ResourceManager::new();
 

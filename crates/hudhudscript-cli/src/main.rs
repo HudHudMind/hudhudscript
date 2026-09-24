@@ -17,12 +17,13 @@ use std::process;
 use clap::{Parser as ClapParser, Subcommand};
 use hudhudscript_cli::common::*;
 
+mod cli_aot_bench;
 mod cli_dispatch;
 mod startup;
 
 #[derive(ClapParser)]
 #[command(name = "hudhud")]
-#[command(version, about = "HudHudScript - MCP-based orchestration language", long_about = None)]
+#[command(version, long_about = None)]
 pub(crate) struct Cli {
     #[command(subcommand)]
     command: Option<Commands>,
@@ -72,6 +73,23 @@ pub(crate) enum Commands {
         #[cfg(feature = "telemetry")]
         #[arg(long, value_name = "PATH")]
         telemetry_json: Option<PathBuf>,
+
+        /// Execution engine: vm (default) or jit
+        #[arg(long, default_value = "vm")]
+        engine: String,
+
+        /// Native backend for --engine=jit: auto, cranelift (llvm/gccjit arrive later)
+        #[arg(long, default_value = "auto")]
+        backend: String,
+
+        /// Print JIT compilation stats to stderr (opt-in; default stays silent)
+        #[arg(long)]
+        jit_stats: bool,
+
+        /// Fallback policy when JIT fails at RUNTIME: vm = restart in VM
+        /// (side effects may repeat!); none = stop with honest error (default)
+        #[arg(long, default_value = "none")]
+        fallback_engine: String,
     },
 
     /// Deploy a HudHudScript app
@@ -93,13 +111,13 @@ pub(crate) enum Commands {
         debug: bool,
     },
 
-    /// Compile a HudHudScript file to bytecode
+    /// Compile a HudHudScript file to bytecode or native object
     Compile {
         /// Path to the script file
         #[arg(value_name = "FILE")]
         file: PathBuf,
 
-        /// Output file path (defaults to input with .hudb extension)
+        /// Output file path (defaults to input with .hudb/.o extension)
         #[arg(short, long)]
         output: Option<PathBuf>,
 
@@ -110,6 +128,72 @@ pub(crate) enum Commands {
         /// Enable strict type checking (Issue #866 TYPE-001)
         #[arg(long)]
         strict: bool,
+
+        /// Emission target: bytecode (default) or obj (native object, AOT)
+        #[arg(long, default_value = "bytecode")]
+        emit: String,
+
+        /// Cross-compilation target triple (e.g. aarch64-unknown-linux-gnu)
+        #[arg(long, default_value = "native")]
+        target: String,
+
+        /// Native backend for --emit=obj: auto, cranelift
+        #[arg(long, default_value = "auto")]
+        backend: String,
+
+        /// Optimization level for native emission: 0, 1, 2, 3
+        #[arg(long, default_value = "2")]
+        opt: u8,
+    },
+
+    /// Build a native executable from a HudHudScript file (AOT)
+    Build {
+        /// Path to the script file
+        #[arg(value_name = "FILE")]
+        file: PathBuf,
+
+        /// Output executable path
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+
+        /// Build mode: aot (native executable); bytecode is `compile`
+        #[arg(long, default_value = "aot")]
+        mode: String,
+
+        /// Native backend: auto, cranelift
+        #[arg(long, default_value = "auto")]
+        backend: String,
+
+        /// Cross-compilation target triple (native or e.g. aarch64-unknown-linux-gnu)
+        #[arg(long, default_value = "native")]
+        target: String,
+
+        /// Optimization level: 0, 1, 2, 3
+        #[arg(long, default_value = "2")]
+        opt: u8,
+
+        /// Build directory for intermediate artifacts (default: ./_build)
+        #[arg(long)]
+        build_dir: Option<PathBuf>,
+
+        /// Sembol tablosunu koru (varsayılan: strip — 4.8MB→1.2MB)
+        #[arg(long)]
+        keep_symbols: bool,
+    },
+
+    /// Benchmark execution engines and native backends on a script
+    Bench {
+        /// Path to the script file
+        #[arg(value_name = "FILE")]
+        file: PathBuf,
+
+        /// Repetitions per engine (default 3, best-of reported)
+        #[arg(long, default_value = "3")]
+        iterations: u32,
+
+        /// Comma-separated backends (default: all compiled-in)
+        #[arg(long, value_delimiter = ',')]
+        backends: Option<Vec<String>>,
     },
 
     /// Start interactive REPL
@@ -229,5 +313,17 @@ fn main() {
                 std::process::exit(1);
             }),
         None => cli_dispatch::run_cli(cli),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Cli;
+    use clap::CommandFactory;
+
+    #[test]
+    fn help_does_not_reduce_hudhudscript_to_mcp_orchestration() {
+        let help = Cli::command().render_help().to_string();
+        assert!(!help.contains("MCP-based orchestration language"));
     }
 }

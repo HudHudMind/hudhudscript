@@ -110,7 +110,7 @@ pub fn resolve_with<R>(id: SymbolId, f: impl FnOnce(&str) -> R) -> R {
     let guard = GLOBAL_INTERNER.read();
     match guard.as_ref() {
         Some(i) => f(i.resolve(id)),
-        None => f(""),
+        None => f("<???>"),
     }
 }
 
@@ -134,13 +134,13 @@ pub fn resolve(id: SymbolId) -> String {
 /// that need the interned string to outlive the lock should use this
 /// instead of `resolve` (which also allocates a fresh `String`).
 ///
-/// Returns an empty `Arc<str>` if the global interner hasn't been
+/// Returns "<???>" if the global interner hasn't been
 /// initialised — matches the `resolve_with` behaviour for consistency.
 pub fn resolve_arc(id: SymbolId) -> Arc<str> {
     let guard = GLOBAL_INTERNER.read();
     match guard.as_ref() {
         Some(i) => i.resolve_arc(id),
-        None => Arc::from(""),
+        None => Arc::from("<???>"),
     }
 }
 

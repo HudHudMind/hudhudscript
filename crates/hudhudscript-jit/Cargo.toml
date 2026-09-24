@@ -1,0 +1,27 @@
+[package]
+name = "hudhudscript-jit"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+readme.workspace = true
+
+[dependencies]
+hudhudscript-types = { path = "../hudhudscript-types" }
+hudhudscript-mir = { path = "../hudhudscript-mir" }
+hudhudscript-mir-opt = { path = "../hudhudscript-mir-opt" }
+hudhudscript-codegen = { path = "../hudhudscript-codegen" }
+hudhudscript-codegen-cranelift = { path = "../hudhudscript-codegen-cranelift", optional = true }
+hudhudscript-codegen-gccjit = { path = "../hudhudscript-codegen-gccjit", optional = true }
+hudhudscript-codegen-llvm = { path = "../hudhudscript-codegen-llvm", optional = true }
+hudhudscript-target = { path = "../hudhudscript-target" }
+hudhudscript-native-abi = { path = "../hudhudscript-native-abi" }
+hudhudscript-parser = { path = "../hudhudscript-parser" }
+hudhudscript-ast = { path = "../hudhudscript-ast" }
+
+[features]
+default = ["cranelift"]
+cranelift = ["dep:hudhudscript-codegen-cranelift"]
+gccjit = ["dep:hudhudscript-codegen-gccjit"]
+llvm = ["dep:hudhudscript-codegen-llvm"]

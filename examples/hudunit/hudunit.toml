@@ -1,0 +1,17 @@
+# Örnek hudunit.toml — tüm alanlar opsiyonel, bu dosya olmadan da çalışır.
+# hudunit bunu çalışma dizininden okur.
+
+# Argümansız çalıştırıldığında taranan dizin (tests/ ve test/ otomatik denenir).
+test_dir = "tests"
+
+# Ek test uzantıları (hhs, hud, hudhud her zaman dahildir).
+# extensions = ["hspec"]
+
+# Tek test için azami süre (ms).
+timeout_ms = 10000
+
+# VM yakıt limiti — sonsuz döngü koruması (yoklamak için -1).
+fuel = 500000000
+
+# Coverage eşiği (%) — altında kalırsa koşu başarısız sayılır.
+# coverage_threshold = 80.0

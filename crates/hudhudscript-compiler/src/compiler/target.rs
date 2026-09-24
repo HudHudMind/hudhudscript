@@ -90,6 +90,12 @@ pub trait CompileTarget {
 
     /// Return the current instruction pointer (= instruction count so far).
     fn ct_current_ip(&self) -> usize;
+
+    /// Issue #7: u8 döndüren derleme yardımcılarıından yapılandırılmış hata
+    /// (ör. RegAlloc bölge tükenmesi). İfade tamamlandığında kontrol edilir;
+    /// panic YOK (release panic=abort'ta catch_unwind çalışmaz).
+    fn ct_defer_compile_error(&self, err: hudhudscript_bytecode::error::CompileError);
+    fn ct_take_deferred_compile_error(&self) -> Option<hudhudscript_bytecode::error::CompileError>;
     /// Back-patch an instruction at the given position.
     fn ct_patch(&mut self, ip: usize, instr: Instruction);
 

@@ -117,7 +117,32 @@ impl VM {
             Some("tokenomics") => self.call_tokenomics_method(method, args.to_vec()).map(Some),
             Some("channel") => self.call_channel_method(method, args.to_vec()).map(Some),
             Some("os") => self.call_os_method(method, args.to_vec()).map(Some),
-            Some("Date") => self.call_date_method(method, args.to_vec()).map(Some),
+            Some("Date") => {
+                // hudhud_datetime tam kapsama (to_millis/now/timestamp/nanos/
+                // micros/year/month/day/hour/minute/second/parse/format/...).
+                // sleep_millis inline — native-abi'dekiImplementasyonun aynısı
+                // (std::thread::sleep); VM crate'i native-abi'ye BAĞLI DEĞİL
+                // (bağımlılık yorumlayıcı kod-yerleşimini kaydırıp VM'yi
+                // ~%%20 yavaşlatıyordu — v0.8.248 geri-dönüş ölçümü).
+                if method == "sleep_millis" {
+                    let ms = args.first().and_then(|v| v.as_int()).unwrap_or(0);
+                    if ms > 0 {
+                        std::thread::sleep(std::time::Duration::from_millis(ms as u64));
+                    }
+                    Ok(Some(Value16::null()))
+                } else {
+                    self.call_date_method(method, args.to_vec()).map(Some)
+                }
+            }
+            Some("Array") => {
+                if method == "fill" || method == "filled" {
+                    let len = args.first().and_then(|v| v.as_int()).unwrap_or(0).max(0) as usize;
+                    let val = args.get(1).cloned().unwrap_or(Value16::null());
+                    Ok(Some(Value16::array(vec![val; len])))
+                } else {
+                    Ok(None)
+                }
+            }
             Some("Duration") => self.call_duration_method(method, args.to_vec()).map(Some),
             Some("regex") => self.call_regex_method(method, args.to_vec()).map(Some),
             Some("schedule") => self.call_schedule_method(method, args.to_vec()).map(Some),

@@ -7,9 +7,14 @@
 use crate::error::{compile_codes, CompileResult};
 use std::cell::Cell;
 
-/// Registers per allocator instance.
-const REGS_PER_ALLOC: u8 = 32;
+/// Registers per allocator instance. Issue #7: 32→16 — eşzamanlı bölge
+/// sayısı 224 tavanında 7'den 14'e çıkar; zincirleme metot çağrıları
+/// (a.f().g().h()...) derinliği bölge başına ~2 olduğu için 14 seviye yeter.
+const REGS_PER_ALLOC: u8 = 16;
 /// Maximum valid base before u8 wrap-around would cause silent aliasing.
+/// Zones span 0..=223; the temp registers live ABOVE them (224..=254) so
+/// the two regions can never alias (regression-tested in hudhud-ffi
+/// tests/engine_quirk_test.rs).
 const MAX_BASE: u8 = 224;
 
 thread_local! {
@@ -53,6 +58,8 @@ impl RegAlloc {
     pub fn new_with_base(floor: u8) -> CompileResult<Self> {
         let base = NEXT_BASE.with(|c| {
             let current = c.get();
+            // Issue #7: floor'u 32'ye yuvarla — yerel sayısı bölge tabanını
+            // kaydırıp eşzamanlı bölge sayısını gizlice eritmesin (base=225).
             let effective = current.max(floor);
             if effective >= MAX_BASE {
                 return Err(compile_codes::generic(format!(
@@ -174,7 +181,11 @@ impl Drop for RegAlloc {
 // registers are properly reclaimed. This per-thread path exists only for legacy
 // call sites and is capped to prevent u8 wrap-around collisions with zone 0.
 // ---------------------------------------------------------------------------
-const TEMP_REG_BASE: u8 = 128;
+/// Temp registers live strictly ABOVE the allocator zones (which end at
+/// 223, see MAX_BASE). The old base of 128 let nested zones alias temps,
+/// miscompiling e.g. await+module-calls on threads whose counters start
+/// cold (regression-tested in hudhud-ffi tests/engine_quirk_test.rs).
+const TEMP_REG_BASE: u8 = 224;
 const TEMP_REG_LIMIT: u8 = 254; // leave 255 as sentinel / spare
 
 thread_local! {

@@ -1,3 +1,0 @@
-[runtime]
-# AI provider calls require network access (DeepSeek API)
-allow_network = true

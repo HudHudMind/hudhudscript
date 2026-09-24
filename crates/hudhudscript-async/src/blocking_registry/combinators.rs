@@ -32,14 +32,14 @@ impl<V> PromiseRegistry<V> {
         let mut pending = 0usize;
 
         for (idx, id) in ids.iter().enumerate() {
-            if let Some(result) = self.cached.remove(*id) {
+            if let Some(result) = self.take_cached_result(id) {
                 match result {
                     Ok(v) => slots[idx] = Some(v),
                     Err(msg) => return Err(RegistryError::Rejected(msg)),
                 }
                 continue;
             }
-            if let Some(receiver) = self.receivers.remove(*id) {
+            if let Some(receiver) = self.take_receiver(id) {
                 let tx = agg_tx.clone();
                 let owned_id = (*id).to_string();
                 std::thread::spawn(move || {
@@ -108,7 +108,7 @@ impl<V> PromiseRegistry<V> {
         }
 
         for (idx, id) in ids.iter().enumerate() {
-            if let Some(result) = self.cached.remove(*id) {
+            if let Some(result) = self.take_cached_result(id) {
                 return match result {
                     Ok(v) => Ok((idx, v)),
                     Err(msg) => Err(RegistryError::Rejected(msg)),
@@ -120,7 +120,7 @@ impl<V> PromiseRegistry<V> {
 
         let mut spawned = 0usize;
         for (idx, id) in ids.iter().enumerate() {
-            if let Some(receiver) = self.receivers.remove(*id) {
+            if let Some(receiver) = self.take_receiver(id) {
                 let tx = agg_tx.clone();
                 let owned_id = (*id).to_string();
                 std::thread::spawn(move || {

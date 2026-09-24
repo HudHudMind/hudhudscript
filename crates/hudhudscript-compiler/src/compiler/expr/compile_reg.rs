@@ -326,11 +326,19 @@ pub(crate) fn compile_expr_to_reg(
             target, left, op, right, regs, last_use,
         ),
         _ => {
-            crate::compiler::expr::compile_complex::compile_expr_complex(target, expr)
-                .expect("compile_complex failed");
-            let dst = regs.alloc(ip, last_use).expect("out of registers");
-            target.emit_move(dst, 255);
-            dst
+            match crate::compiler::expr::compile_complex::compile_expr_complex(target, expr) {
+                Ok(r) => {
+                    let dst = regs.alloc(ip, last_use).expect("out of registers");
+                    target.emit_move(dst, r);
+                    dst
+                }
+                Err(e) => {
+                    // Issue #7: panic YOK — ertelenmiş hata + sentinel;
+                    // ifade/statement sınırında yapılandırılmış Err'e döner
+                    target.ct_defer_compile_error(e);
+                    255
+                }
+            }
         }
     }
 }

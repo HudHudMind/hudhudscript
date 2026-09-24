@@ -21,6 +21,14 @@ use std::collections::HashMap;
 pub enum DateMethodId {
     Now,
     ToMillis,
+    Nanos,
+    Micros,
+    Year,
+    Month,
+    Day,
+    Hour,
+    Minute,
+    Second,
     Parse,
     Format,
     FromMillis,
@@ -37,6 +45,14 @@ impl std::str::FromStr for DateMethodId {
         match s {
             "now" | "timestamp" => Ok(Self::Now),
             "to_millis" => Ok(Self::ToMillis),
+            "nanos" | "time_nanos" => Ok(Self::Nanos),
+            "micros" | "time_micros" => Ok(Self::Micros),
+            "year" => Ok(Self::Year),
+            "month" => Ok(Self::Month),
+            "day" => Ok(Self::Day),
+            "hour" => Ok(Self::Hour),
+            "minute" => Ok(Self::Minute),
+            "second" => Ok(Self::Second),
             "parse" => Ok(Self::Parse),
             "format" => Ok(Self::Format),
             "from_millis" => Ok(Self::FromMillis),
@@ -53,9 +69,61 @@ impl std::str::FromStr for DateMethodId {
 /// Zero-cost enum dispatch for Date operations.
 pub fn dispatch(method: DateMethodId, args: &[Value16]) -> HudHudResult<Value16> {
     match method {
-        DateMethodId::Now => Ok(Value16::number(Utc::now().timestamp() as f64)),
+        DateMethodId::Now => Ok(Value16::number(hudhudscript_native_abi::hudhud_date_now())),
 
-        DateMethodId::ToMillis => Ok(Value16::int(Utc::now().timestamp_millis())),
+        DateMethodId::ToMillis => Ok(Value16::int(hudhudscript_native_abi::hudhud_date_millis())),
+
+        DateMethodId::Nanos => Ok(Value16::int(hudhudscript_native_abi::hudhud_time_nanos())),
+
+        DateMethodId::Micros => Ok(Value16::int(hudhudscript_native_abi::hudhud_time_micros())),
+
+        DateMethodId::Year => {
+            let ts = match args.first() {
+                Some(v) => v.as_int().unwrap_or_else(|| v.as_number().unwrap_or(0.0) as i64),
+                None => hudhudscript_native_abi::hudhud_date_millis(),
+            };
+            Ok(Value16::int(hudhudscript_native_abi::hudhud_date_year(ts)))
+        }
+
+        DateMethodId::Month => {
+            let ts = match args.first() {
+                Some(v) => v.as_int().unwrap_or_else(|| v.as_number().unwrap_or(0.0) as i64),
+                None => hudhudscript_native_abi::hudhud_date_millis(),
+            };
+            Ok(Value16::int(hudhudscript_native_abi::hudhud_date_month(ts)))
+        }
+
+        DateMethodId::Day => {
+            let ts = match args.first() {
+                Some(v) => v.as_int().unwrap_or_else(|| v.as_number().unwrap_or(0.0) as i64),
+                None => hudhudscript_native_abi::hudhud_date_millis(),
+            };
+            Ok(Value16::int(hudhudscript_native_abi::hudhud_date_day(ts)))
+        }
+
+        DateMethodId::Hour => {
+            let ts = match args.first() {
+                Some(v) => v.as_int().unwrap_or_else(|| v.as_number().unwrap_or(0.0) as i64),
+                None => hudhudscript_native_abi::hudhud_date_millis(),
+            };
+            Ok(Value16::int(hudhudscript_native_abi::hudhud_date_hour(ts)))
+        }
+
+        DateMethodId::Minute => {
+            let ts = match args.first() {
+                Some(v) => v.as_int().unwrap_or_else(|| v.as_number().unwrap_or(0.0) as i64),
+                None => hudhudscript_native_abi::hudhud_date_millis(),
+            };
+            Ok(Value16::int(hudhudscript_native_abi::hudhud_date_minute(ts)))
+        }
+
+        DateMethodId::Second => {
+            let ts = match args.first() {
+                Some(v) => v.as_int().unwrap_or_else(|| v.as_number().unwrap_or(0.0) as i64),
+                None => hudhudscript_native_abi::hudhud_date_millis(),
+            };
+            Ok(Value16::int(hudhudscript_native_abi::hudhud_date_second(ts)))
+        }
 
         DateMethodId::Parse => {
             let input = args

@@ -6,6 +6,18 @@ members = [
     "crates/hudhudscript-parser",
     "crates/hudhudscript-ast",
     "crates/hudhudscript-types",
+    "crates/hudhudscript-mir",
+    "crates/hudhudscript-mir-opt",
+    "crates/hudhudscript-target",
+    "crates/hudhudscript-codegen",
+    "crates/hudhudscript-native-abi",
+    "crates/hudhudscript-jit",
+    "crates/hudhudscript-hudunit",
+    "crates/hudhudscript-codegen-cranelift",
+    "crates/hudhudscript-codegen-gccjit",
+    "crates/hudhudscript-codegen-llvm",
+    "crates/hudhudscript-linker",
+    "crates/hudhudscript-aot",
     "crates/hudhudscript-compiler",
     "crates/hudhudscript-bytecode",
     "crates/hudhudscript-vm",
@@ -107,7 +119,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.8.244"
+version = "0.9.32"
 edition = "2021"
 authors = ["Onur GÜZEL"]
 license = "MIT"
@@ -152,6 +164,15 @@ parking_lot = "0.12"
 
 # Faster hashing (interpreter hot paths)
 rustc-hash = "2.1"
+cranelift = "0.132"
+cranelift-jit = "0.132"
+cranelift-module = "0.132"
+cranelift-native = "0.132"
+cranelift-object = "0.132"
+cranelift-codegen = { version = "0.132", features = ["x86", "arm64", "s390x", "riscv64"] }
+gccjit = "=1.0.0"
+inkwell = { version = "0.2", features = ["llvm14-0"] }
+llvm-sys = { version = "140", features = ["force-dynamic"] }
 
 # Serialization formats (v0.4.38 — Batch 1)
 serde_yaml = "0.9"
@@ -188,8 +209,15 @@ hex = "0.4"
 opt-level = 3
 lto = "thin"
 codegen-units = 1
+# Release ikilileri sembolsüz çıkar (~9MB küçülür/ikili; JIT sembol çözümü
+# kendi registry'sinden — .symtab'e ihtiyaç duymaz; canlı kanıt üstte).
+# Debuggere ihtiyaç olursa: cargo build --profile release-prof (strip=false).
+# İSTİSNA — native-abi staticlib: semboller KALIR (linker + hudhud build
+# sürüm-damga nöbeti sembolleri arar; strip staticlib'i de soyuyor).
+strip = "symbols"
+
+[profile.release.package.hudhudscript-native-abi]
 strip = false
-panic = "abort"
 
 [profile.release-prof]
 inherits = "release"

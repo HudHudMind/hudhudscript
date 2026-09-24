@@ -71,7 +71,7 @@ impl crate::vm::VM {
             "all" => {
                 let arr = args.into_iter().next().unwrap_or(Value16::array(vec![]));
                 if let Some(promises) = arr.as_array() {
-                    // P1-4: concurrent Promise.all via shared registry.
+                    // P1-4: concurrent Promise.all across resolver transports.
                     // See `resolve_promise_all` for full semantics.
                     match self.resolve_promise_all(promises.to_vec()) {
                         Ok(values) => Ok(Value16::promise(
@@ -92,7 +92,7 @@ impl crate::vm::VM {
             "race" => {
                 let arr = args.into_iter().next().unwrap_or(Value16::array(vec![]));
                 if let Some(promises) = arr.as_array() {
-                    // P1-3: concurrent Promise.race via shared registry.
+                    // P1-3: concurrent Promise.race across resolver transports.
                     // See `resolve_promise_race` for full semantics.
                     match self.resolve_promise_race(promises.to_vec()) {
                         Ok(val) => Ok(Value16::promise(

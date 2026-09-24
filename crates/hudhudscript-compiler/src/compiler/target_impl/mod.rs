@@ -9,6 +9,17 @@ mod func_impl;
 mod mcp_impl;
 
 impl CompileTarget for Compiler {
+    fn ct_defer_compile_error(&self, err: hudhudscript_bytecode::error::CompileError) {
+        let mut slot = self.deferred_compile_error.borrow_mut();
+        if slot.is_none() {
+            *slot = Some(err);
+        }
+    }
+
+    fn ct_take_deferred_compile_error(&self) -> Option<hudhudscript_bytecode::error::CompileError> {
+        self.deferred_compile_error.borrow_mut().take()
+    }
+
     fn ct_compile_decl(&mut self, decl: &Decl) -> CompileResult<()> {
         self.compile_decl(decl)
     }

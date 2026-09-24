@@ -1,22 +1,17 @@
-//! Thread-backed Promise registry — the shared primitive used by the VM's
-//! `await` handler (Issue #1079 / Kural 7).
+//! Thread-backed Promise registry for resolver-owned values (Issue #1079 /
+//! Kural 7).
 //!
 //! # Why a second registry?
 //!
-//! The crate already exposes [`crate::AsyncRuntime`], a tokio-based runtime
-//! used by the interpreter for `async function`s, Promise.all, Promise.race,
-//! etc. The VM, however, is intentionally tokio-free — it runs async
-//! functions on dedicated OS threads (`std::thread::spawn`) and communicates
-//! results back via `std::sync::mpsc`. Prior to this module both the VM
-//! carried its own ad-hoc `promise_receivers` / `promise_results` HashMaps
-//! and the interpreter carried the tokio path: two parallel lanes.
+//! The VM is intentionally tokio-free and communicates background results via
+//! `std::sync::mpsc`. HudHudScript async functions carry heap-independent
+//! detached graphs in VM-owned receivers, while embedders may register direct
+//! values here. VM Promise combinators merge both receiver transports and
+//! attach detached graphs only on the owning VM thread.
 //!
-//! `PromiseRegistry<V>` consolidates the VM's side into a single shared
-//! primitive that any non-tokio runtime (the VM today, future WASM-targeted
-//! frontends tomorrow) can reuse. It is still thread-based — it does **not**
-//! pull tokio into the VM — but it lives in the async crate so there is one
-//! canonical `spawn → await → resolve` pipeline, one place to fix bugs,
-//! and one API surface for callers.
+//! `PromiseRegistry<V>` is the canonical resolver transport for direct values
+//! and can be reused by any non-tokio runtime. It does **not** pull tokio into
+//! the VM.
 //!
 //! # Semantics
 //!
@@ -29,14 +24,9 @@
 //!   is invoked.
 //! * [`PromiseRegistry::store_result`] lets async work that completes
 //!   synchronously stash its result for a later `await`.
-//! * [`PromiseRegistry::await_blocking`] is the one entry point the `Await`
-//!   bytecode instruction uses: it checks the pre-resolved cache first,
-//!   then the registered receiver, and finally reports a well-formed error
-//!   if neither path is wired. It **never** silently returns a fabricated
-//!   value — the VM previously had a silent fake that was eliminated.
-//!
-//! Both VM and any future thread-based runtime share this type verbatim;
-//! there is no per-backend copy.
+//! * [`PromiseRegistry::await_blocking`] checks the pre-resolved cache first,
+//!   then the registered receiver, and finally reports a well-formed error if
+//!   neither path is wired. It never fabricates a value.
 
 pub mod combinators;
 pub mod error;
@@ -97,11 +87,9 @@ impl<V> PromiseRegistry<V> {
 
     /// Register an externally-created receiver under a freshly minted id.
     ///
-    /// Used when the caller spawns its own thread (e.g. the VM's
-    /// `spawn_async_chunk`) and already owns the sender half of an
-    /// `mpsc::channel`. The registry takes ownership of the receiver and
-    /// returns the id that the VM places inside
-    /// `PromiseState::AsyncPending`.
+    /// Used when the caller spawns its own thread and already owns the sender
+    /// half of an `mpsc::channel`. The registry takes ownership of the receiver
+    /// and returns the id placed inside `PromiseState::AsyncPending`.
     pub fn register_external(&mut self, receiver: Receiver<PromiseResult<V>>) -> PromiseId {
         let id = self.next_id();
         self.receivers.insert(id.clone(), receiver);
@@ -141,6 +129,23 @@ impl<V> PromiseRegistry<V> {
         self.cached.insert(id, result);
     }
 
+    /// Take an already-settled result, if one is cached for `id`.
+    ///
+    /// VM combinators use this before taking live receivers so cached
+    /// settlements retain their immediate, input-order semantics.
+    pub fn take_cached_result(&mut self, id: &str) -> Option<PromiseResult<V>> {
+        self.cached.remove(id)
+    }
+
+    /// Transfer ownership of the live receiver registered for `id`.
+    ///
+    /// This lets a runtime combine registry-backed receivers with its own
+    /// transport-specific receivers without introducing a second resolver
+    /// lookup path inside [`PromiseRegistry`].
+    pub fn take_receiver(&mut self, id: &str) -> Option<Receiver<PromiseResult<V>>> {
+        self.receivers.remove(id)
+    }
+
     /// Block on the given promise id, consuming its receiver or cached
     /// entry exactly once.
     ///
@@ -148,10 +153,10 @@ impl<V> PromiseRegistry<V> {
     /// failure. Callers must map the error into their runtime's native
     /// error type.
     pub fn await_blocking(&mut self, id: &str) -> Result<V, RegistryError> {
-        if let Some(result) = self.cached.remove(id) {
+        if let Some(result) = self.take_cached_result(id) {
             return result.map_err(RegistryError::Rejected);
         }
-        if let Some(receiver) = self.receivers.remove(id) {
+        if let Some(receiver) = self.take_receiver(id) {
             return match receiver.recv() {
                 Ok(Ok(val)) => Ok(val),
                 Ok(Err(msg)) => Err(RegistryError::Rejected(msg)),

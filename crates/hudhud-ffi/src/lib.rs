@@ -26,15 +26,35 @@
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 
-use hudhudscript_bytecode::Value16;
+use hudhudscript_bytecode::Bytecode;
 use hudhudscript_compiler::Compiler;
 use hudhudscript_parser::parse;
 use hudhudscript_vm::VM;
+
+pub mod async_api;
+pub mod bridge_state;
+pub mod call;
+pub mod callback;
+pub mod value_dto;
+
+use bridge_state::mint_promise_pool;
+
+pub use async_api::{hud_vm_await_promise, hud_vm_create_promise, hud_vm_resolve_promise};
+pub use call::{hud_vm_call, hud_vm_call_await, hud_vm_get_global, hud_vm_set_global};
 
 /// Opaque VM handle for C consumers.
 pub struct HudVM {
     vm: VM,
     last_error: Option<CString>,
+    /// Bytecode of the last successful compile, retained so
+    /// `hud_vm_call` can resolve function chunks after execution.
+    last_bytecode: Option<Bytecode>,
+    /// Key into the process-global bridge tables (see `bridge_state`).
+    bridge_id: i64,
+    /// Thread that owns this VM; `hud_vm_*` calls from other threads are
+    /// a programming error (checked in debug builds).
+    #[cfg(debug_assertions)]
+    owner_thread: std::thread::ThreadId,
 }
 
 /// Create a new VM instance.
@@ -43,6 +63,10 @@ pub extern "C" fn hud_vm_new() -> *mut HudVM {
     let vm = HudVM {
         vm: VM::new(),
         last_error: None,
+        last_bytecode: None,
+        bridge_id: bridge_state::register_bridge(),
+        #[cfg(debug_assertions)]
+        owner_thread: std::thread::current().id(),
     };
     Box::into_raw(Box::new(vm))
 }
@@ -54,8 +78,39 @@ pub extern "C" fn hud_vm_new() -> *mut HudVM {
 #[no_mangle]
 pub unsafe extern "C" fn hud_vm_free(vm: *mut HudVM) {
     if !vm.is_null() {
-        drop(Box::from_raw(vm));
+        let boxed = Box::from_raw(vm);
+        bridge_state::drop_bridge(boxed.bridge_id);
     }
+}
+
+// ── Internal helpers shared by the FFI modules ──────────────────────────
+
+pub(crate) fn set_error(hud: &mut HudVM, msg: String) {
+    hud.last_error = CString::new(msg).ok();
+}
+
+/// Debug-only owner-thread guard: VM calls must stay on one thread.
+#[allow(unused_variables)]
+pub(crate) fn check_owner(hud: &HudVM) {
+    #[cfg(debug_assertions)]
+    debug_assert!(
+        hud.owner_thread == std::thread::current().id(),
+        "hud_vm_* called from a non-owner thread"
+    );
+}
+
+/// Parse + compile helper returning an owned error string on failure.
+pub(crate) fn compile_source(source: &str) -> Result<Bytecode, String> {
+    let ast = parse(source).map_err(|e| format!("Parse error: {e}"))?;
+    Compiler::new()
+        .compile(&ast)
+        .map_err(|e| format!("Compile error: {e}"))
+}
+
+/// Refill the cross-thread promise pool at every worker-thread entry point
+/// so async host callbacks always have ids available.
+pub(crate) fn ensure_pool(hud: &mut HudVM) {
+    mint_promise_pool(&mut hud.vm, hud.bridge_id);
 }
 
 /// Execute HudHudScript source code. Returns 0 on success, -1 on error.
@@ -78,30 +133,26 @@ pub unsafe extern "C" fn hud_vm_execute_source(vm: *mut HudVM, source: *const c_
         }
     };
 
-    let ast = match parse(source) {
-        Ok(ast) => ast,
-        Err(e) => {
-            vm.last_error = CString::new(format!("Parse error: {e}")).ok();
-            return -1;
-        }
-    };
-
-    let mut compiler = Compiler::new();
-    let bytecode = match compiler.compile(&ast) {
+    let bytecode = match compile_source(source) {
         Ok(bc) => bc,
         Err(e) => {
-            vm.last_error = CString::new(format!("Compile error: {e}")).ok();
+            vm.last_error = CString::new(e).ok();
             return -1;
         }
     };
 
-    match vm.vm.execute(&bytecode) {
+    ensure_pool(vm);
+
+    let code = match vm.vm.execute(&bytecode) {
         Ok(()) => 0,
         Err(e) => {
             vm.last_error = CString::new(format!("Runtime error: {e}")).ok();
             -1
         }
-    }
+    };
+    // Retain for later hud_vm_call(); pure move, no clone.
+    vm.last_bytecode = Some(bytecode);
+    code
 }
 
 /// Get a number variable from the VM. Returns 0.0 if not found.

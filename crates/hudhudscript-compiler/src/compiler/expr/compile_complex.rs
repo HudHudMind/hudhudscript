@@ -515,14 +515,13 @@ fn compile_expr_complex_inner(
                                 }
                             }
                             // P3a: compile args first, then try inline with actual first_arg
+                            // Issue #7: tek argüman bölgesi (fresh zone/argüman yok)
                             let argc = args.len() as u8;
                             let first_arg = crate::compiler::regalloc::temp_reg();
+                            let mut arg_zone =
+                                RegAlloc::new_with_base(target.ct_next_local_reg())?;
                             for (i, arg) in args.iter().enumerate() {
-                                let r = compile_expr_to_reg(
-                                    target,
-                                    arg,
-                                    &mut RegAlloc::new_with_base(target.ct_next_local_reg())?,
-                                );
+                                let r = compile_expr_to_reg(target, arg, &mut arg_zone);
                                 target.emit_move(first_arg + i as u8, r);
                             }
                             if let Some(chunk) = target.ct_get_function_chunk(name) {
@@ -582,17 +581,16 @@ fn compile_expr_complex_inner(
                         } else {
                             // FIX: stash receiver in a safe register so nested
                             // MethodCall arguments cannot clobber reg255.
-                            let mut outer_regs =
-                                RegAlloc::new_with_base(target.ct_next_local_reg())?;
-                            let receiver_reg = compile_expr_to_reg(target, object, &mut outer_regs);
+                            // Issue #7: alıcı VE argümanlar inner'ın TEK bölgesini
+                            // paylaşır (yeni bölge YOK) — zincirde seviye başına
+                            // 0 ek bölge; 14 seviyeli zincirler bile 224 altında.
+                            // Alıcı canlılığı alloc last_use ile korunur (argüman
+                            // derlemesi onu geri kazanamaz).
+                            let receiver_reg = compile_expr_to_reg(target, object, regs);
                             let argc = args.len() as u8;
                             let first_arg = crate::compiler::regalloc::temp_reg();
                             for (i, arg) in args.iter().enumerate() {
-                                let r = compile_expr_to_reg(
-                                    target,
-                                    arg,
-                                    &mut RegAlloc::new_with_base(target.ct_next_local_reg())?,
-                                );
+                                let r = compile_expr_to_reg(target, arg, regs);
                                 target.emit_move(first_arg + i as u8, r);
                             }
                             // G4B: eliminate stash — use receiver_reg directly

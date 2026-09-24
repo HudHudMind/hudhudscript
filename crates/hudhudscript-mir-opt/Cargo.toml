@@ -1,0 +1,17 @@
+[package]
+name = "hudhudscript-mir-opt"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+readme.workspace = true
+
+[dependencies]
+hudhudscript-mir = { path = "../hudhudscript-mir" }
+
+[dev-dependencies]
+hudhudscript-types = { path = "../hudhudscript-types" }
+hudhudscript-parser = { path = "../hudhudscript-parser" }
+hudhudscript-compiler = { path = "../hudhudscript-compiler" }
+hudhudscript-vm = { path = "../hudhudscript-vm" }

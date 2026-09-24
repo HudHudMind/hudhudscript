@@ -1,0 +1,23 @@
+// src/math.hud — test edilen gerçek kod.
+
+fn topla(a, b) {
+    return a + b;
+}
+
+fn carp(a, b) {
+    return a * b;
+}
+
+fn mutlak(x) {
+    if (x < 0) {
+        return -x;
+    }
+    return x;
+}
+
+fn fibonacci(n) {
+    if (n <= 1) {
+        return n;
+    }
+    return fibonacci(n - 1) + fibonacci(n - 2);
+}

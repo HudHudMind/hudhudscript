@@ -1,5 +1,4 @@
 use crate::vm::VM;
-use hudhudscript_bytecode::error::CompileResult;
 use hudhudscript_bytecode::Value16;
 use hudhudscript_bytecode::{Bytecode, FunctionChunk};
 use std::collections::HashMap;
@@ -34,8 +33,8 @@ impl crate::vm::VM {
 
     /// Spawn an async closure on a background thread and return an
     /// `AsyncPending` promise value. The id is minted by the shared
-    /// `PromiseRegistry`; the `Await` instruction will later block on
-    /// the result through that registry.
+    /// `PromiseRegistry`; the detached receiver is retained by the VM so
+    /// the value can be attached to the owning heap after settlement.
     pub fn spawn_async_task<F>(&mut self, task: F) -> Value16
     where
         F: FnOnce() -> Result<Value16, String> + Send + 'static,
@@ -59,8 +58,8 @@ impl crate::vm::VM {
     }
 
     /// Reduce a `Value::Promise` (in any state) or a non-promise value
-    /// to a concrete resolution result, blocking on the shared
-    /// `PromiseRegistry` for `AsyncPending` entries.
+    /// to a concrete resolution result, blocking on either the VM's detached
+    /// receiver transport or the shared registry for `AsyncPending` entries.
     ///
     /// Returns `Ok(value)` on resolution, `Err(message)` on rejection.
     /// Used by the VM's Promise.all / Promise.race / Promise.allSettled
@@ -97,146 +96,13 @@ impl crate::vm::VM {
         }
     }
 
-    /// Concurrent `Promise.all` implementation, matching the
-    /// interpreter's `eval_promise_all_async` semantics (P1-4).
-    ///
-    /// Behaviour:
-    /// * Already-`Resolved` / non-promise entries contribute their value
-    ///   immediately.
-    /// * Already-`Rejected` entries short-circuit into `Err(msg)`.
-    /// * Bare `Pending` entries short-circuit into `Err("Cannot resolve
-    ///   a bare Pending promise")` — they can never settle on the VM
-    ///   which is tokio-free, so the caller's only option is to reject.
-    /// * `AsyncPending` entries are awaited concurrently via
-    ///   `PromiseRegistry::await_all_blocking`, so the wall-clock cost
-    ///   is `max(duration_i)` rather than `sum(duration_i)`.
-    ///
-    /// Returns `Ok(values)` with the results in input order, or
-    /// `Err(msg)` on the first rejection encountered. Non-rejection
-    /// resolution errors from the registry are surfaced via their
-    /// `Display` impl.
-    pub(crate) fn resolve_promise_all(
-        &mut self,
-        promises: Vec<Value16>,
-    ) -> Result<Vec<Value16>, String> {
-        let n = promises.len();
-        // Resolved-or-later slots, plus a parallel list of
-        // (slot_index, pending_id) for the ids that still need to be
-        // awaited concurrently.
-        let mut slots: Vec<Option<Value16>> = (0..n).map(|_| None).collect();
-        let mut pending: Vec<(usize, String)> = Vec::new();
-
-        for (idx, p) in promises.into_iter().enumerate() {
-            if let Some(ps) = p.as_promise_state() {
-                match ps {
-                    hudhudscript_bytecode::PromiseState16::Resolved(inner) => {
-                        slots[idx] = Some(**inner);
-                    }
-                    hudhudscript_bytecode::PromiseState16::Rejected(msg) => {
-                        return Err(msg.clone());
-                    }
-                    hudhudscript_bytecode::PromiseState16::Pending => {
-                        return Err("Cannot resolve a bare Pending promise".to_string());
-                    }
-                    hudhudscript_bytecode::PromiseState16::AsyncPending(id) => {
-                        pending.push((idx, id.clone()));
-                    }
-                }
-            } else {
-                // Non-promise values behave as immediately resolved.
-                slots[idx] = Some(p);
-            }
-        }
-
-        if !pending.is_empty() {
-            let id_refs: Vec<&str> = pending.iter().map(|(_, id)| id.as_str()).collect();
-            match self.promise_registry.await_all_blocking(&id_refs) {
-                Ok(values) => {
-                    // Zip results back into their original slots.
-                    for ((slot_idx, _id), value) in pending.into_iter().zip(values.into_iter()) {
-                        slots[slot_idx] = Some(value);
-                    }
-                }
-                Err(hudhudscript_async::RegistryError::Rejected(msg)) => {
-                    return Err(msg);
-                }
-                Err(e) => {
-                    return Err(format!("{}", e));
-                }
-            }
-        }
-
-        Ok(slots
-            .into_iter()
-            .map(|s| s.unwrap_or(Value16::null()))
-            .collect())
-    }
-
-    /// Concurrent `Promise.race` implementation, matching the
-    /// interpreter's `eval_promise_race_async` semantics (P1-3).
-    ///
-    /// Behaviour:
-    /// * If any entry is already `Resolved`, `Rejected`, `Pending`, or a
-    ///   non-promise value, the *first* such entry in input order wins
-    ///   immediately — matching JS's "first settled" rule as applied to
-    ///   synchronously-known states.
-    /// * Otherwise every entry is an `AsyncPending`. They are raced
-    ///   concurrently via `PromiseRegistry::await_race_blocking`; the
-    ///   earliest completion (resolve or reject) is returned.
-    /// * Empty input surfaces `Err("Promise.race() on empty array")`.
-    ///
-    /// Returns `Ok(value)` on resolution or `Err(msg)` on rejection.
-    pub(crate) fn resolve_promise_race(
-        &mut self,
-        promises: Vec<Value16>,
-    ) -> Result<Value16, String> {
-        if promises.is_empty() {
-            return Err("Promise.race() on empty array".to_string());
-        }
-
-        // First pass: any synchronously-known settlement wins, in input order.
-        let mut async_ids: Vec<String> = Vec::new();
-        for p in &promises {
-            if let Some(ps) = p.as_promise_state() {
-                match ps {
-                    hudhudscript_bytecode::PromiseState16::Resolved(inner) => {
-                        return Ok(**inner);
-                    }
-                    hudhudscript_bytecode::PromiseState16::Rejected(msg) => {
-                        return Err(msg.clone());
-                    }
-                    hudhudscript_bytecode::PromiseState16::Pending => {
-                        // Bare Pending never settles on the VM; treat it as
-                        // immediate rejection so the race does not hang.
-                        return Err("Cannot resolve a bare Pending promise".to_string());
-                    }
-                    hudhudscript_bytecode::PromiseState16::AsyncPending(id) => {
-                        async_ids.push(id.clone());
-                    }
-                }
-            } else {
-                // Non-promise values are "already resolved" in JS. First
-                // such value wins.
-                return Ok(*p);
-            }
-        }
-
-        // All entries were AsyncPending — race them concurrently.
-        let id_refs: Vec<&str> = async_ids.iter().map(|s| s.as_str()).collect();
-        match self.promise_registry.await_race_blocking(&id_refs) {
-            Ok((_idx, val)) => Ok(val),
-            Err(hudhudscript_async::RegistryError::Rejected(msg)) => Err(msg),
-            Err(e) => Err(format!("{}", e)),
-        }
-    }
-
     /// Spawn an async function chunk on a separate thread, returning an
     /// `AsyncPending` promise. A fresh VM is created for the spawned task,
     /// inheriting the caller's global scope, classes, and declarations so
     /// that captured variables and class hierarchies remain accessible.
     ///
-    /// The result is consumed by the `Await` instruction handler via the
-    /// shared `PromiseRegistry` (Kural 7).
+    /// The result is consumed by the `Await` instruction handler through the
+    /// VM's detached receiver transport (Kural 7).
     pub(crate) fn spawn_async_chunk(
         &mut self,
         chunk: Arc<FunctionChunk>,
