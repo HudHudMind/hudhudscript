@@ -10,7 +10,8 @@ extern "C" {
     fn memcpy(dest: *mut std::ffi::c_void, src: *const std::ffi::c_void, n: usize) -> *mut std::ffi::c_void;
 }
 
-pub(crate) static ASCII_CHARS: [[u8; 2]; 256] = {
+#[no_mangle]
+pub static hudhud_ascii_chars: [[u8; 2]; 256] = {
     let mut table = [[0u8; 2]; 256];
     let mut b = 0usize;
     while b < 256 {
@@ -20,6 +21,7 @@ pub(crate) static ASCII_CHARS: [[u8; 2]; 256] = {
     }
     table
 };
+pub(crate) use hudhud_ascii_chars as ASCII_CHARS;
 
 /// String indexing: s[i] -> single-character string handle.
 ///
@@ -60,14 +62,10 @@ pub unsafe extern "C" fn hudhud_string_substring(
         let b = *s.add(st);
         return ASCII_CHARS[b as u8 as usize].as_ptr() as *mut c_char;
     }
-    let ptr = malloc(sub_len + 1) as *mut c_char;
-    if !ptr.is_null() {
-        if sub_len > 0 {
-            memcpy(ptr as *mut _, s.add(st) as *const _, sub_len);
-        }
-        *ptr.add(sub_len) = 0;
+    let src = std::slice::from_raw_parts(s.add(st) as *const u8, sub_len);
+    let ptr = crate::string_arena::intern_or_alloc(src, sub_len);
+    if !ptr.is_null() && sub_len > 16 {
         crate::set_string_len_cache(ptr as usize, sub_len as i64);
-        crate::type_ops::register_string(ptr as usize);
     }
     ptr
 }

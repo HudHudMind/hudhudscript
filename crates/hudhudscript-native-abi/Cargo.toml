@@ -11,6 +11,7 @@ readme.workspace = true
 libc = "0.2"
 num-bigint = "0.4"
 num-traits = "0.2"
+rustc-hash = { workspace = true }
 
 [lib]
 crate-type = ["rlib", "staticlib"]

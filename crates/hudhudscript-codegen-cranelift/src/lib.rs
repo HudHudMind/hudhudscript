@@ -13,6 +13,7 @@
 
 mod aot;
 mod backend;
+mod symbols;
 mod translate;
 
 pub use aot::{compile_to_object, entry_symbol, entry_symbols};

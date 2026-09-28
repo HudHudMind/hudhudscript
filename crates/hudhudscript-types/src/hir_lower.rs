@@ -40,6 +40,19 @@ impl std::error::Error for HirLowerError {}
 /// language semantics — JavaScript/Python gibi main() zorunluluğu YOK).
 /// Fonksiyon tanımları normal şekilde module.functions'a gider.
 pub fn lower_module_with_init(stmts: &[Stmt]) -> Result<HirModule, HirLowerError> {
+    // M3 (v0.9.36): Loop Engineering DSL önce saf fonksiyon AST'sine yazılır;
+    // desteklenmeyen detayda None → bilinen dürüst hata (CLI VM-fallback).
+    // Hızlı yol: Decl bildirimleri (Loop DSL / SOP) yoksa klonlama yapmadan doğrudan stmts kullan.
+    let has_decls = stmts.iter().any(|s| matches!(s, Stmt::Decl(_)));
+    let rewritten;
+    let stmts: &[Stmt] = if has_decls {
+        rewritten = crate::hir_loop::rewrite_loops(stmts)
+            .ok_or_else(|| reject("loop engineering", "unsupported loop construct"))?;
+        &rewritten
+    } else {
+        crate::hir_sop::set_event_names(vec![]);
+        stmts
+    };
     let class_table = crate::hir_class::ClassTable::from_stmts(stmts);
     let mut known = std::collections::HashSet::new();
     for s in stmts {
@@ -59,7 +72,15 @@ pub fn lower_module_with_init(stmts: &[Stmt]) -> Result<HirModule, HirLowerError
 
         for stmt in stmts {
             match stmt {
-                Stmt::Class(_) | Stmt::Decl(hudhudscript_ast::Decl::Subject { .. }) => {}
+                Stmt::Class(_)
+                | Stmt::Decl(hudhudscript_ast::Decl::Subject { .. })
+                | Stmt::Decl(hudhudscript_ast::Decl::Role { .. })
+                | Stmt::Decl(hudhudscript_ast::Decl::Relation { .. })
+                | Stmt::Decl(hudhudscript_ast::Decl::Council { .. })
+                | Stmt::Decl(hudhudscript_ast::Decl::Compose { .. })
+                | Stmt::Decl(hudhudscript_ast::Decl::Event { .. })
+                | Stmt::Decl(hudhudscript_ast::Decl::Effect { .. })
+                | Stmt::Decl(hudhudscript_ast::Decl::Ability { .. }) => {}
                 Stmt::Function { name, params, body, is_async, is_generator, .. } => {
                     if *is_async {
                         return Err(reject("function", &format!("`{name}` is async (async lane arrives later)")));
@@ -97,7 +118,15 @@ pub fn lower_module(stmts: &[Stmt]) -> Result<HirModule, HirLowerError> {
         class_table.lower_methods(stmts, &mut module)?;
         for stmt in stmts {
             match stmt {
-                Stmt::Class(_) | Stmt::Decl(hudhudscript_ast::Decl::Subject { .. }) => {}
+                Stmt::Class(_)
+                | Stmt::Decl(hudhudscript_ast::Decl::Subject { .. })
+                | Stmt::Decl(hudhudscript_ast::Decl::Role { .. })
+                | Stmt::Decl(hudhudscript_ast::Decl::Relation { .. })
+                | Stmt::Decl(hudhudscript_ast::Decl::Council { .. })
+                | Stmt::Decl(hudhudscript_ast::Decl::Compose { .. })
+                | Stmt::Decl(hudhudscript_ast::Decl::Event { .. })
+                | Stmt::Decl(hudhudscript_ast::Decl::Effect { .. })
+                | Stmt::Decl(hudhudscript_ast::Decl::Ability { .. }) => {}
                 Stmt::Function { name, params, body, is_async, is_generator, .. } => {
                     if *is_async {
                         return Err(reject("function", &format!("`{name}` is async (async lane arrives later)")));
@@ -124,6 +153,15 @@ use crate::hir_ops::has_return_value;
 /// (unit lane). Precise per-type inference arrives with the symbol
 /// table; this rule is total and never guesses per-expression.
 pub fn lower_function(name: &str, params: &[String], body: &[Stmt]) -> Result<HirFunction, HirLowerError> {
+    // Blok-gölgeleme alfa-yeniden adlandırması (v0.9.36): yalnızca gölgeleme
+    // adayı (iç blokta let) varsa çalışır — normal kod dokunulmaz ve klonlanmaz.
+    let shadowed;
+    let body: &[Stmt] = if crate::hir_scoping::has_shadow_candidates(body) {
+        shadowed = crate::hir_scoping::resolve_shadows(params, body);
+        &shadowed
+    } else {
+        body
+    };
     let returns_value = has_return_value(body);
     Ok(HirFunction {
         name: name.to_string(),
@@ -229,8 +267,8 @@ pub(crate) fn lower_stmt(stmt: &Stmt) -> Result<Vec<HirStmt>, HirLowerError> {
                 if let Expr::Member { object, property, span: pspan } = right.as_ref() {
                     if property == "length" {
                         if let Expr::Identifier(obj_name, _) = object.as_ref() {
-                            if !body_assigns_var(body, obj_name)
-                                && !body_may_mutate_heap(body)
+                            if !crate::hir_ops::body_assigns_var(body, obj_name)
+                                && !crate::hir_ops::body_may_mutate_heap(body)
                             {
                                 let hoisted_name = format!("__hoisted_len_{obj_name}");
                                 let hoisted_let = Stmt::Let {
@@ -295,88 +333,6 @@ pub(crate) fn lower_stmt(stmt: &Stmt) -> Result<Vec<HirStmt>, HirLowerError> {
             Ok(vec![HirStmt::Expr(lower_expr(&expr)?)])
         }
         other => Err(crate::hir_ops::unsupported_stmt(other)),
-    }
-}
-
-/// Gövdede heap mutasyonu YAPABİLECEK bir işlem var mı?
-/// Çağrılar (push/pop/foo(arr)), indeks store'lar (a[i]=v) ve property
-/// store'lar (o.p=v) bayat `.length` riski taşır; skaler atamalar (i=i+1)
-/// taşımaz. Güvenli tarafta kal: şüphede `true` (hoist etme).
-fn body_may_mutate_heap(stmt: &Stmt) -> bool {
-    match stmt {
-        Stmt::Expr(e) => expr_has_call(e),
-        Stmt::Assignment { target, value, .. } => {
-            // a[i] = v  veya  o.p = v  → heap store
-            if matches!(target, Expr::Index { .. } | Expr::Member { .. }) {
-                return true;
-            }
-            expr_has_call(value)
-        }
-        Stmt::Let { value, .. } | Stmt::VarDecl(hudhudscript_ast::VarDecl { initializer: Some(value), .. }) => expr_has_call(value),
-        Stmt::Return { value: Some(v), .. } => expr_has_call(v),
-        Stmt::If { condition, then_branch, else_branch, .. } => {
-            expr_has_call(condition)
-                || body_may_mutate_heap(then_branch)
-                || else_branch.as_ref().map(|b| body_may_mutate_heap(b)).unwrap_or(false)
-        }
-        Stmt::While { condition, body, .. } => {
-            expr_has_call(condition) || body_may_mutate_heap(body)
-        }
-        Stmt::Block { statements, .. } => statements.iter().any(body_may_mutate_heap),
-        Stmt::Try { try_block, catch_clause, finally_block, .. } => {
-            body_may_mutate_heap(try_block)
-                || catch_clause.as_ref().map(|c| body_may_mutate_heap(&c.body)).unwrap_or(false)
-                || finally_block.as_ref().map(|b| body_may_mutate_heap(b)).unwrap_or(false)
-        }
-        _ => false,
-    }
-}
-
-/// İfade ağacında çağrı var mı (okuma/yazma ayırt edilemez → var say)?
-fn expr_has_call(e: &Expr) -> bool {
-    match e {
-        Expr::Call { callee, args, .. } => {
-            // Date.to_millis / Math.* saf ve heap'e dokunmaz; diğer tüm
-            // çağrılar (metot dâhil) mutasyon yapabilir.
-            let pure = matches!(callee.as_ref(),
-                Expr::Identifier(n, _) if n == "Date" || n == "Math");
-            if !pure {
-                return true;
-            }
-            args.iter().any(expr_has_call)
-        }
-        Expr::Binary { left, right, .. } => expr_has_call(left) || expr_has_call(right),
-        Expr::Unary { expr, .. } => expr_has_call(expr),
-        Expr::Index { object, index, .. } => expr_has_call(object) || expr_has_call(index),
-        Expr::Member { object, .. } => expr_has_call(object),
-        Expr::Ternary { condition, true_expr, false_expr, .. } => {
-            expr_has_call(condition) || expr_has_call(true_expr) || expr_has_call(false_expr)
-        }
-        Expr::Array { elements, .. } => elements.iter().any(expr_has_call),
-        Expr::Object { properties, .. } => properties.iter().any(|(_, v)| expr_has_call(v)),
-        _ => false,
-    }
-}
-
-fn body_assigns_var(stmt: &Stmt, var: &str) -> bool {
-    match stmt {
-        Stmt::Assignment { target, .. } => {
-            matches!(target, Expr::Identifier(n, _) if n == var)
-        }
-        Stmt::Let { name, .. } => name == var,
-        Stmt::VarDecl(v) => v.name == var,
-        Stmt::Block { statements, .. } => statements.iter().any(|s| body_assigns_var(s, var)),
-        Stmt::If { then_branch, else_branch, .. } => {
-            body_assigns_var(then_branch, var)
-                || else_branch.as_ref().map(|b| body_assigns_var(b, var)).unwrap_or(false)
-        }
-        Stmt::While { body, .. } => body_assigns_var(body, var),
-        Stmt::Try { try_block, catch_clause, finally_block, .. } => {
-            body_assigns_var(try_block, var)
-                || catch_clause.as_ref().map(|c| body_assigns_var(&c.body, var)).unwrap_or(false)
-                || finally_block.as_ref().map(|b| body_assigns_var(b, var)).unwrap_or(false)
-        }
-        _ => false,
     }
 }
 

@@ -1,11 +1,11 @@
 //! Dynamic type introspection (typeof) and runtime handle checks.
 
 use std::cell::RefCell;
-use std::collections::HashSet;
 use std::ffi::c_char;
+use rustc_hash::FxHashSet;
 
 thread_local! {
-    static STRING_REGISTRY: RefCell<HashSet<usize>> = RefCell::new(HashSet::new());
+    static STRING_REGISTRY: RefCell<FxHashSet<usize>> = RefCell::new(FxHashSet::default());
 }
 
 #[inline(always)]
@@ -82,6 +82,9 @@ pub fn is_string(raw: u64) -> bool {
         return true;
     }
     let ptr = raw as usize;
+    if crate::string_arena::is_arena_pointer(ptr) {
+        return true;
+    }
     STRING_REGISTRY.with(|reg| reg.borrow().contains(&ptr))
 }
 

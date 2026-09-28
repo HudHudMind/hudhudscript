@@ -10,6 +10,10 @@ pub mod hir_class;
 pub mod hir_closure;
 pub mod hir_desugar;
 pub mod hir_expr_lower;
+pub mod hir_loop;
+pub mod hir_loop_build;
+pub mod hir_scoping;
+pub mod hir_sop;
 pub mod hir_lower;
 pub mod hir_ops;
 #[cfg(test)]

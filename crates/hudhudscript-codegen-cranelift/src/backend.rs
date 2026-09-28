@@ -2,7 +2,9 @@
 
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::{Arc, OnceLock};
 
+use cranelift_codegen::isa::TargetIsa;
 use cranelift::prelude::settings::{self, Configurable};
 use cranelift_jit::{JITBuilder, JITModule};
 use cranelift_module::Module;
@@ -16,6 +18,54 @@ use hudhudscript_codegen::jit::{JitEngine, NativeAddress, NativeFunction};
 use hudhudscript_mir::{MirFunction, MirModule};
 use hudhudscript_target::{Architecture, TargetSpec};
 
+/// Retrieves or builds a cached TargetIsa for host execution.
+fn get_target_isa(opt_level: &str) -> Result<Arc<dyn TargetIsa>, BackendError> {
+    if opt_level == "speed" {
+        static ISA_SPEED: OnceLock<Result<Arc<dyn TargetIsa>, String>> = OnceLock::new();
+        let cached = ISA_SPEED.get_or_init(|| {
+            let mut flags = settings::builder();
+            flags.set("opt_level", "speed").map_err(|e| format!("opt_level: {e}"))?;
+            let isa_builder = cranelift_native::builder().map_err(|e| format!("native isa: {e}"))?;
+            isa_builder.finish(settings::Flags::new(flags)).map_err(|e| format!("isa finish: {e}"))
+        });
+        return cached
+            .as_ref()
+            .map(Arc::clone)
+            .map_err(|e| BackendError::new("ISA_FAIL", e.clone()));
+    }
+    if opt_level == "none" {
+        static ISA_NONE: OnceLock<Result<Arc<dyn TargetIsa>, String>> = OnceLock::new();
+        let cached = ISA_NONE.get_or_init(|| {
+            let mut flags = settings::builder();
+            flags.set("opt_level", "none").map_err(|e| format!("opt_level: {e}"))?;
+            let isa_builder = cranelift_native::builder().map_err(|e| format!("native isa: {e}"))?;
+            isa_builder.finish(settings::Flags::new(flags)).map_err(|e| format!("isa finish: {e}"))
+        });
+        return cached
+            .as_ref()
+            .map(Arc::clone)
+            .map_err(|e| BackendError::new("ISA_FAIL", e.clone()));
+    }
+    let mut flags = settings::builder();
+    flags
+        .set("opt_level", opt_level)
+        .map_err(|e| BackendError::new("ISA_FAIL", format!("opt_level: {e}")))?;
+    let isa_builder = cranelift_native::builder()
+        .map_err(|e| BackendError::new("ISA_FAIL", format!("native isa: {e}")))?;
+    isa_builder
+        .finish(settings::Flags::new(flags))
+        .map_err(|e| BackendError::new("ISA_FAIL", format!("isa finish: {e}")))
+}
+
+fn opt_str_for(ctx: &CodegenContext<'_>) -> &'static str {
+    match (ctx.opt, ctx.opt_goal) {
+        (hudhudscript_codegen::backend::OptLevel::O0, _) => "none",
+        (_, hudhudscript_codegen::backend::OptGoal::Size)
+        | (_, hudhudscript_codegen::backend::OptGoal::SizeMin) => "speed_and_size",
+        _ => "speed",
+    }
+}
+
 /// Host-ISA Cranelift backend (first-light capabilities: JIT only).
 pub struct CraneliftBackend {
     symbols: HashMap<String, NativeAddress>,
@@ -27,108 +77,9 @@ impl CraneliftBackend {
     }
 
     fn make_jit_module(opt_level: &str) -> Result<JITModule, BackendError> {
-        let mut flags = settings::builder();
-        flags
-            .set("opt_level", opt_level)
-            .map_err(|e| BackendError::new("ISA_FAIL", format!("opt_level: {e}")))?;
-        let isa_builder = cranelift_native::builder()
-            .map_err(|e| BackendError::new("ISA_FAIL", format!("native isa: {e}")))?;
-        let isa = isa_builder
-            .finish(settings::Flags::new(flags))
-            .map_err(|e| BackendError::new("ISA_FAIL", format!("isa finish: {e}")))?;
+        let isa = get_target_isa(opt_level)?;
         let mut builder = JITBuilder::with_isa(isa, cranelift_module::default_libcall_names());
-        // External semboller (native-abi crate'inden)
-        let symbols: &[(&str, *const u8)] = &[
-            ("hudhud_print_int", hudhudscript_native_abi::hudhud_print_int as *const u8),
-            ("hudhud_print_float", hudhudscript_native_abi::hudhud_print_float as *const u8),
-            ("hudhud_print_str", hudhudscript_native_abi::hudhud_print_str as *const u8),
-            ("fmod", libm::fmod as *const u8),
-            ("hudhud_date_millis", hudhudscript_native_abi::hudhud_date_millis as *const u8),
-            ("hudhud_math_sin", hudhudscript_native_abi::hudhud_math_sin as *const u8),
-            ("hudhud_math_sqrt", hudhudscript_native_abi::hudhud_math_sqrt as *const u8),
-            ("hudhud_math_cos", hudhudscript_native_abi::hudhud_math_cos as *const u8),
-            ("hudhud_math_floor", hudhudscript_native_abi::hudhud_math_floor as *const u8),
-            ("hudhud_math_abs", hudhudscript_native_abi::hudhud_math_abs as *const u8),
-            ("hudhud_math_pow", hudhudscript_native_abi::hudhud_math_pow as *const u8),
-            ("hudhud_math_min", hudhudscript_native_abi::hudhud_math_min as *const u8),
-            ("hudhud_math_max", hudhudscript_native_abi::hudhud_math_max as *const u8),
-            ("hudhud_globals", hudhudscript_native_abi::hudhud_globals as *const u8),
-            ("hudhud_global_get", hudhudscript_native_abi::hudhud_global_get as *const u8),
-            ("hudhud_global_set", hudhudscript_native_abi::hudhud_global_set as *const u8),
-            ("hudhud_string_concat", hudhudscript_native_abi::hudhud_string_concat as *const u8),
-            ("hudhud_string_len", hudhudscript_native_abi::hudhud_string_len as *const u8),
-            ("hudhud_string_eq", hudhudscript_native_abi::hudhud_string_eq as *const u8),
-            ("hudhud_int_to_string", hudhudscript_native_abi::hudhud_int_to_string as *const u8),
-            ("hudhud_float_to_string", hudhudscript_native_abi::hudhud_float_to_string as *const u8),
-            ("hudhud_string_char_at", hudhudscript_native_abi::hudhud_string_char_at as *const u8),
-            ("hudhud_string_substring", hudhudscript_native_abi::hudhud_string_substring as *const u8),
-            ("hudhud_string_to_int", hudhudscript_native_abi::hudhud_string_to_int as *const u8),
-            ("hudhud_string_split", hudhudscript_native_abi::hudhud_string_split as *const u8),
-            ("hudhud_string_index_of", hudhudscript_native_abi::hudhud_string_index_of as *const u8),
-            ("hudhud_array_new", hudhudscript_native_abi::hudhud_array_new as *const u8),
-            ("hudhud_array_filled", hudhudscript_native_abi::hudhud_array_filled as *const u8),
-            ("hudhud_array_fill", hudhudscript_native_abi::hudhud_array_fill as *const u8),
-            ("hudhud_array_push", hudhudscript_native_abi::hudhud_array_push as *const u8),
-            ("hudhud_array_get", hudhudscript_native_abi::hudhud_array_get as *const u8),
-            ("hudhud_array_set", hudhudscript_native_abi::hudhud_array_set as *const u8),
-            ("hudhud_array_len", hudhudscript_native_abi::hudhud_array_len as *const u8),
-            ("hudhud_array_pop", hudhudscript_native_abi::hudhud_array_pop as *const u8),
-            ("hudhud_array_join", hudhudscript_native_abi::hudhud_array_join as *const u8),
-            ("hudhud_object_new", hudhudscript_native_abi::hudhud_object_new as *const u8),
-            ("hudhud_object_set", hudhudscript_native_abi::hudhud_object_set as *const u8),
-            ("hudhud_object_get", hudhudscript_native_abi::hudhud_object_get as *const u8),
-            ("hudhud_object_has", hudhudscript_native_abi::hudhud_object_has as *const u8),
-            ("hudhud_object_len", hudhudscript_native_abi::hudhud_object_len as *const u8),
-            ("hudhud_typeof", hudhudscript_native_abi::hudhud_typeof as *const u8),
-            ("hudhud_register_string", hudhudscript_native_abi::hudhud_register_string as *const u8),
-            ("hudhud_bigint_add_trusted", hudhudscript_native_abi::hudhud_bigint_add_trusted as *const u8),
-            ("hudhud_bigint_sub_trusted", hudhudscript_native_abi::hudhud_bigint_sub_trusted as *const u8),
-            ("hudhud_bigint_mul_trusted", hudhudscript_native_abi::hudhud_bigint_mul_trusted as *const u8),
-            ("hudhud_string_cmp", hudhudscript_native_abi::hudhud_string_cmp as *const u8),
-            ("hudhud_string_append", hudhudscript_native_abi::hudhud_string_append as *const u8),
-            ("hudhud_throw", hudhudscript_native_abi::hudhud_throw as *const u8),
-            ("hudhud_has_exception", hudhudscript_native_abi::hudhud_has_exception as *const u8),
-            ("hudhud_catch", hudhudscript_native_abi::hudhud_catch as *const u8),
-            ("hudhud_num_add", hudhudscript_native_abi::hudhud_num_add as *const u8),
-            ("hudhud_num_sub", hudhudscript_native_abi::hudhud_num_sub as *const u8),
-            ("hudhud_num_mul", hudhudscript_native_abi::hudhud_num_mul as *const u8),
-            ("hudhud_num_div", hudhudscript_native_abi::hudhud_num_div as *const u8),
-            ("hudhud_num_rem", hudhudscript_native_abi::hudhud_num_rem as *const u8),
-            ("hudhud_num_cmp", hudhudscript_native_abi::hudhud_num_cmp as *const u8),
-            ("hudhud_string_trim", hudhudscript_native_abi::hudhud_string_trim as *const u8),
-            ("hudhud_string_starts_with", hudhudscript_native_abi::hudhud_string_starts_with as *const u8),
-            ("hudhud_string_ends_with", hudhudscript_native_abi::hudhud_string_ends_with as *const u8),
-            ("hudhud_string_contains", hudhudscript_native_abi::hudhud_string_contains as *const u8),
-            ("hudhud_string_replace", hudhudscript_native_abi::hudhud_string_replace as *const u8),
-            ("hudhud_string_to_lower", hudhudscript_native_abi::hudhud_string_to_lower as *const u8),
-            ("hudhud_string_to_upper", hudhudscript_native_abi::hudhud_string_to_upper as *const u8),
-            ("hudhud_string_char_code_at", hudhudscript_native_abi::hudhud_string_char_code_at as *const u8),
-            ("hudhud_array_slice", hudhudscript_native_abi::hudhud_array_slice as *const u8),
-            ("hudhud_array_reverse", hudhudscript_native_abi::hudhud_array_reverse as *const u8),
-            ("hudhud_array_concat", hudhudscript_native_abi::hudhud_array_concat as *const u8),
-            ("hudhud_array_index_of", hudhudscript_native_abi::hudhud_array_index_of as *const u8),
-            ("hudhud_array_includes", hudhudscript_native_abi::hudhud_array_includes as *const u8),
-            ("hudhud_array_shift", hudhudscript_native_abi::hudhud_array_shift as *const u8),
-            ("hudhud_array_unshift", hudhudscript_native_abi::hudhud_array_unshift as *const u8),
-            ("hudhud_array_sort", hudhudscript_native_abi::hudhud_array_sort as *const u8),
-            ("hudhud_date_now", hudhudscript_native_abi::hudhud_date_now as *const u8),
-            ("hudhud_time_nanos", hudhudscript_native_abi::hudhud_time_nanos as *const u8),
-            ("hudhud_time_micros", hudhudscript_native_abi::hudhud_time_micros as *const u8),
-            ("hudhud_sleep_millis", hudhudscript_native_abi::hudhud_sleep_millis as *const u8),
-            ("hudhud_sleep_micros", hudhudscript_native_abi::hudhud_sleep_micros as *const u8),
-            ("hudhud_date_year", hudhudscript_native_abi::hudhud_date_year as *const u8),
-            ("hudhud_date_month", hudhudscript_native_abi::hudhud_date_month as *const u8),
-            ("hudhud_date_day", hudhudscript_native_abi::hudhud_date_day as *const u8),
-            ("hudhud_date_hour", hudhudscript_native_abi::hudhud_date_hour as *const u8),
-            ("hudhud_date_minute", hudhudscript_native_abi::hudhud_date_minute as *const u8),
-            ("hudhud_date_second", hudhudscript_native_abi::hudhud_date_second as *const u8),
-            ("hudhud_date_iso", hudhudscript_native_abi::hudhud_date_iso as *const u8),
-            // data sembolü: satır-içi global erişimi (emit_global_load/store)
-            ("GLOBAL_SLOTS", unsafe { hudhudscript_native_abi::object::GLOBAL_SLOTS.as_ptr() } as *const u8),
-        ];
-        for &(name, ptr) in symbols {
-            builder.symbol(name, ptr);
-        }
+        crate::symbols::register_symbols(&mut builder);
         Ok(JITModule::new(builder))
     }
 }
@@ -174,9 +125,9 @@ impl NativeBackend for CraneliftBackend {
     fn compile_function(
         &mut self,
         func: &MirFunction,
-        _ctx: &CodegenContext<'_>,
+        ctx: &CodegenContext<'_>,
     ) -> Result<CompiledFunction, BackendError> {
-        let mut module = Self::make_jit_module("speed")?;
+        let mut module = Self::make_jit_module(opt_str_for(ctx))?;
         let mut func_ctx = cranelift::prelude::FunctionBuilderContext::new();
         let symbol = crate::translate::translate(&mut module, &mut func_ctx, func)?;
 
@@ -210,21 +161,22 @@ impl NativeBackend for CraneliftBackend {
         module: &MirModule,
         ctx: &CodegenContext<'_>,
     ) -> Result<CompiledModule, BackendError> {
-        let mut jit = Self::make_jit_module("speed")?;
+        let mut jit = Self::make_jit_module(opt_str_for(ctx))?;
         let ptr = jit.isa().pointer_type();
 
+        let mut uniform_sig = jit.make_signature();
+        uniform_sig.params.push(cranelift::prelude::AbiParam::new(
+            cranelift::prelude::types::I32,
+        ));
+        uniform_sig.params.push(cranelift::prelude::AbiParam::new(ptr));
+        uniform_sig.params.push(cranelift::prelude::AbiParam::new(ptr));
+
         // 1) TÜM fonksiyonları ÖNCE declare et (CallStatic ileri referans)
-        let mut func_ids: Vec<cranelift_module::FuncId> = Vec::new();
+        let mut func_ids: Vec<cranelift_module::FuncId> = Vec::with_capacity(module.functions.len());
         for f in &module.functions {
-            let mut sig = jit.make_signature();
-            sig.params.push(cranelift::prelude::AbiParam::new(
-                cranelift::prelude::types::I32,
-            ));
-            sig.params.push(cranelift::prelude::AbiParam::new(ptr));
-            sig.params.push(cranelift::prelude::AbiParam::new(ptr));
             let symbol = format!("hudhud_{}", f.name);
             let id = jit
-                .declare_function(&symbol, cranelift_module::Linkage::Export, &sig)
+                .declare_function(&symbol, cranelift_module::Linkage::Export, &uniform_sig)
                 .map_err(|e| {
                     BackendError::new("DECLARE_FAIL", format!("declare {symbol}: {e}"))
                         .in_function(f.name.to_string())
@@ -233,9 +185,9 @@ impl NativeBackend for CraneliftBackend {
         }
 
         // 2) Her fonksiyonu çevir (CallStatic → declare edilmiş FuncId'ye call)
-        let mut results = Vec::new();
+        let mut results = Vec::with_capacity(module.functions.len());
+        let mut fc = cranelift::prelude::FunctionBuilderContext::new();
         for f in module.functions.iter() {
-            let mut fc = cranelift::prelude::FunctionBuilderContext::new();
             let symbol = crate::translate::translate_in_module(
                 &mut jit,
                 &mut fc,

@@ -76,3 +76,5 @@ coverage/
 # Backup files
 *.bak
 *.backup
+
+COMMIT_MESSAGE_*

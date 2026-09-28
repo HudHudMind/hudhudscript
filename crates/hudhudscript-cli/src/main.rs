@@ -19,6 +19,7 @@ use hudhudscript_cli::common::*;
 
 mod cli_aot_bench;
 mod cli_dispatch;
+mod cli_run;
 mod startup;
 
 #[derive(ClapParser)]
@@ -74,22 +75,22 @@ pub(crate) enum Commands {
         #[arg(long, value_name = "PATH")]
         telemetry_json: Option<PathBuf>,
 
-        /// Execution engine: vm (default) or jit
-        #[arg(long, default_value = "vm")]
-        engine: String,
+        /// Execution engine: vm or jit (default: from hudhud.toml [runtime.engine] or "vm")
+        #[arg(long)]
+        engine: Option<String>,
 
-        /// Native backend for --engine=jit: auto, cranelift (llvm/gccjit arrive later)
-        #[arg(long, default_value = "auto")]
-        backend: String,
+        /// Native backend for --engine=jit: auto, cranelift, llvm, gccjit (default: from hudhud.toml or "auto")
+        #[arg(long)]
+        backend: Option<String>,
 
         /// Print JIT compilation stats to stderr (opt-in; default stays silent)
         #[arg(long)]
         jit_stats: bool,
 
         /// Fallback policy when JIT fails at RUNTIME: vm = restart in VM
-        /// (side effects may repeat!); none = stop with honest error (default)
-        #[arg(long, default_value = "none")]
-        fallback_engine: String,
+        /// (side effects may repeat!); none = stop with honest error (default: none, or from hudhud.toml)
+        #[arg(long)]
+        fallback_engine: Option<String>,
     },
 
     /// Deploy a HudHudScript app

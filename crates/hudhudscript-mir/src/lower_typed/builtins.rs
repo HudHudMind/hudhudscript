@@ -106,6 +106,95 @@ pub(crate) fn lower_builtin_call(
                 _ => Err(cx.err("len() expects a string or array")),
             }
         }
+        "input" | "confirm" => {
+            // M6: 0 veya 1 arg (string istem). input → string handle,
+            // confirm → 0/1. Çok-dilli alias'lar canonical_builtin'ten
+            // gelir (oku → input).
+            let prompt = if args.is_empty() {
+                let b = cx.current_block;
+                let z = cx.builder.const_null(b);
+                cx.set_ty(z, MirType::I64);
+                z
+            } else {
+                let v = lower_expr(hir, cx, &args[0])?;
+                let b = cx.current_block;
+                match cx.ty_of(v) {
+                    Some(MirType::Ref(crate::mir::RefKind::String)) => v,
+                    _ => {
+                        let z = cx.builder.const_null(b);
+                        cx.set_ty(z, MirType::I64);
+                        z
+                    }
+                }
+            };
+            let h = if callee == "input" { RuntimeHelperId::Input } else { RuntimeHelperId::Confirm };
+            let block = cx.current_block;
+            let r = cx.builder.call_native(block, MirType::Generic, h, vec![prompt]);
+            cx.set_ty(r, MirType::Generic);
+            Ok(Some(r))
+        }
+        "__hudhud_dyn_call" => {
+            // M5: [alıcı, yöntem adı(string), ...arg'lar] — ad const string
+            // handle'ı; hepsi i64 şeridinde CallNative'e iner.
+            if args.is_empty() {
+                return Err(cx.err("dyn_call needs method name"));
+            }
+            let name = lower_expr(hir, cx, &args[0])?;
+            let zero = {
+                let b = cx.current_block;
+                let z = cx.builder.const_null(b);
+                cx.set_ty(z, MirType::I64);
+                z
+            };
+            let mut vals = vec![zero, name];
+            for a in &args[1..] {
+                vals.push(lower_expr(hir, cx, a)?);
+            }
+            let block = cx.current_block;
+            let r = cx.builder.call_native(block, MirType::Generic, RuntimeHelperId::DynCallMethod, vals);
+            cx.set_ty(r, MirType::Generic);
+            Ok(Some(r))
+        }
+        "assert_eq" => {
+            if args.len() != 2 {
+                return Err(cx.err("assert_eq takes exactly two arguments"));
+            }
+            let a = lower_expr(hir, cx, &args[0])?;
+            let b = lower_expr(hir, cx, &args[1])?;
+            let block = cx.current_block;
+            let a = match cx.ty_of(a) { Some(MirType::F64) => return Err(cx.err("assert_eq float lane — use assert_approx")), _ => a };
+            let b = match cx.ty_of(b) { Some(MirType::F64) => return Err(cx.err("assert_eq float lane — use assert_approx")), _ => b };
+            cx.builder.call_native(block, MirType::Unit, RuntimeHelperId::AssertEq, vec![a, b]);
+            let n = cx.builder.const_null(block);
+            cx.set_ty(n, MirType::Generic);
+            Ok(Some(n))
+        }
+        "assert_approx" => {
+            if args.len() != 2 {
+                return Err(cx.err("assert_approx takes exactly two arguments"));
+            }
+            let a = lower_expr(hir, cx, &args[0])?;
+            let b = lower_expr(hir, cx, &args[1])?;
+            let a = f64_of(cx, a)?;
+            let b = f64_of(cx, b)?;
+            let block = cx.current_block;
+            cx.builder.call_native(block, MirType::Unit, RuntimeHelperId::AssertApprox, vec![a, b]);
+            let n = cx.builder.const_null(block);
+            cx.set_ty(n, MirType::Generic);
+            Ok(Some(n))
+        }
+        "assert_true" | "assert_false" => {
+            if args.len() != 1 {
+                return Err(cx.err("assert_true/false take exactly one argument"));
+            }
+            let v = lower_expr(hir, cx, &args[0])?;
+            let block = cx.current_block;
+            let h = if callee == "assert_true" { RuntimeHelperId::AssertTrue } else { RuntimeHelperId::AssertFalse };
+            cx.builder.call_native(block, MirType::Unit, h, vec![v]);
+            let n = cx.builder.const_null(block);
+            cx.set_ty(n, MirType::Generic);
+            Ok(Some(n))
+        }
         "print" => {
             if args.len() != 1 {
                 return Err(cx.err("print takes exactly one argument"));

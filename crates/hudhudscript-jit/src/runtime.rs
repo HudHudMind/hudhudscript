@@ -18,6 +18,17 @@ pub struct JitRunResult {
 /// Eager JIT runtime (v1: compile everything, run main()).
 pub struct JitRuntime {
     backend: Box<dyn NativeBackend>,
+    /// Göreli importların çözümleme tabanı (M4) — CLI dosya dizinini verir.
+    base_dir: Option<std::path::PathBuf>,
+    opt_level: OptLevel,
+    opt_goal: OptGoal,
+    mir_opt_rounds: usize,
+    policy: String,
+    hot_threshold: usize,
+    loop_threshold: usize,
+    cache_enabled: bool,
+    code_cache_mb: usize,
+    verify_with_vm: bool,
 }
 
 impl JitRuntime {
@@ -28,41 +39,123 @@ impl JitRuntime {
 
     /// Adla backend seçer. Bilinmeyen ad → kullanılabilirların listelendiği hata.
     pub fn with_backend(name: &str) -> Result<Self, String> {
-        match name {
+        let backend: Box<dyn NativeBackend> = match name {
             "auto" | "cranelift" => {
                 #[cfg(feature = "cranelift")]
                 {
-                    Ok(Self {
-                        backend: Box::new(hudhudscript_codegen_cranelift::CraneliftBackend::new()),
-                    })
+                    Box::new(hudhudscript_codegen_cranelift::CraneliftBackend::new())
                 }
                 #[cfg(not(feature = "cranelift"))]
                 {
-                    Err("no JIT backend compiled in (rebuild with --features cranelift)".to_string())
+                    return Err("no JIT backend compiled in (rebuild with --features cranelift)".to_string());
                 }
             }
             #[cfg(feature = "gccjit")]
-            "gccjit" => Ok(Self {
-                backend: Box::new(crate::extern_backend::ExternJitBackend::new(
-                    "gccjit",
-                    hudhudscript_codegen_gccjit::compile_jit,
-                )),
-            }),
+            "gccjit" => Box::new(crate::extern_backend::ExternJitBackend::new(
+                "gccjit",
+                hudhudscript_codegen_gccjit::compile_jit,
+            )),
             #[cfg(not(feature = "gccjit"))]
-            "gccjit" => Err("gccjit backend requires --features gccjit (libgccjit link gerektirir; konak ikili -rdynamic ile derlenmeli)".to_string()),
+            "gccjit" => return Err("gccjit backend requires --features gccjit (libgccjit link gerektirir; konak ikili -rdynamic ile derlenmeli)".to_string()),
             #[cfg(feature = "llvm")]
-            "llvm" => Ok(Self {
-                backend: Box::new(crate::extern_backend::ExternJitBackend::new(
-                    "llvm",
-                    hudhudscript_codegen_llvm::compile_jit,
-                )),
-            }),
+            "llvm" => Box::new(crate::extern_backend::ExternJitBackend::new(
+                "llvm",
+                hudhudscript_codegen_llvm::compile_jit,
+            )),
             #[cfg(not(feature = "llvm"))]
-            "llvm" => Err("llvm backend requires --features llvm (LLVM 14 link gerektirir; konak ikili -rdynamic ile derlenmeli)".to_string()),
-            other => Err(format!(
+            "llvm" => return Err("llvm backend requires --features llvm (LLVM 14 link gerektirir; konak ikili -rdynamic ile derlenmeli)".to_string()),
+            other => return Err(format!(
                 "unknown backend `{other}` — available: auto, cranelift, gccjit, llvm"
             )),
-        }
+        };
+        Ok(Self {
+            backend,
+            base_dir: None,
+            opt_level: OptLevel::O2,
+            opt_goal: OptGoal::Speed,
+            mir_opt_rounds: 4,
+            policy: "eager".to_string(),
+            hot_threshold: 1000,
+            loop_threshold: 10000,
+            cache_enabled: true,
+            code_cache_mb: 64,
+            verify_with_vm: false,
+        })
+    }
+
+    /// Import tabanı (M4): göreli `import ... from "./x.hud"` çözümleri için.
+    pub fn set_base_dir(&mut self, dir: impl Into<std::path::PathBuf>) {
+        self.base_dir = Some(dir.into());
+    }
+
+    /// Sets the backend optimization level (O0, O1, O2, O3).
+    pub fn set_opt_level(&mut self, opt: OptLevel) {
+        self.opt_level = opt;
+    }
+
+    /// Sets the backend optimization level from string ("o0", "o1", "o2", "o3", "none", "speed").
+    pub fn set_opt_level_str(&mut self, s: &str) -> bool {
+        let opt = match s.to_ascii_lowercase().as_str() {
+            "0" | "o0" | "none" => OptLevel::O0,
+            "1" | "o1" | "less" => OptLevel::O1,
+            "2" | "o2" | "default" | "speed" => OptLevel::O2,
+            "3" | "o3" | "aggressive" => OptLevel::O3,
+            _ => return false,
+        };
+        self.opt_level = opt;
+        true
+    }
+
+    /// Sets the optimization goal (Speed, Size, SizeMin).
+    pub fn set_opt_goal(&mut self, goal: OptGoal) {
+        self.opt_goal = goal;
+    }
+
+    /// Sets the optimization goal from string ("speed", "size", "sizemin").
+    pub fn set_opt_goal_str(&mut self, s: &str) -> bool {
+        let goal = match s.to_ascii_lowercase().as_str() {
+            "speed" => OptGoal::Speed,
+            "size" => OptGoal::Size,
+            "sizemin" | "size_min" => OptGoal::SizeMin,
+            _ => return false,
+        };
+        self.opt_goal = goal;
+        true
+    }
+
+    /// Sets maximum fixed-point rounds for the MIR optimizer.
+    pub fn set_mir_opt_rounds(&mut self, rounds: usize) {
+        self.mir_opt_rounds = rounds;
+    }
+
+    /// Sets the JIT compilation policy ("hot", "lazy", "eager").
+    pub fn set_policy(&mut self, policy: impl Into<String>) {
+        self.policy = policy.into();
+    }
+
+    /// Sets the hot threshold invocation count for JIT compilation.
+    pub fn set_hot_threshold(&mut self, threshold: usize) {
+        self.hot_threshold = threshold;
+    }
+
+    /// Sets the loop threshold iteration count for on-stack replacement.
+    pub fn set_loop_threshold(&mut self, threshold: usize) {
+        self.loop_threshold = threshold;
+    }
+
+    /// Enables or disables JIT code caching.
+    pub fn set_cache_enabled(&mut self, enabled: bool) {
+        self.cache_enabled = enabled;
+    }
+
+    /// Sets JIT code cache size limit in megabytes.
+    pub fn set_code_cache_mb(&mut self, mb: usize) {
+        self.code_cache_mb = mb;
+    }
+
+    /// Sets whether differential replay against the VM is enabled.
+    pub fn set_verify_with_vm(&mut self, verify: bool) {
+        self.verify_with_vm = verify;
     }
 
     /// Parse → HIR → MIR → compile → execute.
@@ -70,6 +163,9 @@ impl JitRuntime {
     /// in a synthetic _hudhud_init function). No main() requirement.
     pub fn run(&mut self, source: &str) -> Result<JitRunResult, String> {
         let ast = parse(source).map_err(|e| format!("parse: {e}"))?;
+        // M4: yerel importlar AST-düzeyinde birleştirilir; çözümlenemeyen
+        // import yerinde kalır → precheck reddi → dürüst VM-fallback.
+        let ast = crate::module_linker::link_imports(&ast, self.base_dir.as_deref())?;
         crate::precheck::quick_precheck(&ast).map_err(|e| format!("precheck: {e}"))?;
         let mut hir_module = lower_module_with_init(&ast).map_err(|e| format!("HIR: {e}"))?;
 
@@ -87,7 +183,7 @@ impl JitRuntime {
             .map_err(|e| format!("MIR lowering: {e}"))?;
         // MIR optimizer: §18'e saygılı const-fold (taşma/bölme asla katlanmaz)
         for f in mir_module.functions.iter_mut() {
-            let (opt, _n) = hudhudscript_mir_opt::optimize(f);
+            let (opt, _n) = hudhudscript_mir_opt::optimize_with_rounds(f, self.mir_opt_rounds);
             *f = opt;
         }
 
@@ -98,8 +194,8 @@ impl JitRuntime {
         let target = TargetSpec::host();
         let ctx = CodegenContext {
             target: &target,
-            opt: OptLevel::O2,
-            opt_goal: OptGoal::Speed,
+            opt: self.opt_level,
+            opt_goal: self.opt_goal,
             debug_info: false,
             abi_version: 1,
         };
@@ -117,6 +213,11 @@ impl JitRuntime {
             .find(|f| f.symbol == "hudhud_main")
             .and_then(|f| f.address);
 
+        // Kütüphane Modülü (M2, v0.9.35): init/main yoksa ölümcül hata yerine
+        // derlenmiş fonksiyon kütüphanesi say — hiçbiri koşmaz, exit 0 ile
+        // döner (hudunit benzeri test koşucuları sembolleri call_uniform ile
+        // çağırır). Yalnız fonksiyonlar da boşsa "nothing to execute" kalır
+        // (yukarıdaki boş-modül denetimi).
         let out = match (init_addr, main_addr) {
             (Some(ia), Some(ma)) => {
                 let init_out = unsafe { call_uniform(ia, &[]) };
@@ -128,7 +229,13 @@ impl JitRuntime {
             }
             (Some(ia), None) => unsafe { call_uniform(ia, &[]) },
             (None, Some(ma)) => unsafe { call_uniform(ma, &[]) },
-            (None, None) => return Err("no executable code found".to_string()),
+            (None, None) => {
+                return Ok(JitRunResult {
+                    exit_status: 0,
+                    return_value: 0,
+                    functions_compiled: n,
+                })
+            }
         };
         let exit_status = if hudhudscript_native_abi::has_active_exception() {
             hudhudscript_native_abi::JIT_EXIT_UNCAUGHT_EXCEPTION

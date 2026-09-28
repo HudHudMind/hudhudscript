@@ -98,3 +98,37 @@ fn test_array_operations() {
         hudhud_array_free(joined);
     }
 }
+
+#[test]
+fn test_string_concat_interning_and_ascii_chars() {
+    unsafe {
+        let a = to_c("abc");
+        let b = to_c("def");
+        let c1 = hudhud_string_concat(a, b);
+        let c2 = hudhud_string_concat(a, b);
+        assert_eq!(from_c(c1), "abcdef");
+        assert_eq!(from_c(c2), "abcdef");
+        // Short strings <= 32 bytes are interned in string arena, returning same pointer
+        assert_eq!(c1, c2, "short strings should be interned to the same pointer");
+
+        // String equality fast path on same pointer and different pointers
+        assert_eq!(hudhud_string_eq(c1, c2), 1);
+        assert_eq!(hudhud_string_eq(c1, a), 0);
+
+        // ASCII chars table verification
+        let ch_a = hudhud_string_char_at(c1, 0);
+        let ch_b = hudhud_string_char_at(c1, 1);
+        assert_eq!(from_c(ch_a), "a");
+        assert_eq!(from_c(ch_b), "b");
+        assert_eq!(ch_a as *const u8, hudhud_ascii_chars[b'a' as usize].as_ptr());
+        assert_eq!(ch_b as *const u8, hudhud_ascii_chars[b'b' as usize].as_ptr());
+
+        // Out of bounds / zero index
+        let empty_ch = hudhud_string_char_at(c1, 999);
+        assert_eq!(from_c(empty_ch), "");
+        assert_eq!(empty_ch as *const u8, hudhud_ascii_chars[0].as_ptr());
+
+        hudhud_string_free(a);
+        hudhud_string_free(b);
+    }
+}

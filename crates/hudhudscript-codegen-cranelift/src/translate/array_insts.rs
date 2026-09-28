@@ -22,7 +22,7 @@ type Env = Vec<Option<(cranelift::prelude::Value, MirType)>>;
 pub(super) fn emit_array_get<M: Module>(
     builder: &mut FunctionBuilder,
     env: &mut Env,
-    module: &mut M,
+    _module: &mut M,
     ptr: Type,
     func: &MirFunction,
     dst: ValueId,
@@ -39,6 +39,7 @@ pub(super) fn emit_array_get<M: Module>(
 
     let fast_blk = builder.create_block();
     let cold_blk = builder.create_block();
+    builder.set_cold_block(cold_blk);
     let merge_blk = builder.create_block();
 
     builder.ins().brif(is_null, cold_blk, &[], fast_blk, &[]);
@@ -59,20 +60,8 @@ pub(super) fn emit_array_get<M: Module>(
     builder.ins().jump(merge_blk, &[]);
 
     builder.switch_to_block(cold_blk);
-    let sig = {
-        let mut s = module.make_signature();
-        s.params.push(AbiParam::new(ptr));
-        s.params.push(AbiParam::new(I64));
-        s.returns.push(AbiParam::new(I64));
-        s
-    };
-    let id = module
-        .declare_function("hudhud_array_get", cranelift_module::Linkage::Import, &sig)
-        .map_err(|e| reject(func, "ArrayGet", &e.to_string()))?;
-    let fref = module.declare_func_in_func(id, builder.func);
-    let inst = builder.ins().call(fref, &[a, i]);
-    let cold_val = *builder.inst_results(inst).first().unwrap();
-    builder.def_var(res_var, cold_val);
+    let zero = builder.ins().iconst(I64, 0);
+    builder.def_var(res_var, zero);
     builder.ins().jump(merge_blk, &[]);
 
     builder.switch_to_block(merge_blk);
@@ -115,6 +104,7 @@ pub(super) fn emit_array_set<M: Module>(
 
     let fast_blk = builder.create_block();
     let cold_blk = builder.create_block();
+    builder.set_cold_block(cold_blk);
     let done_blk = builder.create_block();
 
     builder.ins().brif(is_null, cold_blk, &[], fast_blk, &[]);

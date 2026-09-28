@@ -99,4 +99,86 @@ pub(crate) fn unsupported_expr(expr: &hudhudscript_ast::Expr) -> HirLowerError {
     }
 }
 
+/// Gövdede heap mutasyonu YAPABİLECEK bir işlem var mı?
+/// Çağrılar (push/pop/foo(arr)), indeks store'lar (a[i]=v) ve property
+/// store'lar (o.p=v) bayat `.length` riski taşır; skaler atamalar (i=i+1)
+/// taşımaz. Güvenli tarafta kal: şüphede `true` (hoist etme).
+pub(crate) fn body_may_mutate_heap(stmt: &hudhudscript_ast::Stmt) -> bool {
+    use hudhudscript_ast::{Expr, Stmt};
+    match stmt {
+        Stmt::Expr(e) => expr_has_call(e),
+        Stmt::Assignment { target, value, .. } => {
+            if matches!(target, Expr::Index { .. } | Expr::Member { .. }) {
+                return true;
+            }
+            expr_has_call(value)
+        }
+        Stmt::Let { value, .. } | Stmt::VarDecl(hudhudscript_ast::VarDecl { initializer: Some(value), .. }) => expr_has_call(value),
+        Stmt::Return { value: Some(v), .. } => expr_has_call(v),
+        Stmt::If { condition, then_branch, else_branch, .. } => {
+            expr_has_call(condition)
+                || body_may_mutate_heap(then_branch)
+                || else_branch.as_ref().map(|b| body_may_mutate_heap(b)).unwrap_or(false)
+        }
+        Stmt::While { condition, body, .. } => {
+            expr_has_call(condition) || body_may_mutate_heap(body)
+        }
+        Stmt::Block { statements, .. } => statements.iter().any(body_may_mutate_heap),
+        Stmt::Try { try_block, catch_clause, finally_block, .. } => {
+            body_may_mutate_heap(try_block)
+                || catch_clause.as_ref().map(|c| body_may_mutate_heap(&c.body)).unwrap_or(false)
+                || finally_block.as_ref().map(|b| body_may_mutate_heap(b)).unwrap_or(false)
+        }
+        _ => false,
+    }
+}
+
+/// İfade ağacında çağrı var mı (okuma/yazma ayırt edilemez → var say)?
+pub(crate) fn expr_has_call(e: &hudhudscript_ast::Expr) -> bool {
+    use hudhudscript_ast::Expr;
+    match e {
+        Expr::Call { callee, args, .. } => {
+            let pure = matches!(callee.as_ref(), Expr::Identifier(n, _) if n == "Date" || n == "Math");
+            if !pure {
+                return true;
+            }
+            args.iter().any(expr_has_call)
+        }
+        Expr::Binary { left, right, .. } => expr_has_call(left) || expr_has_call(right),
+        Expr::Unary { expr, .. } => expr_has_call(expr),
+        Expr::Index { object, index, .. } => expr_has_call(object) || expr_has_call(index),
+        Expr::Member { object, .. } => expr_has_call(object),
+        Expr::Ternary { condition, true_expr, false_expr, .. } => {
+            expr_has_call(condition) || expr_has_call(true_expr) || expr_has_call(false_expr)
+        }
+        Expr::Array { elements, .. } => elements.iter().any(expr_has_call),
+        Expr::Object { properties, .. } => properties.iter().any(|(_, v)| expr_has_call(v)),
+        _ => false,
+    }
+}
+
+pub(crate) fn body_assigns_var(stmt: &hudhudscript_ast::Stmt, var: &str) -> bool {
+    use hudhudscript_ast::{Expr, Stmt};
+    match stmt {
+        Stmt::Assignment { target, .. } => {
+            matches!(target, Expr::Identifier(n, _) if n == var)
+        }
+        Stmt::Let { name, .. } => name == var,
+        Stmt::VarDecl(v) => v.name == var,
+        Stmt::Block { statements, .. } => statements.iter().any(|s| body_assigns_var(s, var)),
+        Stmt::If { then_branch, else_branch, .. } => {
+            body_assigns_var(then_branch, var)
+                || else_branch.as_ref().map(|b| body_assigns_var(b, var)).unwrap_or(false)
+        }
+        Stmt::While { body, .. } => body_assigns_var(body, var),
+        Stmt::Try { try_block, catch_clause, finally_block, .. } => {
+            body_assigns_var(try_block, var)
+                || catch_clause.as_ref().map(|c| body_assigns_var(&c.body, var)).unwrap_or(false)
+                || finally_block.as_ref().map(|b| body_assigns_var(b, var)).unwrap_or(false)
+        }
+        _ => false,
+    }
+}
+
+
 

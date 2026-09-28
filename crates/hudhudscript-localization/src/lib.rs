@@ -12,6 +12,7 @@
 //! - [`interpolation::interpolate`] — variable substitution and inline plural expressions
 //! - [`locale::Locale`] — BCP-47 locale parsing, system detection, fallback chains
 
+pub mod builtin_aliases;
 mod catalog;
 mod interpolation;
 mod keyword_map;

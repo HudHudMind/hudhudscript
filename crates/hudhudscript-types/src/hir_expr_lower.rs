@@ -46,7 +46,10 @@ pub(crate) fn lower_expr(expr: &Expr) -> Result<HirExpr, HirLowerError> {
                             return Ok(dispatch);
                         }
                     }
-                    Ok(HirExpr::Call { callee: name.clone(), args: lowered_args, ty: Type::Any })
+                    // M6: SOP effect çağrısı → __event__X fn'ine çözümlenir
+                    let callee = crate::hir_sop::resolve_call_callee(name)
+                        .unwrap_or_else(|| name.clone());
+                    Ok(HirExpr::Call { callee, args: lowered_args, ty: Type::Any })
                 }
                 Expr::Member { object, property, .. } => {
                     if let Expr::Identifier(ns, _) = object.as_ref() {
@@ -76,7 +79,16 @@ pub(crate) fn lower_expr(expr: &Expr) -> Result<HirExpr, HirLowerError> {
                     } else if let Some(implementors) = crate::hir_class::get_method_implementors(property) {
                         Ok(crate::hir_class::dispatch_method_call(arr, property, lowered_args, &implementors))
                     } else {
-                        return Err(reject("array method", &format!(".{property} not supported on arrays in this lane")));
+                        // M5: bilinmeyen yöntem → dinamik dispatch ABI'si
+                        // (çalışma zamanı kayıt defteri; kayıtsız ad dürüst
+                        // hata). args: [alıcı, yöntem adı, ...arg'lar]
+                        // M5: ad-temelli dispatch — alıcı DEĞERİ taşınmaz
+                        // (ad alanı tanımlayıcıları bağımsız; v1 name-dispatch)
+                        let mut dyn_args = vec![
+                            hir_expr_lit_string(property),
+                        ];
+                        dyn_args.extend(lowered_args);
+                        Ok(HirExpr::Call { callee: "__hudhud_dyn_call".to_string(), args: dyn_args, ty: Type::Any })
                     }
                 }
                 other => return Err(reject("call", &format!("non-identifier callee {:?}", std::mem::discriminant(other)))),
@@ -136,4 +148,10 @@ pub(crate) fn lower_expr(expr: &Expr) -> Result<HirExpr, HirLowerError> {
         }
         other => Err(crate::hir_ops::unsupported_expr(other)),
     }
+}
+
+/// Dinamik dispatch için yöntem adını HIR string sabitine çevirir (M5).
+fn hir_expr_lit_string(s: &str) -> crate::hir::HirExpr {
+    use crate::hir::HirExpr;
+    HirExpr::StringLit(s.to_string())
 }

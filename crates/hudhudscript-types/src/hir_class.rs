@@ -119,6 +119,32 @@ impl ClassTable {
             }
         }
 
+        // M6: kapsamsız üst-düzey `on ability(...)` — VM'in ability::{name}
+        // fallback denklemi: HER subject'ın metot tablosuna kaydedilir
+        // (fn adı = ability adı; hir_loop pre-pass fn'i sentezler).
+        let unscoped: Vec<String> = stmts
+            .iter()
+            .filter_map(|st| match st {
+                Stmt::Decl(hudhudscript_ast::Decl::Ability { subject_type: None, name, .. }) => {
+                    Some(name.clone())
+                }
+                _ => None,
+            })
+            .collect();
+        for ability in unscoped {
+            for (cls_name, info) in table.classes.iter_mut() {
+                if info.methods.contains_key(&ability) {
+                    continue; // subject kendi ability'sini tanımladı — öncelikli
+                }
+                info.methods.insert(ability.clone(), ability.clone());
+                table
+                    .methods
+                    .entry(ability.clone())
+                    .or_default()
+                    .push((cls_name.clone(), info.type_id));
+            }
+        }
+
         table
     }
 

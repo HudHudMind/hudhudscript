@@ -8,4 +8,9 @@ repository.workspace = true
 readme.workspace = true
 
 [dependencies]
+hudhudscript-localization = { path = "../hudhudscript-localization" }
+hudhudscript-types = { path = "../hudhudscript-types" }
+
+[dev-dependencies]
+hudhudscript-parser = { path = "../hudhudscript-parser" }
 hudhudscript-types = { path = "../hudhudscript-types" }

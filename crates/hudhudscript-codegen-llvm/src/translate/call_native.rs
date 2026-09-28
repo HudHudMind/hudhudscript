@@ -141,6 +141,71 @@ pub(crate) fn translate_call_native<'ctx, 'm>(
             let r = cx.b.build_call(f, &[v.into()], what).try_as_basic_value();
             cx.env.insert(dst.0, r.left().unwrap());
         }
+        RuntimeHelperId::AssertEq | RuntimeHelperId::AssertTrue | RuntimeHelperId::AssertFalse => {
+            // M4 test yerleşikleri — i64 şeridi, void dönüş
+            let (name, n) = match helper {
+                RuntimeHelperId::AssertEq => ("hudhud_assert_eq", 2usize),
+                RuntimeHelperId::AssertTrue => ("hudhud_assert_true", 1),
+                _ => ("hudhud_assert_false", 1),
+            };
+            let f = cx.ext_void_fn(name, n);
+            let vals: Vec<_> = args.iter().map(|a| cx.ival(*a).unwrap()).collect();
+            let refs: Vec<_> = vals.iter().map(|v| (*v).into()).collect();
+            cx.b.build_call(f, &refs, "");
+        }
+        RuntimeHelperId::AssertApprox => {
+            // (f64, f64) → void — MathPow ABI kalıbı
+            if let Some(f) = cx.module.get_function("hudhud_assert_approx") {
+                let _ = f;
+            }
+            let f = {
+                use inkwell::types::BasicMetadataTypeEnum;
+                let fty = cx.ctx.void_type().fn_type(&[cx.f64t.into(), cx.f64t.into()], false);
+                match cx.module.get_function("hudhud_assert_approx") {
+                    Some(f) => f,
+                    None => cx.module.add_function("hudhud_assert_approx", fty, None),
+                }
+            };
+            let a = cx.fval(args[0]).unwrap();
+            let b = cx.fval(args[1]).unwrap();
+            cx.b.build_call(f, &[a.into(), b.into()], "");
+        }
+        RuntimeHelperId::DynCallMethod => {
+            // (recv, name, a1..a5) sabit imza; eksik slotlar 0
+            if args.len() > 7 {
+                return Err(cx.err("dyn_call supports at most 5 arguments"));
+            }
+            let f = {
+                let ps: Vec<_> = vec![cx.i64t.into(); 7];
+                let fty = cx.i64t.fn_type(&ps, false);
+                match cx.module.get_function("hudhud_dyn_call_method") {
+                    Some(f) => f,
+                    None => cx.module.add_function("hudhud_dyn_call_method", fty, None),
+                }
+            };
+            let mut vals: Vec<_> = Vec::with_capacity(7);
+            for a in args.iter() {
+                vals.push(cx.ival(*a)?.into());
+            }
+            while vals.len() < 7 {
+                vals.push(cx.i64t.const_zero().into());
+            }
+            let r = cx.b.build_call(f, &vals, "dyn").try_as_basic_value();
+            cx.env.insert(dst.0, r.left().unwrap());
+        }
+        RuntimeHelperId::Input | RuntimeHelperId::Confirm => {
+            let name = if matches!(helper, RuntimeHelperId::Input) { "hudhud_input" } else { "hudhud_confirm" };
+            let f = {
+                let fty = cx.i64t.fn_type(&[cx.i64t.into()], false);
+                match cx.module.get_function(name) {
+                    Some(f) => f,
+                    None => cx.module.add_function(name, fty, None),
+                }
+            };
+            let v = cx.ival(args[0])?;
+            let r = cx.b.build_call(f, &[v.into()], "inpc").try_as_basic_value();
+            cx.env.insert(dst.0, r.left().unwrap());
+        }
         RuntimeHelperId::Throw => {
             let f = ext_i64_fn(cx, "hudhud_throw", 1);
             let v = cx.ival(args[0])?;

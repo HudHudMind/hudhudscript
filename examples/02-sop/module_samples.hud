@@ -48,7 +48,7 @@ let files = file.list(".")
 print("Dosya sayisi: " + files.length)
 
 let content = file.read("Cargo.toml")
-print("Cargo.toml: " + content[0:100] + "...")
+print("Cargo.toml: " + content.substring(0, 100) + "...")
 
 file.write("/tmp/hud_test.txt", "Merhaba HudHudScript!")
 file.append("/tmp/hud_test.txt", "\nYeni satir eklendi.")

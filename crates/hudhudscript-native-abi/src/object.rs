@@ -4,7 +4,7 @@
 //! string/array/object opak handle). Anahtarlar C string olarak verilir;
 //! property isimleri derleme zamanında bilinir (ConstString → handle).
 
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 use std::ffi::{c_char, CStr};
 
 pub const HUD_OBJECT_MAGIC: u32 = 0x4855444F; // 'HUDO'
@@ -21,17 +21,20 @@ unsafe fn keys_match(k1: *const c_char, k2: *const c_char) -> bool {
     if k1.is_null() || k2.is_null() {
         return false;
     }
+    if *k1 != *k2 {
+        return false;
+    }
     strcmp(k1, k2) == 0
 }
 
-/// Opaque object handle with 4 fast inline slots and overflow HashMap.
+/// Opaque object handle with 4 fast inline slots and overflow FxHashMap.
 #[repr(C)]
 pub struct HudObject {
     pub magic: u32,
     pub num_fields: u16,
     pub keys: [*const c_char; 4],
     pub values: [i64; 4],
-    pub overflow: *mut HashMap<String, i64>,
+    pub overflow: *mut FxHashMap<String, i64>,
 }
 
 unsafe fn key_from<'a>(key: *const c_char) -> Option<&'a str> {
@@ -81,12 +84,17 @@ pub unsafe extern "C" fn hudhud_object_set(obj: *mut HudObject, key: *const c_ch
         o.num_fields = (n + 1) as u16;
         return;
     }
-    // Slow path: overflow to HashMap
+    // Slow path: overflow to FxHashMap
     if let Some(k) = key_from(key) {
         if o.overflow.is_null() {
-            o.overflow = Box::into_raw(Box::new(HashMap::new()));
+            o.overflow = Box::into_raw(Box::new(FxHashMap::default()));
         }
-        (*o.overflow).insert(k.to_string(), value);
+        let map = &mut *o.overflow;
+        if let Some(v) = map.get_mut(k) {
+            *v = value;
+            return;
+        }
+        map.insert(k.to_string(), value);
     }
 }
 

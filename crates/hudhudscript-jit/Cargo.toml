@@ -20,6 +20,8 @@ hudhudscript-native-abi = { path = "../hudhudscript-native-abi" }
 hudhudscript-parser = { path = "../hudhudscript-parser" }
 hudhudscript-ast = { path = "../hudhudscript-ast" }
 
+hudhudscript-modules = { path = "../hudhudscript-modules" }
+
 [features]
 default = ["cranelift"]
 cranelift = ["dep:hudhudscript-codegen-cranelift"]

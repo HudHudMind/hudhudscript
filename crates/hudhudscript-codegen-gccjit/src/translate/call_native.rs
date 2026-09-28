@@ -109,6 +109,48 @@ pub(crate) fn translate_call_native<'ctx, 'a>(
             let r = g.new_call(None, cx.ext.string_append, &[a, b]);
             cx.store(gb, dst, cx.to_handle(r), false);
         }
+        RuntimeHelperId::AssertEq => {
+            let a = cx.val(args[0])?;
+            let b = cx.val(args[1])?;
+            gb.add_eval(None, g.new_call(None, cx.ext.assert_eq, &[a, b]));
+        }
+        RuntimeHelperId::AssertApprox => {
+            let a = cx.val(args[0])?;
+            let b = cx.val(args[1])?;
+            let a = g.new_cast(None, a, cx.abi.f64t);
+            let b = g.new_cast(None, b, cx.abi.f64t);
+            gb.add_eval(None, g.new_call(None, cx.ext.assert_approx, &[a, b]));
+        }
+        RuntimeHelperId::AssertTrue => {
+            let v = cx.val(args[0])?;
+            gb.add_eval(None, g.new_call(None, cx.ext.assert_true, &[v]));
+        }
+        RuntimeHelperId::AssertFalse => {
+            let v = cx.val(args[0])?;
+            gb.add_eval(None, g.new_call(None, cx.ext.assert_false, &[v]));
+        }
+        RuntimeHelperId::DynCallMethod => {
+            // Sabit 8-param imza (recv, name, argc + 5 slot); eksik slotlara 0.
+            if args.len() > 7 {
+                return Err(cx.err("dyn_call supports at most 5 arguments"));
+            }
+            let zero = cx.ll(0);
+            let mut call_args: Vec<_> = Vec::with_capacity(7);
+            for a in args.iter() {
+                call_args.push(cx.val(*a)?);
+            }
+            while call_args.len() < 7 {
+                call_args.push(zero);
+            }
+            let r = g.new_call(None, cx.ext.dyn_call, &call_args);
+            cx.store(gb, dst, r, false);
+        }
+        RuntimeHelperId::Input | RuntimeHelperId::Confirm => {
+            let f = if matches!(helper, RuntimeHelperId::Input) { cx.ext.input_fn } else { cx.ext.confirm_fn };
+            let v = cx.val(args[0])?;
+            let r = g.new_call(None, f, &[v]);
+            cx.store(gb, dst, r, false);
+        }
         RuntimeHelperId::Throw => {
             let v = cx.val(args[0])?;
             let call = g.new_call(None, cx.ext.throw_fn, &[v]);

@@ -157,6 +157,20 @@ pub enum RuntimeHelperId {
     StringAppend,
     /// hudhud_throw: (val: i64)
     Throw,
+    /// hudhud_assert_eq: (a: i64, b: i64) — M4 test yerleşikleri
+    AssertEq,
+    /// hudhud_assert_approx: (a: f64, b: f64)
+    AssertApprox,
+    /// hudhud_assert_true: (x: i64)
+    AssertTrue,
+    /// hudhud_assert_false: (x: i64)
+    AssertFalse,
+    /// hudhud_dyn_call_method: (recv, name, argc, args*) → i64 — M5
+    DynCallMethod,
+    /// hudhud_input: (prompt ptr) → string handle — M6
+    Input,
+    /// hudhud_confirm: (prompt ptr) → 1/0 — M6
+    Confirm,
     /// hudhud_has_exception: () -> i64 (0 or 1)
     HasException,
     /// hudhud_catch: () -> i64

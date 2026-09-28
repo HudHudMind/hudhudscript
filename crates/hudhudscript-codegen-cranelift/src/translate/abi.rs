@@ -1,8 +1,8 @@
 //! MIR string/array instruction'ları → native ABI helper çağrıları
 //! (hudhud_string_* / hudhud_array_*; §D Runtime ABI).
 
-use cranelift::prelude::types::{F64, I64, Type};
-use cranelift::prelude::{AbiParam, FunctionBuilder, InstBuilder};
+use cranelift::prelude::types::{F64, I8, I64, Type};
+use cranelift::prelude::{AbiParam, FunctionBuilder, InstBuilder, MemFlags};
 use cranelift_module::{DataDescription, Linkage, Module};
 
 use hudhudscript_codegen::backend::BackendError;
@@ -116,13 +116,55 @@ pub(super) fn translate_abi<M: Module>(
             MirInst::StringCharAt { dst, s, index } => {
                 let (sv, _) = operand(env, *s, func)?;
                 let (i, _) = operand(env, *index, func)?;
-                let sig = { let mut s2 = module.make_signature(); s2.params.push(AbiParam::new(ptr)); s2.params.push(AbiParam::new(I64)); s2.returns.push(AbiParam::new(ptr)); s2 };
+
+                let res_var = builder.declare_var(ptr);
+                let zero_ptr = builder.ins().iconst(ptr, 0);
+                let is_not_null = builder.ins().icmp(cranelift::prelude::IntCC::NotEqual, sv, zero_ptr);
+                let zero_i64 = builder.ins().iconst(I64, 0);
+                let is_pos = builder.ins().icmp(cranelift::prelude::IntCC::SignedGreaterThanOrEqual, i, zero_i64);
+                let valid = builder.ins().band(is_not_null, is_pos);
+
+                let fast_blk = builder.create_block();
+                let cold_blk = builder.create_block();
+                builder.set_cold_block(cold_blk);
+                let merge_blk = builder.create_block();
+
+                builder.ins().brif(valid, fast_blk, &[], cold_blk, &[]);
+
+                builder.switch_to_block(fast_blk);
+                let addr = builder.ins().iadd(sv, i);
+                let b = builder.ins().load(I8, MemFlags::trusted(), addr, 0);
+                let b64 = builder.ins().uextend(I64, b);
+                let offset = builder.ins().ishl_imm(b64, 1);
+
+                let data_id = module
+                    .declare_data("hudhud_ascii_chars", Linkage::Import, false, false)
+                    .map_err(|e| reject(func, "StringCharAt", &e.to_string()))?;
+                let gv = module.declare_data_in_func(data_id, builder.func);
+                let table_ptr = builder.ins().global_value(ptr, gv);
+                let char_ptr = builder.ins().iadd(table_ptr, offset);
+                builder.def_var(res_var, char_ptr);
+                builder.ins().jump(merge_blk, &[]);
+
+                builder.switch_to_block(cold_blk);
+                let sig = {
+                    let mut s2 = module.make_signature();
+                    s2.params.push(AbiParam::new(ptr));
+                    s2.params.push(AbiParam::new(I64));
+                    s2.returns.push(AbiParam::new(ptr));
+                    s2
+                };
                 let id = module.declare_function("hudhud_string_char_at", Linkage::Import, &sig)
                     .map_err(|e| reject(func, "StringCharAt", &e.to_string()))?;
                 let fref = module.declare_func_in_func(id, builder.func);
                 let inst = builder.ins().call(fref, &[sv, i]);
-                let result = *builder.inst_results(inst).first()
+                let slow_res = *builder.inst_results(inst).first()
                     .ok_or_else(|| reject(func, "StringCharAt", "helper returned no value"))?;
+                builder.def_var(res_var, slow_res);
+                builder.ins().jump(merge_blk, &[]);
+
+                builder.switch_to_block(merge_blk);
+                let result = builder.use_var(res_var);
                 record(env, *dst, result, MirType::Ref(hudhudscript_mir::RefKind::String));
             }
             MirInst::ArrayPop { dst, arr } => {
@@ -215,6 +257,22 @@ pub(super) fn translate_abi<M: Module>(
             MirInst::StringEq { dst, lhs, rhs } => {
                 let (l, _) = operand(env, *lhs, func)?;
                 let (r, _) = operand(env, *rhs, func)?;
+
+                let res_var = builder.declare_var(I64);
+                let is_same = builder.ins().icmp(cranelift::prelude::IntCC::Equal, l, r);
+                let fast_blk = builder.create_block();
+                let slow_blk = builder.create_block();
+                builder.set_cold_block(slow_blk);
+                let merge_blk = builder.create_block();
+
+                builder.ins().brif(is_same, fast_blk, &[], slow_blk, &[]);
+
+                builder.switch_to_block(fast_blk);
+                let one = builder.ins().iconst(I64, 1);
+                builder.def_var(res_var, one);
+                builder.ins().jump(merge_blk, &[]);
+
+                builder.switch_to_block(slow_blk);
                 let sig = {
                     let mut s = module.make_signature();
                     s.params.push(AbiParam::new(ptr));
@@ -226,8 +284,13 @@ pub(super) fn translate_abi<M: Module>(
                     .map_err(|e| reject(func, "StringEq", &format!("declare: {e}")))?;
                 let fref = module.declare_func_in_func(id, builder.func);
                 let inst = builder.ins().call(fref, &[l, r]);
-                let result = *builder.inst_results(inst).first()
+                let slow_res = *builder.inst_results(inst).first()
                     .ok_or_else(|| reject(func, "StringEq", "helper returned no value"))?;
+                builder.def_var(res_var, slow_res);
+                builder.ins().jump(merge_blk, &[]);
+
+                builder.switch_to_block(merge_blk);
+                let result = builder.use_var(res_var);
                 record(env, *dst, result, MirType::I64);
             }
             MirInst::IntToString { dst, src } => {

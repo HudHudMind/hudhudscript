@@ -260,7 +260,13 @@ pub(crate) fn lower_expr(
                 }
                 return Ok(ret);
             }
-            if let Some(v) = lower_builtin_call(hir, cx, callee.as_str(), args)? {
+            // M1 (çok dilli, v0.9.34): modül fonksiyonu değilse yerelleştirilmiş
+            // yerleşik adı kanonik ada çözümle (tek kaynak: localization crate).
+            // Kullanıcı fonksiyonu önceliği korunur — modül araması yukarıda
+            // yapıldı; buraya yalnızca modülde olmayan adlar ulaşır.
+            let effective_callee = hudhudscript_localization::builtin_aliases::canonical_builtin(callee.as_str())
+                .unwrap_or(callee.as_str());
+            if let Some(v) = lower_builtin_call(hir, cx, effective_callee, args)? {
                 return Ok(v);
             }
             Err(cx.err(&format!("unknown function `{callee}` (not in module, not a builtin)")))

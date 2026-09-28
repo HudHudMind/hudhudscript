@@ -24,13 +24,17 @@ mod abi;
 pub(super) mod array_insts;
 mod arith;
 mod call;
+mod call_native;
+mod call_native_math;
 mod helpers;
 mod terminators;
 
 use abi::translate_abi;
 use arith::translate_arith;
 use call::translate_call;
-use helpers::{bitcast_i64_to_f64, discriminator, ensure_f64, operand, record, reject};
+use helpers::{
+    bitcast_i64_to_f64, collect_non_bigint, discriminator, ensure_f64, operand, record, reject,
+};
 use terminators::emit_terminator;
 
 // ── ConstString STRING_REGISTRY kayıt stratejisi (v0.9.9 regresyon fix) ──
@@ -122,6 +126,7 @@ pub fn translate_with_module<M: Module>(
     let zero32 = builder.ins().iconst(I32, 0);
     builder.def_var(ov_var, zero32);
     builder.def_var(dz_var, zero32);
+    let non_bigint = collect_non_bigint(func);
 
     // MIR BlockId -> CLIF Block mapping — TÜM blokları ÖNCE oluştur
     // (CondBranch'ler ileri bloklara işaret edebilir)
@@ -230,7 +235,7 @@ pub fn translate_with_module<M: Module>(
             // ── Aritmetik + karşılaştırma (arith; §18 bayrak akümülasyonu) ──
             MirInst::Add { .. } | MirInst::Sub { .. } | MirInst::Mul { .. }
             | MirInst::Div { .. } | MirInst::Rem { .. } | MirInst::Cmp { .. } => {
-                translate_arith(inst, &mut builder, &mut env, module, func, ov_var, dz_var)?;
+                translate_arith(inst, &mut builder, &mut env, &non_bigint, module, func, ov_var, dz_var)?;
             }
             // ── String/array ABI helper'ları (abi) ──
             inst if abi::handles(inst) => {
@@ -263,8 +268,12 @@ pub fn translate_with_module<M: Module>(
     if std::env::var("HUDHUD_DUMP_CLIF").is_ok() {
         eprintln!("=== CLIF for {} ===\n{}", func.name, code_ctx.func.display());
     }
-    if let Err(e) = cranelift_codegen::verifier::verify_function(&code_ctx.func, module.isa()) {
-        if std::env::var("HUDHUD_JIT_TRACE").is_ok() || std::env::var("HUDHUD_DUMP_CLIF").is_ok() {
+    #[cfg(debug_assertions)]
+    let check_verify = true;
+    #[cfg(not(debug_assertions))]
+    let check_verify = std::env::var("HUDHUD_JIT_TRACE").is_ok() || std::env::var("HUDHUD_DUMP_CLIF").is_ok();
+    if check_verify {
+        if let Err(e) = cranelift_codegen::verifier::verify_function(&code_ctx.func, module.isa()) {
             eprintln!("=== DETAILED VERIFIER ERRORS for {} ===\n{e}", func.name);
         }
     }

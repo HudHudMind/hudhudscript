@@ -7,6 +7,7 @@
 #[cfg(any(feature = "gccjit", feature = "llvm"))]
 mod extern_backend;
 
+pub mod module_linker;
 pub mod precheck;
 pub mod runtime;
 

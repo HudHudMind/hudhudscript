@@ -175,3 +175,45 @@ fn regress_bigint_sub_demote_parity() {
     assert_eq!(r.exit_status, 0);
     assert_eq!(r.return_value, 1, "BigInt-BigInt=0 → typeof \"number\" (VM paritesi)");
 }
+
+#[test]
+fn regress_jit_string_char_at_ascii_fast_path() {
+    let mut rt = JitRuntime::new().expect("runtime");
+    let src = r#"
+        function main() {
+            let s = "kayak"
+            let left = 0
+            let right = s.length - 1
+            let match_count = 0
+            while (left < right) {
+                if (s[left] == s[right]) {
+                    match_count = match_count + 1
+                }
+                left = left + 1
+                right = right - 1
+            }
+            return match_count
+        }
+    "#;
+    let r = rt.run(src).expect("run");
+    assert_eq!(r.exit_status, 0);
+    assert_eq!(r.return_value, 2);
+}
+
+#[test]
+fn regress_jit_string_equality_pointer_fast_path() {
+    let mut rt = JitRuntime::new().expect("runtime");
+    let src = r#"
+        function main() {
+            let s1 = "hudhud"
+            let s2 = "hud" + "hud"
+            let same_ptr_eq = (s1 == s1) ? 1 : 0
+            let intern_eq = (s1 == s2) ? 1 : 0
+            let not_eq = (s1 == "different") ? 0 : 1
+            return same_ptr_eq + intern_eq + not_eq
+        }
+    "#;
+    let r = rt.run(src).expect("run");
+    assert_eq!(r.exit_status, 0);
+    assert_eq!(r.return_value, 3);
+}

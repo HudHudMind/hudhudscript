@@ -203,3 +203,44 @@ pub(super) fn discriminator(i: &MirInst) -> &'static str {
         ArrayJoin { .. } => "ArrayJoin",
     }
 }
+
+/// Pre-computes which MIR ValueIds are guaranteed NOT to be BigInt pointers
+/// (Constitution H.6: constant/scalar fast-path, bypasses 0xB161 pointer tag checks).
+pub(super) fn collect_non_bigint(func: &MirFunction) -> Vec<bool> {
+    let mut non_bigint = Vec::with_capacity(256);
+    let mut mark = |vid: hudhudscript_mir::ValueId| {
+        let idx = vid.0 as usize;
+        if non_bigint.len() <= idx {
+            non_bigint.resize(idx + 1, false);
+        }
+        non_bigint[idx] = true;
+    };
+    for blk in &func.blocks {
+        for inst in &blk.insts {
+            match inst {
+                MirInst::ConstInt { dst, value, .. } if ((*value as u64) >> 48) != 0xB161 => {
+                    mark(*dst);
+                }
+                MirInst::ConstBool { dst, .. }
+                | MirInst::ConstNull { dst }
+                | MirInst::Cmp { dst, .. }
+                | MirInst::ArrayLen { dst, .. }
+                | MirInst::StringLen { dst, .. }
+                | MirInst::ObjectLen { dst, .. }
+                | MirInst::ObjectHas { dst, .. }
+                | MirInst::StringEq { dst, .. }
+                | MirInst::LogicalAnd { dst, .. }
+                | MirInst::LogicalOr { dst, .. }
+                | MirInst::LogicalNot { dst, .. } => {
+                    mark(*dst);
+                }
+                MirInst::Param { dst, ty: MirType::Bool, .. } => {
+                    mark(*dst);
+                }
+                _ => {}
+            }
+        }
+    }
+    non_bigint
+}
+

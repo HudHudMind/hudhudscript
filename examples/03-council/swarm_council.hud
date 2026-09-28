@@ -37,7 +37,7 @@ swarm ResearchTeam {
 // Council — oylamalı karar
 council EditorialBoard {
     members: [
-        { agent_id: "Researcher", role: "investigator" }
+        { agent_id: "Researcher", role: "investigator" },
         { agent_id: "Reviewer", role: "judge" }
     ]
     rules: ["majority"]
@@ -46,7 +46,7 @@ council EditorialBoard {
 // Council — oylamalı karar
 council EditorialBoard {
     members: [
-        { agent_id: "Researcher", role: "investigator" }
+        { agent_id: "Researcher", role: "investigator" },
         { agent_id: "Reviewer", role: "judge" }
     ]
     rules: ["majority"]

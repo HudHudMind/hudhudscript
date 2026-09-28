@@ -86,6 +86,16 @@ pub(crate) struct ExtFns<'ctx> {
     pub num_div: Function<'ctx>,
     pub num_rem: Function<'ctx>,
     pub num_cmp: Function<'ctx>,
+    /// M4 test yerleşikleri (hudunit assert_*)
+    pub assert_eq: Function<'ctx>,
+    /// M6: input/confirm — (prompt) → i64
+    pub input_fn: Function<'ctx>,
+    pub confirm_fn: Function<'ctx>,
+    pub assert_approx: Function<'ctx>,
+    pub assert_true: Function<'ctx>,
+    pub assert_false: Function<'ctx>,
+    /// M5: (recv, name, argc, a1..a5) → i64 — 5 dyn arg'a kadar; fazlası reddi
+    pub dyn_call: Function<'ctx>,
 }
 
 pub(crate) fn declare_exts<'ctx>(abi: &Abi<'ctx>) -> ExtFns<'ctx> {
@@ -148,6 +158,14 @@ pub(crate) fn declare_exts<'ctx>(abi: &Abi<'ctx>) -> ExtFns<'ctx> {
         num_div: d("hudhud_num_div", &[abi.ll, abi.ll], abi.ll),
         num_rem: d("hudhud_num_rem", &[abi.ll, abi.ll], abi.ll),
         num_cmp: d("hudhud_num_cmp", &[abi.ll, abi.ll], abi.ll),
+        input_fn: d("hudhud_input", &[abi.ll], abi.ll),
+        confirm_fn: d("hudhud_confirm", &[abi.ll], abi.ll),
+        assert_eq: d("hudhud_assert_eq", &[abi.ll, abi.ll], abi.void_ty),
+        assert_approx: d("hudhud_assert_approx", &[abi.f64t, abi.f64t], abi.void_ty),
+        assert_true: d("hudhud_assert_true", &[abi.ll], abi.void_ty),
+        assert_false: d("hudhud_assert_false", &[abi.ll], abi.void_ty),
+        dyn_call: d("hudhud_dyn_call_method",
+            &[abi.ll, abi.ll, abi.ll, abi.ll, abi.ll, abi.ll, abi.ll], abi.ll),
     }
 }
 

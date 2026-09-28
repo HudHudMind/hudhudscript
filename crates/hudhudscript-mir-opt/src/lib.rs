@@ -16,11 +16,16 @@ pub use const_prop::const_prop;
 pub use dce::dce;
 
 /// Tam optimizasyon pipeline'ı: fold → prop → dce döngüsü sabit noktaya
-/// dek (maks 4 tur). §18: taşma/bölme asla katlanmaz (const_fold sözleşmesi).
+/// dek (varsayılan maks 4 tur). §18: taşma/bölme asla katlanmaz (const_fold sözleşmesi).
 pub fn optimize(f: &MirFunction) -> (MirFunction, usize) {
+    optimize_with_rounds(f, 4)
+}
+
+/// Tam optimizasyon pipeline'ı: belirtilen maksimum tur sayısına kadar çalıştırır.
+pub fn optimize_with_rounds(f: &MirFunction, max_rounds: usize) -> (MirFunction, usize) {
     let mut cur = f.clone();
     let mut total = 0usize;
-    for _ in 0..4 {
+    for _ in 0..max_rounds {
         let (a, n1) = const_fold(&cur);
         let (b, n2) = const_prop(&a);
         let (c, n3) = dce(&b);

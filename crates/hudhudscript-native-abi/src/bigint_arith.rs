@@ -219,6 +219,9 @@ pub(crate) unsafe fn mul_limbs(sa: i32, la: &[u64], sb: i32, lb: &[u64]) -> i64 
 /// Sonuç handle'ı i64'e sığıyorsa demote et, değilse handle döner.
 pub(crate) unsafe fn demote_or(r: i64) -> i64 {
     let p = untag_bigint(r as *mut HudBigInt);
+    if (*p).len > 1 {
+        return r;
+    }
     if let Some(i) = crate::bigint::fits_i64((*p).sign, (*p).limbs()) {
         return i;
     }
