@@ -1,0 +1,144 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# HudHudScript Runtime Configuration (hudhud.toml)
+# JIT_AOT_ARCHITECTURE §20 — Production & Runtime Settings
+# ══════════════════════════════════════════════════════════════════════════════
+
+# Optionally import additional configuration files.
+# Relative paths are resolved relative to the directory containing this file.
+# Maximum nesting depth is 8; cyclic includes are automatically detected.
+# include = ["hudhud.build.toml"]
+
+# ── [runtime] General Runtime Engine and Security Permissions ────────────────
+[runtime]
+# Execution engine: "vm" (standard register-based virtual machine) or "jit" (native machine code)
+engine = "vm"
+
+# Network access permission (required for HTTP client, remote data fetching, and AI providers)
+allow_network = true
+
+# Child process execution permission (for stdio-based external MCP servers, CLI subprocesses, etc.)
+allow_process = true
+
+# Allow insecure (HTTP) network access for local development (recommended false in production)
+allow_insecure_http = false
+
+# Allow privileged system commands (sudo, firewall modifications, etc., default: false)
+allow_privileged = false
+
+# Default timeout duration for external AI provider (LLM) invocations (in seconds)
+provider_timeout_secs = 120
+
+# ── [runtime.vm] Virtual Machine (VM) Specific Limits ────────────────────────
+[runtime.vm]
+# Maximum call stack depth (recursion limit)
+max_call_depth = 4000
+
+# VM register arena stack limit (in number of slots)
+stack_limit = 1000000
+
+# Fuel/gas execution limit (0 = unlimited; used for DoS mitigation and sandboxing)
+fuel_limit = 0
+
+# ── [runtime.jit] JIT (Just-In-Time) Compiler Configuration ──────────────────
+# (Active only when engine="jit" or when --engine=jit is provided via CLI)
+[runtime.jit]
+# Native code generator backend:
+# "auto"      -> Automatically selects the most suitable compiled backend
+# "cranelift" -> Fast compilation time and portable native code (default)
+# "llvm"      -> Maximum optimization and high-performance machine code (requires LLVM)
+# "gccjit"    -> GCC-based code generation (requires libgccjit)
+backend = "cranelift"
+
+# JIT compilation policy:
+# "eager" -> Compiles all functions and top-level code directly to native machine code (default)
+# "hot"   -> Dynamically compiles frequently called functions based on invocation threshold
+# "lazy"  -> Compiles functions on first invocation
+policy = "eager"
+
+# Hot function invocation threshold (call count required when policy="hot")
+hot_threshold = 1000
+
+# Hot loop On-Stack Replacement (OSR) threshold (loop iteration count)
+loop_threshold = 10000
+
+# JIT fallback strategy when encountering an unsupported instruction at runtime:
+# "none" -> Report error honestly and abort execution (prevents repeating side effects)
+# "vm"   -> Safely restart execution inside the VM from the beginning
+fallback = "vm"
+
+# Print JIT compilation statistics to stderr (equivalent to CLI flag --jit-stats)
+stats = false
+
+# Differential replay for development/verification (cross-checks VM vs JIT outputs)
+verify_with_vm = false
+
+# Enable in-memory caching of JIT-compiled machine code
+cache = true
+
+# JIT code cache memory upper bound (in Megabytes)
+code_cache_mb = 64
+
+# Code generator optimization level: "none", "speed", "speed_and_size"
+opt_level = "speed"
+
+# Optimization objective: "speed" (execution speed) or "size" (binary code size)
+opt_goal = "speed"
+
+# Number of MIR fixed-point optimization passes (constant-folding, DCE, etc.)
+mir_opt_rounds = 4
+
+# ── [host_access] System and Resource Access Permissions ─────────────────────
+[host_access]
+# Default action for all undefined resource accesses ("allow" | "deny")
+default = "deny"
+
+[host_access.env]
+# Environment variable access policy
+default = "deny"
+# Explicitly allowed safe or necessary environment variables
+allow = ["POSTGRES_URL", "MYSQL_URL", "HUDHUD_LOCALE"]
+
+[host_access.modules]
+# Native module access rules
+default = "deny"
+database = "allow"
+
+# ── [stream] Data Streaming Configuration ────────────────────────────────────
+[stream]
+# Data chunk payload size (in bytes)
+chunk_size = 1024
+# Response wait timeout (in milliseconds)
+timeout = 30000
+# Maximum tokens allowed per stream
+max_tokens = 4096
+# Streaming buffer size (in bytes)
+buffer_size = 8192
+
+# ── [security] Security and Command Execution Policy ─────────────────────────
+[security]
+# Enable sandbox isolation
+sandbox = false
+
+[security.commands]
+# Safe commands allowed to run without prompting
+safe = ["git status", "cargo check"]
+# Commands that require explicit user confirmation before execution
+ask = ["rm -rf", "git push"]
+# Dangerous commands strictly blocked from running
+blocked = ["mkfs", "dd"]
+
+# ── [lint] Code Linter and Diagnostic Rules ──────────────────────────────────
+[lint]
+# Variable shadowing / redeclaration in the same scope: "allow", "warn", "error"
+redeclare = "warn"
+
+# ── [gc] Garbage Collector (GC) Settings ─────────────────────────────────────
+[gc]
+# Minimum live object count before triggering GC collection
+min_objects = 1000
+# Growth factor multiplier for object threshold after each collection (2 = 2x increase)
+growth_factor = 2
+
+# ── Database Integration and Local Secrets ───────────────────────────────────
+[database_tests]
+secrets_file = ".hudhud/database.toml"

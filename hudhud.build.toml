@@ -1,0 +1,97 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# HudHudScript Build & Toolchain Configuration (hudhud.build.toml)
+# JIT_AOT_ARCHITECTURE §20 — AOT Compilation, Target Architectures & Profiles
+# ══════════════════════════════════════════════════════════════════════════════
+# NOTE: This file is for toolchain build-time configuration; not deployed to production.
+# The `hudhud build` and `hudhud compile` commands automatically search for this file first.
+
+# ── [build] General Output Mode ──────────────────────────────────────────────
+[build]
+# Compilation mode:
+# "bytecode" -> Generates portable HudHudScript bytecode (.hudb) via `hudhud compile`
+# "aot"      -> Compiles directly to native machine binary (ELF/Mach-O/PE) via `hudhud build`
+mode = "aot"
+
+# ── [build.aot] Ahead-Of-Time (AOT) Compilation Options ──────────────────────
+[build.aot]
+# Native object code generator backend: "cranelift", "llvm", "gccjit", "auto"
+backend = "cranelift"
+
+# Target output binary format:
+# "executable" -> Standalone executable binary program
+# "shared"     -> Shared library (.so/.dylib/.dll) callable from C, Rust, Python, etc.
+format = "executable"
+
+# ── [target] Cross-Compilation and Hardware Architecture ─────────────────────
+[target]
+# Target platform triple:
+# "native"                     -> Current host system architecture
+# "x86_64-unknown-linux-gnu"   -> 64-bit Linux x86
+# "aarch64-unknown-linux-gnu"  -> ARM64 / Raspberry Pi / AWS Graviton Linux
+# "x86_64-pc-windows-msvc"     -> 64-bit Windows
+# "aarch64-apple-darwin"       -> Apple Silicon (M1/M2/M3/M4) macOS
+triple = "native"
+
+# Target CPU micro-architecture:
+# "native"    -> Utilizes all instruction sets supported by host CPU (highest performance)
+# "generic"   -> Baseline instruction set for broad compatibility
+# "cortex-a8" -> Specialized embedded microcontroller/processor
+cpu = "native"
+
+# Specific hardware instruction set flags:
+# Example: ["+avx2", "-avx512f", "+aes"]
+features = []
+
+# ── [optimization] Optimization Levels and Trade-offs ────────────────────────
+[optimization]
+# Backend-independent optimization level (0, 1, 2, 3):
+# 0 -> No optimization (fast compilation time, maximum debuggability)
+# 1 -> Basic optimizations
+# 2 -> Balanced production optimization (default)
+# 3 -> Aggressive loop unrolling, vectorization, and inlining
+level = 2
+
+# Optimization goal:
+# "speed"    -> Maximize execution throughput (Speed)
+# "size"     -> Minimize binary size (Size)
+# "size-min" -> Aggressive size reduction prioritizing smallest binary
+goal = "speed"
+
+# ── [link] Linker and Runtime Library Linkage ────────────────────────────────
+[link]
+# Runtime linking mode for the HudHud engine:
+# "static"  -> Embeds VM and runtime code directly into the binary (zero dependencies, single binary)
+# "dynamic" -> Links dynamically against shared runtime library (.so/.dll)
+runtime = "static"
+
+# ── [profile.*] Predefined Build Profiles (JIT_AOT_ARCHITECTURE §20.3) ────────
+# Selectable via CLI with `--profile <NAME>`.
+
+# Development profile: Fast bytecode compilation and immediate VM execution
+[profile.dev]
+build = "bytecode"
+runtime = "vm"
+
+# JIT testing profile: Bytecode compilation followed by Cranelift JIT execution
+[profile.jit]
+build = "bytecode"
+runtime = "jit"
+backend = "cranelift"
+
+# Production AOT profile: LLVM backend with level 3 optimization for peak performance
+[profile.release]
+build = "aot"
+backend = "llvm"
+optimization = 3
+
+# Fast production AOT profile: Instant AOT binary generation using Cranelift
+[profile.fast-release]
+build = "aot"
+backend = "cranelift"
+optimization = 2
+
+# Embedded/IoT system profile: GCC/libgccjit with minimum memory and binary footprint
+[profile.embedded]
+build = "aot"
+backend = "gccjit"
+optimization = "size"
