@@ -459,7 +459,7 @@ fn compile_expr_complex_inner(
                     Expr::Identifier(name, _) => {
                         if name == "super" {
                             let argc = args.len() as u8;
-                            let first_arg = crate::compiler::regalloc::temp_reg();
+                            let first_arg = crate::compiler::regalloc::temp_reg_window(argc);
                             for (i, arg) in args.iter().enumerate() {
                                 let r = compile_expr_to_reg(
                                     target,
@@ -480,7 +480,7 @@ fn compile_expr_complex_inner(
                             // Issue #667: Emit MakeGenerator for generator function calls
                             let name_sym = target.ct_sym(name);
                             let argc = args.len() as u8;
-                            let first_arg = crate::compiler::regalloc::temp_reg();
+                            let first_arg = crate::compiler::regalloc::temp_reg_window(argc);
                             for (i, arg) in args.iter().enumerate() {
                                 let r = compile_expr_to_reg(
                                     target,
@@ -517,7 +517,7 @@ fn compile_expr_complex_inner(
                             // P3a: compile args first, then try inline with actual first_arg
                             // Issue #7: tek argüman bölgesi (fresh zone/argüman yok)
                             let argc = args.len() as u8;
-                            let first_arg = crate::compiler::regalloc::temp_reg();
+                            let first_arg = crate::compiler::regalloc::temp_reg_window(argc);
                             let mut arg_zone =
                                 RegAlloc::new_with_base(target.ct_next_local_reg())?;
                             for (i, arg) in args.iter().enumerate() {
@@ -561,7 +561,7 @@ fn compile_expr_complex_inner(
                         // Issue #345: super.method(args) → SuperCall
                         if matches!(&**object, Expr::Identifier(n, _) if n == "super") {
                             let argc = args.len() as u8;
-                            let first_arg = crate::compiler::regalloc::temp_reg();
+                            let first_arg = crate::compiler::regalloc::temp_reg_window(argc);
                             for (i, arg) in args.iter().enumerate() {
                                 let r = compile_expr_to_reg(
                                     target,
@@ -588,7 +588,7 @@ fn compile_expr_complex_inner(
                             // derlemesi onu geri kazanamaz).
                             let receiver_reg = compile_expr_to_reg(target, object, regs);
                             let argc = args.len() as u8;
-                            let first_arg = crate::compiler::regalloc::temp_reg();
+                            let first_arg = crate::compiler::regalloc::temp_reg_window(argc);
                             for (i, arg) in args.iter().enumerate() {
                                 let r = compile_expr_to_reg(target, arg, regs);
                                 target.emit_move(first_arg + i as u8, r);
@@ -690,7 +690,7 @@ fn compile_expr_complex_inner(
                     Expr::Index { object, index, .. } => {
                         // funcs[i]() — closure stored in array/object
                         let argc = args.len() as u8;
-                        let first_arg = crate::compiler::regalloc::temp_reg();
+                        let first_arg = crate::compiler::regalloc::temp_reg_window(argc);
                         for (i, arg) in args.iter().enumerate() {
                             let r = compile_expr_to_reg(
                                 target,
@@ -747,7 +747,7 @@ fn compile_expr_complex_inner(
             class_name, args, ..
         } => {
             let argc = args.len() as u8;
-            let first_arg = crate::compiler::regalloc::temp_reg();
+            let first_arg = crate::compiler::regalloc::temp_reg_window(argc);
             for (i, arg) in args.iter().enumerate() {
                 let r = compile_expr_to_reg(
                     target,

@@ -259,7 +259,7 @@ pub(super) fn compile_stmt_part1(
                                 let name_sym = target.ct_sym(called);
                                 let mut tregs =
                                     RegAlloc::new_with_base(target.ct_next_local_reg())?;
-                                let first_arg = crate::compiler::regalloc::temp_reg();
+                                let first_arg = crate::compiler::regalloc::temp_reg_window(argc);
                                 let func_reg = crate::compiler::regalloc::temp_reg();
                                 target.ct_emit(Instruction::LoadGlobal {
                                     dst: func_reg,

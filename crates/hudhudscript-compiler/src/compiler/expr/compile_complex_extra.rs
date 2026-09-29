@@ -58,7 +58,7 @@ pub(crate) fn compile_expr_complex_inner_extra(
         } => {
             let name_sym = target.ct_sym(subject_name);
             let argc = args.len() as u8;
-            let first_arg = crate::compiler::regalloc::temp_reg();
+            let first_arg = crate::compiler::regalloc::temp_reg_window(argc);
             for (i, arg) in args.iter().enumerate() {
                 let r = compile_expr_to_reg(
                     target,

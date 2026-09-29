@@ -63,7 +63,7 @@ pub(super) fn compile_stmt_part3(
         } => {
             let name_sym = target.ct_sym(subject_name);
             let argc = args.len() as u8;
-            let first_arg = crate::compiler::regalloc::temp_reg();
+            let first_arg = crate::compiler::regalloc::temp_reg_window(argc);
             for (i, arg) in args.iter().enumerate() {
                 let r = crate::compiler::expr::compile_reg::compile_expr_to_reg(
                     target,

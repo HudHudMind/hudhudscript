@@ -160,6 +160,14 @@ impl RegAlloc {
                 self.base, self.next, count
             )));
         }
+        // Mutlak u8 sınır savunması (Bulgu 3): base + start + count asla
+        // 254'ü aşmamalı — aşarsa bölge yığını taşmış demektir.
+        let abs_start = self.base as u16 + start as u16;
+        debug_assert!(
+            abs_start + count as u16 <= 254,
+            "alloc_contiguous: mutlak u8 taşması! base={} start={} count={} → {}",
+            self.base, start, count, abs_start + count as u16
+        );
         for i in 0..count {
             let local = start + i;
             self.active.push((last_use_ip, local));
@@ -206,6 +214,36 @@ pub fn temp_reg() -> u8 {
         };
         c.set(next);
         current
+    })
+}
+
+/// Pencere ayır: `count` adet bitişik geçici yazmaç rezerve eder.
+/// Pencere TEMP_REG_LIMIT'i aşacaksa sayacı BASE'e sarar — böylece
+/// `first_arg + i` ASLA u8 taşması yapmaz (v0.9.52: 6 noktadaki
+/// `first_arg + i as u8` overflow bug'ının kalıcı çözümü).
+/// Dönen değer = pencerenin ilk yazmacı; sonraki `count-1` slot otomatik
+/// tüketilmiştir (tekrar temp_reg() çağırmayın).
+pub fn temp_reg_window(count: u8) -> u8 {
+    NEXT_TEMP.with(|c| {
+        let current = c.get();
+        // Pencere sınırı aşacaksa baştan başlat (bölünme olmasın)
+        let start = if current >= TEMP_REG_BASE
+            && current.saturating_add(count) > TEMP_REG_LIMIT
+        {
+            TEMP_REG_BASE
+        } else if current < TEMP_REG_BASE {
+            TEMP_REG_BASE
+        } else {
+            current
+        };
+        // Pencereyi tüket: sonraki çağrı pencere bitişinden devam eder
+        let next = if start + count >= TEMP_REG_LIMIT {
+            TEMP_REG_BASE
+        } else {
+            start + count
+        };
+        c.set(next);
+        start
     })
 }
 
