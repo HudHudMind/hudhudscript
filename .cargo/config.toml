@@ -1,21 +1,23 @@
 [target.x86_64-unknown-linux-gnu]
 rustflags = ["-C", "target-cpu=native"]
 
-# Give test threads the same stack the runtime gets in production.
+# Give test threads enough stack for DEBUG-build evaluation depth.
 #
-# `hudhud` runs scripts on the process main thread (8 MiB) and can be asked for
-# more via HUDHUD_THREAD_STACK_MB (see hudhudscript-cli/src/startup.rs), but the
-# libtest harness spawns each test on a 2 MiB thread. VM evaluation of ordinary
-# scripts — class inheritance with `super`, nested module imports — exceeds
-# 2 MiB, so tests aborted with "has overflowed its stack" for programs that run
-# fine under the real CLI. That is a harness artefact, not a language limit, and
-# it masks the actual assertion failures underneath.
+# `hudhud` runs scripts on the process main thread (8 MiB, more via
+# HUDHUD_THREAD_STACK_MB, see hudhudscript-cli/src/startup.rs), but the libtest
+# harness spawns each test on a 2 MiB thread. VM evaluation — class inheritance
+# with `super`, nested module imports — exceeds 2 MiB and aborted tests with
+# "has overflowed its stack" for programs that run fine under the real CLI.
 #
-# 8 MiB mirrors the production main thread. Set here (and in the mirrored
-# hudhud-script-tests config) so the whole suite is measured under
-# production-like conditions no matter which directory cargo is invoked from.
+# 32 MiB (was 8): nested module loading re-enters VM::execute on the native
+# stack once per `use` level (see module_ops.rs), and DEBUG builds pay ~1 MiB
+# per level (dispatch_unpacked's match frame alone is ~750 KiB unoptimized;
+# coverage instrumentation inflates it further) — a 3-level diamond import sits
+# at the 8 MiB edge and dies intermittently under cargo llvm-cov. Release
+# builds optimize those frames away, so the 8 MiB "production mirror" only ever
+# held for release-like stacks; virtual reservation costs nothing on Linux.
 [env]
-RUST_MIN_STACK = "8388608"
+RUST_MIN_STACK = "33554432"
 # llvm-sys (inkwell llvm14-0) build script'i llvm-config'i bu önekten bulur.
 # Bu makinede llvm-prefix kırık olduğundan açık yol verilir (target-cpu=native
 # gibi makineye özel bir kayıt; LLVM'si başka yerde olan makine değiştirir).

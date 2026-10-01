@@ -35,6 +35,10 @@ impl Compiler {
         self.current_max_register = 0;
         let saved_next_local_reg = self.next_local_reg;
         crate::compiler::regalloc::reset_temp_reg();
+        // B6: save the OUTER zone counter — the nested body resets it to 0
+        // for its own locals; without the save/restore pair a sibling zone
+        // opened after the nested body could alias a still-live outer zone.
+        let saved_base = crate::compiler::regalloc::save_base();
         crate::compiler::regalloc::reset_base();
 
         // ── Set function context ───────────────────────────────────────
@@ -73,6 +77,9 @@ impl Compiler {
 
         // ── Emit function body ─────────────────────────────────────────
         let emit_result = emit_body(self);
+        // B6: nested body is done (its zones dropped) — reinstate the
+        // outer function's zone counter so sibling zones stay disjoint.
+        crate::compiler::regalloc::restore_base(saved_base);
         if let Err(e) = &emit_result {
             // Error path: restore outer state before propagating
             self.fn_ctx = saved_fn_ctx;

@@ -221,7 +221,10 @@ impl ModuleResolverTrait for ModuleLoader {
             )
         })?;
 
-        Ok(ModuleContent::Source(source))
+        Ok(ModuleContent::Source {
+            content: source,
+            file: Some(resolved),
+        })
     }
 
     /// Check if a module exists at the given path.

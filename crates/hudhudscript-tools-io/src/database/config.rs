@@ -140,7 +140,8 @@ impl DatabaseConfig {
     }
 
     #[cfg(feature = "db")]
-    pub(crate) fn validate(&self) -> Result<(), DatabaseError> {
+    #[doc(hidden)]
+    pub fn validate(&self) -> Result<(), DatabaseError> {
         if self.connection_string.trim().is_empty() {
             return Err(DatabaseError::InvalidArguments(
                 "database URL is empty".into(),
@@ -229,34 +230,5 @@ impl DatabaseConfig {
                 self.backend
             )))
         }
-    }
-}
-
-#[cfg(all(test, feature = "db"))]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn tls_required_rejects_plain_remote_url() {
-        let mut config = DatabaseConfig::postgres("postgres://user:pass@db.example/app");
-        config.tls_required = true;
-        assert!(config.validate().is_err());
-        config.connection_string.push_str("?sslmode=verify-full");
-        assert!(config.validate().is_ok());
-    }
-
-    #[test]
-    fn backend_and_url_scheme_must_match() {
-        let config = DatabaseConfig::mysql("postgres://localhost/app");
-        assert!(config.validate().is_err());
-    }
-
-    #[test]
-    fn debug_output_redacts_credentials() {
-        let config = DatabaseConfig::postgres("postgres://admin:secret@localhost/app");
-        let output = format!("{config:?}");
-        assert!(output.contains("<redacted>"));
-        assert!(!output.contains("secret"));
-        assert!(!output.contains("admin"));
     }
 }

@@ -196,7 +196,8 @@ fn existing_checksums(rows: Vec<super::Row>) -> Result<HashMap<i64, String>, Dat
         .collect()
 }
 
-fn decoded_i64(value: &Value) -> Option<i64> {
+#[doc(hidden)]
+pub fn decoded_i64(value: &Value) -> Option<i64> {
     value.as_i64().or_else(|| {
         let object = value.as_object()?;
         if object.get("$type")?.as_str()? != "i64" {
@@ -238,30 +239,4 @@ fn checksum(sql: &str) -> String {
         .iter()
         .map(|byte| format!("{byte:02x}"))
         .collect()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn migration_versions_accept_plain_and_lossless_i64_json() {
-        assert_eq!(decoded_i64(&json!(42)), Some(42));
-        assert_eq!(
-            decoded_i64(&json!({
-                "$type": "i64",
-                "value": "9007199254740992"
-            })),
-            Some(9_007_199_254_740_992)
-        );
-    }
-
-    #[test]
-    fn migration_versions_reject_other_tagged_values() {
-        assert_eq!(decoded_i64(&json!({"$type": "u64", "value": "42"})), None);
-        assert_eq!(
-            decoded_i64(&json!({"$type": "i64", "value": "invalid"})),
-            None
-        );
-    }
 }

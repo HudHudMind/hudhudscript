@@ -49,7 +49,12 @@ impl crate::vm::VM {
         // because a deeper frame popped and stashed PendingFlow::Throw,
         // check once before the instruction loop.
         if let Some(crate::vm::PendingFlow::Throw(thrown)) = self.pending_flow.take() {
-            if let Some((catch_ip, iter_depth, loop_depth)) = self.try_frames.pop() {
+            // BULGU6: TF yalnız KENDİ çerçevesine aitsen tüketilir. Sahibi
+            // başka (daha dış) çerçeve olan TF, callee tarafından çalınıp
+            // yabancı koordinata atlama hatasını kapatır: geri it, istisna
+            // sahip çerçeveye kadar taşar.
+            let own_tf = self.pop_own_try_frame();
+            if let Some((catch_ip, iter_depth, loop_depth, _owner)) = own_tf {
                 let thrown_val = *thrown;
                 self.iterators.truncate(iter_depth);
                 self.iterator_generators.truncate(iter_depth);

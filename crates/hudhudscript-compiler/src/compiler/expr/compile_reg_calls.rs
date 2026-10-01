@@ -98,7 +98,13 @@ pub(crate) fn compile_call(
     if !has_spread {
         if let Expr::Identifier(name, _) = callee {
             if name != "super" && !target.ct_is_known_generator(name) {
-                // P3b: try compiler-side inlining BEFORE emitting Call
+                // P3b: try compiler-side inlining BEFORE emitting Call.
+                //
+                // BULGU6 fix: inline gövdenin TÜM yazmaçları (argümanlar +
+                // geçiciler) izole temp penceresine yerleşir. Eski kodda
+                // 1-argüman yolunda first_arg = argümanın yazmacıydı; inline
+                // geçicileri first_arg+argc'den itibaren çağıranın canlı
+                // yerellerini eziyordu (MakeObject dst'si → ObjLitSet panik).
                 if let Some(chunk) = target.ct_get_function_chunk(name) {
                     let argc = args.len() as u8;
                     let mut arg_regs = Vec::with_capacity(args.len());
@@ -106,38 +112,61 @@ pub(crate) fn compile_call(
                         let r = compile_expr_to_reg(target, arg, regs);
                         arg_regs.push(r);
                     }
-                    let opt_first_arg = if argc == 0 {
-                        None
-                    } else if argc == 1 {
-                        Some(arg_regs[0])
-                    } else {
-                        let first = regs
-                            .alloc_contiguous(
-                                argc,
-                                target.ct_current_ip(),
-                                target.ct_current_ip() + 1,
-                            )
-                            .expect("out of contiguous registers");
-                        for (i, &r) in arg_regs.iter().enumerate() {
-                            target.emit_move(first + i as u8, r);
-                            regs.free_now(r);
+                    // Pencere sığar mı? (224..=254 bölgesi; span = argc + geçiciler)
+                    let span = crate::optimizer::inline_compile::inline_window_need(&chunk)
+                        .map(|s| s.max(argc))
+                        .filter(|s| 224u16 + *s as u16 <= 254);
+                    if let Some(span) = span {
+                        let w = crate::compiler::regalloc::temp_reg_window(span);
+                        for (i, r) in arg_regs.iter().enumerate() {
+                            target.emit_move(w + i as u8, *r);
+                            regs.free_now(*r);
                         }
-                        Some(first)
+                        let dst = regs
+                            .alloc(target.ct_current_ip(), last_use)
+                            .expect("out of registers");
+                        if crate::optimizer::inline_compile::try_inline_call(
+                            target, &chunk, w, argc, dst,
+                        ) {
+                            return dst;
+                        }
+                        // Inline düşerse argümanlar zaten pencerede: Call aynı
+                        // pencereyle (args'tan okunur, geçici yazmaz).
+                        let name_sym = target.ct_sym(name);
+                        let idx = target.ct_add_call_payload(name_sym, argc);
+                        target.ct_emit(Instruction::Call {
+                            dst,
+                            payload_idx: idx as u16,
+                            first_arg: w,
+                            arg_count: argc,
+                        });
+                        return dst;
+                    }
+                    // Pencere sığmadı (gövde remap-edilemez veya span>30):
+                    // inline DENEME YOK. Argümanlar yukarıda ZATEN bir kez
+                    // derlendi — yeniden derlemek yan etkileri ikileler
+                    // (v0.9.54 regresyonu). v0.9.53'ün Call yolunu mevcut
+                    // arg_regs üzerinden kur. PERF (v0.9.58): birebir v0.9.53
+                    // paritesi — argc==0 alloc_contiguous(0)=base (allocsız),
+                    // argc==1 tek-argüman register'ı emit SONRASI serbest.
+                    let call_ip = target.ct_current_ip();
+                    let first_arg = if argc == 1 {
+                        arg_regs[0]
+                    } else {
+                        let first_arg = regs
+                            .alloc_contiguous(argc, call_ip, call_ip + 1)
+                            .expect("out of contiguous registers");
+                        for (i, r) in arg_regs.iter().enumerate() {
+                            target.emit_move(first_arg + i as u8, *r);
+                            regs.free_now(*r);
+                        }
+                        first_arg
                     };
+                    let name_sym = target.ct_sym(name);
+                    let idx = target.ct_add_call_payload(name_sym, argc);
                     let dst = regs
                         .alloc(target.ct_current_ip(), last_use)
                         .expect("out of registers");
-                    let first_arg = opt_first_arg.unwrap_or(dst);
-                    if crate::optimizer::inline_compile::try_inline_call(
-                        target, &chunk, first_arg, argc, dst,
-                    ) {
-                        if argc == 1 {
-                            regs.free_now(first_arg);
-                        }
-                        return dst;
-                    }
-                    let name_sym = target.ct_sym(name);
-                    let idx = target.ct_add_call_payload(name_sym, argc);
                     target.ct_emit(Instruction::Call {
                         dst,
                         payload_idx: idx as u16,
@@ -217,6 +246,9 @@ pub(crate) fn compile_array(
         return dst;
     }
     let has_spread = elements.iter().any(|e| matches!(e, Expr::Spread { .. }));
+    // BULGU6 (2. yol): eleman ifadeleri taze bölgede derlenir (spread dalı
+    // deseni) — dst'nin yuvası eleman ifadesince alınamaz; dst normal
+    // last_use ile kalır. Eski hali: aynı regs; erken serbest dst ezilirdi.
     let dst = regs
         .alloc(target.ct_current_ip(), last_use)
         .expect("out of registers");
@@ -244,14 +276,16 @@ pub(crate) fn compile_array(
     } else {
         let count = elements.len().min(255) as u16;
         target.ct_emit(Instruction::MakeArray { dst, count });
+        let mut elem_zone = regalloc::RegAlloc::new_with_base(target.ct_next_local_reg())
+            .expect("out of register zones");
         for elem in elements {
-            let r = compile_expr_to_reg(target, elem, regs);
+            let r = compile_expr_to_reg(target, elem, &mut elem_zone);
             target.ct_emit(Instruction::ArrayPush {
                 dst,
                 arr: dst,
                 val: r,
             });
-            regs.free_now(r);
+            elem_zone.free_now(r);
         }
     }
     dst
@@ -266,6 +300,12 @@ pub(crate) fn compile_object(
     let has_spread = properties
         .iter()
         .any(|(_, v)| matches!(v, Expr::Spread { .. }));
+    // BULGU6 (2. yol): özellik DEĞER ifadeleri taze bölgede derlenir (spread
+    // dalının kanıtlanmış deseni) — böylece dst'nin yazmacı hiçbir değer
+    // ifadesince yeniden ayrılamaz; dst normal last_use ile kalır (yazmaç
+    // baskısı yaratmaz). Eski hali: değerler AYNI regs ile derleniyordu;
+    // lineer tarama dst'yi erken serbest bırakıp yuvayı değere veriyordu
+    // (fabrika: obj_reg=17 → InlineString).
     let dst = regs
         .alloc(target.ct_current_ip(), last_use)
         .expect("out of registers");
@@ -301,15 +341,17 @@ pub(crate) fn compile_object(
             dst,
             count: properties.len() as u16,
         });
+        let mut val_zone = regalloc::RegAlloc::new_with_base(target.ct_next_local_reg())
+            .expect("out of register zones");
         for (key, value) in properties {
-            let val_reg = compile_expr_to_reg(target, value, regs);
+            let val_reg = compile_expr_to_reg(target, value, &mut val_zone);
             let key_sym = target.ct_sym(key);
             target.ct_emit(Instruction::ObjLitSet {
                 obj: dst,
                 val: val_reg,
                 prop_sym: key_sym.0 as u16,
             });
-            regs.free_now(val_reg);
+            val_zone.free_now(val_reg);
         }
     }
     dst

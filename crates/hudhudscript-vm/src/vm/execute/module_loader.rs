@@ -4,6 +4,24 @@ use super::*;
 use crate::vm::module_load_context::{ModuleIdentity, ModuleLoadGuard};
 
 impl VM {
+    /// BULGU 4 (modül use-bağlama): `LoadModule` ile kurulan takma-ad
+    /// bağını hem bu VM'e kurar hem paylaşılan modül-yükleme günlüğüne
+    /// yazar. Günlükteki bağlar, modül yüklemesi tamamlandığında üst VM'e
+    /// (birleşik birim) taşınır; böylece modülün KENDİ `use` listesi,
+    /// birleşik derlemede o modülün kodu için bağlanmış olur. Ana
+    /// script'in aynı adlı açık `use`'u her zaman kazanır.
+    pub(crate) fn bind_module_alias(
+        &mut self,
+        name: &str,
+        value: Value16,
+    ) -> CompileResult<()> {
+        self.module_load_context
+            .lock()
+            .alias_binds
+            .push((name.to_string(), value));
+        self.set_var(name, value)
+    }
+
     pub(crate) fn load_module_from_bytecode(
         &mut self,
         path: &str,
@@ -14,6 +32,9 @@ impl VM {
     ) -> CompileResult<Value16> {
         let mut sub_vm = VM::new();
         sub_vm.module_load_context = Arc::clone(&self.module_load_context);
+        // BULGU 4: bu modülün yüklenmesi sırasında kurulacak takma-ad
+        // bağlarının günlükteki başlangıç konumu.
+        let alias_mark = self.module_load_context.lock().alias_binds.len();
         let initial_globals: Option<rustc_hash::FxHashSet<_>> = if export_names.is_none() {
             Some(sub_vm.globals.keys().copied().collect())
         } else {
@@ -25,10 +46,45 @@ impl VM {
                 path, e
             )));
         }
+        // BULGU 4 ek — GC kök penceresi: execute() yalnız girişte ana
+        // sabitleri kökler; chunk sabitleri ise ilk ÇAĞRIDA (chunk-cache
+        // kurulurken) köklenir. Modül yüklemesi çalışma anında (execute
+        // sırasında) birleşime yeni chunk'lar eklediğinden, ilk çağrıya
+        // kadar geçen sürede bir GC sweep bu chunk'ların sabitlerini
+        // toplayıp Value16 repr'lerini bozabiliyordu (alıcı fonksiyona/
+        // çöpe bağlanıyor: "Unknown method on object", "Cannot call
+        // method on unknown" — raporun BULGU 6 sınıfı). Birleşime giren
+        // chunk'ların sabitleri merge'anın hemen ardından köklenir.
+        let fn_count_before = bytecode.functions.borrow().len();
         merge_module_bytecode(module_bc, bytecode).map_err(|e| {
             compile_codes::runtime_error(format!("Module '{}' resolve error: {}", path, e))
         })?;
+        {
+            let funcs = bytecode.functions.borrow();
+            for chunk in funcs.iter().skip(fn_count_before) {
+                self.add_chunk_constants(chunk);
+            }
+        }
         drop(guard);
+
+        // BULGU 4: modül-ici `use` bağlamalarını birleşik birime taşı.
+        // Modül bir sub-VM'de yürütülür; onun `use` listesiyle kurulan
+        // bağlar (ve iç içe yüklemelerden yukarı taşınanlar) günlükte bu
+        // pencerede birikir. Üst VM'de aynı adla ZATEN bir bağ varsa
+        // (ana script'in kendi `use`'u ya da yerel değişkeni) o kazanır.
+        let new_binds: Vec<(String, Value16)> = {
+            let ctx = self.module_load_context.lock();
+            if alias_mark < ctx.alias_binds.len() {
+                ctx.alias_binds[alias_mark..].to_vec()
+            } else {
+                Vec::new()
+            }
+        };
+        for (name, value) in new_binds {
+            if self.get_var(&name).is_none() {
+                self.bind_module_alias(&name, value)?;
+            }
+        }
 
         for (name, id) in sub_vm.agent_names.iter() {
             self.agent_names.insert(name.clone(), *id);

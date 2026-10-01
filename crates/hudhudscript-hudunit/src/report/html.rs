@@ -209,7 +209,8 @@ fn humantime_now() -> String {
 }
 
 /// Howard Hinnant's civil-from-days algorithm.
-fn civil_from_days(z: i64) -> (i64, u32, u32) {
+#[doc(hidden)]
+pub fn civil_from_days(z: i64) -> (i64, u32, u32) {
     let z = z + 719_468;
     let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
     let doe = (z - era * 146_097) as u64;
@@ -229,7 +230,8 @@ fn card(label: &str, value: &str, class: &str) -> String {
     )
 }
 
-fn escape(text: &str) -> String {
+#[doc(hidden)]
+pub fn escape(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     for ch in text.chars() {
         match ch {
@@ -273,47 +275,3 @@ pre code{font-family:ui-monospace,monospace;font-size:.8rem}\
 .cov-none{display:block}\
 footer{margin-top:3rem;opacity:.6;font-size:.8rem}\
 ";
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn escapes_html() {
-        assert_eq!(escape("<script>&'\""), "&lt;script&gt;&amp;&#39;&quot;");
-    }
-
-    #[test]
-    fn civil_from_days_epoch() {
-        assert_eq!(civil_from_days(0), (1970, 1, 1));
-        assert_eq!(civil_from_days(19_723), (2024, 1, 1));
-    }
-
-    #[test]
-    fn html_report_renders_cards() {
-        use crate::runner::{FileOutcome, Outcome, TestOutcome};
-        use std::time::Duration;
-        let suite = SuiteOutcome {
-            files: vec![FileOutcome {
-                path: std::path::PathBuf::from("/t/tests/test_a.hud"),
-                group: "test_a".into(),
-                tests: vec![TestOutcome {
-                    name: "test_x".into(),
-                    outcome: Outcome::Passed,
-                    duration: Duration::from_millis(2),
-                    groups: vec![],
-                    line: 1,
-                    output: None,
-                }],
-                error: None,
-                fail_fast_stopped: false,
-            }],
-            duration: Duration::from_millis(4),
-            ..Default::default()
-        };
-        let html = render(&suite);
-        assert!(html.contains("<!DOCTYPE html>"));
-        assert!(html.contains("test_x"));
-        assert!(html.contains("1 test") || html.contains("Geçti"));
-    }
-}

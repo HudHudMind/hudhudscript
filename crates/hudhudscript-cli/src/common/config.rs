@@ -121,7 +121,8 @@ fn resolve_hudhud_config(
 }
 
 /// Try to load a config file with recursive includes, returning None if not found or invalid.
-fn try_load_config(path: &Path, debug: bool) -> Option<HudHudConfig> {
+#[doc(hidden)]
+pub fn try_load_config(path: &Path, debug: bool) -> Option<HudHudConfig> {
     if !path.is_file() {
         return None;
     }
@@ -272,7 +273,3 @@ fn dirs_fallback_home() -> PathBuf {
         .map(PathBuf::from)
         .unwrap_or_else(|_| PathBuf::from("/tmp"))
 }
-
-#[path = "config_tests.rs"]
-#[cfg(test)]
-mod tests;

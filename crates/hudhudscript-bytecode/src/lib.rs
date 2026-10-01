@@ -8,8 +8,10 @@ pub mod captures_serde;
 pub mod dynamic;
 pub mod error;
 pub mod gc;
+pub mod gc_attach_helpers;
 pub mod gc_detach;
 pub mod gc_pin;
+pub mod gc_trace;
 pub mod instruction;
 pub mod instruction_impl;
 pub mod interner;
@@ -44,3 +46,8 @@ pub use value_dto::ValueDto;
 pub use version::{
     GeneratorState, GeneratorState16, PromiseState, PromiseState16, BYTECODE_VERSION,
 };
+
+/// External unit-test reachability: `Value16::bigint` takes `num_bigint::BigInt`,
+/// so the external test suite needs the type nameable through this crate.
+#[doc(hidden)]
+pub use num_bigint;

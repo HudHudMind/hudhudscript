@@ -8,7 +8,8 @@ use rustc_hash::FxHashMap;
 
 /// Subject template — compile-time declaration data stored at DeclStore.
 #[derive(Debug, Clone)]
-pub(crate) struct SubjectTemplate {
+#[doc(hidden)]
+pub struct SubjectTemplate {
     pub name: String,
     pub of_subject: Option<String>,
     pub roles: Vec<String>,
@@ -19,7 +20,8 @@ pub(crate) struct SubjectTemplate {
 
 /// Live subject instance — runtime copy of a template with mutable state.
 #[derive(Debug, Clone)]
-pub(crate) struct SubjectInstance {
+#[doc(hidden)]
+pub struct SubjectInstance {
     pub template_name: String,
     pub instance_id: String,
     pub state: FxHashMap<String, Value16>,
@@ -37,7 +39,8 @@ pub(crate) struct EventSchema {
 
 /// SOP0007: VM-side composition mode
 #[derive(Debug, Clone)]
-pub(crate) enum CompositionMode {
+#[doc(hidden)]
+pub enum CompositionMode {
     Combine(Vec<String>),
     Override(String),
     Before(String),
@@ -46,7 +49,8 @@ pub(crate) enum CompositionMode {
 
 /// SOP0007: A single composition rule stored in VM
 #[derive(Debug, Clone)]
-pub(crate) struct CompositionRule {
+#[doc(hidden)]
+pub struct CompositionRule {
     pub ability_name: String,
     pub mode: CompositionMode,
 }

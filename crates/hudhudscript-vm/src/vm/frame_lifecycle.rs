@@ -320,6 +320,9 @@ impl VM {
         let _new_stack_base = 0;
 
         // Gap 2 — snapshot caller's try/finally state.
+        // BULGU6: try_depth TAKE'TEN ÖNCE okunmalı (save_finally_state
+        // try_frames'i boşaltır; teardown geri yükleneni budmasın).
+        let try_depth_at_push = self.try_frames.len();
         let saved_fin = self.save_finally_state();
 
         let debugger_pushed = self.debugger.is_some();
@@ -351,6 +354,12 @@ impl VM {
             return_sink,
             receiver_context,
             swallow_error: false,
+            try_depth: try_depth_at_push,
+            serial: {
+                let s = self.frame_serial;
+                self.frame_serial += 1;
+                s
+            },
         });
 
         Ok(())
@@ -370,6 +379,8 @@ impl VM {
             self.stack_frame_base = frame.reg_base;
             self.registers.retreat(frame.reg_size);
             self.call_stack_local_syms.pop();
+            // BULGU6: dökülen callee try çerçevelerini budar (koordinat sızıntısı).
+            self.try_frames.truncate(frame.try_depth);
             return;
         }
         if frame.debugger_pushed {
@@ -388,6 +399,8 @@ impl VM {
             self.close_receiver_context(*context);
         }
         self.registers.retreat(frame.reg_size);
+        // BULGU6: dökülen callee try çerçevelerini budar (koordinat sızıntısı).
+        self.try_frames.truncate(frame.try_depth);
         if frame.has_captures {
             self.pop_scope_cells();
         }

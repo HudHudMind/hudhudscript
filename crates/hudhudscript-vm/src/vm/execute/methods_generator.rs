@@ -73,19 +73,19 @@ impl VM {
                     // Snapshot state for the generator thread
                     let chunk_arc = Arc::clone(&chunk);
                     let bytecode_clone = bytecode.clone();
-                    let global_scope = self.globals.clone();
+                    // B5: capture the caller's global scope (top-level
+                    // slot-backed bindings included), classes, declarations,
+                    // and SOP subjects so the generator body keeps the
+                    // caller's context.
+                    let spawn_ctx = crate::vm::promise::SpawnContext::capture(self);
                     let classes_clone = self.classes.clone();
                     let declarations_clone = self.declarations.clone();
                     let params_clone: Vec<String> = chunk.params.clone();
 
                     std::thread::spawn(move || {
                         let mut gen_vm = VM::new();
-                        // Share the caller's globals
-                        for (k, v) in global_scope {
-                            gen_vm.globals.entry(k).or_insert(v);
-                        }
-                        gen_vm.classes = classes_clone;
-                        gen_vm.declarations = declarations_clone;
+                        // Share the caller's global scope (B5 bundle)
+                        spawn_ctx.install_into(&mut gen_vm);
                         // Install the yield sender so Yield instructions
                         // send through the channel instead of collecting.
                         gen_vm.yield_sender = Some(yield_tx);

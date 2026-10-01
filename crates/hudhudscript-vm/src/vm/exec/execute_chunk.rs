@@ -66,6 +66,12 @@ impl VM {
             return_sink: ReturnSink::Register(255),
             receiver_context: None,
             swallow_error: false,
+            try_depth: self.try_frames.len(),
+            serial: {
+                let s = self.frame_serial;
+                self.frame_serial += 1;
+                s
+            },
         });
 
         let returned = self.run_frame_loop(bytecode, &*packed, stop_depth)?;

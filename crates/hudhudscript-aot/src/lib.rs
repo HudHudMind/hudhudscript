@@ -152,7 +152,8 @@ fn is_stale_runtime(err: &str) -> bool {
 
 /// Statik runtime kütüphanesini cargo ile yeniden derle (konak veya cross).
 /// Cargo yoksa (kurulu ikili) anlaşılır hata — talimat mesajda korunur.
-fn refresh_runtime_lib(target_triple: &str) -> Result<(), String> {
+#[doc(hidden)]
+pub fn refresh_runtime_lib(target_triple: &str) -> Result<(), String> {
     if std::env::var_os("HUDHUD_NO_AUTO_REFRESH").is_some() {
         return Err("otomatik yenileme HUDHUD_NO_AUTO_REFRESH ile kapatılmış".into());
     }
@@ -167,7 +168,24 @@ fn refresh_runtime_lib(target_triple: &str) -> Result<(), String> {
             "cargo PATH'te değil — runtime'ı elle yenileyin:\n  cargo build --release -p hudhudscript-native-abi".to_string()
         })?;
     let mut cmd = std::process::Command::new(&cargo);
-    cmd.args(["build", "--release", "-p", "hudhudscript-native-abi"]);
+    // The runtime package belongs to the main workspace; run cargo from its
+    // root so the build resolves regardless of the caller's CWD (e.g. tests
+    // running inside the external hudhud-script-tests repo, whose own
+    // manifest cannot resolve main-workspace path dependencies).
+    let repo_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .ancestors()
+        .nth(2)
+        .expect("aot crate lives at <repo>/crates/hudhudscript-aot");
+    cmd.current_dir(repo_root)
+        // Strip inherited build-env from the caller: under `cargo llvm-cov`
+        // the test process exports CARGO_TARGET_DIR (coverage build dir) and
+        // instrumented RUSTFLAGS — inheriting either would build the runtime
+        // .a into the coverage dir (where find_runtime_lib never looks) and
+        // bake coverage instrumentation into it. The refresh must always
+        // produce the canonical artifact in <repo>/target.
+        .env_remove("CARGO_TARGET_DIR")
+        .env_remove("RUSTFLAGS")
+        .args(["build", "--release", "-p", "hudhudscript-native-abi"]);
     if target_triple != "native" && !target_triple.is_empty() {
         cmd.args(["--target", target_triple]);
     }
@@ -183,152 +201,3 @@ fn refresh_runtime_lib(target_triple: &str) -> Result<(), String> {
     }
     Ok(())
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    // Bu testin runtime kütüphanesini bulması gerekir. Temiz ağaçta
-    // staticlib .a henüz derlenmemiş olabilir (cargo bağımlılıkları yalnız
-    // rlib derler) — özyeterlilik (kullanıcı onayı, v0.9.24): mevcut
-    // refresh_runtime_lib ile bir kez üret, tekrar ara; yine yoksa ortam
-    // hazırlığı değil üretim doğrulaması olduğu için net hata göster.
-    #[test]
-    fn aot_end_to_end_executable() {
-        let mut rt = hudhudscript_linker::find_runtime_lib();
-        if rt.is_err() {
-            if let Err(e) = refresh_runtime_lib("native") {
-                panic!(
-                    "runtime lib missing: {:?} — yenileme de başarısız: {e} — \
-                     run cargo build --release -p hudhudscript-native-abi",
-                    hudhudscript_linker::find_runtime_lib().err()
-                );
-            }
-            rt = hudhudscript_linker::find_runtime_lib();
-        }
-        let rt = match rt {
-            Ok(p) => p,
-            Err(e) => panic!(
-                "runtime lib missing: {e:?} — \
-                 run cargo build --release -p hudhudscript-native-abi"
-            ),
-        };
-        let _ = rt; // build_executable kendi find_runtime_lib çağrısını yapar
-        let workdir = std::env::temp_dir().join(format!("hudhud_aot_e2e_{}", std::process::id()));
-        let out = workdir.join("hudhud_aot_test_bin");
-        let result = build_executable(
-            "function main() { return 6 * 7 }",
-            &out,
-            &workdir,
-            OptLevel::O2,
-            "native",
-            "cranelift",
-        )
-        .expect("aot build");
-        assert!(result.executable.is_file());
-        assert_eq!(result.entry_symbol, "hudhud_main");
-        let status = std::process::Command::new(&result.executable)
-            .status()
-            .expect("run aot binary");
-        // main() 42 döndürür → JitExit.status = RETURNED(0) → exit code 0
-        assert!(status.success(), "aot binary exit: {:?}", status.code());
-        let _ = std::fs::remove_file(&result.executable);
-        let _ = std::fs::remove_file(&result.object);
-        let _ = std::fs::remove_dir_all(&workdir);
-    }
-
-    #[test]
-    fn cross_object_aarch64() {
-        let workdir = std::env::temp_dir().join(format!("hudhud_aot_cross_{}", std::process::id()));
-        std::fs::create_dir_all(&workdir).unwrap();
-        let obj = workdir.join("t_arm64.o");
-        let (path, _, _, _) = compile_object_only(
-            "print(2 + 3)",
-            &obj,
-            OptLevel::O2,
-            "aarch64-unknown-linux-gnu",
-            "cranelift",
-        )
-        .expect("aarch64 object");
-        let bytes = std::fs::read(&path).expect("read");
-        assert_eq!(&bytes[0..4], &[0x7f, b'E', b'L', b'F']);
-        // aarch64 ELF: e_machine = EM_AARCH64 (183, offset 18, little-endian)
-        assert_eq!(&bytes[18..20], &[183, 0]);
-        let _ = std::fs::remove_file(&obj);
-        let _ = std::fs::remove_dir_all(&workdir);
-    }
-
-    #[cfg(feature = "gccjit")]
-    #[test]
-    fn gccjit_end_to_end_executable() {
-        // gccjit backend: kaynak → GCC object → link → binary (libgccjit gerekir)
-        let rt = hudhudscript_linker::find_runtime_lib();
-        if rt.is_err() {
-            panic!("runtime lib missing: {:?}", rt.err());
-        }
-        let workdir = std::env::temp_dir().join(format!("hudhud_gccjit_e2e_{}", std::process::id()));
-        let out = workdir.join("hudhud_gccjit_test_bin");
-        let result = build_executable(
-            "function main() { return 6 * 7 }",
-            &out,
-            &workdir,
-            OptLevel::O2,
-            "native",
-            "gccjit",
-        )
-        .expect("gccjit aot build");
-        assert!(result.executable.is_file());
-        let status = std::process::Command::new(&result.executable)
-            .status()
-            .expect("run gccjit binary");
-        assert!(status.success(), "gccjit binary exit: {:?}", status.code());
-        let _ = std::fs::remove_file(&result.executable);
-        let _ = std::fs::remove_file(&result.object);
-        let _ = std::fs::remove_dir_all(&workdir);
-    }
-
-    #[cfg(feature = "llvm")]
-    #[test]
-    fn llvm_end_to_end_executable() {
-        // LLVM backend: kaynak → LLVM IR → object → link → binary
-        let rt = hudhudscript_linker::find_runtime_lib();
-        if rt.is_err() {
-            panic!("runtime lib missing: {:?}", rt.err());
-        }
-        let workdir = std::env::temp_dir().join(format!("hudhud_llvm_e2e_{}", std::process::id()));
-        let out = workdir.join("hudhud_llvm_test_bin");
-        let result = build_executable(
-            "function main() { return 6 * 7 }",
-            &out,
-            &workdir,
-            OptLevel::O2,
-            "native",
-            "llvm",
-        )
-        .expect("llvm aot build");
-        assert!(result.executable.is_file());
-        let status = std::process::Command::new(&result.executable)
-            .status()
-            .expect("run llvm binary");
-        assert!(status.success(), "llvm binary exit: {:?}", status.code());
-        let _ = std::fs::remove_file(&result.executable);
-        let _ = std::fs::remove_file(&result.object);
-        let _ = std::fs::remove_dir_all(&workdir);
-    }
-
-    #[test]
-    fn object_only_has_entry() {
-        let workdir = std::env::temp_dir().join(format!("hudhud_aot_obj_{}", std::process::id()));
-        std::fs::create_dir_all(&workdir).unwrap();
-        let obj = workdir.join("t.o");
-        let (path, symbols, entry, _entries) =
-            compile_object_only("print(2 + 3)", &obj, OptLevel::O2, "native", "cranelift").expect("obj");
-        assert!(path.is_file());
-        assert!(symbols.contains(&"hudhud__hudhud_init".to_string()));
-        assert_eq!(entry, "hudhud__hudhud_init");
-        let _ = std::fs::remove_file(&obj);
-        let _ = std::fs::remove_dir_all(&workdir);
-    }
-}
-
-

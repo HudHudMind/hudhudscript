@@ -6,6 +6,11 @@ use hudhudscript_governance::enforcement::enforce_constitution;
 use hudhudscript_governance::enforcement::EvaluationContext;
 use std::sync::Arc;
 
+// M1 bridge runtime lives in `provider_runtime`; re-exported here to keep the
+// historical `provider::block_on_provider` paths (mod.rs, mcp_dispatch,
+// provider_dispatch) stable.
+pub(crate) use crate::vm::provider_runtime::block_on_provider;
+
 impl ProviderContext for VM {
     fn provider_check_constitution(&self, prompt: &str) -> HudHudResult<()> {
         use hudhudscript_bytecode::shared_value::runtime_error;
@@ -335,7 +340,8 @@ impl ProviderContext for VM {
     }
 }
 
-pub(crate) fn extract_timeout_secs_from_objmap(
+#[doc(hidden)]
+pub fn extract_timeout_secs_from_objmap(
     obj: &hudhudscript_bytecode::ObjMap,
 ) -> HudHudResult<Option<u64>> {
     use hudhudscript_bytecode::shared_value::runtime_error;
@@ -368,86 +374,3 @@ pub(crate) fn extract_timeout_secs_from_objmap(
     Ok(None)
 }
 
-/// Run an async future synchronously from within a tokio runtime,
-/// without risking current_thread deadlock. Spawns a fresh OS thread
-/// with its own mini-runtime so the VM thread is never blocked waiting
-/// for spawned tasks on the same runtime.
-/// M1: KALICI paylaşımlı tokio runtime (tek şerit — tüm provider + MCP
-/// köprüleri buradan geçer).
-///
-/// Önceki gövde her çağrıda GEÇİCİ current-thread runtime kurup `block_on`
-/// sonrası düşürüyordu. Runtime düşünce üzerinde `tokio::spawn` edilmiş HER
-/// task ölür: MCP client'ın `response_loop`'u (StdioRecvHalf üzerinden Child
-/// süreci + stdout okuyucusunun SAHİBİ) da initialize biter bitmez
-/// öldürülüyordu → sunucunun stdout'u kapanıyor, sunucu çıkıyor ve İLK
-/// `tools/call` "Boru kapatılıyor (os error 232)" alıyordu. Sunucu hayatta
-/// kalsa bile yanıtı okuyacak handler kalmadığından çağrı asılırdı.
-///
-/// Kalıcı runtime ile spawn edilen task'lar client ömrü boyunca yaşar.
-/// Ayrı OS thread'inde `block_on` kalıyor: çağıran zaten bir tokio
-/// runtime'ının İÇİNDEyse doğrudan `block_on` panik olur; scoped thread
-/// bunu izole eder (eski davranışla aynı).
-static PROVIDER_RUNTIME: std::sync::OnceLock<tokio::runtime::Runtime> = std::sync::OnceLock::new();
-
-pub(crate) fn block_on_provider<T: Send + 'static>(
-    fut: impl std::future::Future<Output = T> + Send + 'static,
-) -> T {
-    std::thread::scope(|s| {
-        s.spawn(|| {
-            let rt = PROVIDER_RUNTIME.get_or_init(|| {
-                tokio::runtime::Builder::new_multi_thread()
-                    .worker_threads(2)
-                    .thread_name("hudhud-provider-rt")
-                    .enable_all()
-                    .build()
-                    .expect("provider runtime build")
-            });
-            rt.block_on(fut)
-        })
-        .join()
-        .unwrap()
-    })
-}
-
-#[cfg(test)]
-mod provider_timeout_tests {
-    use super::*;
-    use hudhudscript_bytecode::{ObjMap, Value16};
-
-    #[test]
-    fn test_provider_timeout_invalid_zero_or_negative_fails() {
-        let mut obj = ObjMap::new();
-        obj.insert("timeout".to_string(), Value16::number(0.0));
-        assert!(extract_timeout_secs_from_objmap(&obj).is_err());
-
-        let mut obj = ObjMap::new();
-        obj.insert("timeout".to_string(), Value16::number(-5.0));
-        assert!(extract_timeout_secs_from_objmap(&obj).is_err());
-
-        let mut obj = ObjMap::new();
-        obj.insert("timeout".to_string(), Value16::string("0".to_string()));
-        assert!(extract_timeout_secs_from_objmap(&obj).is_err());
-
-        let mut obj = ObjMap::new();
-        obj.insert("timeout".to_string(), Value16::string("abc".to_string()));
-        assert!(extract_timeout_secs_from_objmap(&obj).is_err());
-    }
-
-    #[test]
-    fn test_provider_timeout_agent_overrides_call_site() {
-        // Just a dummy test to pass the filter name check
-        assert!(true);
-    }
-
-    #[test]
-    fn test_provider_timeout_provider_used_when_agent_absent() {
-        // Just a dummy test to pass the filter name check
-        assert!(true);
-    }
-
-    #[test]
-    fn test_provider_timeout_default_injected_as_some() {
-        // Just a dummy test to pass the filter name check
-        assert!(true);
-    }
-}

@@ -120,51 +120,7 @@ impl crate::vm::VM {
             }
 
             D_INT_SUB_LOCAL_I | D_INT_ADD_LOCAL_I => {
-                let dst = arg1 as usize;
-                let payload = bytecode.get_super_instr_payload(arg2 as u32);
-                let slot_idx = payload.slot as usize;
-                let (tag, p) = self.registers[slot_idx].split_tag();
-                self.registers[dst] = match tag {
-                    ReprTag::Int => {
-                        let a = p as i64;
-                        let imm = payload.imm as i64;
-                        let r = if dense == D_INT_SUB_LOCAL_I {
-                            a.checked_sub(imm)
-                        } else {
-                            a.checked_add(imm)
-                        };
-                        match r {
-                            Some(v) => Value16::int(v),
-                            None => {
-                                // G3.1: overflow → BigInt via bigint_arith
-                                if dense == D_INT_SUB_LOCAL_I {
-                                    crate::vm::bigint_arith::int_sub(Value16::int(a), Value16::int(imm))
-                                        .unwrap_or_else(|_| Value16::null())
-                                } else {
-                                    crate::vm::bigint_arith::int_add(Value16::int(a), Value16::int(imm))
-                                        .unwrap_or_else(|_| Value16::null())
-                                }
-                            }
-                        }
-                    }
-                    ReprTag::Number => {
-                        let a = f64::from_bits(p);
-                        let r = if dense == D_INT_SUB_LOCAL_I {
-                            a - payload.imm as f64
-                        } else {
-                            a + payload.imm as f64
-                        };
-                        Value16::number(r)
-                    }
-                    _ => {
-                        return Err(Self::runtime_error_with_pos(
-                            "IntSubLocalI/IntAddLocalI: expected numeric local",
-                            bytecode,
-                            ip,
-                        ))
-                    }
-                };
-                Ok(PackedResult::Advance)
+                self.int_local_i_op(dense, arg1 as usize, arg2, bytecode, ip)
             }
             // A3b: explicit Int → Number widening on the fast-dispatch
             // path.  Compiler emits this only where a downstream
@@ -173,131 +129,13 @@ impl crate::vm::VM {
             // invariant violation — fall through to the unpacked arm
             // ── Logic ops ───────────────────────────────────────────
 
-            // Register-based comparison ops — packed dispatch (split_tag fast path)
+            // Register-based comparison ops — packed dispatch (split_tag
+            // fast path); merdiven dispatch_cmp_ops.rs::int_rr_cmp_result.
             D_INT_EQ_RR | D_INT_LT_RR | D_INT_LE_RR | D_INT_NE_RR => {
                 let src1 = ((arg2 >> 8) & 0xFF) as usize;
                 let src2 = (arg2 & 0xFF) as usize;
-                let dst = arg1 as usize;
-                let (t1, p1) = self.registers[src1].split_tag();
-                let (t2, p2) = self.registers[src2].split_tag();
-                let result = match (t1, t2) {
-                    (ReprTag::Int, ReprTag::Int) => {
-                        let a = p1 as i64;
-                        let b = p2 as i64;
-                        match dense {
-                            D_INT_EQ_RR => a == b,
-                            D_INT_LT_RR => a < b,
-                            D_INT_LE_RR => a <= b,
-                            D_INT_NE_RR => a != b,
-                            _ => unreachable!(),
-                        }
-                    }
-                    (ReprTag::Number, ReprTag::Number)
-                    | (ReprTag::Int, ReprTag::Number)
-                    | (ReprTag::Number, ReprTag::Int) => {
-                        let a = if t1 == ReprTag::Int {
-                            p1 as i64 as f64
-                        } else {
-                            f64::from_bits(p1)
-                        };
-                        let b = if t2 == ReprTag::Int {
-                            p2 as i64 as f64
-                        } else {
-                            f64::from_bits(p2)
-                        };
-                        match dense {
-                            D_INT_EQ_RR => a == b,
-                            D_INT_LT_RR => a < b,
-                            D_INT_LE_RR => a <= b,
-                            D_INT_NE_RR => a != b,
-                            _ => unreachable!(),
-                        }
-                    }
-                    _ => {
-                        // BigInt comparison
-                        let v1 = self.registers[src1];
-                        let v2 = self.registers[src2];
-                        if let (Some(a), Some(b)) = (v1.to_bigint_value(), v2.to_bigint_value()) {
-                            match dense {
-                                D_INT_EQ_RR => a == b,
-                                D_INT_LT_RR => a < b,
-                                D_INT_LE_RR => a <= b,
-                                D_INT_NE_RR => a != b,
-                                _ => unreachable!(),
-                            }
-                        } else if let (Some(a), Some(b)) = (v1.as_str(), v2.as_str()) {
-                            match dense {
-                                D_INT_EQ_RR => a == b,
-                                D_INT_LT_RR => a < b,
-                                D_INT_LE_RR => a <= b,
-                                D_INT_NE_RR => a != b,
-                                _ => unreachable!(),
-                            }
-                        } else if let (Some(a), Some(b)) = (v1.as_bool(), v2.as_bool()) {
-                            match dense {
-                                D_INT_EQ_RR => a == b,
-                                D_INT_NE_RR => a != b,
-                                D_INT_LT_RR => !a && b,
-                                D_INT_LE_RR => !a || a == b,
-                                _ => unreachable!(),
-                            }
-                        } else if v1.is_null() || v2.is_null() {
-                            let both = v1.is_null() && v2.is_null();
-                            match dense {
-                                D_INT_EQ_RR => both,
-                                D_INT_NE_RR => !both,
-                                _ => false,
-                            }
-                        } else {
-                            // F3: Object/array equality — delegate to object_equality policy
-                            let (t1, t2) = (v1.split_tag().0, v2.split_tag().0);
-                            if t1 == ReprTag::Dynamic && t2 == ReprTag::Dynamic {
-                                match self.object_equality {
-                                    crate::vm::config_types::ObjectEquality::Identity => {
-                                        let p1 = v1.split_tag().1;
-                                        let p2 = v2.split_tag().1;
-                                        match dense {
-                                            D_INT_EQ_RR => p1 == p2,
-                                            D_INT_NE_RR => p1 != p2,
-                                            D_INT_LT_RR => p1 < p2,
-                                            D_INT_LE_RR => p1 <= p2,
-                                            _ => false,
-                                        }
-                                    }
-                                    crate::vm::config_types::ObjectEquality::Never => {
-                                        match dense {
-                                            D_INT_EQ_RR => false,
-                                            D_INT_NE_RR => true,
-                                            D_INT_LT_RR => false,
-                                            D_INT_LE_RR => false,
-                                            _ => false,
-                                        }
-                                    }
-                                    crate::vm::config_types::ObjectEquality::Deep => {
-                                        let eq = v1.values_equal(&v2);
-                                        match dense {
-                                            D_INT_EQ_RR => eq,
-                                            D_INT_NE_RR => !eq,
-                                            D_INT_LT_RR => false,
-                                            D_INT_LE_RR => false,
-                                            _ => false,
-                                        }
-                                    }
-                                }
-                            } else {
-                                // B8: non-Dynamic types — handle all comparison ops, not just EQ/NE
-                                match dense {
-                                    D_INT_EQ_RR => false,
-                                    D_INT_NE_RR => true,
-                                    D_INT_LT_RR => false,
-                                    D_INT_LE_RR => false,
-                                    _ => false,
-                                }
-                            }
-                        }
-                    }
-                };
-                self.registers[dst] = Value16::bool_(result);
+                let result = self.int_rr_cmp_result(dense, src1, src2);
+                self.registers[arg1 as usize] = Value16::bool_(result);
                 Ok(PackedResult::Advance)
             }
             D_MOVE_RR => {
@@ -495,14 +333,21 @@ impl crate::vm::VM {
             }
 
             // G4: genel cmp+branch — op arg1'de, payload indeksi arg2'de.
-            // Karşılaştırma çekirdeği TEK yerde (branch.rs::cmp_rr_generic);
+            // Karşılaştırma çekirdeği TEK yerde (cmp_core.rs::cmp_rr_generic);
             // unpacked IntCmpRRJumpIfFalse ile birebir aynı semantik.
+            // PERF (v0.9.58): 3-argüman çağrı — policy stack ABI'sini
+            // geri aldı; Incompatible sinyali soğuk çözücüye düşer.
             D_INT_CMP_RR_JUMP_P => {
                 let p = bytecode.cmp_jump_payloads[arg2 as usize];
                 let v1 = self.registers[p.src1 as usize];
                 let v2 = self.registers[p.src2 as usize];
-                let cond = crate::vm::execute::branch::cmp_rr_generic(v1, v2, arg1)
-                    .map_err(|m| Self::runtime_error_with_pos(m, bytecode, ip))?;
+                let cond = match crate::vm::execute::cmp_core::cmp_rr_generic(v1, v2, arg1) {
+                    Ok(cond) => cond,
+                    Err(crate::vm::execute::cmp_core::CMP_RR_INCOMPATIBLE) => {
+                        self.cmp_rr_resolve_incompatible(v1, v2, arg1)
+                    }
+                    Err(m) => return Err(Self::runtime_error_with_pos(m, bytecode, ip)),
+                };
                 if !cond {
                     Ok(PackedResult::Jump(p.target as usize))
                 } else {

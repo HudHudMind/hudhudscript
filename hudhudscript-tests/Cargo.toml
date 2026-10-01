@@ -5,6 +5,13 @@ edition = "2021"
 publish = false
 description = "External test suite for HudHudScript — tests live here, code lives in hudhudscript"
 
+[features]
+# Extracted hudhudscript-aot backend tests (gccjit/llvm) need system libraries;
+# off by default so plain `cargo test --workspace` stays hermetic.
+aot-backends = ["hudhudscript-aot/gccjit", "hudhudscript-aot/llvm"]
+# Extracted hudhudscript-jit llvm-backend test (jit_llvm_backend_runs).
+llvm = ["hudhudscript-jit/llvm"]
+
 # Tüm crate'leri path dependency olarak al
 [dependencies]
 hudhud-datetime = { path = "../crates/hudhud-datetime" }
@@ -90,6 +97,17 @@ hudhud-gpu = { path = "../crates/hudhud-gpu" }
 hudhud-security = { path = "../crates/hudhud-security" }
 hudhud-project = { path = "../crates/hudhud-project" }
 hudhudscript-stm = { path = "../crates/hudhudscript-stm" }
+hudhudscript-mir = { path = "../crates/hudhudscript-mir" }
+hudhudscript-mir-opt = { path = "../crates/hudhudscript-mir-opt" }
+hudhudscript-jit = { path = "../crates/hudhudscript-jit" }
+hudhudscript-aot = { path = "../crates/hudhudscript-aot" }
+hudhudscript-linker = { path = "../crates/hudhudscript-linker" }
+hudhudscript-codegen = { path = "../crates/hudhudscript-codegen" }
+hudhudscript-codegen-cranelift = { path = "../crates/hudhudscript-codegen-cranelift" }
+hudhudscript-codegen-gccjit = { path = "../crates/hudhudscript-codegen-gccjit" }
+hudhudscript-codegen-llvm = { path = "../crates/hudhudscript-codegen-llvm" }
+hudhudscript-native-abi = { path = "../crates/hudhudscript-native-abi" }
+hudhudscript-target = { path = "../crates/hudhudscript-target" }
 serde_json = "1"
 serde = { version = "1", features = ["derive"] }
 

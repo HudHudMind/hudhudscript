@@ -7,7 +7,10 @@ use hudhudscript_bytecode::{Instruction, Value16};
 
 impl VM {
     pub(crate) fn try_catch_runtime_error(&mut self, err: &CompileError) -> Option<usize> {
-        let (catch_ip, iter_depth, loop_depth) = self.try_frames.pop()?;
+        // BULGU6: yalnız KENDİ çerçevesine ait TF tüketilir. Anahtar SERIAL
+        // olmalı (v0.9.54 regresyonu: call_depth pop'ta düşer, ikinci çağrıdan
+        // itibaren ayrışır → runtime hatası kendi catch'ini kaçırırdı).
+        let (catch_ip, iter_depth, loop_depth, _owner) = self.pop_own_try_frame()?;
 
         // Issue #661 — exception breakpoint hook. Fire BEFORE unwinding
         // so the paused debugger still sees a coherent scope / stack
@@ -344,7 +347,9 @@ impl VM {
                 let thrown = *v;
                 // Re-raise: next try-frame → catch; else next finally →
                 // propagate; else uncaught.
-                if let Some((catch_ip, iter_depth, loop_depth)) = self.try_frames.pop() {
+                // BULGU6: yalnız kendi TF'i; sahibi dışsa istisna taşar.
+                let own_tf = self.pop_own_try_frame();
+                if let Some((catch_ip, iter_depth, loop_depth, _owner)) = own_tf {
                     // Register-based VM: no stack truncation.
                     self.iterators.truncate(iter_depth);
                     self.iterator_generators.truncate(iter_depth);

@@ -6,8 +6,16 @@
 
 /// The content of a resolved module.
 pub enum ModuleContent {
-    /// Source code to be parsed (.hud, .hudhud files)
-    Source(String),
+    /// Source code to be parsed (.hud, .hudhud files).
+    ///
+    /// `file` is the resolved module file path. The loader uses its parent
+    /// directory as the base for the module's OWN `use` imports (BULGU 4:
+    /// a module's nested imports must resolve relative to the module file,
+    /// not relative to the importing script's root).
+    Source {
+        content: String,
+        file: Option<std::path::PathBuf>,
+    },
     /// Pre-compiled bytecode (.hudb files)
     Bytecode(Vec<u8>),
     /// Native/built-in module (no file needed)

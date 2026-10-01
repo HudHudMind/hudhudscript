@@ -11,7 +11,7 @@ use crate::vm::packed_ops::*;
 
 macro_rules! dense_ops {
     ($( $d:ident = $op:ident ),* $(,)?) => {
-        $( pub(crate) const $d: u8 = dense_index($op); )*
+        $( #[doc(hidden)] pub const $d: u8 = dense_index($op); )*
 
         /// HAM packed opcode (paketlenmiş u32'nin düşük baytı, OP_* değeri)
         /// → mnemonic ("D_" öneki atılmış const adı). Telemetri histogramları

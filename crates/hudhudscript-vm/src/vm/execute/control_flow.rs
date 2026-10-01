@@ -295,6 +295,7 @@ impl VM {
                     catch_abs as usize,
                     self.iterators.len(),
                     self.loop_headers.len(),
+                    self.frame_stack.last().map(|f| f.serial).unwrap_or(usize::MAX),
                 ));
             }
             Instruction::TryEnd => {
@@ -346,14 +347,16 @@ impl VM {
                 let has_try = !self.try_frames.is_empty();
                 if has_fin && has_try {
                     let (fin_ip, _, _) = *self.finally_frames.last().unwrap();
-                    let (catch_ip, _, _) = *self.try_frames.last().unwrap();
+                    let (catch_ip, _, _, _own) = *self.try_frames.last().unwrap();
                     if fin_ip < catch_ip {
                         self.pending_flow = Some(crate::vm::PendingFlow::Throw(Box::new(thrown)));
                         *ip_ref = fin_ip;
                         return Ok(StepAction::Jumped);
                     }
                 }
-                if let Some((catch_ip, iter_depth, loop_depth)) = self.try_frames.pop() {
+                // BULGU6: kendi TF'i değilse tüketme — istisna sahip çerçeveye taşar.
+                let own_tf = self.pop_own_try_frame();
+                if let Some((catch_ip, iter_depth, loop_depth, _owner)) = own_tf {
                     // Restore iterator depth and loop header depth.
                     self.iterators.truncate(iter_depth);
                     self.iterator_generators.truncate(iter_depth);

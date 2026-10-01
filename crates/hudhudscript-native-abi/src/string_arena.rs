@@ -18,7 +18,8 @@ use std::collections::HashMap;
 use std::ffi::c_char;
 
 const INTERN_MAX: usize = 32;
-const ARENA_SLAB: usize = 2 * 1024 * 1024; // 2 MiB
+#[doc(hidden)]
+pub const ARENA_SLAB: usize = 2 * 1024 * 1024; // 2 MiB
 
 thread_local! {
     /// ≤ 32 baytlık stringler için içerik→pointer intern tablosu.
@@ -66,7 +67,8 @@ impl Slab {
 
 /// Arena'dan string alloc (NUL sonlandırmalı). Büyük stringler (> slab/2)
 /// doğrudan sistem alloc'una gider (arena'da yer israfı önlemek için).
-pub(crate) unsafe fn arena_alloc(len: usize) -> *mut c_char {
+#[doc(hidden)]
+pub unsafe fn arena_alloc(len: usize) -> *mut c_char {
     ARENA_STATS.with(|s| s.borrow_mut().0 += 1);
 
     if len + 1 > ARENA_SLAB / 2 {
@@ -105,7 +107,8 @@ pub(crate) unsafe fn arena_alloc(len: usize) -> *mut c_char {
 /// Kısa string intern: aynı içerik → aynı pointer (sıfır alloc).
 /// `data` NUL sonlandırmalı raw baytlardır. Sonuç her zaman geçerli bir
 /// C string pointer'dır (arena'dan veya cache'den).
-pub(crate) unsafe fn intern_or_alloc(data: &[u8], len: usize) -> *mut c_char {
+#[doc(hidden)]
+pub unsafe fn intern_or_alloc(data: &[u8], len: usize) -> *mut c_char {
     if len <= INTERN_MAX {
         // Stack'te sabit boyutlu key — heap alloc YOK (v0.9.42)
         let mut key = [0u8; INTERN_MAX];
@@ -139,7 +142,8 @@ pub(crate) unsafe fn intern_or_alloc(data: &[u8], len: usize) -> *mut c_char {
 /// Pointer'ın string arena slab'larının içinde olup olmadığını kontrol
 /// eder (arena pointer'ları tekil serbest bırakılamaz — hudhud_string_free
 /// bunu kullanır).
-pub(crate) fn is_arena_pointer(ptr: usize) -> bool {
+#[doc(hidden)]
+pub fn is_arena_pointer(ptr: usize) -> bool {
     let (min, max) = ARENA_BOUNDS.with(|b| b.get());
     if ptr < min || ptr >= max {
         return false;
@@ -162,54 +166,6 @@ pub fn trace_stats() {
                 allocs, hits, bytes, bytes as f64 / 1048576.0
             );
         });
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn intern_returns_same_pointer() {
-        unsafe {
-            let a = intern_or_alloc(b"hello", 5);
-            let b = intern_or_alloc(b"hello", 5);
-            assert_eq!(a, b, "aynı içerik → aynı pointer");
-            assert_eq!(std::ffi::CStr::from_ptr(a).to_str().unwrap(), "hello");
-        }
-    }
-
-    #[test]
-    fn different_content_different_pointer() {
-        unsafe {
-            let a = intern_or_alloc(b"abc", 3);
-            let b = intern_or_alloc(b"xyz", 3);
-            assert_ne!(a, b);
-        }
-    }
-
-    #[test]
-    fn long_string_not_interned() {
-        let long = vec![b'A'; 100];
-        unsafe {
-            let a = intern_or_alloc(&long, 100);
-            let b = intern_or_alloc(&long, 100);
-            assert!(!a.is_null() && !b.is_null());
-        }
-    }
-
-    #[test]
-    fn multi_slab_is_arena_pointer() {
-        unsafe {
-            let p1 = arena_alloc(100);
-            assert!(is_arena_pointer(p1 as usize));
-            let p2 = arena_alloc(ARENA_SLAB / 2 - 100);
-            let p3 = arena_alloc(ARENA_SLAB / 2 - 100);
-            let p4 = arena_alloc(ARENA_SLAB / 2 - 100);
-            assert!(is_arena_pointer(p2 as usize));
-            assert!(is_arena_pointer(p3 as usize));
-            assert!(is_arena_pointer(p4 as usize));
-        }
     }
 }
 

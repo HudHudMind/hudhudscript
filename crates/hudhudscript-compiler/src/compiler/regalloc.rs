@@ -24,6 +24,15 @@ thread_local! {
 pub struct RegAlloc {
     /// Base offset for this allocator's register range.
     base: u8,
+    /// B6: exactly how far this instance advanced the per-thread counter
+    /// (one zone of `REGS_PER_ALLOC` plus any floor raise, i.e.
+    /// `effective + REGS_PER_ALLOC - counter_before`).  `Drop` rewinds by
+    /// exactly this amount so a floor raise (`effective > current`) is
+    /// fully recycled instead of permanently consuming zone space: the old
+    /// fixed `-16` rewind left the counter at `effective` whenever
+    /// `floor > current`, a ratchet that could never be reclaimed inside
+    /// the function.
+    pushed: u16,
     /// Next available local register index (0..REGS_PER_ALLOC).
     next: u8,
     /// Freed local indices available for reuse.
@@ -47,6 +56,7 @@ impl RegAlloc {
         })?;
         Ok(Self {
             base,
+            pushed: REGS_PER_ALLOC as u16,
             next: 0,
             free: Vec::with_capacity(8),
             active: Vec::with_capacity(8),
@@ -56,7 +66,7 @@ impl RegAlloc {
     /// Local variable–aware constructor.
     /// Temp registers start at `floor` (= next_local_reg), never below.
     pub fn new_with_base(floor: u8) -> CompileResult<Self> {
-        let base = NEXT_BASE.with(|c| {
+        let (base, pushed) = NEXT_BASE.with(|c| {
             let current = c.get();
             // Issue #7: floor'u 32'ye yuvarla — yerel sayısı bölge tabanını
             // kaydırıp eşzamanlı bölge sayısını gizlice eritmesin (base=225).
@@ -68,10 +78,13 @@ impl RegAlloc {
                 )));
             }
             c.set(effective + REGS_PER_ALLOC);
-            Ok(effective)
+            // B6: floor yükseltmesi de dahil tam ilerleme miktarı — Drop
+            // sayaçtı birebir geri sarar (eski kod hep -16 düşürüyordu).
+            Ok((effective, effective + REGS_PER_ALLOC - current))
         })?;
         Ok(Self {
             base,
+            pushed: pushed as u16,
             next: 0,
             free: Vec::with_capacity(8),
             active: Vec::with_capacity(8),
@@ -180,7 +193,10 @@ impl RegAlloc {
 
 impl Drop for RegAlloc {
     fn drop(&mut self) {
-        NEXT_BASE.with(|c| c.set(c.get().saturating_sub(REGS_PER_ALLOC)));
+        // B6: rewind EXACTLY what this instance pushed (zone + floor raise).
+        // `saturating_sub` guards LIFO violations / foreign resets: the
+        // per-function `reset_base()` re-establishes order at chunk borders.
+        NEXT_BASE.with(|c| c.set(c.get().saturating_sub(self.pushed as u8)));
     }
 }
 
@@ -257,4 +273,26 @@ pub fn reset_temp_reg() {
 /// compilation so RegAlloc zones don't accumulate across function bodies.
 pub fn reset_base() {
     NEXT_BASE.with(|c| c.set(0));
+}
+
+/// B6: snapshot the per-thread base counter.  Paired with
+/// [`restore_base`] around nested function-chunk compilation
+/// (`compile_function_chunk_with`): a nested function resets the counter
+/// to 0 for its own body, which used to silently discard the enclosing
+/// function's zone state — a later sibling zone could then be handed a
+/// base range that a still-live outer zone occupied.  Restoring the
+/// snapshot after the nested body keeps the counter monotone with the
+/// outer zone stack.
+pub fn save_base() -> u8 {
+    NEXT_BASE.with(|c| c.get())
+}
+
+/// B6: restore a counter snapshot taken by [`save_base`].  Never lowers
+/// below the current value: nested-body leftovers (defensive) are kept.
+pub fn restore_base(prev: u8) {
+    NEXT_BASE.with(|c| {
+        if c.get() < prev {
+            c.set(prev);
+        }
+    });
 }

@@ -15,20 +15,27 @@ fn type_error(expected: &str, got: &str, context: &str) -> Error {
 }
 
 /// `len(value)` — returns the length of a string, array, or object.
+///
+/// B2 (filo raporu): uzunluk her zaman tam sayıdır — `Value16::int`
+/// döner. Eskiden `Value16::number` (float) döndüğü için `len(x) / 2`
+/// tamsayı bölmesi beklentisiyle yazılan kod sessizce kesirli sonuç
+/// üretiyordu (arcade `mac_anlatimi`, tutor tohumlu seçim). Nesne-metodu
+/// biçimi (`set.rs` içindeki `size|length|len`) zaten Int döndürüyordu;
+/// global builtin de öyle olmalı.
 pub fn shared_len(args: &[Value16]) -> HudHudResult<Value16> {
     let val = args
         .first()
         .ok_or_else(|| runtime_error("len() requires 1 argument"))?;
     if let Some(s) = val.as_str() {
-        Ok(Value16::number(s.chars().count() as f64))
+        Ok(Value16::int(s.chars().count() as i64))
     } else if let Some(arr) = val.as_array() {
-        Ok(Value16::number(arr.len() as f64))
+        Ok(Value16::int(arr.len() as i64))
     } else if let Some(obj) = val.as_object() {
-        Ok(Value16::number(obj.len() as f64))
+        Ok(Value16::int(obj.len() as i64))
     } else if let Some(items) = val.as_set() {
-        Ok(Value16::number(items.len() as f64))
+        Ok(Value16::int(items.len() as i64))
     } else if let Some(pairs) = val.as_map_pairs() {
-        Ok(Value16::number(pairs.len() as f64))
+        Ok(Value16::int(pairs.len() as i64))
     } else {
         Err(type_error(
             "string, array, object, set, or map",

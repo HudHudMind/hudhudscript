@@ -27,7 +27,8 @@ pub(crate) async fn list_tables(
     Ok(result.rows.into_iter().filter_map(table_name).collect())
 }
 
-fn table_name(row: Row) -> Option<String> {
+#[doc(hidden)]
+pub fn table_name(row: Row) -> Option<String> {
     row.into_iter()
         .find(|(name, _)| name.eq_ignore_ascii_case("hudhud_table_name"))
         .and_then(|(_, value)| metadata_text(&value))
@@ -104,7 +105,8 @@ fn take_column(row: &mut Row, expected: &str) -> Option<Value> {
     row.remove(&key)
 }
 
-fn metadata_text(value: &Value) -> Option<String> {
+#[doc(hidden)]
+pub fn metadata_text(value: &Value) -> Option<String> {
     if let Some(text) = value.as_str() {
         return Some(text.to_owned());
     }
@@ -119,7 +121,8 @@ fn metadata_text(value: &Value) -> Option<String> {
     String::from_utf8(bytes).ok()
 }
 
-fn metadata_bool(value: &Value) -> Option<bool> {
+#[doc(hidden)]
+pub fn metadata_bool(value: &Value) -> Option<bool> {
     value
         .as_bool()
         .or_else(|| value.as_i64().map(|number| number != 0))
@@ -134,25 +137,4 @@ fn metadata_bool(value: &Value) -> Option<bool> {
 
 fn invalid_metadata(field: &str) -> DatabaseError {
     DatabaseError::QueryFailed(format!("invalid MySQL metadata field '{field}'"))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn table_name_accepts_driver_specific_column_case() {
-        for key in ["hudhud_table_name", "HUDHUD_TABLE_NAME"] {
-            let row = Row::from([(key.into(), json!("users"))]);
-            assert_eq!(table_name(row).as_deref(), Some("users"));
-        }
-    }
-
-    #[test]
-    fn metadata_text_accepts_mysql_information_schema_bytes() {
-        let value = json!({"$type": "bytes", "base64": "dXNlcnM="});
-        assert_eq!(metadata_text(&value).as_deref(), Some("users"));
-        assert_eq!(metadata_bool(&json!(1)), Some(true));
-        assert_eq!(metadata_bool(&json!(0)), Some(false));
-    }
 }

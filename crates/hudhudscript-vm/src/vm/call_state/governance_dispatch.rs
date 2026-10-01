@@ -1,9 +1,10 @@
 use super::ContinuationResume;
 use hudhudscript_bytecode::{gc, DynamicObject, Value16};
 
-pub(crate) struct GovernanceDispatchState {
-    pub(crate) dst: u8,
-    pub(crate) response: hudhudscript_bytecode::ObjMap,
+#[doc(hidden)]
+pub struct GovernanceDispatchState {
+    pub dst: u8,
+    pub response: hudhudscript_bytecode::ObjMap,
 }
 
 impl GovernanceDispatchState {

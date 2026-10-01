@@ -29,19 +29,16 @@ pub struct VM {
     #[cfg(feature = "telemetry")]
     pub telemetry: crate::vm::telemetry::Telemetry,
     pub gc_heap: Box<hudhudscript_bytecode::gc::GcHeap>,
-    /// Operand stack.  Audit v3 Finding 1.1 / S1.1 (PERF-20): stores
-    /// Return value relay: function Return/IntAddReturn/IntSubReturn write here.
+    /// Audit v3 Finding 1.1 / S1.1 (PERF-20): return value relay — Return/IntAddReturn/IntSubReturn write here.
     /// run_frame_loop reads from here on hit_return path instead of registers[255].
-    pub(crate) last_return: Value16,
+    pub last_return: Value16,
     /// Global namespace (top-level bindings: functions, constants, classes).
-    /// Mirrors the Rune/Lua/Wren pattern: a single HashMap per VM, not a
-    /// per-call scope stack. PERF-1 Step 1 migration (2026-04-17) —
-    /// All `define_global` / `set_global` / module-level declarations land
-    /// here. Inner function/block scopes use `registers` directly.
-    pub(crate) globals: FxHashMap<hudhudscript_bytecode::interner::SymbolId, Value16>,
-    /// P3: flat Vec for shared top-level globals, indexed by compile-time
-    /// slot index.  Hot path LoadGlobal/StoreGlobal reads/writes here
-    /// instead of globals HashMap.
+    /// Mirrors the Rune/Lua/Wren pattern: a single HashMap per VM, not a per-call scope stack.
+    /// PERF-1 Step 1 migration (2026-04-17) — All `define_global` / `set_global` /
+    /// module-level declarations land here. Inner function/block scopes use `registers` directly.
+    pub globals: FxHashMap<hudhudscript_bytecode::interner::SymbolId, Value16>,
+    /// P3: flat Vec for shared top-level globals, indexed by compile-time slot index.
+    /// Hot path LoadGlobal/StoreGlobal reads/writes here instead of globals HashMap.
     pub(crate) shared_globals_vec: Vec<Value16>,
     /// Upvalue cell sidecar — stack of cell maps, one per active function
     /// call. When a variable is captured by a closure, its value in the
@@ -50,13 +47,13 @@ pub struct VM {
     /// slot entry.  One map is pushed on every function call and popped on
     /// G5-slotvec: (cells, sym_ids) per scope. cells[slot]=None → uninitialized.
     /// sym_ids: Arc shared from chunk (single ref-count bump per call, no clone).
-    pub(crate) scope_cells: Vec<(Box<[Option<Arc<parking_lot::RwLock<Value16>>>]>, Arc<[u32]>)>,
+    pub scope_cells: Vec<(Box<[Option<Arc<parking_lot::RwLock<Value16>>>]>, Arc<[u32]>)>,
     /// Output locale (for number formatting)
     pub(crate) locale: OutputLocale,
     /// F3: Object/dizi eşitlik politikası (varsayılan: Identity)
     pub object_equality: crate::vm::config_types::ObjectEquality,
-    /// Try-catch frames: (catch_target_ip, iterator_depth, loop_header_depth)
-    pub(crate) try_frames: Vec<(usize, usize, usize)>,
+    /// Try-catch frames: (catch_ip, iter_depth, loop_depth, owner_serial)
+    pub(crate) try_frames: Vec<(usize, usize, usize, usize)>,
     /// Finally frames: (finally_ip, iter_depth, loop_depth).
     pub(crate) finally_frames: Vec<(usize, usize, usize)>,
     /// Pending abrupt flow recorded by Return / Throw when a finally frame
@@ -70,40 +67,40 @@ pub struct VM {
     /// completion (a plain `return` / `throw` inside finally) the pending
     /// flow is *overwritten* — matching the interpreter's
     /// `finally_result.is_err() → return finally_result` semantics.
-    pub(crate) pending_flow: Option<crate::vm::types::PendingFlow>,
+    pub pending_flow: Option<crate::vm::types::PendingFlow>,
     /// For-in iterator state: Vec<(elements, variable_name, current_index)>
-    pub(crate) iterators: Vec<(Vec<Value16>, String, usize)>,
+    pub iterators: Vec<(Vec<Value16>, String, usize)>,
     /// Parallel to `iterators`: if entry is `Some`, this frame is a generator
     /// and `IterNext` should lazily `advance()` instead of indexing `elements`.
     /// Allows infinite / side-effecting generators to iterate correctly.
-    pub(crate) iterator_generators: Vec<Option<Arc<Mutex<GeneratorState16>>>>,
+    pub iterator_generators: Vec<Option<Arc<Mutex<GeneratorState16>>>>,
     /// Loop header and exit IP stack for continue/break instructions
     /// Each element is (header_ip, exit_ip)
     pub(crate) loop_headers: Vec<(usize, usize)>,
     /// Class metadata: class_name → (parent, method_names)
     pub(crate) classes: FxHashMap<String, (Option<String>, Vec<String>)>,
     /// Declaration store: kind:name → fields object
-    pub(crate) declarations: FxHashMap<String, Value16>,
+    pub declarations: FxHashMap<String, Value16>,
     /// Effect registry: event_name → handler function chunk name (#351)
-    pub(crate) effects: FxHashMap<String, String>,
+    pub effects: FxHashMap<String, String>,
     /// Relation store: "SubjectA_SubjectB" → relation object (#352)
-    pub(crate) relations: FxHashMap<String, Value16>,
+    pub relations: FxHashMap<String, Value16>,
     /// Subject template registry: name → SubjectTemplate
-    pub(crate) subject_templates: FxHashMap<String, crate::vm::sop_types::SubjectTemplate>,
+    pub subject_templates: FxHashMap<String, crate::vm::sop_types::SubjectTemplate>,
     /// Event schema registry: event_name → EventSchema
     pub(crate) event_schemas: FxHashMap<String, crate::vm::sop_types::EventSchema>,
     /// Live subject instances: instance_id → SubjectInstance
-    pub(crate) subject_instances: FxHashMap<String, crate::vm::sop_types::SubjectInstance>,
+    pub subject_instances: FxHashMap<String, crate::vm::sop_types::SubjectInstance>,
     /// SOP0007: Composition rules: "Knight::attack" → Vec<CompositionRule>
-    pub(crate) composition_rules: FxHashMap<String, Vec<crate::vm::sop_types::CompositionRule>>,
+    pub composition_rules: FxHashMap<String, Vec<crate::vm::sop_types::CompositionRule>>,
     /// SOP0009: Field correspondences: "Knight::state::name" → FieldCorrespondence
     pub(crate) field_correspondences: FxHashMap<String, crate::vm::sop_types::FieldCorrespondence>,
     /// ENV0004: Provider defaults from hudhud.toml [providers.NAME]
     pub(crate) toml_providers: FxHashMap<String, FxHashMap<String, String>>,
     /// Full hudhud.toml config as nested object, accessible via config() builtin
-    pub(crate) toml_config: Value16,
+    pub toml_config: Value16,
     /// PROVIDER0002: receiver object during X.call() dispatch
-    pub(crate) dispatch_provider_receiver: Option<Value16>,
+    pub dispatch_provider_receiver: Option<Value16>,
     /// AGENT0003: agent names for dispatch lookup
     pub(crate) agent_names: FxHashMap<String, ()>,
     /// AGENT0004: swarm names for dispatch lookup
@@ -115,9 +112,11 @@ pub struct VM {
     /// Ability handlers: ability_name → chunk_name
     pub(crate) ability_handlers: FxHashMap<String, String>,
     /// Active constitutions (typed governance objects from hudhudscript-governance)
-    pub(crate) constitutions: FxHashMap<String, Constitution>,
+    #[doc(hidden)]
+    pub constitutions: FxHashMap<String, Constitution>,
     /// Active constitution name
-    pub(crate) active_constitution: Option<String>,
+    #[doc(hidden)]
+    pub active_constitution: Option<String>,
     /// Provider / LLM provider for agent calls (Kural 7 — shared dispatch).
     ///
     /// Populated by `VM::set_provider` from the runtime harness or a
@@ -175,7 +174,7 @@ pub struct VM {
     /// Max MCP servers (default: 128).
     pub(crate) max_mcp_servers: usize,
     /// Builtin iteration limit (default: 10_000).
-    pub(crate) max_builtin_iter: usize,
+    pub max_builtin_iter: usize,
     /// Non-Linux default stack size in bytes for remaining_stack_bytes().
     pub(crate) default_stack_bytes: usize,
     /// Default provider timeout in seconds (Issue #446).
@@ -201,7 +200,7 @@ pub struct VM {
     pub(crate) host_access_policy: crate::vm::host_access::HostAccessPolicy,
     /// STM: shared TVar registry (Kural 7 — `hudhudscript-stm`).
     /// Maps script-visible string handles to live `Arc<TVar<Value>>`.
-    pub(crate) tvars: hudhudscript_stm::TVarRegistry<Value16>,
+    pub tvars: hudhudscript_stm::TVarRegistry<Value16>,
     /// Class context stack for proper super call resolution in nested contexts
     pub(crate) class_context_stack: Vec<hudhudscript_bytecode::SymId>,
     /// Scratch slot used by `call_method_on_value` for `Value::Instance`
@@ -214,7 +213,7 @@ pub struct VM {
     /// `Option<Value>` cost ~40 B per VM instance even when unset.  Every
     /// call goes through `take()` / `Some(...)` which is a single pointer
     /// write either way.
-    pub(crate) last_instance_mutation: Option<Box<Value16>>,
+    pub last_instance_mutation: Option<Box<Value16>>,
     /// Set of variable names declared as `const` (immutable after initial assignment)
     pub(crate) immutables: HashSet<hudhudscript_bytecode::interner::SymbolId>,
     /// Avoids 30M+ interner::resolve calls in hot loops.
@@ -227,7 +226,7 @@ pub struct VM {
     pub(crate) json_obj: Option<Value16>,
 
     /// Whether we are inside an `atomically()` block (#518)
-    pub(crate) in_stm_context: bool,
+    pub in_stm_context: bool,
     /// Active STM transaction — `Some` only inside `atomically(fn)`.
     /// All `tvar_read` / `tvar_write` during this window go through the shared
     /// `Transaction` so conflicts and versioning are detected exactly like
@@ -236,7 +235,7 @@ pub struct VM {
     /// single nullable pointer.  `Transaction<Value>` holds two `HashMap`s
     /// (~96 B); outside an `atomically(fn)` block this slot is permanently
     /// `None`, so the box is never allocated on the hot path.
-    pub(crate) current_tx: Option<Box<hudhudscript_stm::Transaction<Value16>>>,
+    pub current_tx: Option<Box<hudhudscript_stm::Transaction<Value16>>>,
     /// Issue #661: Debugger for breakpoints, stepping, and DAP integration
     /// PERF-39: `Box` the debugger so the `Option<...>` niche-optimises to
     /// a single nullable pointer.  Every VM instruction does
@@ -254,9 +253,9 @@ pub struct VM {
     /// receive-side of every spawn call, keyed by the registry-generated
     /// id, so bytecode `Receive` instructions can drain a specific actor's
     /// inbox without contending for the registry lock.
-    pub(crate) actors: Arc<SharedActorRegistry<Value16>>,
+    pub actors: Arc<SharedActorRegistry<Value16>>,
     /// Receive-side of each actor owned by this VM (id → ActorMailbox).
-    pub(crate) actor_mailboxes: HashMap<String, ActorMailbox<Value16>>,
+    pub actor_mailboxes: HashMap<String, ActorMailbox<Value16>>,
     /// Shared thread-backed promise registry (Kural 7 / #726).
     ///
     /// Replaces the previous pair of ad-hoc `promise_receivers` and
@@ -265,7 +264,7 @@ pub struct VM {
     /// `hudhudscript-async` and can be reused by any future non-tokio
     /// runtime. The Await instruction drives resolution exclusively
     /// through this registry — no ad-hoc pending-to-null fallback.
-    pub(crate) promise_registry: PromiseRegistry<Value16>,
+    pub promise_registry: PromiseRegistry<Value16>,
     /// #728/#892: RAG embedding provider for cosine similarity recall
     pub(crate) rag_embedder: SimpleEmbedding,
     /// #892: RAG vector stores delegated to hudhudscript_rag::VectorStore (per store_name)
@@ -276,26 +275,24 @@ pub struct VM {
     /// Boxed so call/return can swap the entire bank via
     /// std::mem::swap (O(1) pointer exchange) instead of
     /// copying 256 Value16s (AÇIK-8 / PERF-REGSWAP).
-    pub(crate) registers: crate::vm::register_arena::RegisterArena,
-    /// Call-stack parallel to `call_stack_names`: each entry holds the
+    pub registers: crate::vm::register_arena::RegisterArena,
     /// Used by `get_var_cloned` / `upvalue_cell_for` for slot-based lookups.
-    /// PERF-T2-3: raw pointer eliminates Arc::clone atomic refcount ops.
-    /// generator), all valid for the VM lifetime.
+    /// PERF-T2-3: raw pointer eliminates Arc::clone atomic refcount ops;
+    /// all valid for the VM lifetime.
     pub(crate) call_stack_local_syms: Vec<*const Vec<(u32, usize, Option<usize>)>>,
-    /// Owned local_syms allocations that must be freed on VM drop.
-    /// Entries correspond to call_stack_local_syms slots created via
-    /// included here because ChunkCache owns them.
+    /// Owned local_syms allocations that must be freed on VM drop
+    /// (call_stack_local_syms slots not owned by ChunkCache).
     pub(crate) owned_local_sym_refs: Vec<*const Vec<(u32, usize, Option<usize>)>>,
     /// Pending call request set by execute_instructions on StepAction::Call
     pub(crate) pending_call: Option<(SymId, u32, u8, u8, u8, usize)>, // (func_sym, function_idx, arg_count, first_arg, dst, ip)
     /// Heap-owned VM-to-VM request consumed only by the outer frame driver.
-    pub(crate) pending_vm_call: Option<Box<VmCallRequest>>,
+    pub pending_vm_call: Option<Box<VmCallRequest>>,
     /// Large multi-stage call state. `StepAction` carries only a marker/id.
-    pub(crate) vm_continuations: Vec<VmContinuation>,
+    pub vm_continuations: Vec<VmContinuation>,
     /// Flag: the next exec_call in the trampoline should set class_context on the pushed frame.
     pub(crate) pending_super_call: bool,
     /// T3-1-B: Trampoline call-frame stack.
-    pub(crate) frame_stack: Vec<CallFrame>,
+    pub frame_stack: Vec<CallFrame>,
 
     /// PERF0004: base index into the operand stack for the current call frame.
     /// Same flat-Vec trick as local_slot_base. On call: save base, set new
@@ -326,17 +323,18 @@ pub struct VM {
     /// path (Vec<Value> is 24 B and would inflate every step's
     /// return value).  Reused across tail calls via `take()` in the
     /// handler — no per-call allocation once grown.
-    pub(crate) tco_args: Option<Vec<Value16>>,
+    pub tco_args: Option<Vec<Value16>>,
     /// AÇIK-9: Reusable scratch buffer for argument lists > 8.
     /// Eliminates per-call Vec allocation by clearing + reusing
     /// the same backing storage across calls.
-    pub(crate) args_scratch: Vec<Value16>,
+    pub args_scratch: Vec<Value16>,
     /// Lazy generator support: sender for yielded values.
     /// When set, the `Yield` instruction sends through this channel (blocking
     /// on the rendezvous channel until `next()` consumes it) instead of
     /// V2-B: Yield-tabanlı generator'ların DetachedGraph receiver'ları.
     /// Key = state.yield_id; receiver heap'ten bağımsız → GC trace gerekmez.
-    pub(crate) yield_receivers:
+    #[doc(hidden)]
+    pub yield_receivers:
         FxHashMap<u64, std::sync::mpsc::Receiver<hudhudscript_bytecode::gc_detach::DetachedGraph>>,
     /// H-BLOCKING: Detached promise receivers (detach in thread, attach on await).
     pub(crate) detached_promises: FxHashMap<
@@ -344,8 +342,7 @@ pub struct VM {
         std::sync::mpsc::Receiver<Result<hudhudscript_bytecode::gc_detach::DetachedGraph, String>>,
     >,
     pub(crate) next_yield_id: u64,
-    // Eski yield_sender (Value16) — V2-B'de DetachedGraph'e geçildi. Hâlâ kurulumda kullanılır
-    // ama kanal artık gc_detach::DetachedGraph taşır.
+    // Eski yield_sender (Value16) — V2-B'de DetachedGraph'e geçildi.
     pub(crate) yield_sender:
         Option<std::sync::mpsc::SyncSender<hudhudscript_bytecode::gc_detach::DetachedGraph>>,
     /// PERF0011: Unified chunk cache — single FxHashMap lookup for both
@@ -368,7 +365,7 @@ pub struct VM {
     pub(crate) main_local_slots: Vec<u32>,
     /// P5.1: GC-root olarak izlenecek sabit havuzu değerleri (Bytecode +
     /// FunctionChunk constants). execute() girişinde + chunk cache eklemede doldurulur.
-    pub(crate) gc_constant_roots: Vec<Value16>,
+    pub gc_constant_roots: Vec<Value16>,
     /// G3-2: Already registered chunk roots — guards duplicate extend.
     pub(crate) constant_root_chunks: FxHashSet<*const hudhudscript_bytecode::FunctionChunk>,
     /// Callee cache indexed by function-name sym_id.
@@ -397,4 +394,7 @@ pub struct VM {
     /// P3: pre-interned SymId for hot-path set_var/get_var in class method dispatch.
     pub(crate) this_sym: u32,
     pub(crate) cur_this: Value16,
+    /// BULGU6: tekil çerçeve seri sayacı — TF sahiplik anahtarı.
+    /// PERF (v0.9.58): struct sonunda — ortada sıcak alan ofsetlerini kaydırıyordu.
+    pub(crate) frame_serial: usize,
 }

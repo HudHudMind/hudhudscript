@@ -149,28 +149,11 @@ impl VM {
         trace_values(self.gc_constant_roots.iter(), gray);
     }
 
-    pub(crate) fn mark_from_roots(&self) {
+    #[doc(hidden)]
+    pub fn mark_from_roots(&self) {
         let mut gray = Vec::new();
         self.trace_roots(&mut gray);
         hudhudscript_bytecode::gc_pin::trace_pinned(&mut gray);
         gc::drain_gray(&mut gray);
     }
 }
-
-#[cfg(test)]
-mod tests;
-
-#[cfg(test)]
-mod read_only_tests;
-
-#[cfg(test)]
-mod runtime_bucket_tests;
-
-#[cfg(test)]
-mod collect_tests;
-
-#[cfg(test)]
-mod collect_constant_tests;
-
-#[cfg(test)]
-mod call_state_tests;

@@ -42,6 +42,7 @@ impl VM {
             locale: OutputLocale::Default,
             object_equality: crate::vm::config_types::ObjectEquality::Identity,
             try_frames: Vec::new(),
+            frame_serial: 0,
             finally_frames: Vec::new(),
             pending_flow: None,
             iterators: Vec::new(),

@@ -95,6 +95,19 @@ pub fn find_runtime_lib() -> Result<PathBuf, String> {
             break;
         }
     }
+    // Yedek: bu crate'in derleme-zamanı konumundan ana workspace kökü.
+    // Çağıran dış repoda (hudhud-script-tests) koşarken CWD yürüyüşü ana
+    // repoya ulaşamaz — kardeş dizindir; refresh_runtime_lib çıktısı her
+    // zaman ana repo target/'ına yazılır.
+    if let Some(root) = Path::new(env!("CARGO_MANIFEST_DIR")).ancestors().nth(2) {
+        for profile in ["release", "debug"] {
+            let c = root.join("target").join(profile).join(libname);
+            if c.is_file() {
+                ensure_runtime_fresh(&c)?;
+                return Ok(c);
+            }
+        }
+    }
     Err(format!(
         "runtime library {libname} not found — build it with \
          `cargo build --release -p hudhudscript-native-abi` or set HUDHUD_RUNTIME_LIB"
@@ -104,7 +117,8 @@ pub fn find_runtime_lib() -> Result<PathBuf, String> {
 /// Giriş shim'i (F19): init VE main sırayla koşar (JIT ile aynı);
 /// her nonzero status hatadır (önceden yalnız 3 sayılıyordu — taşma
 /// ve bölme-sıfır sessizce başarılı çıkıyordu).
-fn entry_shim(init_symbol: Option<&str>, main_symbol: Option<&str>) -> String {
+#[doc(hidden)]
+pub fn entry_shim(init_symbol: Option<&str>, main_symbol: Option<&str>) -> String {
     let mut calls = String::new();
     if let Some(sym) = init_symbol {
         calls.push_str(&format!(
@@ -206,25 +220,18 @@ pub fn find_runtime_lib_for(triple: &str) -> Result<PathBuf, String> {
             break;
         }
     }
+    // Yedek: ana workspace kökü (find_runtime_lib ile aynı gerekçe).
+    if let Some(root) = Path::new(env!("CARGO_MANIFEST_DIR")).ancestors().nth(2) {
+        for profile in ["release", "debug"] {
+            let c = root.join("target").join(triple).join(profile).join(libname);
+            if c.is_file() {
+                ensure_runtime_fresh(&c)?;
+                return Ok(c);
+            }
+        }
+    }
     Err(format!(
         "cross runtime library for `{triple}` not found — build with \
          `cargo build --release -p hudhudscript-native-abi --target {triple}`"
     ))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn finds_linker_on_host() {
-        assert!(find_linker().is_ok());
-    }
-
-    #[test]
-    fn entry_shim_calls_entry_symbol() {
-        let shim = entry_shim(Some("hudhud__hudhud_init"), None);
-        assert!(shim.contains("hudhud__hudhud_init"));
-        assert!(shim.contains("int main(void)"));
-    }
 }

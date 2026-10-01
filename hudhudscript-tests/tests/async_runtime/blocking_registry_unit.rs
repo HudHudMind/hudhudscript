@@ -64,13 +64,17 @@ mod tests {
     #[test]
     fn await_all_blocking_returns_values_in_input_order() {
         let mut reg: PromiseRegistry<i32> = PromiseRegistry::new();
-        // Two tasks with inverted completion order: id_a sleeps longer.
-        let id_a = reg.spawn_task(|| {
+        let completion_order = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let co1 = completion_order.clone();
+        let id_a = reg.spawn_task(move || {
             std::thread::sleep(std::time::Duration::from_millis(80));
+            co1.lock().unwrap().push(1);
             Ok(1)
         });
-        let id_b = reg.spawn_task(|| {
+        let co2 = completion_order.clone();
+        let id_b = reg.spawn_task(move || {
             std::thread::sleep(std::time::Duration::from_millis(20));
+            co2.lock().unwrap().push(2);
             Ok(2)
         });
         let ids = [id_a.as_str(), id_b.as_str()];
@@ -78,10 +82,15 @@ mod tests {
         let out = reg.await_all_blocking(&ids).expect("all resolve");
         let elapsed = start.elapsed();
         assert_eq!(out, vec![1, 2], "results must follow input order");
-        // Concurrent: should be ~max(80, 20) ≈ 80ms, not 100ms.
+        assert_eq!(
+            *completion_order.lock().unwrap(),
+            vec![2, 1],
+            "task 2 must complete before task 1"
+        );
+        // Concurrent: should finish promptly without sequential serialization
         assert!(
-            elapsed < std::time::Duration::from_millis(180),
-            "await_all_blocking should be concurrent, took {:?}",
+            elapsed < std::time::Duration::from_millis(600),
+            "await_all_blocking should be concurrent and finish promptly, took {:?}",
             elapsed
         );
     }
@@ -89,8 +98,11 @@ mod tests {
     #[test]
     fn await_all_blocking_propagates_first_rejection() {
         let mut reg: PromiseRegistry<i32> = PromiseRegistry::new();
-        let id_a = reg.spawn_task(|| {
-            std::thread::sleep(std::time::Duration::from_millis(100));
+        let slow_finished = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let sf = slow_finished.clone();
+        let id_a = reg.spawn_task(move || {
+            std::thread::sleep(std::time::Duration::from_millis(300));
+            sf.store(true, std::sync::atomic::Ordering::SeqCst);
             Ok(1)
         });
         let id_b = reg.spawn_task(|| {
@@ -105,10 +117,13 @@ mod tests {
             RegistryError::Rejected(msg) => assert_eq!(msg, "boom"),
             other => panic!("expected Rejected, got {:?}", other),
         }
-        // Should return near-immediately after the fast rejection, not
-        // wait for the slow resolver.
+        // Should return near-immediately after the fast rejection, without waiting for the slow resolver
         assert!(
-            elapsed < std::time::Duration::from_millis(80),
+            !slow_finished.load(std::sync::atomic::Ordering::SeqCst),
+            "slow task should not have finished before await_all_blocking returns on rejection"
+        );
+        assert!(
+            elapsed < std::time::Duration::from_millis(250),
             "await_all_blocking should short-circuit on reject, took {:?}",
             elapsed
         );
@@ -127,8 +142,11 @@ mod tests {
     #[test]
     fn await_race_blocking_first_to_finish_wins() {
         let mut reg: PromiseRegistry<i32> = PromiseRegistry::new();
-        let id_slow = reg.spawn_task(|| {
-            std::thread::sleep(std::time::Duration::from_millis(120));
+        let slow_finished = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let sf = slow_finished.clone();
+        let id_slow = reg.spawn_task(move || {
+            std::thread::sleep(std::time::Duration::from_millis(300));
+            sf.store(true, std::sync::atomic::Ordering::SeqCst);
             Ok(100)
         });
         let id_fast = reg.spawn_task(|| {
@@ -142,7 +160,11 @@ mod tests {
         assert_eq!(idx, 1, "fast promise at idx 1 must win");
         assert_eq!(val, 200);
         assert!(
-            elapsed < std::time::Duration::from_millis(90),
+            !slow_finished.load(std::sync::atomic::Ordering::SeqCst),
+            "slow task should not have finished before race returns"
+        );
+        assert!(
+            elapsed < std::time::Duration::from_millis(250),
             "race must return near the fast completion, took {:?}",
             elapsed
         );
@@ -170,7 +192,7 @@ mod tests {
             Err("early".to_string())
         });
         let id_ok = reg.spawn_task(|| {
-            std::thread::sleep(std::time::Duration::from_millis(80));
+            std::thread::sleep(std::time::Duration::from_millis(200));
             Ok(1)
         });
         let ids = [id_rej.as_str(), id_ok.as_str()];

@@ -6,17 +6,18 @@ use parking_lot::RwLock;
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
 
-pub(crate) struct AtomicTransactionAttemptState {
-    pub(crate) function: Value16,
-    pub(crate) chunk: Arc<FunctionChunk>,
-    pub(crate) func_sym: SymId,
-    pub(crate) captures: FxHashMap<String, Arc<RwLock<Value16>>>,
-    pub(crate) dst: u8,
-    pub(crate) origin_ip: usize,
-    pub(crate) attempt: usize,
-    pub(crate) started_at: std::time::Instant,
-    pub(crate) config: hudhudscript_stm::StmConfig,
-    pub(crate) backoff_us: u64,
+#[doc(hidden)]
+pub struct AtomicTransactionAttemptState {
+    pub function: Value16,
+    pub chunk: Arc<FunctionChunk>,
+    pub func_sym: SymId,
+    pub captures: FxHashMap<String, Arc<RwLock<Value16>>>,
+    pub dst: u8,
+    pub origin_ip: usize,
+    pub attempt: usize,
+    pub started_at: std::time::Instant,
+    pub config: hudhudscript_stm::StmConfig,
+    pub backoff_us: u64,
 }
 
 impl AtomicTransactionAttemptState {
@@ -58,7 +59,8 @@ fn atomic_error(message: String) -> hudhudscript_errors::Error {
 impl VM {
     /// Install a fresh transaction and schedule the first attempt body on
     /// the trampoline. Commit/retry decisions happen in the continuation.
-    pub(crate) fn start_atomic_transaction_attempt(
+    #[doc(hidden)]
+    pub fn start_atomic_transaction_attempt(
         &mut self,
         state: AtomicTransactionAttemptState,
     ) -> CompileResult<()> {

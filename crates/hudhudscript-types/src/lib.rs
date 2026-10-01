@@ -16,8 +16,6 @@ pub mod hir_scoping;
 pub mod hir_sop;
 pub mod hir_lower;
 pub mod hir_ops;
-#[cfg(test)]
-mod hir_lower_tests;
 pub mod inference;
 pub mod semantics;
 pub mod types;

@@ -1,14 +1,16 @@
-# Give test threads the same stack the runtime gets in production.
+# Give test threads enough stack for DEBUG-build evaluation depth.
 #
-# `hudhud` runs scripts on the process main thread (8 MiB) and can be asked for
-# more via HUDHUD_THREAD_STACK_MB (see hudhudscript-cli/src/startup.rs), but the
-# libtest harness spawns each test on a 2 MiB thread. VM evaluation of ordinary
-# scripts — class inheritance with `super`, nested module imports — exceeds
-# 2 MiB, so tests aborted with "has overflowed its stack" for programs that run
-# fine under the real CLI. That is a harness artefact, not a language limit, and
-# it masks the actual assertion failures underneath.
+# `hudhud` runs scripts on the process main thread (8 MiB, more via
+# HUDHUD_THREAD_STACK_MB), but the libtest harness spawns each test on a
+# 2 MiB thread; VM evaluation (nested module imports, `super` inheritance)
+# exceeds that and aborts with "has overflowed its stack".
 #
-# 8 MiB mirrors the production main thread. Raise it here, not per test, so the
-# whole suite is measured under production-like conditions.
+# 32 MiB (was 8): nested module loading re-enters VM::execute on the native
+# stack once per `use` level, and DEBUG builds pay ~1 MiB per level
+# (dispatch_unpacked's match frame alone is ~750 KiB unoptimized; coverage
+# instrumentation inflates it further) — a 3-level diamond import sits at the
+# 8 MiB edge and dies intermittently under cargo llvm-cov. Release builds
+# optimize those frames away; virtual reservation costs nothing on Linux.
+# Mirror of the main repo's .cargo/config.toml [env] — keep both in sync.
 [env]
-RUST_MIN_STACK = "8388608"
+RUST_MIN_STACK = "33554432"

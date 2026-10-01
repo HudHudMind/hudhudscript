@@ -3,7 +3,8 @@
 
 use crate::vm::packed_ops::*;
 
-pub(crate) const DENSE_OPCODE_ORDER: &[u8] = &[
+#[doc(hidden)]
+pub const DENSE_OPCODE_ORDER: &[u8] = &[
     OP_INT_EQ_RR,
     OP_INT_LT_RR,
     OP_INT_LE_RR,
@@ -113,21 +114,3 @@ pub(crate) const DENSE_OPCODE_ORDER: &[u8] = &[
     OP_F_CONST,
     OP_F_MOVE,
 ];
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::vm::dispatch_table::dense_index;
-
-    #[test]
-    fn dense_map_has_index_array_rrr() {
-        let idx = dense_index(OP_INDEX_ARRAY_RRR);
-        assert_ne!(idx, 0xFF, "OP_INDEX_ARRAY_RRR must be in DENSE_MAP");
-    }
-
-    #[test]
-    fn dense_map_has_index_string_ascii_rrr() {
-        let idx = dense_index(OP_INDEX_STRING_ASCII_RRR);
-        assert_ne!(idx, 0xFF, "OP_INDEX_STRING_ASCII_RRR must be in DENSE_MAP");
-    }
-}

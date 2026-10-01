@@ -8,18 +8,19 @@ use parking_lot::RwLock;
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
 
-pub(crate) struct CustomIteratorSequence {
-    pub(crate) receiver: Value16,
-    pub(crate) elements: Vec<Value16>,
-    pub(crate) variable_name: String,
-    pub(crate) limit: usize,
-    pub(crate) dst: u8,
-    pub(crate) origin_ip: usize,
-    pub(crate) chunk: Arc<FunctionChunk>,
-    pub(crate) func_sym: SymId,
-    pub(crate) captures: FxHashMap<String, Arc<RwLock<Value16>>>,
-    pub(crate) class_sym: Option<SymId>,
-    pub(crate) write_back: bool,
+#[doc(hidden)]
+pub struct CustomIteratorSequence {
+    pub receiver: Value16,
+    pub elements: Vec<Value16>,
+    pub variable_name: String,
+    pub limit: usize,
+    pub dst: u8,
+    pub origin_ip: usize,
+    pub chunk: Arc<FunctionChunk>,
+    pub func_sym: SymId,
+    pub captures: FxHashMap<String, Arc<RwLock<Value16>>>,
+    pub class_sym: Option<SymId>,
+    pub write_back: bool,
 }
 
 impl CustomIteratorSequence {

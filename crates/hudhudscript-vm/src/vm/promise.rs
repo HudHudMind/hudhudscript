@@ -1,8 +1,59 @@
 use crate::vm::VM;
 use hudhudscript_bytecode::Value16;
 use hudhudscript_bytecode::{Bytecode, FunctionChunk};
+use rustc_hash::FxHashMap;
 use std::collections::HashMap;
 use std::sync::Arc;
+
+/// B5: context bundle captured from the caller VM and installed into every
+/// spawned async/generator VM.  A plain `globals.clone()` snapshot loses the
+/// global scope: top-level bindings live in `shared_globals_vec` (shared
+/// symbols) or in main-frame register slots (main-only symbols) until the
+/// end of `execute()`, and SOP subject templates/instances live in their
+/// own VM-side maps.  Without this bundle a spawned body saw
+/// `console.log` → null / "Undefined variable" / "Property not found" on
+/// subject state.  The bundle is a point-in-time snapshot (same model as
+/// the previous `globals.clone()`): reads resolve, writes stay local to
+/// the spawned VM.
+pub(crate) struct SpawnContext {
+    globals: FxHashMap<hudhudscript_bytecode::interner::SymbolId, Value16>,
+    classes: FxHashMap<String, (Option<String>, Vec<String>)>,
+    declarations: FxHashMap<String, Value16>,
+    subject_templates: FxHashMap<String, crate::vm::sop_types::SubjectTemplate>,
+    subject_instances: FxHashMap<String, crate::vm::sop_types::SubjectInstance>,
+    /// Host-registered module methods (`register_method`) — the bridge
+    /// installs `console.log` here; handlers are `Send + Sync` `Arc`s.
+    module_registry: crate::vm::registry::ModuleRegistry,
+}
+
+impl SpawnContext {
+    /// Capture the caller's global scope (see
+    /// [`VM::globals_snapshot_including_toplevel`]) plus class metadata,
+    /// declaration store, SOP subject templates/instances, and the host
+    /// module-method registry.
+    pub(crate) fn capture(vm: &VM) -> Self {
+        Self {
+            globals: vm.globals_snapshot_including_toplevel(),
+            classes: vm.classes.clone(),
+            declarations: vm.declarations.clone(),
+            subject_templates: vm.subject_templates.clone(),
+            subject_instances: vm.subject_instances.clone(),
+            module_registry: vm.module_registry.clone(),
+        }
+    }
+
+    /// Install the captured context into a freshly spawned VM.
+    pub(crate) fn install_into(self, vm: &mut VM) {
+        for (k, v) in self.globals {
+            vm.globals.entry(k).or_insert(v);
+        }
+        vm.classes = self.classes;
+        vm.declarations = self.declarations;
+        vm.subject_templates = self.subject_templates;
+        vm.subject_instances = self.subject_instances;
+        vm.module_registry = self.module_registry;
+    }
+}
 
 impl crate::vm::VM {
     pub fn register_promise(
@@ -29,6 +80,46 @@ impl crate::vm::VM {
     /// the `await` point and the id was minted elsewhere.
     pub fn store_promise_result(&mut self, id: String, result: Result<Value16, String>) {
         self.promise_registry.store_result_with_id(id, result);
+    }
+
+    /// Snapshot the caller's global namespace INCLUDING the top-level
+    /// bindings that do not live in the `globals` HashMap during
+    /// execution (P3 / ISSUE-2e single-storage routing):
+    ///
+    /// - shared top-level symbols live in `shared_globals_vec` (flat Vec
+    ///   indexed by compile-time shared index),
+    /// - main-only top-level symbols live in their absolute register slot.
+    ///
+    /// The `globals` HashMap only receives these values at the END of
+    /// `execute()` (run.rs), so a bare `globals.clone()` snapshot misses
+    /// them — which is why spawned async/generator VMs (B5) used to lose
+    /// the global scope: `console.log` resolved to null and top-level
+    /// `let` reads failed with "Undefined variable".  Slot-backed values
+    /// are canonical during execution and therefore overwrite any stale
+    /// HashMap entry; plain globals keep their existing values.
+    pub(crate) fn globals_snapshot_including_toplevel(
+        &self,
+    ) -> FxHashMap<hudhudscript_bytecode::interner::SymbolId, Value16> {
+        let mut snap = self.globals.clone();
+        for (sym_idx, encoded) in self.main_local_slots.iter().enumerate() {
+            if *encoded == u32::MAX {
+                continue;
+            }
+            let (slot, is_shared) = VM::main_slot_decode(*encoded);
+            let value = if is_shared {
+                let shared_idx = VM::main_slot_shared_index(*encoded);
+                match self.shared_globals_vec.get(shared_idx) {
+                    Some(v) => *v,
+                    None => continue,
+                }
+            } else if slot != usize::MAX {
+                self.registers.get_absolute(slot)
+            } else {
+                continue;
+            };
+            snap.insert(hudhudscript_bytecode::interner::SymbolId(sym_idx as u32), value);
+        }
+        snap
     }
 
     /// Spawn an async closure on a background thread and return an
@@ -122,11 +213,10 @@ impl crate::vm::VM {
         let captures_clone: HashMap<String, Arc<parking_lot::RwLock<Value16>>> =
             closure_captures.cloned().unwrap_or_default();
 
-        // Snapshot the caller's global namespace so the async function can
-        // read top-level bindings (functions, constants, classes, etc.).
-        let global_scope = self.globals.clone();
-        let classes_clone = self.classes.clone();
-        let declarations_clone = self.declarations.clone();
+        // B5: capture the caller's global scope (top-level slot-backed
+        // bindings included), classes, declarations, and SOP subjects so
+        // the async body keeps the caller's context.
+        let spawn_ctx = SpawnContext::capture(self);
 
         // H-BLOCKING: Detach değerleri thread heap'inden çıkar, DetachedGraph taşınır.
         // Main thread await'te attach ile kendi heap'ine alır.
@@ -137,11 +227,7 @@ impl crate::vm::VM {
 
         std::thread::spawn(move || {
             let mut task_vm = VM::new();
-            for (k, v) in global_scope {
-                task_vm.globals.entry(k).or_insert(v);
-            }
-            task_vm.classes = classes_clone;
-            task_vm.declarations = declarations_clone;
+            spawn_ctx.install_into(&mut task_vm);
             // run attached chunk, capture result
             let func_sym = hudhudscript_bytecode::SymId(
                 hudhudscript_bytecode::interner::intern(&name_clone).0,

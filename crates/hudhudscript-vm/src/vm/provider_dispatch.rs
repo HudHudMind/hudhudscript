@@ -254,7 +254,8 @@ where
 }
 
 /// Build a follow-up LLM request after tool execution.
-fn build_follow_up_request(
+#[doc(hidden)]
+pub fn build_follow_up_request(
     orig_config: &ProviderCallConfig,
     follow_up_prompt: &str,
     tools: &[ToolDefinition],
@@ -328,33 +329,4 @@ pub fn llm_response_to_value(response: &LLMResponse) -> Value16 {
     }
 
     Value16::object(obj)
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test_build_follow_up_request() {
-        let orig_config = ProviderCallConfig {
-            prompt: "original prompt".to_string(),
-            system_prompt: Some("original system".to_string()),
-            temperature: Some(0.5),
-            max_tokens: Some(100),
-            timeout_secs: Some(300),
-        };
-
-        let follow_up = build_follow_up_request(
-            &orig_config,
-            "new prompt",
-            &[],
-            Some("Role text".to_string()),
-        );
-
-        assert_eq!(follow_up.prompt, "new prompt");
-        assert_eq!(follow_up.system_prompt, Some("Role text".to_string()));
-        assert_eq!(follow_up.temperature, Some(0.5));
-        assert_eq!(follow_up.max_tokens, Some(100));
-        assert_eq!(follow_up.timeout_secs, Some(300));
-    }
 }

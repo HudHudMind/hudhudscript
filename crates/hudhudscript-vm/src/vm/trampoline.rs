@@ -3,19 +3,18 @@ use crate::vm::VM;
 use hudhudscript_bytecode::error::{compile_codes, CompileResult};
 use hudhudscript_bytecode::Bytecode;
 
-#[cfg(test)]
 thread_local! {
     static DRIVER_ENTRY_COUNT: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
 }
 
 impl VM {
-    #[cfg(test)]
-    pub(crate) fn reset_driver_entry_count_for_test() {
+    #[doc(hidden)]
+    pub fn reset_driver_entry_count_for_test() {
         DRIVER_ENTRY_COUNT.with(|count| count.set(0));
     }
 
-    #[cfg(test)]
-    pub(crate) fn driver_entry_count_for_test() -> usize {
+    #[doc(hidden)]
+    pub fn driver_entry_count_for_test() -> usize {
         DRIVER_ENTRY_COUNT.with(std::cell::Cell::get)
     }
 
@@ -82,13 +81,13 @@ impl VM {
     /// Run the canonical frame driver until every frame created after
     /// `stop_depth` has returned. User chunks never open another driver from
     /// inside this loop; they schedule a request and yield control here.
-    pub(crate) fn run_frame_loop(
+    #[doc(hidden)]
+    pub fn run_frame_loop(
         &mut self,
         bytecode: &Bytecode,
         main_packed: &[u32],
         stop_depth: usize,
     ) -> CompileResult<bool> {
-        #[cfg(test)]
         DRIVER_ENTRY_COUNT.with(|count| count.set(count.get() + 1));
         self.frame_stack.reserve(64);
         let mut returned = false;

@@ -116,6 +116,12 @@ impl VM {
             return_sink: crate::vm::call_state::ReturnSink::Register(255),
             receiver_context: None,
             swallow_error: false,
+            try_depth: self.try_frames.len(),
+            serial: {
+                let s = self.frame_serial;
+                self.frame_serial += 1;
+                s
+            },
         });
 
         let stop_depth = 0;
@@ -234,6 +240,12 @@ impl VM {
             return_sink: crate::vm::call_state::ReturnSink::Register(255),
             receiver_context: None,
             swallow_error: false,
+            try_depth: self.try_frames.len(),
+            serial: {
+                let s = self.frame_serial;
+                self.frame_serial += 1;
+                s
+            },
         });
 
         let stop_depth = 0;

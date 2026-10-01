@@ -1,6 +1,7 @@
 use hudhudscript_bytecode::error::CompileResult;
 use hudhudscript_bytecode::Value16;
 use hudhudscript_errors::HudHudResult;
+use std::sync::Arc;
 
 /// Zero-cost builtin function pointer (real code, no wrapper).
 pub type BuiltinFn = Box<dyn Fn(&[Value16]) -> HudHudResult<Value16> + Send + Sync>;
@@ -15,9 +16,18 @@ pub type ModuleMethodHandler =
 ///
 /// Supports both per-method registration (`register_method`) and legacy
 /// per-module registration (`register_module`) during the transition.
+///
+/// Handlers are stored as `Arc` so the registry is cheaply clonable
+/// (`Clone`): spawned async/generator VMs (B5) share the caller's host
+/// methods — a bare `module.method(...)` call inside an awaited async
+/// body used to fail with "Unknown method" because the fresh VM had an
+/// empty registry.  Handlers are `Send + Sync` by the `BuiltinFn` /
+/// `ModuleMethodHandler` contracts, so cross-thread sharing is sound.
+#[derive(Clone)]
 pub struct ModuleRegistry {
-    methods: rustc_hash::FxHashMap<String, rustc_hash::FxHashMap<String, BuiltinFn>>,
-    modules: rustc_hash::FxHashMap<String, ModuleMethodHandler>,
+    methods:
+        rustc_hash::FxHashMap<String, rustc_hash::FxHashMap<String, Arc<BuiltinFn>>>,
+    modules: rustc_hash::FxHashMap<String, Arc<ModuleMethodHandler>>,
 }
 
 impl ModuleRegistry {
@@ -33,12 +43,12 @@ impl ModuleRegistry {
         self.methods
             .entry(module_name.to_string())
             .or_default()
-            .insert(method_name.to_string(), handler);
+            .insert(method_name.to_string(), Arc::new(handler));
     }
 
     /// Register a legacy module-wide handler.
     pub fn register_module(&mut self, module_name: &str, handler: ModuleMethodHandler) {
-        self.modules.insert(module_name.to_string(), handler);
+        self.modules.insert(module_name.to_string(), Arc::new(handler));
     }
 
     /// Look up and call a registered builtin.

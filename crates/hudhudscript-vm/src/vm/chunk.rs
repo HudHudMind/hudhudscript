@@ -5,7 +5,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 impl VM {
-    pub(crate) fn call_chunk(
+    #[doc(hidden)]
+    pub fn call_chunk(
         &mut self,
         chunk: &FunctionChunk,
         params: &[String],

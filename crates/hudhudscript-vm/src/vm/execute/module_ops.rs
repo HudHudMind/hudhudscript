@@ -45,7 +45,7 @@ impl VM {
                                     let module_val = self.load_module_from_bytecode(
                                         path, &module_bc, bytecode, None, guard,
                                     )?;
-                                    self.set_var(&module_name, module_val)?;
+                                    self.bind_module_alias(&module_name, module_val)?;
                                     return Ok(StepAction::Advance);
                                 }
                                 Err(e) => {
@@ -56,12 +56,31 @@ impl VM {
                                 }
                             }
                         }
-                        Ok(hudhudscript_errors::ModuleContent::Source(source)) => {
+                        Ok(hudhudscript_errors::ModuleContent::Source {
+                            content: source,
+                            file,
+                        }) => {
+                            // BULGU 4 (P1): modülün KENDİ `use` listesi modül
+                            // dosyasının dizinine göre çözümlenmelidir. Dosya
+                            // yolu bulunamayan fallback `cand_path.parent()`
+                            // kullanır; resolver yolu içe aktaranın kökünü
+                            // geçirdiği için lib/gwork.hud içindeki
+                            // `use "profiles"` lib/profiles.hud'yu bulamayıp
+                            // "__module" işaretleyicisi bağlıyordu.
+                            let module_dir = file
+                                .as_deref()
+                                .and_then(std::path::Path::parent)
+                                .filter(|dir| !dir.as_os_str().is_empty());
+                            let compile_base = module_dir.or(base_dir);
                             let guard = self.resolver_module_guard(base_dir, path)?;
                             let module_val = self.load_module_from_source(
-                                path, &source, bytecode, base_dir, guard,
+                                path,
+                                &source,
+                                bytecode,
+                                compile_base,
+                                guard,
                             )?;
-                            self.set_var(&module_name, module_val)?;
+                            self.bind_module_alias(&module_name, module_val)?;
                             return Ok(StepAction::Advance);
                         }
                         Ok(hudhudscript_errors::ModuleContent::Native { name }) => {
@@ -69,7 +88,7 @@ impl VM {
                             obj.insert("__module".to_string(), Value16::string(name));
                             obj.insert("__loaded".to_string(), Value16::bool_(true));
                             let module_val = Value16::object(obj);
-                            self.set_var(&module_name, module_val)?;
+                            self.bind_module_alias(&module_name, module_val)?;
                             return Ok(StepAction::Advance);
                         }
                         Err(_) => {
@@ -136,6 +155,12 @@ impl VM {
                             match std::fs::read_to_string(&cand_path) {
                                 Ok(source) => {
                                     let guard = self.filesystem_module_guard(&cand_path)?;
+                                    // Nested `use` levels re-enter VM::execute on
+                                    // the NATIVE stack: ~1 MiB per level in debug
+                                    // builds (dispatch_unpacked's unoptimized
+                                    // match frame is ~750 KiB), near-zero in
+                                    // release. Import depth is therefore bounded
+                                    // by thread stack size, not by vm limits.
                                     self.load_module_from_source(
                                         path,
                                         &source,
@@ -169,7 +194,7 @@ impl VM {
                     }
                 };
 
-                self.set_var(&module_name, module_val)?;
+                self.bind_module_alias(&module_name, module_val)?;
             }
 
             Instruction::DefineFunction(payload_idx) => {

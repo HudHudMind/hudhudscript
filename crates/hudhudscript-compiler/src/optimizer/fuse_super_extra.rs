@@ -9,13 +9,18 @@ pub(super) fn try_fuse_extra_pattern(
     i: usize,
 ) -> bool {
     try_array_push_const(instructions, loop_payloads, source_positions, i)
-        || try_index2d(instructions, loop_payloads, source_positions, i)
-        || try_index_assign2d(instructions, loop_payloads, source_positions, i)
+        || super::fuse_super_index::try_index2d(instructions, loop_payloads, source_positions, i)
+        || super::fuse_super_index::try_index_assign2d(
+            instructions,
+            loop_payloads,
+            source_positions,
+            i,
+        )
         || try_int_mul_add_assign(instructions, loop_payloads, source_positions, i)
         || try_property_assign(instructions, loop_payloads, source_positions, i)
         || try_strcat(instructions, loop_payloads, source_positions, i)
 }
-fn remove_at(
+pub(super) fn remove_at(
     instructions: &mut Vec<Instruction>,
     loop_payloads: &mut [LoopPayload],
     source_positions: &mut SourcePositions,
@@ -205,222 +210,6 @@ fn array_push_const_pair(instructions: &[Instruction], i: usize) -> Option<(u8, 
         ) if *dst == *val && *push_dst == *arr => Some((*arr, ArrayPushConst::Any(*const_idx))),
         _ => None,
     }
-}
-fn try_index2d(
-    instructions: &mut Vec<Instruction>,
-    loop_payloads: &mut [LoopPayload],
-    source_positions: &mut SourcePositions,
-    i: usize,
-) -> bool {
-    // P3: also match IndexArray (P1) for nested fusion.
-    // IndexStringAscii is intentionally NOT fused — string-of-strings is not a 2D pattern.
-    let (mid, outer, idx1, inner2, dst, idx2) = match (&instructions[i], &instructions[i + 1]) {
-        (
-            Instruction::Index {
-                dst: m,
-                obj: o,
-                idx: i1,
-            },
-            Instruction::Index {
-                dst,
-                obj: inn,
-                idx: i2,
-            },
-        ) => (*m, *o, *i1, *inn, *dst, *i2),
-        (
-            Instruction::IndexArray {
-                dst: m,
-                obj: o,
-                idx: i1,
-            },
-            Instruction::IndexArray {
-                dst,
-                obj: inn,
-                idx: i2,
-            },
-        ) => (*m, *o, *i1, *inn, *dst, *i2),
-        (
-            Instruction::Index {
-                dst: m,
-                obj: o,
-                idx: i1,
-            },
-            Instruction::IndexArray {
-                dst,
-                obj: inn,
-                idx: i2,
-            },
-        ) => (*m, *o, *i1, *inn, *dst, *i2),
-        (
-            Instruction::IndexArray {
-                dst: m,
-                obj: o,
-                idx: i1,
-            },
-            Instruction::Index {
-                dst,
-                obj: inn,
-                idx: i2,
-            },
-        ) => (*m, *o, *i1, *inn, *dst, *i2),
-        _ => return false,
-    };
-    if mid == inner2 {
-        instructions[i] = Instruction::Index2D {
-            dst,
-            obj: outer,
-            idx1,
-            idx2,
-        };
-        remove_at(instructions, loop_payloads, source_positions, i + 1);
-        return true;
-    }
-    false
-}
-fn try_index_assign2d(
-    instructions: &mut Vec<Instruction>,
-    loop_payloads: &mut [LoopPayload],
-    source_positions: &mut SourcePositions,
-    i: usize,
-) -> bool {
-    // P3: also match IndexArray (P1) for nested fusion
-    match (&instructions[i], &instructions[i + 1]) {
-        (
-            Instruction::Index {
-                dst: row,
-                obj: outer,
-                idx: idx1,
-            },
-            Instruction::IndexAssign {
-                obj: inner,
-                idx: idx2,
-                val,
-            },
-        )
-        | (
-            Instruction::IndexArray {
-                dst: row,
-                obj: outer,
-                idx: idx1,
-            },
-            Instruction::IndexAssignArray {
-                obj: inner,
-                idx: idx2,
-                val,
-            },
-        )
-        | (
-            Instruction::Index {
-                dst: row,
-                obj: outer,
-                idx: idx1,
-            },
-            Instruction::IndexAssignArray {
-                obj: inner,
-                idx: idx2,
-                val,
-            },
-        )
-        | (
-            Instruction::IndexArray {
-                dst: row,
-                obj: outer,
-                idx: idx1,
-            },
-            Instruction::IndexAssign {
-                obj: inner,
-                idx: idx2,
-                val,
-            },
-        ) => {
-            if *row == *inner {
-                instructions[i] = Instruction::IndexAssign2D {
-                    obj: *outer,
-                    idx1: *idx1,
-                    idx2: *idx2,
-                    val: *val,
-                };
-                remove_at(instructions, loop_payloads, source_positions, i + 1);
-                return true;
-            }
-        }
-        _ => {}
-    }
-
-    if i + 2 >= instructions.len() {
-        return false;
-    }
-    let middle = instructions[i + 1].clone();
-    if !matches!(
-        &middle,
-        Instruction::LoadIntConst { .. } | Instruction::LoadConst { .. }
-    ) {
-        return false;
-    }
-    let fused = if let (
-        Instruction::Index {
-            dst: row,
-            obj: outer,
-            idx: idx1,
-        },
-        Instruction::IndexAssign {
-            obj: inner,
-            idx: idx2,
-            val,
-        },
-    ) = (&instructions[i], &instructions[i + 2])
-    {
-        let middle_dst = match &middle {
-            Instruction::LoadIntConst { dst, .. } | Instruction::LoadConst { dst, .. } => *dst,
-            _ => unreachable!(),
-        };
-        if *row == *inner && middle_dst == *val {
-            Some(Instruction::IndexAssign2D {
-                obj: *outer,
-                idx1: *idx1,
-                idx2: *idx2,
-                val: *val,
-            })
-        } else {
-            None
-        }
-    } else if let (
-        Instruction::IndexArray {
-            dst: row,
-            obj: outer,
-            idx: idx1,
-        },
-        Instruction::IndexAssign {
-            obj: inner,
-            idx: idx2,
-            val,
-        },
-    ) = (&instructions[i], &instructions[i + 2])
-    {
-        let middle_dst = match &middle {
-            Instruction::LoadIntConst { dst, .. } | Instruction::LoadConst { dst, .. } => *dst,
-            _ => unreachable!(),
-        };
-        if *row == *inner && middle_dst == *val {
-            Some(Instruction::IndexAssign2D {
-                obj: *outer,
-                idx1: *idx1,
-                idx2: *idx2,
-                val: *val,
-            })
-        } else {
-            None
-        }
-    } else {
-        None
-    };
-    if let Some(instr) = fused {
-        instructions[i] = middle;
-        instructions[i + 1] = instr;
-        remove_at(instructions, loop_payloads, source_positions, i + 2);
-        return true;
-    }
-    false
 }
 fn try_int_mul_add_assign(
     instructions: &mut Vec<Instruction>,

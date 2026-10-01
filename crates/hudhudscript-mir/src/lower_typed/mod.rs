@@ -27,8 +27,6 @@ pub(crate) mod methods;
 pub(crate) mod phi_helpers;
 pub(crate) mod stmt;
 pub(crate) mod stmt_loops;
-#[cfg(test)]
-mod tests;
 
 pub(crate) use cx::FnCx;
 pub(crate) use stmt::{lower_stmts, StmtFlow};

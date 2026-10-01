@@ -50,28 +50,3 @@ where
             })?
     })
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn works_without_a_caller_runtime() {
-        assert_eq!(block_on(async { Ok(7) }).unwrap(), 7);
-    }
-
-    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-    async fn works_inside_a_multithread_runtime() {
-        assert_eq!(block_on(async { Ok(8) }).unwrap(), 8);
-    }
-
-    #[test]
-    fn works_inside_a_current_thread_runtime() {
-        let caller = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .unwrap();
-        let value = caller.block_on(async { block_on(async { Ok(9) }) });
-        assert_eq!(value.unwrap(), 9);
-    }
-}

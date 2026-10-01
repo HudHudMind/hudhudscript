@@ -7,7 +7,8 @@ use crate::hir_lower::{reject, HirLowerError};
 use crate::hir_ops::{bin_op, lower_literal};
 use crate::types::Type;
 
-pub(crate) fn lower_expr(expr: &Expr) -> Result<HirExpr, HirLowerError> {
+#[doc(hidden)]
+pub fn lower_expr(expr: &Expr) -> Result<HirExpr, HirLowerError> {
     match expr {
         Expr::Literal(lit, _) => lower_literal(lit),
         Expr::Identifier(name, _) => Ok(HirExpr::Local { name: name.clone(), ty: Type::Any }),

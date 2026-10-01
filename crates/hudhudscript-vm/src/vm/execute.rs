@@ -47,7 +47,10 @@ mod class_ops;
 mod classes_modules;
 mod collections_calls;
 mod collections_fast;
+pub(crate) mod cmp_core;
+mod cmp_fallback;
 mod control_flow;
+mod index2d_fallback;
 mod indexing;
 mod int_arith;
 mod int_cmp;
@@ -56,11 +59,8 @@ mod literals_locals;
 mod methods_async_generator;
 mod methods_generator;
 mod module_loader;
-mod module_merge;
+pub mod module_merge;
 mod module_ops;
-
-#[cfg(test)]
-mod module_loader_tests;
 mod num_arith;
 mod rag;
 mod step;

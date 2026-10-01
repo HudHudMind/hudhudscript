@@ -159,9 +159,39 @@ pub(crate) fn compile_expr_to_reg(
             )
         }
         Expr::Call { callee, args, .. } => {
-            crate::compiler::expr::compile_reg_calls::compile_call(
-                target, callee, args, regs, ip, last_use, expr,
-            )
+            // B6 zone reclamation: a member call whose receiver is itself a
+            // non-trivial expression (a chain link like `a.m().n().o()`)
+            // used to reach `compile_call`'s fall-through, which compiled
+            // the whole sub-expression in a FRESH 16-register zone — one
+            // zone per chain level, exhausting the 14 available zones
+            // around depth 14.  Compile the level in the CALLER's zone
+            // instead; chain receivers recurse through this dispatch, so
+            // the whole chain shares one zone.  Identifier receivers
+            // (`x.m(...)`, `Math.floor(...)`, `this.call(...)`) keep the
+            // legacy path so the math intrinsics, generator handling and
+            // builtin-resolution fast paths are untouched.
+            if let Expr::Member {
+                object, property, ..
+            } = callee.as_ref()
+            {
+                let is_super =
+                    matches!(object.as_ref(), Expr::Identifier(n, _) if n == "super");
+                let has_spread = args.iter().any(|a| matches!(a, Expr::Spread { .. }));
+                let simple_receiver = matches!(object.as_ref(), Expr::Identifier(..));
+                if !is_super && !has_spread && !simple_receiver {
+                    crate::compiler::expr::compile_member_call::compile_chained_member_call(
+                        target, object, property, args, regs, ip, last_use,
+                    )
+                } else {
+                    crate::compiler::expr::compile_reg_calls::compile_call(
+                        target, callee, args, regs, ip, last_use, expr,
+                    )
+                }
+            } else {
+                crate::compiler::expr::compile_reg_calls::compile_call(
+                    target, callee, args, regs, ip, last_use, expr,
+                )
+            }
         }
         Expr::Perform { action, .. } => {
             crate::compiler::expr::compile_reg_calls::compile_perform(

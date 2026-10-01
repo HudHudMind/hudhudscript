@@ -4,14 +4,15 @@ use parking_lot::RwLock;
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
 
-pub(crate) struct PromiseCallbackState {
-    pub(crate) dst: u8,
-    pub(crate) callback: Value16,
-    pub(crate) origin_ip: usize,
-    pub(crate) argument: Value16,
-    pub(crate) chunk: Arc<FunctionChunk>,
-    pub(crate) func_sym: SymId,
-    pub(crate) captures: FxHashMap<String, Arc<RwLock<Value16>>>,
+#[doc(hidden)]
+pub struct PromiseCallbackState {
+    pub dst: u8,
+    pub callback: Value16,
+    pub origin_ip: usize,
+    pub argument: Value16,
+    pub chunk: Arc<FunctionChunk>,
+    pub func_sym: SymId,
+    pub captures: FxHashMap<String, Arc<RwLock<Value16>>>,
 }
 
 impl PromiseCallbackState {

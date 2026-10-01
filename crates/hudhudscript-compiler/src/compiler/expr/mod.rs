@@ -202,6 +202,7 @@ pub(crate) fn emit_numeric_literal(target: &mut impl CompileTarget, n: f64) {
 /// `compile_expr` logic used by both `Compiler` and `FunctionCompiler`.
 pub mod compile_complex;
 pub mod compile_complex_extra;
+pub mod compile_member_call;
 pub mod compile_reg;
 pub mod compile_reg_binary;
 pub mod compile_reg_calls;

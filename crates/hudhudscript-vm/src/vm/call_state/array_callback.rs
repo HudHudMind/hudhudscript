@@ -10,7 +10,8 @@ use rustc_hash::FxHashMap;
 use std::sync::Arc;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum ArrayCallbackOperation {
+#[doc(hidden)]
+pub enum ArrayCallbackOperation {
     Map,
     Filter,
     Reduce,
@@ -35,15 +36,16 @@ impl ArrayCallbackOperation {
     }
 }
 
-pub(crate) struct FunctionCallbackSequence {
-    pub(crate) operation: ArrayCallbackOperation,
-    pub(crate) items: Vec<Value16>,
-    pub(crate) callback: Value16,
-    pub(crate) index: usize,
-    pub(crate) accumulator: Option<Value16>,
-    pub(crate) output: Vec<Value16>,
-    pub(crate) dst: u8,
-    pub(crate) origin_ip: usize,
+#[doc(hidden)]
+pub struct FunctionCallbackSequence {
+    pub operation: ArrayCallbackOperation,
+    pub items: Vec<Value16>,
+    pub callback: Value16,
+    pub index: usize,
+    pub accumulator: Option<Value16>,
+    pub output: Vec<Value16>,
+    pub dst: u8,
+    pub origin_ip: usize,
     chunk: Arc<FunctionChunk>,
     func_sym: SymId,
     captures: FxHashMap<String, Arc<RwLock<Value16>>>,

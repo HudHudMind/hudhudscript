@@ -4,25 +4,28 @@ use hudhudscript_bytecode::error::{compile_codes, CompileResult};
 use hudhudscript_bytecode::{gc, DynamicObject, FunctionChunk, SymId, Value16};
 use std::sync::Arc;
 
-pub(crate) enum SopResultPolicy {
+#[doc(hidden)]
+pub enum SopResultPolicy {
     Ignore,
     Replace,
 }
 
-pub(crate) struct SopCallStep {
-    pub(crate) chunk: Arc<FunctionChunk>,
-    pub(crate) func_sym: SymId,
-    pub(crate) result_policy: SopResultPolicy,
-    pub(crate) swallow_error: bool,
+#[doc(hidden)]
+pub struct SopCallStep {
+    pub chunk: Arc<FunctionChunk>,
+    pub func_sym: SymId,
+    pub result_policy: SopResultPolicy,
+    pub swallow_error: bool,
 }
 
-pub(crate) struct SopAbilitySequence {
-    pub(crate) steps: Vec<SopCallStep>,
-    pub(crate) index: usize,
-    pub(crate) args: Vec<Value16>,
-    pub(crate) result: Option<Value16>,
-    pub(crate) dst: u8,
-    pub(crate) origin_ip: usize,
+#[doc(hidden)]
+pub struct SopAbilitySequence {
+    pub steps: Vec<SopCallStep>,
+    pub index: usize,
+    pub args: Vec<Value16>,
+    pub result: Option<Value16>,
+    pub dst: u8,
+    pub origin_ip: usize,
 }
 
 impl SopAbilitySequence {

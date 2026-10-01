@@ -336,7 +336,8 @@ pub(crate) fn lower_stmt(stmt: &Stmt) -> Result<Vec<HirStmt>, HirLowerError> {
     }
 }
 
-pub(crate) use crate::hir_expr_lower::lower_expr;
+#[doc(hidden)]
+pub use crate::hir_expr_lower::lower_expr;
 
 pub(crate) fn reject(item: &str, reason: &str) -> HirLowerError {
     HirLowerError::Unsupported { item: item.to_string(), reason: reason.to_string() }

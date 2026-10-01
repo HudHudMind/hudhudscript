@@ -27,10 +27,3 @@ pub use mir::*;
 pub use print::render_function;
 pub use specialize::specialize_module;
 pub use verify::{verify_function, VerifyError};
-
-#[cfg(test)]
-mod builder_tests;
-#[cfg(test)]
-mod mir_tests;
-#[cfg(test)]
-mod verify_tests;

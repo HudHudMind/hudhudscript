@@ -118,6 +118,10 @@ impl VM {
 
         // BUG1: plain functions also need to save the caller's try/finally
         // state so that cross-frame throw can restore it when unwinding.
+        // BULGU6: try_depth TAKE'TEN ÖNCE okunmalı — save_finally_state()
+        // try_frames'i mem::take ile boşaltır; sonrası okunan değer 0 olur
+        // ve teardown, geri yüklenen çağıran TF'lerini yanlışlıkla budar.
+        let try_depth_at_push = self.try_frames.len();
         let saved_fin = self.save_finally_state();
 
         self.frame_stack.push(CallFrame {
@@ -138,6 +142,12 @@ impl VM {
             return_sink: ReturnSink::Register(dst),
             receiver_context: None,
             swallow_error: false,
+            try_depth: try_depth_at_push,
+            serial: {
+                let s = self.frame_serial;
+                self.frame_serial += 1;
+                s
+            },
         });
 
         Ok(())

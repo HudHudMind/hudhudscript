@@ -60,10 +60,12 @@ use std::collections::{HashMap, HashSet};
 // remaining atomic is `AtomicBool` via the fully-qualified path used in
 // the cancellation token field (see `cancellation_token` below).
 use std::sync::Arc;
+pub(crate) mod try_frames;
 pub(crate) mod module_load_context;
 pub(crate) mod opcode_spec;
-pub(crate) mod types;
-pub(crate) use crate::vm::types::*;
+#[doc(hidden)]
+pub mod types;
+pub use crate::vm::types::*;
 
 // ── Packed-instruction opcode constants for fast dispatch ────────────
 // These MUST stay in sync with hudhudscript_bytecode::packed_instruction.
@@ -87,24 +89,32 @@ pub(crate) mod class_ops;
 pub(crate) mod config_types;
 pub(crate) mod ctor;
 pub(crate) mod database;
-pub(crate) mod dense_ops;
-pub(crate) mod dense_spec;
+#[doc(hidden)]
+pub mod dense_ops;
+#[doc(hidden)]
+pub mod dense_spec;
 pub(crate) mod dispatch;
 pub(crate) mod dispatch_actor_io;
+pub(crate) mod dispatch_cmp_ops;
 pub(crate) mod dispatch_core;
 pub(crate) mod dispatch_env;
 pub(crate) mod dispatch_general;
 pub(crate) mod dispatch_governance;
-pub(crate) mod dispatch_int_arith;
+#[doc(hidden)]
+pub mod dispatch_int_arith;
+pub(crate) mod dispatch_int_arith_reg;
 pub(crate) mod dispatch_mcp_stm;
-pub(crate) mod dispatch_num_arith;
+#[doc(hidden)]
+pub mod dispatch_num_arith;
 pub(crate) mod dispatch_string_result;
-pub(crate) mod dispatch_table;
+#[doc(hidden)]
+pub mod dispatch_table;
 pub(crate) mod dispatch_terminal;
 pub(crate) mod error_helpers;
 pub(crate) mod exception_value;
-pub(crate) mod exec;
-pub(crate) mod execute;
+#[doc(hidden)]
+pub mod exec;
+pub mod execute;
 pub(crate) mod execute_instructions;
 pub mod ffi_support;
 pub(crate) mod fastcall;
@@ -119,7 +129,7 @@ pub mod governance_ops;
 pub mod host_access;
 pub(crate) mod index_helpers;
 pub use host_access::{AccessDecision as HostAccessDecision, HostAccessPolicy};
-pub(crate) mod call_state;
+pub mod call_state;
 pub mod json;
 pub mod map;
 pub(crate) mod math_fast_paths;
@@ -132,8 +142,10 @@ pub(crate) mod prepack;
 pub(crate) mod promise;
 pub(crate) mod promise_combinators;
 pub(crate) mod property;
-pub(crate) mod provider;
+#[doc(hidden)]
+pub mod provider;
 pub mod provider_dispatch;
+pub(crate) mod provider_runtime;
 pub mod provider_system_context;
 
 /// M1: üretimin async→sync köprüsü — kalıcı paylaşımlı runtime üzerinde
@@ -145,7 +157,8 @@ pub fn provider_bridge_block_on<T: Send + 'static>(
     provider::block_on_provider(fut)
 }
 pub(crate) mod frame_lifecycle;
-pub(crate) mod register_arena;
+#[doc(hidden)]
+pub mod register_arena;
 pub mod registry;
 pub(crate) mod run;
 pub(crate) mod scope;
@@ -163,6 +176,7 @@ use crate::vm::registry::{BuiltinFn, ModuleRegistry};
 
 pub mod machine;
 pub(crate) mod machine_support;
-mod machine_types;
+#[doc(hidden)]
+pub mod machine_types;
 pub(crate) mod method_dispatch;
 pub use machine::VM;

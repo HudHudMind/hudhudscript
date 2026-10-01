@@ -342,7 +342,3 @@ impl HostAccessConfig {
         policy
     }
 }
-
-#[cfg(test)]
-#[path = "host_access_tests.rs"]
-mod tests;

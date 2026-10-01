@@ -11,7 +11,8 @@ mod indices;
 use indices::{len_u32, merge_module_payload_pools_once, remap_chunk_indices};
 
 /// Merge selected module registries and all shared payload pools exactly once.
-pub(crate) fn merge_module_bytecode(source: &Bytecode, target: &Bytecode) -> CompileResult<()> {
+#[doc(hidden)]
+pub fn merge_module_bytecode(source: &Bytecode, target: &Bytecode) -> CompileResult<()> {
     let source_functions = source.function_entries_by_index()?;
     let selected_functions: Vec<_> = source_functions
         .into_iter()
@@ -110,9 +111,6 @@ fn resolve_merged_call_range(target: &mut Bytecode, call_range: Range<usize>) ->
 fn merge_error(message: String) -> hudhudscript_errors::Error {
     compile_codes::runtime_error(format!("Module merge invariant: {}", message))
 }
-
-#[cfg(test)]
-mod tests;
 
 pub(crate) fn collect_module_export_names(ast: &[hudhudscript_ast::Stmt]) -> Vec<String> {
     let mut names = Vec::new();

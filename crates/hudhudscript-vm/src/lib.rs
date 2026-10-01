@@ -20,5 +20,8 @@ pub mod stdlib;
 pub mod vm;
 pub mod wasm_compat;
 
+#[doc(hidden)]
+pub use rustc_hash;
+
 pub use stdlib::register_vm_stdlib_modules;
 pub use vm::*;

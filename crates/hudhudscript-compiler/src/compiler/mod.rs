@@ -22,7 +22,7 @@ mod helpers;
 pub(crate) use helpers::*;
 mod regalloc;
 pub(crate) use regalloc::RegAlloc;
-mod stmt_shared;
+pub mod stmt_shared;
 mod target;
 // FunctionCompiler eliminated (ISSUE-2) — Compiler handles function bodies directly
 // use function_compiler::FunctionCompiler;

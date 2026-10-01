@@ -65,6 +65,10 @@ impl std::fmt::Display for CliError {
 pub mod config_types;
 pub mod config_include;
 pub mod config_build;
+#[doc(hidden)]
+pub mod cli_spec;
+#[doc(hidden)]
+pub mod startup;
 
 pub use config_types::*;
 pub use config_build::*;

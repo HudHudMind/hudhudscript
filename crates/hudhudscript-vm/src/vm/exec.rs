@@ -1,5 +1,5 @@
 mod execute_chunk;
-pub(crate) mod helpers;
+pub mod helpers;
 mod super_call;
 
 use crate::vm::VM;

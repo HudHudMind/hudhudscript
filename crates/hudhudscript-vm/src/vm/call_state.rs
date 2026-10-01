@@ -11,41 +11,52 @@ use parking_lot::RwLock;
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
 
-pub(crate) use array_callback::{ArrayCallbackOperation, FunctionCallbackSequence};
-pub(crate) use atomic_transaction::AtomicTransactionAttemptState;
-pub(crate) use custom_iterator::CustomIteratorSequence;
-pub(crate) use governance_dispatch::GovernanceDispatchState;
-pub(crate) use promise_callback::PromiseCallbackState;
-pub(crate) use sop_ability::{SopAbilitySequence, SopCallStep, SopResultPolicy};
+#[doc(hidden)]
+pub use array_callback::{ArrayCallbackOperation, FunctionCallbackSequence};
+#[doc(hidden)]
+pub use atomic_transaction::AtomicTransactionAttemptState;
+#[doc(hidden)]
+pub use custom_iterator::CustomIteratorSequence;
+#[doc(hidden)]
+pub use governance_dispatch::GovernanceDispatchState;
+#[doc(hidden)]
+pub use promise_callback::PromiseCallbackState;
+#[doc(hidden)]
+pub use sop_ability::{SopAbilitySequence, SopCallStep, SopResultPolicy};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct ContinuationId(pub(crate) usize);
+#[doc(hidden)]
+pub struct ContinuationId(pub usize);
 
 /// G06A: instruction-side call-site identity for deferred method calls.
 #[derive(Clone, Copy, Debug)]
-pub(crate) struct DeferredCallSite {
-    pub(crate) dst: u8,
-    pub(crate) origin_ip: usize,
+#[doc(hidden)]
+pub struct DeferredCallSite {
+    pub dst: u8,
+    pub origin_ip: usize,
 }
 
 /// G06A: constructor completion state. The constructor's own return value
 /// is discarded by contract; the instance is rebuilt from the mutated
 /// receiver (or its write-back) when the deferred frame returns.
-pub(crate) struct ConstructorContinuation {
-    pub(crate) dst: u8,
-    pub(crate) class_name: String,
-    pub(crate) class_value: Value16,
-    pub(crate) receiver: Value16,
+#[doc(hidden)]
+pub struct ConstructorContinuation {
+    pub dst: u8,
+    pub class_name: String,
+    pub class_value: Value16,
+    pub receiver: Value16,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum ReturnSink {
+#[doc(hidden)]
+pub enum ReturnSink {
     Register(u8),
     Continuation(ContinuationId),
     Discard,
 }
 
-pub(crate) struct ReceiverContext {
+#[doc(hidden)]
+pub struct ReceiverContext {
     pub(crate) receiver: Value16,
     pub(crate) previous_this: Option<Value16>,
     pub(crate) class_sym: Option<SymId>,
@@ -53,7 +64,8 @@ pub(crate) struct ReceiverContext {
 }
 
 impl ReceiverContext {
-    pub(crate) fn new(receiver: Value16, class_sym: Option<SymId>, write_back: bool) -> Self {
+    #[doc(hidden)]
+    pub fn new(receiver: Value16, class_sym: Option<SymId>, write_back: bool) -> Self {
         Self {
             receiver,
             previous_this: None,
@@ -70,17 +82,18 @@ impl ReceiverContext {
     }
 }
 
-pub(crate) struct VmCallRequest {
-    pub(crate) chunk: Arc<FunctionChunk>,
-    pub(crate) func_sym: SymId,
-    pub(crate) args: Vec<Value16>,
-    pub(crate) captures: FxHashMap<String, Arc<RwLock<Value16>>>,
-    pub(crate) dst: u8,
-    pub(crate) origin_ip: usize,
-    pub(crate) receiver_context: Option<ReceiverContext>,
-    pub(crate) return_sink: ReturnSink,
+#[doc(hidden)]
+pub struct VmCallRequest {
+    pub chunk: Arc<FunctionChunk>,
+    pub func_sym: SymId,
+    pub args: Vec<Value16>,
+    pub captures: FxHashMap<String, Arc<RwLock<Value16>>>,
+    pub dst: u8,
+    pub origin_ip: usize,
+    pub receiver_context: Option<ReceiverContext>,
+    pub return_sink: ReturnSink,
     /// SOP effect steps discard body errors instead of unwinding them.
-    pub(crate) swallow_error: bool,
+    pub swallow_error: bool,
 }
 
 impl VmCallRequest {
@@ -102,7 +115,8 @@ impl VmCallRequest {
 
 /// G05 continuation shell. G06 replaces each operation-specific shell with
 /// its full state machine while preserving this single VM-owned storage lane.
-pub(crate) enum VmContinuation {
+#[doc(hidden)]
+pub enum VmContinuation {
     SopAbilitySequence(SopAbilitySequence),
     FunctionCallbackSequence(FunctionCallbackSequence),
     GovernanceDispatch(GovernanceDispatchState),
@@ -131,13 +145,15 @@ impl VmContinuation {
     }
 }
 
-pub(crate) enum ContinuationResume {
+#[doc(hidden)]
+pub enum ContinuationResume {
     Schedule(Box<VmCallRequest>),
     Complete { dst: u8, value: Value16 },
     Discard,
 }
 
-pub(crate) enum MethodDispatchOutcome {
+#[doc(hidden)]
+pub enum MethodDispatchOutcome {
     Immediate(Value16),
     Deferred,
 }
@@ -183,7 +199,8 @@ impl VM {
             .unwrap_or_else(|| Value16::object(hudhudscript_bytecode::ObjMap::default()));
     }
 
-    pub(crate) fn schedule_vm_call(&mut self, request: Box<VmCallRequest>) -> CompileResult<()> {
+    #[doc(hidden)]
+    pub fn schedule_vm_call(&mut self, request: Box<VmCallRequest>) -> CompileResult<()> {
         if self.pending_vm_call.is_some() {
             return Err(continuation_error(
                 "VM call scheduling invariant: pending_vm_call is already occupied".to_string(),
@@ -267,7 +284,8 @@ impl VM {
 
     /// Resume exactly one continuation step. This helper never enters a chunk
     /// driver; scheduling is returned to the existing outer frame loop.
-    pub(crate) fn resume_continuation(
+    #[doc(hidden)]
+    pub fn resume_continuation(
         &mut self,
         id: ContinuationId,
         value: Value16,
@@ -326,30 +344,3 @@ mod custom_iterator;
 mod governance_dispatch;
 mod promise_callback;
 mod sop_ability;
-
-#[cfg(test)]
-mod governance_dispatch_tests;
-
-#[cfg(test)]
-mod sop_ability_tests;
-
-#[cfg(test)]
-mod array_callback_tests;
-
-#[cfg(test)]
-mod custom_iterator_tests;
-
-#[cfg(test)]
-mod deep_chain_tests;
-
-#[cfg(test)]
-mod g07_tests;
-
-#[cfg(test)]
-mod promise_callback_tests;
-
-#[cfg(test)]
-mod single_call_tests;
-
-#[cfg(test)]
-mod tests;

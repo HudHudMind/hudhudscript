@@ -22,7 +22,8 @@ fn ability_step(
 }
 
 impl VM {
-    pub(crate) fn dispatch_sop_method(
+    #[doc(hidden)]
+    pub fn dispatch_sop_method(
         &mut self,
         receiver: &Value16,
         method: &str,

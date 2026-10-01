@@ -192,46 +192,6 @@ pub unsafe extern "C" fn hudhud_object_free(obj: *mut HudObject) {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::ffi::CString;
-
-    fn key(s: &str) -> *const c_char {
-        CString::new(s).unwrap().into_raw() as *const c_char
-    }
-
-    #[test]
-    fn set_get_roundtrip() {
-        unsafe {
-            let obj = hudhud_object_new();
-            let k = key("deger");
-            hudhud_object_set(obj, k, 42);
-            assert_eq!(hudhud_object_get(obj, k), 42);
-            assert_eq!(hudhud_object_get(obj, key("yok")), 0);
-            assert_eq!(hudhud_object_has(obj, k), 1);
-            assert_eq!(hudhud_object_len(obj), 1);
-            hudhud_object_free(obj);
-        }
-    }
-
-    #[test]
-    fn overwrite_and_null_safety() {
-        unsafe {
-            let obj = hudhud_object_new();
-            let k = key("x");
-            hudhud_object_set(obj, k, 1);
-            hudhud_object_set(obj, k, 9);
-            assert_eq!(hudhud_object_get(obj, k), 9);
-            assert_eq!(hudhud_object_len(obj), 1);
-            // null handle'lar sessizce güvenli
-            assert_eq!(hudhud_object_get(std::ptr::null_mut(), k), 0);
-            assert_eq!(hudhud_object_len(std::ptr::null_mut()), 0);
-            hudhud_object_free(obj);
-        }
-    }
-}
-
 // ── Handle dönüşümleri (i64-handle lane ABI kenarları) ─────────────────
 
 /// Opak handle ↔ i64 kimlik dönüşümü. gccjit gibi C-tipi backend'lerde
@@ -249,34 +209,12 @@ pub extern "C" fn hudhud_i64_to_ptr(v: i64) -> *mut core::ffi::c_void {
     v as *mut core::ffi::c_void
 }
 
-#[cfg(test)]
-mod handle_tests {
-    #[test]
-    fn ptr_i64_roundtrip() {
-        let x: i64 = 0x1234_5678;
-        unsafe {
-            let p = super::hudhud_i64_to_ptr(x);
-            assert_eq!(super::hudhud_ptr_to_i64(p), x);
-        }
-    }
-}
-
 /// Dallanmasız seçim: c != 0 ? a : b. §18 bayrak select zincirleri ve
 /// Div/Rem güvenli bölen seçimi için (gccjit gibi select rvalue'su
 /// sunmayan backend'ler).
 #[no_mangle]
 pub extern "C" fn hudhud_select_i64(c: i64, a: i64, b: i64) -> i64 {
     if c != 0 { a } else { b }
-}
-
-#[cfg(test)]
-mod select_tests {
-    #[test]
-    fn select_semantics() {
-        assert_eq!(super::hudhud_select_i64(1, 10, 20), 10);
-        assert_eq!(super::hudhud_select_i64(0, 10, 20), 20);
-        assert_eq!(super::hudhud_select_i64(-5, 10, 20), 10);
-    }
 }
 
 // ── Date/Math builtin helper'ları (benchmark zamanlama/matematik şeridi) ──

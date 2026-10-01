@@ -1,7 +1,7 @@
 //! G09: CLI command dispatch, split from `main.rs` to respect the
 //! 400-line source limit.
 
-use crate::{Cli, Commands};
+use hudhudscript_cli::common::cli_spec::{Cli, Commands};
 use hudhudscript_cli::common::*;
 #[allow(unused_imports)]
 use crate::cli_aot_bench::*;

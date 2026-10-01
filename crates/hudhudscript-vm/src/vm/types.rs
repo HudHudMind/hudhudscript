@@ -3,7 +3,8 @@ use std::sync::Arc;
 
 /// Decode a packed `u32` into `(opcode, arg1, arg2)`.
 #[inline(always)]
-pub(crate) const fn decode_packed(packed: u32) -> (u8, u8, u16) {
+#[doc(hidden)]
+pub const fn decode_packed(packed: u32) -> (u8, u8, u16) {
     let opcode = (packed & 0xFF) as u8;
     let arg1 = ((packed >> 8) & 0xFF) as u8;
     let arg2 = ((packed >> 16) & 0xFFFF) as u16;
@@ -79,10 +80,11 @@ pub(crate) enum FinallyStep {
 /// stack frame stays small (3 Vecs + Option would otherwise add ~72
 /// bytes per recursive frame and overflow the 2 MB test thread stack
 /// on mutual-recursion tests).
-pub(crate) struct SavedFinally {
-    pub(crate) try_frames: Vec<(usize, usize, usize)>,
-    pub(crate) finally_frames: Vec<(usize, usize, usize)>,
-    pub(crate) pending_flow: Option<PendingFlow>,
+#[doc(hidden)]
+pub struct SavedFinally {
+    pub try_frames: Vec<(usize, usize, usize, usize)>,
+    pub finally_frames: Vec<(usize, usize, usize)>,
+    pub pending_flow: Option<PendingFlow>,
 }
 
 /// Pending abrupt-completion carried across a `finally` body.
@@ -99,13 +101,15 @@ pub(crate) struct SavedFinally {
 /// would otherwise inflate every `call_chunk_with_captures` stack frame
 /// when paired with the `saved_pending_flow` Option.
 #[derive(Debug, Clone)]
-pub(crate) enum PendingFlow {
+#[doc(hidden)]
+pub enum PendingFlow {
     Return(Box<Value16>),
     Throw(Box<Value16>),
 }
 
 /// Result of the packed fast-dispatch path.
-pub(crate) enum PackedResult {
+#[doc(hidden)]
+pub enum PackedResult {
     /// Instruction handled; advance ip by 1.
     Advance,
     /// Instruction handled; set ip to the given target.
@@ -123,7 +127,8 @@ pub(crate) enum PackedResult {
 /// Needed so the step body can live inside a closure (for unified runtime
 /// error → try/catch routing) while still conveying jump / return intents
 /// back to the loop driver.
-pub(crate) enum StepAction {
+#[doc(hidden)]
+pub enum StepAction {
     /// Normal fall-through: caller should advance `ip` by 1.
     Advance,
     /// The handler already set `ip` to a new target; caller must NOT advance.
@@ -163,16 +168,6 @@ pub(crate) enum StepAction {
     /// (not the enum) to keep `Result<StepAction, CompileError>`
     /// small on the hot dispatch path.
     TailCall,
-}
-
-#[cfg(test)]
-mod step_action_tests {
-    use super::StepAction;
-
-    #[test]
-    fn step_action_stays_compact() {
-        assert!(std::mem::size_of::<StepAction>() <= 32);
-    }
 }
 
 /// Result of one `step_generator_iter` call — signals whether the caller

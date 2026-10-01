@@ -6,6 +6,7 @@
 //! cycle with the full load chain.
 
 use hudhudscript_bytecode::error::compile_codes;
+use hudhudscript_bytecode::Value16;
 use parking_lot::Mutex;
 use rustc_hash::FxHashSet;
 use std::sync::Arc;
@@ -17,6 +18,16 @@ pub(crate) struct ModuleIdentity(pub(crate) String);
 pub(crate) struct ModuleLoadContext {
     pub(crate) active: FxHashSet<ModuleIdentity>,
     pub(crate) chain: Vec<ModuleIdentity>,
+    /// BULGU 4 (modül use-bağlama): `LoadModule` ile kurulmuş takma-ad
+    /// bağlarının günlüğü (ad → modül nesnesi). Bir modül kendi `use`
+    /// listesiyle bir sub-VM'de yüklendiğinde bu bağlar yalnızca sub-VM'in
+    /// globals'inde kalıyor; modül fonksiyon gövdeleri birleşik birimde
+    /// (ana VM) çalıştığında yakalama çözümlemesi ana VM'in globals'ine
+    /// düşüyor ve bağlar kayboluyordu ("Unknown method on object" /
+    /// alıcının yanlış değere bağlanması). Bu paylaşılan günlük sayesinde
+    /// yükleme tamamlandığında bağlar üst VM'e taşınır — modülün KENDİ
+    /// use listesi birleşik derlemede o modülün kodu için bağlanmış olur.
+    pub(crate) alias_binds: Vec<(String, Value16)>,
 }
 
 pub(crate) struct ModuleLoadGuard {

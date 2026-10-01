@@ -115,13 +115,3 @@ fn assert_throws(f, msg) {
     throw \"assert_throws failed: expected an exception, none was thrown\";
 }
 ";
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn prelude_parses_as_valid_hudhudscript() {
-        assert!(hudhudscript_parser::parse(PRELUDE).is_ok(), "prelude must parse");
-    }
-}

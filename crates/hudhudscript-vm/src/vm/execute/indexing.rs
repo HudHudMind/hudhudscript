@@ -277,21 +277,37 @@ impl VM {
                         ip,
                     ));
                 };
-                let i2 = numeric_index_i64(self.registers[*idx2 as usize])
+                // B5: hızlı yol (matris a[i][k]) — idx2 sayısal + satır dizi.
+                // Uyumsuzluk (idx2 string / satır harita) eskiden doğrudan
+                // hataydı; şimdi mevcut dallar cold fallback'a gider
+                // (H.6.3, cmp_fallback.rs deseni) — hızlı yola yeni dal
+                // eklenmez, satır dizi + idx2 sayısal ise yürütme orada kalır.
+                let i2 = match numeric_index_i64(self.registers[*idx2 as usize])
                     .and_then(index_i64_to_usize)
-                    .ok_or_else(|| {
-                        Self::runtime_error_with_pos("Index2D: idx2 not numeric", bytecode, ip)
-                    })?;
+                {
+                    Some(i2) => i2,
+                    None => {
+                        return self.index2d_row_fallback(
+                            *dst,
+                            row_arr,
+                            self.registers[*idx2 as usize],
+                            bytecode,
+                            ip,
+                        )
+                    }
+                };
                 let result = if let Some(inner) = row_arr.as_array() {
                     inner.get(i2).cloned().ok_or_else(|| {
                         Self::runtime_error_with_pos("Index2D: row2 OOB", bytecode, ip)
                     })?
                 } else {
-                    return Err(Self::runtime_error_with_pos(
-                        "Index2D: row not array",
+                    return self.index2d_row_fallback(
+                        *dst,
+                        row_arr,
+                        self.registers[*idx2 as usize],
                         bytecode,
                         ip,
-                    ));
+                    );
                 };
                 self.registers[*dst as usize] = result;
             }

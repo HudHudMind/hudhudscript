@@ -9,9 +9,9 @@ mod codec;
 pub mod config;
 pub mod error;
 #[cfg(feature = "db")]
-mod metadata;
+pub mod metadata;
 #[cfg(feature = "db")]
-mod migrations;
+pub mod migrations;
 #[cfg(feature = "db")]
 mod mysql;
 #[cfg(feature = "db")]

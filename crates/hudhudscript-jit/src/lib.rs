@@ -12,6 +12,3 @@ pub mod precheck;
 pub mod runtime;
 
 pub use runtime::{JitRunResult, JitRuntime};
-
-#[cfg(test)]
-mod tests;

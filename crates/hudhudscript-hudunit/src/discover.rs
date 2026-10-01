@@ -148,7 +148,8 @@ pub fn discover_file(path: &Path, root: Option<&Path>) -> Result<TestFile, Disco
 
 /// `tests/math/test_x.hud` with root `tests` → `["math"]`; a file directly
 /// in the root keeps an empty chain (its fallback group is the file stem).
-fn derive_group_path(path: &Path, root: Option<&Path>) -> Vec<String> {
+#[doc(hidden)]
+pub fn derive_group_path(path: &Path, root: Option<&Path>) -> Vec<String> {
     let rel = match root {
         Some(root) => path.strip_prefix(root).unwrap_or(path),
         None => path,
@@ -169,7 +170,8 @@ fn derive_group_path(path: &Path, root: Option<&Path>) -> Vec<String> {
 /// *next* non-comment line. Comment lines directly above a function attach
 /// their groups to it; blank lines reset the pending set. (`//` is the
 /// language's comment syntax; `#` is not.)
-fn collect_group_annotations(source: &str) -> Vec<(usize, Vec<String>)> {
+#[doc(hidden)]
+pub fn collect_group_annotations(source: &str) -> Vec<(usize, Vec<String>)> {
     let lines: Vec<&str> = source.lines().collect();
     let mut out = Vec::new();
     let mut pending: Vec<String> = Vec::new();
@@ -198,55 +200,4 @@ fn collect_group_annotations(source: &str) -> Vec<(usize, Vec<String>)> {
         pending.clear();
     }
     out
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn group_annotations_attach_to_following_line() {
-        let src = "// @group hizli\n// @group math\nfn test_a() {}\n\nfn test_b() {}\n";
-        let groups = collect_group_annotations(src);
-        assert_eq!(groups.len(), 1);
-        assert_eq!(groups[0].0, 3);
-        assert_eq!(groups[0].1, vec!["hizli".to_string(), "math".to_string()]);
-    }
-
-    #[test]
-    fn blank_line_resets_pending_groups() {
-        let src = "// @group x\n\nfn test_a() {}\n";
-        assert!(collect_group_annotations(src).is_empty());
-    }
-
-    #[test]
-    fn slash_comment_groups_supported() {
-        let src = "// @group slow\nfn test_a() {}\n";
-        let groups = collect_group_annotations(src);
-        assert_eq!(groups.len(), 1);
-        assert_eq!(groups[0].1, vec!["slow".to_string()]);
-    }
-
-    #[test]
-    fn derive_group_path_nested() {
-        let path = Path::new("/tmp/tests/math/test_a.hud");
-        let chain = derive_group_path(path, Some(Path::new("/tmp/tests")));
-        assert_eq!(chain, vec!["math".to_string()]);
-    }
-
-    #[test]
-    fn derive_group_path_root_file() {
-        let path = Path::new("/tmp/tests/test_a.hud");
-        let chain = derive_group_path(path, Some(Path::new("/tmp/tests")));
-        assert!(chain.is_empty());
-    }
-
-    #[test]
-    fn extension_filter() {
-        let cfg = HudunitConfig::default();
-        assert!(cfg.is_test_file(Path::new("a.hhs")));
-        assert!(cfg.is_test_file(Path::new("a.hud")));
-        assert!(cfg.is_test_file(Path::new("a.hudhud")));
-        assert!(!cfg.is_test_file(Path::new("a.rs")));
-    }
 }

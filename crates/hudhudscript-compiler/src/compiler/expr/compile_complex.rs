@@ -516,15 +516,29 @@ fn compile_expr_complex_inner(
                             }
                             // P3a: compile args first, then try inline with actual first_arg
                             // Issue #7: tek argüman bölgesi (fresh zone/argüman yok)
+                            //
+                            // BULGU6 fix: pencere boyutu argc değil, inline
+                            // gövdenin TOPLAM yazmaç ihtiyacı (argc + geçiciler)
+                            // — aksi halde inline geçicileri pencerenin dışına,
+                            // çağıranın canlı yerellerine taşardı.
                             let argc = args.len() as u8;
-                            let first_arg = crate::compiler::regalloc::temp_reg_window(argc);
+                            let chunk_opt = target.ct_get_function_chunk(name);
+                            let span = chunk_opt
+                                .as_ref()
+                                .and_then(|c| {
+                                    crate::optimizer::inline_compile::inline_window_need(c)
+                                })
+                                .map(|s| s.max(argc))
+                                .filter(|s| 224u16 + *s as u16 <= 254);
+                            let first_arg =
+                                crate::compiler::regalloc::temp_reg_window(span.unwrap_or(argc));
                             let mut arg_zone =
                                 RegAlloc::new_with_base(target.ct_next_local_reg())?;
                             for (i, arg) in args.iter().enumerate() {
                                 let r = compile_expr_to_reg(target, arg, &mut arg_zone);
                                 target.emit_move(first_arg + i as u8, r);
                             }
-                            if let Some(chunk) = target.ct_get_function_chunk(name) {
+                            if let (Some(chunk), Some(_)) = (chunk_opt, span) {
                                 if crate::optimizer::inline_compile::try_inline_call(
                                     target, &chunk, first_arg, argc, 255,
                                 ) {
@@ -579,112 +593,13 @@ fn compile_expr_complex_inner(
                                 arg_count: argc,
                             });
                         } else {
-                            // FIX: stash receiver in a safe register so nested
-                            // MethodCall arguments cannot clobber reg255.
-                            // Issue #7: alıcı VE argümanlar inner'ın TEK bölgesini
-                            // paylaşır (yeni bölge YOK) — zincirde seviye başına
-                            // 0 ek bölge; 14 seviyeli zincirler bile 224 altında.
-                            // Alıcı canlılığı alloc last_use ile korunur (argüman
-                            // derlemesi onu geri kazanamaz).
-                            let receiver_reg = compile_expr_to_reg(target, object, regs);
-                            let argc = args.len() as u8;
-                            let first_arg = crate::compiler::regalloc::temp_reg_window(argc);
-                            for (i, arg) in args.iter().enumerate() {
-                                let r = compile_expr_to_reg(target, arg, regs);
-                                target.emit_move(first_arg + i as u8, r);
-                            }
-                            // G4B: eliminate stash — use receiver_reg directly
-                            if property == "push" && argc == 1 {
-                                let stash = crate::compiler::regalloc::temp_reg();
-                                target.emit_move(stash, receiver_reg);
-                                target.ct_emit(Instruction::ArrayPush {
-                                    dst: stash,
-                                    arr: stash,
-                                    val: first_arg,
-                                });
-                                target.emit_move(255, stash);
-                            } else if property == "pop" && argc == 0 {
-                                let stash = crate::compiler::regalloc::temp_reg();
-                                target.emit_move(stash, receiver_reg);
-                                let is_typed_array = root_var_name(object)
-                                    .map(|n| {
-                                        target.ct_local_type(&n)
-                                            == crate::compiler::expr::ExprType::Array
-                                    })
-                                    .unwrap_or(false);
-                                if is_typed_array {
-                                    target.ct_emit(Instruction::ArrayPop {
-                                        dst: 255,
-                                        obj: stash,
-                                    });
-                                } else {
-                                    let prop_sym = target.ct_sym(property);
-                                    let idx = target.ct_add_call_payload_with_builtin(
-                                        prop_sym,
-                                        argc,
-                                        hudhudscript_bytecode::builtin_method::NONE,
-                                    );
-                                    target.emit_move(255, stash);
-                                    target.ct_emit(Instruction::MethodCall {
-                                        dst: 255,
-                                        obj: 255,
-                                        payload_idx: idx as u16,
-                                        first_arg,
-                                        arg_count: argc,
-                                    });
-                                }
-                            } else if property == "indexOf" && argc == 1 {
-                                let stash = crate::compiler::regalloc::temp_reg();
-                                target.emit_move(stash, receiver_reg);
-                                target.ct_emit(Instruction::StringIndexOf {
-                                    dst: stash,
-                                    haystack: stash,
-                                    needle: first_arg,
-                                });
-                                target.emit_move(255, stash);
-                            } else if property == "contains" && argc == 1 {
-                                let stash = crate::compiler::regalloc::temp_reg();
-                                target.emit_move(stash, receiver_reg);
-                                target.ct_emit(Instruction::StringContains {
-                                    dst: stash,
-                                    haystack: stash,
-                                    needle: first_arg,
-                                });
-                                target.emit_move(255, stash);
-                            } else {
-                                // G4B: generic MethodCall — use receiver_reg directly, no stash
-                                let prop_sym = target.ct_sym(property);
-                                let builtin_idx = if let Expr::Identifier(obj_name, _) = &**object {
-                                    hudhudscript_bytecode::builtin_method::resolve(
-                                        obj_name, property,
-                                    )
-                                } else {
-                                    u32::MAX
-                                };
-                                let idx = if builtin_idx != u32::MAX {
-                                    target.ct_add_call_payload_with_builtin(
-                                        prop_sym,
-                                        argc,
-                                        builtin_idx,
-                                    )
-                                } else {
-                                    target.ct_add_call_payload(prop_sym, argc)
-                                };
-                                target.emit_move(255, receiver_reg);
-                                target.ct_emit(Instruction::MethodCall {
-                                    dst: 255,
-                                    obj: 255,
-                                    payload_idx: idx as u16,
-                                    first_arg,
-                                    arg_count: argc,
-                                });
-                            }
-                            // Bug 4: this.call() implicitly references 'provider'
-                            if property == "call"
-                                && root_var_name(object).as_deref() == Some("this")
-                            {
-                                target.ct_track_reference("provider");
-                            }
+                            // B6: emission extracted to compile_member_call
+                            // (shared with the chain entry point so chained
+                            // receivers reuse the caller's zone instead of
+                            // stacking a fresh 16-reg zone per link).
+                            crate::compiler::expr::compile_member_call::emit_member_call_level(
+                                target, object, property, args, regs,
+                            );
                         }
                     }
                     Expr::Index { object, index, .. } => {
