@@ -24,7 +24,9 @@ use std::os::raw::{c_char, c_void};
 
 use hudhudscript_bytecode::{ObjMap, PromiseState16, Value16};
 
-use crate::bridge_state::{next_request_id, take_free_promise, with_bridge, PendingHostCall};
+use crate::bridge_state::{
+    next_request_id, take_free_promise, with_bridge, DtoPayload, PendingHostCall,
+};
 use crate::value_dto::{dto_to_value16, free_dto_contents, value16_to_dto, HudValue};
 use crate::{check_owner, ensure_pool, HudVM};
 
@@ -172,11 +174,16 @@ pub unsafe extern "C" fn hud_vm_register_dart_fn(
                 let Some(promise_id) = take_free_promise(state) else {
                     return Err("dart callback promise pool exhausted".to_string());
                 };
+                // Argümanları VM HÂLÂ DEĞERLERİ TUTARKEN sahipli DTO'lara
+                // çevir (use-after-free önlemi — bkz. bridge_state.rs notu).
+                let dtos = DtoPayload(
+                    args.iter().map(|a| value16_to_dto(a, 0)).collect(),
+                );
                 state.pending_calls.insert(
                     request_id,
                     PendingHostCall {
                         key: key.clone(),
-                        args: Some(args.to_vec()),
+                        args: Some(dtos),
                         promise_id,
                     },
                 );
@@ -239,8 +246,8 @@ pub unsafe extern "C" fn hud_callback_take(
     let taken = with_bridge(bridge_id, |state| {
         if let Some(call) = state.pending_calls.get_mut(&request_id) {
             let key = CString::new(call.key.clone()).ok()?;
-            let args = call.args.take()?;
-            let dtos: Vec<HudValue> = args.iter().map(|a| value16_to_dto(a, 0)).collect();
+            // Args enqueue anında kopyalandı; burada VM belleğine DOKUNULMAZ.
+            let dtos = call.args.take()?.0;
             let len = dtos.len() as u32;
             let ptr = if dtos.is_empty() {
                 std::ptr::null_mut()

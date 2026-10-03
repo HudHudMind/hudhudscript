@@ -27,11 +27,32 @@ use hudhudscript_vm::VM;
 /// pool is refilled at the next worker-thread FFI entry point.
 const PROMISE_POOL_TARGET: usize = 64;
 
+/// Sahipli DTO yükü. `HudValue` ham işaretçiler taşıdığı için Rust'ta
+/// otomatik `Send`/`Sync` DEĞİLDİR; ancak belgelenen sahiplik kuralı gereği
+/// (value_dto.rs) içindeki tüm işaretçiler bu DTO'ya AİTTİR ve yalnız köprü
+/// kayıt kilidi altında erişilir → iş parçacıkları arasında taşınması
+/// güvenlidir (aynı anda tek taraf erişir).
+pub struct DtoPayload(pub Vec<crate::value_dto::HudValue>);
+
+// SAFETY: bkz. yukarıdaki not — sahiplik tekildir ve erişim kilit altındadır.
+unsafe impl Send for DtoPayload {}
+unsafe impl Sync for DtoPayload {}
+
 pub struct PendingHostCall {
     /// "module.method" the Dart side resolves to a registered handler.
     pub key: String,
-    /// Script-supplied arguments; `None` once fetched by `hud_callback_take`.
-    pub args: Option<Vec<Value16>>,
+    /// Script-supplied arguments, ALREADY deep-copied into bridge-owned DTOs
+    /// at ENQUEUE time (while the VM still holds the values alive);
+    /// `None` once fetched by `hud_callback_take`.
+    ///
+    /// NEDEN: eskiden burada `Vec<Value16>` (VM belleğine İŞARETÇİLER)
+    /// tutuluyordu. Dart tarafı geç uyandığında (özellikle uygulama arka
+    /// plana atılınca) VM o belleği serbest bırakıyor, `hud_callback_take`
+    /// serbest belleği okuyup SIGSEGV (SEGV_ACCERR) veriyordu — Android'de
+    /// libhudhud_ffi.so içinde gözlenen çökme (hud_callback_take+1004).
+    /// Kopyalama enqueue anında yapıldığı için take artık VM belleğine
+    /// DOKUNMAZ.
+    pub args: Option<DtoPayload>,
     /// Async mode: id of the promise awaiting `hud_callback_complete`.
     pub promise_id: String,
 }
